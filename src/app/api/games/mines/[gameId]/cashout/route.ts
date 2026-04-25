@@ -1,0 +1,46 @@
+import { NextResponse } from "next/server";
+import { readSession } from "@/lib/auth/session";
+import { credit, getBalance } from "@/lib/wallet";
+import { getMinesGame, updateMinesGame } from "@/lib/db";
+
+export const runtime = "nodejs";
+
+export async function POST(_req: Request, ctx: { params: Promise<{ gameId: string }> }) {
+  const s = await readSession();
+  if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const { gameId } = await ctx.params;
+  const game = getMinesGame(gameId);
+  if (!game) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  if (game.user_id !== s.user.id) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  if (game.status !== "active") return NextResponse.json({ error: "not_active" }, { status: 400 });
+
+  // Refuse zero-reveal cashout (no profit; UX-safer to just let user reveal first).
+  if (!game.revealed.includes("r")) {
+    return NextResponse.json({ error: "no_reveals" }, { status: 400 });
+  }
+
+  const payout = Math.floor(game.bet * game.current_multiplier);
+  credit({
+    userId: s.user.id,
+    amount: payout,
+    reason: "mines_cashout",
+    refKind: "mines",
+    refId: `${gameId}:cashout`,
+  });
+  updateMinesGame(gameId, {
+    status: "cashed",
+    payout,
+    ended_at: new Date().toISOString(),
+  });
+
+  return NextResponse.json({
+    ok: true,
+    status: "cashed",
+    payout,
+    multiplier: game.current_multiplier,
+    layout: game.layout,
+    revealed: game.revealed,
+    balance: getBalance(s.user.id),
+  });
+}

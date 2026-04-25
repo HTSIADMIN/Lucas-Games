@@ -12,9 +12,9 @@ const GAMES = [
   { slug: "slots",     name: "Slots",     tag: "JACKPOT", live: true  },
   { slug: "blackjack", name: "Blackjack", tag: "CLASSIC", live: true  },
   { slug: "roulette",  name: "Roulette",  tag: "CLASSIC", live: true  },
+  { slug: "mines",     name: "Mines",     tag: "RISKY",   live: true  },
+  { slug: "plinko",    name: "Plinko",    tag: "PHYSICS", live: true  },
   { slug: "poker",     name: "Poker",     tag: "MULTI",   live: false },
-  { slug: "plinko",    name: "Plinko",    tag: "PHYSICS", live: false },
-  { slug: "mines",     name: "Mines",     tag: "RISKY",   live: false },
   { slug: "crash",     name: "Crash",     tag: "LIVE",    live: false },
 ];
 
