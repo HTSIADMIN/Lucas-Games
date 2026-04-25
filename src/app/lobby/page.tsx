@@ -10,12 +10,12 @@ const GAMES = [
   { slug: "coinflip",  name: "Coin Flip", tag: "QUICK",   live: true  },
   { slug: "dice",      name: "Dice",      tag: "QUICK",   live: true  },
   { slug: "slots",     name: "Slots",     tag: "JACKPOT", live: true  },
-  { slug: "blackjack", name: "Blackjack", tag: "CLASSIC", live: false },
+  { slug: "blackjack", name: "Blackjack", tag: "CLASSIC", live: true  },
+  { slug: "roulette",  name: "Roulette",  tag: "CLASSIC", live: true  },
   { slug: "poker",     name: "Poker",     tag: "MULTI",   live: false },
   { slug: "plinko",    name: "Plinko",    tag: "PHYSICS", live: false },
   { slug: "mines",     name: "Mines",     tag: "RISKY",   live: false },
   { slug: "crash",     name: "Crash",     tag: "LIVE",    live: false },
-  { slug: "roulette",  name: "Roulette",  tag: "CLASSIC", live: false },
 ];
 
 const EARN_BACKS = [
