@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Games — Lucas Games</title>
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="components.css" />
+<link rel="stylesheet" href="games.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  .demo-frame {
+    background: var(--parchment-50);
+    border: 3px solid var(--ink-900);
+    padding: var(--sp-5);
+    box-shadow: var(--sh-card-rest);
+    margin-bottom: var(--sp-4);
+    background-image:
+      linear-gradient(0deg, rgba(168,117,69,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(168,117,69,0.08) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+  .demo-frame.felt {
+    background: var(--cactus-500);
+    background-image:
+      repeating-linear-gradient(45deg,
+        rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 2px,
+        transparent 2px, transparent 6px);
+  }
+  .demo-label {
+    font-family: var(--font-display);
+    font-size: var(--fs-small);
+    letter-spacing: var(--ls-loose);
+    text-transform: uppercase;
+    color: var(--saddle-400);
+    margin-bottom: var(--sp-2);
+  }
+  /* Slot reel */
+  .slot {
+    display: inline-flex;
+    background: var(--saddle-500);
+    border: 4px solid var(--ink-900);
+    padding: var(--sp-3);
+    box-shadow: var(--sh-card-rest);
+    gap: var(--sp-2);
+  }
+  .reel {
+    width: 88px; height: 120px;
+    background: var(--parchment-50);
+    border: 3px solid var(--ink-900);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display);
+    font-size: 56px;
+    color: var(--crimson-500);
+    box-shadow: inset 0 4px 0 0 rgba(0,0,0,0.12);
+  }
+  /* Plinko peg */
+  .plinko {
+    background: var(--saddle-500);
+    border: 4px solid var(--ink-900);
+    padding: var(--sp-5);
+    width: 100%; max-width: 360px;
+    box-shadow: var(--sh-card-rest);
+  }
+  .plinko-row {
+    display: flex; justify-content: center; gap: 16px;
+    margin-bottom: 14px;
+  }
+  .plinko-peg {
+    width: 10px; height: 10px;
+    background: var(--gold-300);
+    border: 2px solid var(--ink-900);
+    border-radius: 999px;
+  }
+  .plinko-buckets {
+    display: flex; gap: 4px; margin-top: var(--sp-3);
+  }
+  .plinko-bucket {
+    flex: 1; height: 36px;
+    background: var(--parchment-100);
+    border: 2px solid var(--ink-900);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display);
+    font-size: var(--fs-small);
+    color: var(--ink-900);
+  }
+  /* Mines grid */
+  .mines {
+    display: grid;
+    grid-template-columns: repeat(5, 56px);
+    gap: 6px;
+    background: var(--saddle-500);
+    border: 4px solid var(--ink-900);
+    padding: var(--sp-3);
+    box-shadow: var(--sh-card-rest);
+  }
+  .mine-cell {
+    width: 56px; height: 56px;
+    background: var(--saddle-200);
+    border: 3px solid var(--ink-900);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display);
+    font-size: 32px;
+    color: var(--saddle-500);
+    box-shadow: var(--bevel-wood);
+    cursor: pointer;
+  }
+  .mine-cell.is-revealed {
+    background: var(--cactus-300);
+    box-shadow: none;
+    color: var(--parchment-50);
+    text-shadow: 1px 1px 0 var(--cactus-700);
+  }
+  .mine-cell.is-bomb {
+    background: var(--crimson-300);
+    box-shadow: none;
+    color: var(--parchment-50);
+  }
+  /* Roulette wheel snippet */
+  .roulette-strip {
+    display: flex;
+    border: 4px solid var(--ink-900);
+    overflow: hidden;
+    box-shadow: var(--sh-card-rest);
+  }
+  .roulette-cell {
+    flex: 1;
+    height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display);
+    font-size: var(--fs-h4);
+    border-right: 2px solid var(--ink-900);
+    color: var(--parchment-50);
+  }
+  .roulette-cell:last-child { border-right: 0; }
+  .roulette-cell.r { background: var(--crimson-500); }
+  .roulette-cell.b { background: var(--ink-900); }
+  .roulette-cell.g { background: var(--cactus-500); }
+  .roulette-cell.is-active { box-shadow: inset 0 0 0 4px var(--gold-300); color: var(--gold-300); }
+
+  /* Crash chart */
+  .crash {
+    background: var(--saddle-500);
+    border: 4px solid var(--ink-900);
+    padding: var(--sp-4);
+    box-shadow: var(--sh-card-rest);
+    width: 100%;
+  }
+  .crash-mult {
+    font-family: var(--font-display);
+    font-size: 64px;
+    color: var(--neon-gold);
+    text-shadow: 4px 4px 0 var(--saddle-600), 0 0 24px rgba(255,216,77,0.55);
+    line-height: 1;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" data-presets="env,react">
+function CardSet() {
+  const ranks = ["A","K","Q","J","10","9","8","7","6","5","4","3","2"];
+  return (
+    <div className="stack">
+      <div className="row" style={{gap:"var(--sp-3)", flexWrap:"wrap"}}>
+        <PlayingCard rank="A" suit="spades"   size="lg" />
+        <PlayingCard rank="K" suit="hearts"   size="lg" />
+        <PlayingCard rank="Q" suit="diamonds" size="lg" />
+        <PlayingCard rank="J" suit="clubs"    size="lg" />
+        <PlayingCard faceDown size="lg" />
+      </div>
+      <div className="row" style={{gap:"var(--sp-2)", flexWrap:"wrap"}}>
+        {ranks.map(r => <PlayingCard key={r} rank={r} suit="spades" size="sm" />)}
+      </div>
+    </div>
+  );
+}
+
+function ChipSet() {
+  const colors = ["white","red","blue","green","black","gold"];
+  return (
+    <div className="row-lg" style={{gap:"var(--sp-5)", flexWrap:"wrap", alignItems:"end"}}>
+      {colors.map(c => (
+        <div key={c} style={{display:"flex", flexDirection:"column", alignItems:"center", gap:"var(--sp-2)"}}>
+          <Chip color={c} size={80} />
+          <code>{c}</code>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ChipStacks() {
+  return (
+    <div className="row-lg" style={{gap:"var(--sp-7)", alignItems:"end"}}>
+      <Chip color="red"   size={64} stack={3} />
+      <Chip color="blue"  size={64} stack={5} />
+      <Chip color="green" size={64} stack={2} />
+      <Chip color="black" size={64} stack={6} />
+      <Chip color="gold"  size={64} stack={4} />
+    </div>
+  );
+}
+
+function DiceSet() {
+  return (
+    <div className="stack">
+      <div className="row-lg" style={{flexWrap:"wrap"}}>
+        {[1,2,3,4,5,6].map(v => <Die key={v} value={v} size={72} />)}
+      </div>
+      <div className="row-lg" style={{flexWrap:"wrap"}}>
+        {[1,2,3,4,5,6].map(v => <Die key={v} value={v} size={72} color="crimson" />)}
+      </div>
+    </div>
+  );
+}
+
+function PlinkoArt() {
+  const rows = 6;
+  return (
+    <div className="plinko">
+      {Array.from({length: rows}).map((_, r) => (
+        <div key={r} className="plinko-row">
+          {Array.from({length: r + 3}).map((__, i) => <div key={i} className="plinko-peg" />)}
+        </div>
+      ))}
+      <div className="plinko-buckets">
+        {["3x","1.5x","1x","0.4x","1x","1.5x","3x"].map((v, i) => (
+          <div key={i} className="plinko-bucket">{v}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MinesGrid() {
+  const grid = [
+    [1,1,2,0,0],
+    [1,'b',2,0,0],
+    [1,1,1,1,1],
+    [0,0,0,1,'b'],
+    [0,0,0,1,1],
+  ];
+  return (
+    <div className="mines">
+      {grid.flat().map((v, i) => {
+        if (v === 'b') return <div key={i} className="mine-cell is-bomb">✸</div>;
+        if (v === 0)   return <div key={i} className="mine-cell"></div>;
+        return <div key={i} className="mine-cell is-revealed">{v}</div>;
+      })}
+    </div>
+  );
+}
+
+function RouletteStrip() {
+  const cells = [
+    {n: 0, c: "g"},
+    {n: 32, c: "r"}, {n: 15, c: "b"}, {n: 19, c: "r"}, {n: 4, c: "b"},
+    {n: 21, c: "r"}, {n: 2, c: "b"}, {n: 25, c: "r", active: true}, {n: 17, c: "b"},
+    {n: 34, c: "r"}, {n: 6, c: "b"}, {n: 27, c: "r"},
+  ];
+  return (
+    <div className="roulette-strip">
+      {cells.map((c, i) => (
+        <div key={i} className={"roulette-cell " + c.c + (c.active ? " is-active" : "")}>{c.n}</div>
+      ))}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <div data-screen-label="Games">
+      <LG_Header current="games.html" />
+      <main className="page">
+        <PageHero
+          eyebrow="03 — Game Pieces"
+          title="Game Primitives"
+          lede="Cards, chips, dice, the coin — and the per-game props for every table on the floor."
+        />
+
+        <Section num="A" title="Playing Cards">
+          <p style={{color:"var(--saddle-400)", maxWidth:"60ch", marginBottom:"var(--sp-4)"}}>
+            Hard-cornered, parchment-faced. Suit colors map to the four accent palettes — spades=ink, hearts=crimson, diamonds=sky, clubs=cactus. Card backs ride on a saloon-red diagonal weave.
+          </p>
+          <div className="demo-frame felt">
+            <CardSet />
+          </div>
+
+          <div className="grid grid-3">
+            <div>
+              <div className="demo-label">Sizes — sm · md · lg</div>
+              <div className="demo-frame">
+                <div className="row" style={{gap:"var(--sp-3)", alignItems:"end"}}>
+                  <PlayingCard rank="A" suit="hearts" size="sm" />
+                  <PlayingCard rank="A" suit="hearts" size="md" />
+                  <PlayingCard rank="A" suit="hearts" size="lg" />
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="demo-label">Hover — cards lift</div>
+              <div className="demo-frame">
+                <div className="row" style={{gap:"var(--sp-3)"}}>
+                  <PlayingCard rank="K" suit="spades" size="md" hoverable />
+                  <PlayingCard rank="Q" suit="diamonds" size="md" hoverable />
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="demo-label">Card back</div>
+              <div className="demo-frame">
+                <div className="row" style={{gap:"var(--sp-3)"}}>
+                  <PlayingCard faceDown size="sm" />
+                  <PlayingCard faceDown size="md" />
+                  <PlayingCard faceDown size="lg" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section num="B" title="Chips">
+          <p style={{color:"var(--saddle-400)", maxWidth:"60ch", marginBottom:"var(--sp-4)"}}>
+            Six denominations from $1 (white) to $1K (gold). Notched edge ring, beveled face, hard drop shadow.
+          </p>
+          <div className="demo-frame felt">
+            <ChipSet />
+          </div>
+          <div className="demo-label" style={{marginTop:"var(--sp-5)"}}>Stacks</div>
+          <div className="demo-frame felt">
+            <ChipStacks />
+          </div>
+        </Section>
+
+        <Section num="C" title="Coin · Dice">
+          <div className="grid grid-2">
+            <div>
+              <div className="demo-label">Coin (heads / tails) — for Coinflip</div>
+              <div className="demo-frame felt">
+                <div className="row-lg" style={{gap:"var(--sp-7)"}}>
+                  <Coin side="heads" size={120} />
+                  <Coin side="tails" size={120} />
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="demo-label">Dice — for Craps</div>
+              <div className="demo-frame felt">
+                <DiceSet />
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section num="D" title="Per-Game Props">
+          <div className="grid grid-2">
+            <div>
+              <div className="demo-label">Slots — reel cluster</div>
+              <div className="demo-frame felt">
+                <div className="slot">
+                  <div className="reel">7</div>
+                  <div className="reel">7</div>
+                  <div className="reel">7</div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="demo-label">Crash — multiplier readout</div>
+              <div className="demo-frame felt">
+                <div className="crash">
+                  <div className="row" style={{justifyContent:"space-between", marginBottom:"var(--sp-2)"}}>
+                    <span className="badge badge-crimson">LIVE</span>
+                    <span className="badge">ROUND #3,841</span>
+                  </div>
+                  <div className="crash-mult">2.34×</div>
+                  <div style={{color:"var(--parchment-200)", fontFamily:"var(--font-display)"}}>↑ rising · cash out before the bust</div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="demo-label">Plinko — pegs & buckets</div>
+              <div className="demo-frame felt">
+                <PlinkoArt />
+              </div>
+            </div>
+            <div>
+              <div className="demo-label">Mines — 5×5 grid</div>
+              <div className="demo-frame felt">
+                <MinesGrid />
+              </div>
+            </div>
+            <div style={{gridColumn: "span 2"}}>
+              <div className="demo-label">Roulette — number strip</div>
+              <div className="demo-frame felt">
+                <RouletteStrip />
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section num="E" title="Suit glyphs at scale">
+          <div className="demo-frame">
+            <div className="row-lg" style={{gap:"var(--sp-7)"}}>
+              <div style={{textAlign:"center"}}>
+                <Suit kind="spades" size={96} />
+                <div className="demo-label" style={{marginTop:"var(--sp-2)"}}>Spades</div>
+              </div>
+              <div style={{textAlign:"center"}}>
+                <Suit kind="hearts" size={96} />
+                <div className="demo-label" style={{marginTop:"var(--sp-2)"}}>Hearts</div>
+              </div>
+              <div style={{textAlign:"center"}}>
+                <Suit kind="diamonds" size={96} />
+                <div className="demo-label" style={{marginTop:"var(--sp-2)"}}>Diamonds</div>
+              </div>
+              <div style={{textAlign:"center"}}>
+                <Suit kind="clubs" size={96} />
+                <div className="demo-label" style={{marginTop:"var(--sp-2)"}}>Clubs</div>
+              </div>
+            </div>
+          </div>
+        </Section>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

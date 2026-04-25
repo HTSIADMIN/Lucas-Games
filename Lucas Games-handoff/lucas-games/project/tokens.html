@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tokens — Lucas Games</title>
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="components.css" />
+<link rel="stylesheet" href="games.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" data-presets="env,react">
+function Swatch({ name, hex, varName, onDark = false }) {
+  return (
+    <div className="swatch">
+      <div className="swatch-color" style={{background: hex}}></div>
+      <div className="swatch-label">
+        <span className="name">{name}</span>
+        <span className="hex">{hex.toUpperCase()}{varName ? ` · ${varName}` : ""}</span>
+      </div>
+    </div>
+  );
+}
+
+function PaletteRow({ title, swatches }) {
+  return (
+    <div style={{marginBottom:"var(--sp-6)"}}>
+      <h3 style={{
+        fontSize:"var(--fs-h4)", textTransform:"uppercase",
+        letterSpacing:"var(--ls-loose)",
+        marginBottom:"var(--sp-3)",
+        color:"var(--saddle-400)"}}>{title}</h3>
+      <div className="grid grid-4">
+        {swatches.map(s => <Swatch key={s.name} {...s} />)}
+      </div>
+    </div>
+  );
+}
+
+function TypeRow({ name, size, sample, variable }) {
+  return (
+    <tr>
+      <td style={{fontSize: size + "px", lineHeight: 1, padding:"var(--sp-3)"}}>{sample}</td>
+      <td>{name}</td>
+      <td><code>{variable}</code></td>
+      <td>{size}px</td>
+    </tr>
+  );
+}
+
+function App() {
+  return (
+    <div data-screen-label="Tokens">
+      <LG_Header current="tokens.html" />
+      <main className="page">
+        <PageHero
+          eyebrow="01 — Foundations"
+          title="Tokens"
+          lede="The atoms of the saloon. Every screen is built from these colors, type sizes, spaces, and chunks of pixel chrome."
+        />
+
+        <Section num="A" title="Color · Saddle">
+          <PaletteRow title="The Wood — Saddle"
+            swatches={[
+              { name:"saddle-50",  hex:"#f1d9b3", varName:"--saddle-50" },
+              { name:"saddle-100", hex:"#e8c089", varName:"--saddle-100" },
+              { name:"saddle-200", hex:"#d4a574", varName:"--saddle-200" },
+              { name:"saddle-300", hex:"#a87545", varName:"--saddle-300" },
+              { name:"saddle-400", hex:"#6b3f24", varName:"--saddle-400" },
+              { name:"saddle-500", hex:"#4a2818", varName:"--saddle-500" },
+              { name:"saddle-600", hex:"#2a1810", varName:"--saddle-600" },
+              { name:"ink-900",    hex:"#2a1810", varName:"--ink-900" },
+            ]}/>
+          <PaletteRow title="The Paper — Parchment"
+            swatches={[
+              { name:"parchment-50",  hex:"#fef6e4", varName:"--parchment-50" },
+              { name:"parchment-100", hex:"#fbe9c4", varName:"--parchment-100" },
+              { name:"parchment-200", hex:"#f4dba0", varName:"--parchment-200" },
+              { name:"parchment-300", hex:"#e8c468", varName:"--parchment-300" },
+            ]}/>
+        </Section>
+
+        <Section num="B" title="Color · Accents">
+          <PaletteRow title="Gold — Sheriff's star"
+            swatches={[
+              { name:"gold-100", hex:"#ffe9a8", varName:"--gold-100" },
+              { name:"gold-300", hex:"#f5c842", varName:"--gold-300" },
+              { name:"gold-500", hex:"#c8941d", varName:"--gold-500" },
+              { name:"gold-700", hex:"#7a5510", varName:"--gold-700" },
+            ]}/>
+          <PaletteRow title="Crimson — Saloon awning · Hearts"
+            swatches={[
+              { name:"crimson-100", hex:"#ffb8a8", varName:"--crimson-100" },
+              { name:"crimson-300", hex:"#e05a3c", varName:"--crimson-300" },
+              { name:"crimson-500", hex:"#8b3a3a", varName:"--crimson-500" },
+              { name:"crimson-700", hex:"#4a1a1a", varName:"--crimson-700" },
+            ]}/>
+          <PaletteRow title="Cactus — Felt · Clubs · Win"
+            swatches={[
+              { name:"cactus-100", hex:"#b8d99a", varName:"--cactus-100" },
+              { name:"cactus-300", hex:"#6ba84f", varName:"--cactus-300" },
+              { name:"cactus-500", hex:"#3d6b2e", varName:"--cactus-500" },
+              { name:"cactus-700", hex:"#1f3818", varName:"--cactus-700" },
+            ]}/>
+          <PaletteRow title="Sky — River · Diamonds · Info"
+            swatches={[
+              { name:"sky-100", hex:"#c9e4f2", varName:"--sky-100" },
+              { name:"sky-300", hex:"#5fa8d3", varName:"--sky-300" },
+              { name:"sky-500", hex:"#2c6a8e", varName:"--sky-500" },
+              { name:"sky-700", hex:"#143348", varName:"--sky-700" },
+            ]}/>
+        </Section>
+
+        <Section num="C" title="Color · Neon (sparingly)">
+          <p style={{maxWidth:"60ch", color:"var(--saddle-400)", marginBottom:"var(--sp-4)"}}>
+            Neon is for outlines & glows on win states only. Never as fill.
+          </p>
+          <div className="grid grid-4">
+            <Swatch name="neon-gold"    hex="#ffd84d" varName="--neon-gold" />
+            <Swatch name="neon-crimson" hex="#ff5544" varName="--neon-crimson" />
+            <Swatch name="neon-cactus"  hex="#8aff5a" varName="--neon-cactus" />
+            <Swatch name="neon-sky"     hex="#5fdcff" varName="--neon-sky" />
+          </div>
+          <div className="row-lg" style={{marginTop:"var(--sp-5)"}}>
+            <button className="btn" style={{boxShadow:"var(--bevel-light), var(--bevel-dark), var(--glow-gold)"}}>Glow · Gold</button>
+            <button className="btn btn-danger" style={{boxShadow:"var(--bevel-light), var(--bevel-dark), var(--glow-crimson)"}}>Glow · Crimson</button>
+            <button className="btn btn-success" style={{boxShadow:"var(--bevel-light), var(--bevel-dark), var(--glow-cactus)"}}>Glow · Cactus</button>
+          </div>
+        </Section>
+
+        <Section num="D" title="Type — All Pixel">
+          <p style={{maxWidth:"60ch", color:"var(--saddle-400)", marginBottom:"var(--sp-4)"}}>
+            One face, m6x11, used at integer sizes only. No anti-aliasing.
+            Display sizes get a 2–4px hard drop shadow.
+          </p>
+          <table className="spec-table">
+            <thead><tr>
+              <th style={{width:"40%"}}>Sample</th>
+              <th>Role</th>
+              <th>Variable</th>
+              <th>Size</th>
+            </tr></thead>
+            <tbody>
+              <TypeRow name="Display"  size={88} sample="WAGON" variable="--fs-display" />
+              <TypeRow name="H1"       size={56} sample="Saloon Heading" variable="--fs-h1" />
+              <TypeRow name="H2"       size={40} sample="Section Title" variable="--fs-h2" />
+              <TypeRow name="H3"       size={32} sample="Subsection" variable="--fs-h3" />
+              <TypeRow name="H4"       size={24} sample="Card Title" variable="--fs-h4" />
+              <TypeRow name="Body LG"  size={24} sample="The quick brown fox" variable="--fs-body-lg" />
+              <TypeRow name="Body"     size={20} sample="Standard reading copy at 20px." variable="--fs-body" />
+              <TypeRow name="Small"    size={16} sample="Captions and metadata" variable="--fs-small" />
+              <TypeRow name="Tiny"     size={12} sample="EYEBROWS · TAGS · BADGES" variable="--fs-tiny" />
+            </tbody>
+          </table>
+        </Section>
+
+        <Section num="E" title="Spacing">
+          <p style={{maxWidth:"60ch", color:"var(--saddle-400)", marginBottom:"var(--sp-4)"}}>
+            All spaces snap to the 4px pixel grid so the bitmap font stays crisp.
+          </p>
+          <div className="stack">
+            {[
+              ["sp-0", 2], ["sp-1", 4], ["sp-2", 8], ["sp-3", 12],
+              ["sp-4", 16], ["sp-5", 24], ["sp-6", 32], ["sp-7", 48],
+              ["sp-8", 64], ["sp-9", 96]
+            ].map(([n, v]) => (
+              <div key={n} className="row" style={{gap:"var(--sp-4)"}}>
+                <code style={{minWidth:80}}>--{n}</code>
+                <span style={{minWidth:40, color:"var(--saddle-400)"}}>{v}px</span>
+                <div style={{height:16, width: v, background:"var(--saddle-300)", border:"2px solid var(--ink-900)"}}></div>
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        <Section num="F" title="Pixel Chrome">
+          <div className="grid grid-2">
+            <div className="panel">
+              <div className="panel-title">Borders</div>
+              <div className="stack">
+                <div className="row" style={{gap:"var(--sp-3)"}}>
+                  <div style={{width:80, height:48, background:"var(--parchment-100)", border:"2px solid var(--ink-900)"}}></div>
+                  <code>--bw-thin · 2px</code>
+                </div>
+                <div className="row" style={{gap:"var(--sp-3)"}}>
+                  <div style={{width:80, height:48, background:"var(--parchment-100)", border:"3px solid var(--ink-900)"}}></div>
+                  <code>--bw-card · 3px</code>
+                </div>
+                <div className="row" style={{gap:"var(--sp-3)"}}>
+                  <div style={{width:80, height:48, background:"var(--parchment-100)", border:"4px solid var(--ink-900)"}}></div>
+                  <code>--bw-panel · 4px</code>
+                </div>
+                <div className="row" style={{gap:"var(--sp-3)"}}>
+                  <div style={{width:80, height:48, background:"var(--parchment-100)", border:"6px solid var(--ink-900)"}}></div>
+                  <code>--bw-chunky · 6px</code>
+                </div>
+              </div>
+            </div>
+
+            <div className="panel">
+              <div className="panel-title">Hard Drop Shadows</div>
+              <div className="stack-lg">
+                <div className="row" style={{gap:"var(--sp-4)"}}>
+                  <div style={{width:80, height:48, background:"var(--parchment-50)", border:"3px solid var(--ink-900)", boxShadow:"var(--sh-card-rest)"}}></div>
+                  <code>--sh-card-rest</code>
+                </div>
+                <div className="row" style={{gap:"var(--sp-4)"}}>
+                  <div style={{width:80, height:48, background:"var(--parchment-50)", border:"3px solid var(--ink-900)", boxShadow:"var(--sh-card-hover)"}}></div>
+                  <code>--sh-card-hover</code>
+                </div>
+                <div className="row" style={{gap:"var(--sp-4)"}}>
+                  <div style={{width:80, height:48, background:"var(--parchment-50)", border:"3px solid var(--ink-900)", boxShadow:"var(--sh-popover)"}}></div>
+                  <code>--sh-popover</code>
+                </div>
+                <div className="row" style={{gap:"var(--sp-4)"}}>
+                  <div style={{width:80, height:48, background:"var(--saddle-200)", border:"4px solid var(--ink-900)", boxShadow:"var(--sh-table)"}}></div>
+                  <code>--sh-table</code>
+                </div>
+              </div>
+            </div>
+
+            <div className="panel">
+              <div className="panel-title">Bevels</div>
+              <div className="stack-lg">
+                <div className="row" style={{gap:"var(--sp-4)"}}>
+                  <div style={{width:120, height:48, background:"var(--gold-300)", border:"3px solid var(--ink-900)", boxShadow:"var(--bevel-light), var(--bevel-dark)"}}></div>
+                  <code>light + dark</code>
+                </div>
+                <div className="row" style={{gap:"var(--sp-4)"}}>
+                  <div style={{width:120, height:48, background:"var(--saddle-200)", border:"3px solid var(--ink-900)", boxShadow:"var(--bevel-wood)"}}></div>
+                  <code>--bevel-wood</code>
+                </div>
+              </div>
+            </div>
+
+            <div className="panel">
+              <div className="panel-title">Neon Outlines</div>
+              <div className="stack-lg">
+                <div className="row" style={{gap:"var(--sp-4)"}}>
+                  <div style={{width:120, height:48, background:"var(--saddle-500)", border:"3px solid var(--ink-900)", boxShadow:"var(--glow-gold)"}}></div>
+                  <code>--glow-gold</code>
+                </div>
+                <div className="row" style={{gap:"var(--sp-4)"}}>
+                  <div style={{width:120, height:48, background:"var(--saddle-500)", border:"3px solid var(--ink-900)", boxShadow:"var(--glow-crimson)"}}></div>
+                  <code>--glow-crimson</code>
+                </div>
+                <div className="row" style={{gap:"var(--sp-4)"}}>
+                  <div style={{width:120, height:48, background:"var(--saddle-500)", border:"3px solid var(--ink-900)", boxShadow:"var(--glow-cactus)"}}></div>
+                  <code>--glow-cactus</code>
+                </div>
+                <div className="row" style={{gap:"var(--sp-4)"}}>
+                  <div style={{width:120, height:48, background:"var(--saddle-500)", border:"3px solid var(--ink-900)", boxShadow:"var(--glow-sky)"}}></div>
+                  <code>--glow-sky</code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section num="G" title="Motion">
+          <table className="spec-table">
+            <thead><tr><th>Token</th><th>Value</th><th>Use</th></tr></thead>
+            <tbody>
+              <tr><td><code>--dur-quick</code></td><td>100ms</td><td>Hovers, tab switches</td></tr>
+              <tr><td><code>--dur-snap</code></td><td>180ms</td><td>Card flips, button press</td></tr>
+              <tr><td><code>--dur-flop</code></td><td>320ms</td><td>Chip placement, win flash</td></tr>
+              <tr><td><code>--ease-snap</code></td><td>cubic-bezier(.5,1.6,.4,1)</td><td>Default — overshoot</td></tr>
+              <tr><td><code>--ease-out</code></td><td>cubic-bezier(.2,.9,.3,1)</td><td>Reveals</td></tr>
+              <tr><td><code>--ease-in</code></td><td>cubic-bezier(.6,0,.8,.4)</td><td>Exits</td></tr>
+            </tbody>
+          </table>
+        </Section>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

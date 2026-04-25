@@ -1,0 +1,244 @@
+/* ============================================================
+   LUCAS GAMES — Game-piece styles
+   Playing card chrome, chip stack, coin, die.
+   ============================================================ */
+
+/* ------------------ PLAYING CARD ------------------ */
+.pcard {
+  position: relative;
+  background: var(--parchment-50);
+  border: 3px solid var(--ink-900);
+  box-shadow: var(--sh-card-rest);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 6px 8px;
+  font-family: var(--font-display);
+  user-select: none;
+  flex-shrink: 0;
+}
+.pcard.is-hoverable {
+  cursor: pointer;
+  transition: transform var(--dur-quick) var(--ease-snap),
+              box-shadow var(--dur-quick) var(--ease-snap);
+}
+.pcard.is-hoverable:hover {
+  transform: translateY(-8px) rotate(-1deg);
+  box-shadow: 0 12px 0 0 var(--ink-900);
+}
+.pcard-corner {
+  display: flex; flex-direction: column; align-items: center;
+  line-height: 1;
+}
+.pcard-corner-br { transform: rotate(180deg); }
+.pcard-rank {
+  font-family: var(--font-display);
+  line-height: 1;
+  margin-bottom: 2px;
+}
+.pcard-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Back of card — diagonal pixel pattern */
+.pcard-back {
+  background: var(--crimson-500);
+  position: relative;
+  overflow: hidden;
+}
+.pcard-back-pattern {
+  position: absolute;
+  inset: 6px;
+  border: 3px solid var(--gold-300);
+  background-image:
+    repeating-linear-gradient(45deg,
+      var(--crimson-700) 0,
+      var(--crimson-700) 4px,
+      var(--crimson-500) 4px,
+      var(--crimson-500) 8px),
+    repeating-linear-gradient(-45deg,
+      transparent 0,
+      transparent 4px,
+      rgba(245,200,66,0.15) 4px,
+      rgba(245,200,66,0.15) 8px);
+}
+.pcard-back-emblem {
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 48px;
+  color: var(--gold-300);
+  text-shadow: 3px 3px 0 var(--crimson-700);
+}
+
+/* ------------------ CHIP ------------------ */
+.chip-wrap {
+  position: relative;
+  display: inline-block;
+}
+.chip {
+  position: absolute;
+  left: 0;
+  border-radius: 999px;
+  border: 3px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 0 0 var(--ink-900);
+  overflow: hidden;
+}
+.chip-stack-layer { z-index: 0; opacity: 0.95; }
+.chip-notches {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  opacity: 0.9;
+}
+.chip-inner {
+  position: relative;
+  width: 60%; height: 60%;
+  border-radius: 999px;
+  border: 3px solid;
+  display: flex; align-items: center; justify-content: center;
+}
+.chip-value {
+  font-family: var(--font-display);
+  letter-spacing: 0;
+  line-height: 1;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.25);
+}
+
+/* ------------------ COIN ------------------ */
+.coin {
+  position: relative;
+  border-radius: 999px;
+  background: var(--gold-300);
+  border: 3px solid var(--ink-900);
+  box-shadow:
+    inset 0 4px 0 0 rgba(255,255,255,0.4),
+    inset 0 -4px 0 0 var(--gold-500),
+    0 4px 0 0 var(--ink-900);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.coin-face {
+  width: 70%; height: 70%;
+  border: 3px solid var(--gold-700);
+  border-radius: 999px;
+  background: var(--gold-300);
+  display: flex; align-items: center; justify-content: center;
+}
+.coin-glyph {
+  font-family: var(--font-display);
+  font-size: 48%;
+  color: var(--gold-700);
+  text-shadow: 2px 2px 0 var(--gold-100);
+  line-height: 1;
+}
+
+/* ------------------ DIE ------------------ */
+.die {
+  position: relative;
+  border: 3px solid var(--ink-900);
+}
+
+/* ------------------ FACE CARD FRAME ------------------ */
+.pcard-face-frame {
+  width: 62%;
+  height: 64%;
+  border: 1.5px solid;
+  background: #fafafa;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+
+/* ------------------ STAT CALLOUT ------------------ */
+.stat-callout {
+  display: inline-flex;
+  flex-direction: column;
+  background: var(--saddle-500);
+  border: 3px solid var(--ink-900);
+  padding: var(--sp-3) var(--sp-4);
+  min-width: 140px;
+  box-shadow: var(--sh-card-rest);
+  position: relative;
+}
+.stat-callout::before {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  box-shadow: var(--bevel-wood);
+}
+.stat-label {
+  font-family: var(--font-display);
+  font-size: var(--fs-tiny);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  color: var(--parchment-200);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  line-height: 1;
+}
+
+/* ------------------ TOKEN SWATCH (for tokens page) ------------------ */
+.swatch {
+  display: flex; flex-direction: column;
+  border: 3px solid var(--ink-900);
+  background: var(--parchment-50);
+  box-shadow: var(--sh-card-rest);
+  overflow: hidden;
+  font-family: var(--font-display);
+}
+.swatch-color { aspect-ratio: 4/3; }
+.swatch-label {
+  padding: var(--sp-2) var(--sp-3);
+  border-top: 3px solid var(--ink-900);
+  background: var(--parchment-100);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.swatch-label .name {
+  font-size: var(--fs-small);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  color: var(--ink-900);
+}
+.swatch-label .hex {
+  font-size: var(--fs-tiny);
+  color: var(--saddle-400);
+}
+
+/* ------------------ SPEC TABLE (tokens page) ------------------ */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 3px solid var(--ink-900);
+  background: var(--parchment-100);
+  box-shadow: var(--sh-card-rest);
+  font-family: var(--font-display);
+}
+.spec-table th, .spec-table td {
+  padding: var(--sp-2) var(--sp-3);
+  text-align: left;
+  border-bottom: 2px dashed var(--saddle-300);
+  font-size: var(--fs-body);
+}
+.spec-table th {
+  background: var(--saddle-500);
+  color: var(--parchment-50);
+  border-bottom: 3px solid var(--ink-900);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-loose);
+  font-size: var(--fs-small);
+}
+.spec-table tr:last-child td { border-bottom: 0; }
+.spec-table .demo-cell { width: 80px; }

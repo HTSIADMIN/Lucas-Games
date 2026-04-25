@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Components — Lucas Games</title>
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="components.css" />
+<link rel="stylesheet" href="games.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  .demo-frame {
+    background: var(--parchment-50);
+    border: 3px solid var(--ink-900);
+    padding: var(--sp-5);
+    box-shadow: var(--sh-card-rest);
+    margin-bottom: var(--sp-4);
+    background-image:
+      linear-gradient(0deg, rgba(168,117,69,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(168,117,69,0.08) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+  .demo-frame.on-wood {
+    background: var(--saddle-500);
+    background-image: none;
+  }
+  .demo-label {
+    font-family: var(--font-display);
+    font-size: var(--fs-small);
+    letter-spacing: var(--ls-loose);
+    text-transform: uppercase;
+    color: var(--saddle-400);
+    margin-bottom: var(--sp-2);
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" data-presets="env,react">
+const { useState } = React;
+
+function Demo({ label, dark = false, children }) {
+  return (
+    <div>
+      <div className="demo-label">{label}</div>
+      <div className={"demo-frame" + (dark ? " on-wood" : "")}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function BetStepperDemo() {
+  const [val, setVal] = useState(25);
+  return (
+    <div className="stepper">
+      <button className="stepper-btn" onClick={() => setVal(Math.max(1, val - 5))}>−</button>
+      <div className="stepper-amount">
+        <span className="currency">Wager</span>
+        <span className="value">${val}</span>
+      </div>
+      <button className="stepper-btn" onClick={() => setVal(val + 5)}>+</button>
+    </div>
+  );
+}
+
+function TabsDemo() {
+  const [tab, setTab] = useState("All");
+  const tabs = ["All", "Cards", "Dice", "Coin"];
+  return (
+    <div className="tabs">
+      {tabs.map(t => (
+        <button key={t} className="tab"
+                aria-selected={tab === t}
+                onClick={() => setTab(t)}>{t}</button>
+      ))}
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <div data-screen-label="Components">
+      <LG_Header current="components.html" />
+      <main className="page">
+        <PageHero
+          eyebrow="02 — Furniture"
+          title="Components"
+          lede="The chairs, signs, and hand-rails of the saloon. Buttons that feel pressable. Panels that feel nailed-together."
+        />
+
+        <Section num="A" title="Buttons">
+          <Demo label="Primary — gold (deal me in)">
+            <div className="row-lg" style={{flexWrap:"wrap"}}>
+              <button className="btn btn-sm">Hit</button>
+              <button className="btn">Deal Cards</button>
+              <button className="btn btn-lg">Deal Me In</button>
+              <button className="btn" disabled>Locked</button>
+            </div>
+          </Demo>
+          <Demo label="Wood — secondary actions">
+            <div className="row-lg" style={{flexWrap:"wrap"}}>
+              <button className="btn btn-wood btn-sm">Stand</button>
+              <button className="btn btn-wood">Cash Out</button>
+              <button className="btn btn-wood btn-lg">Leave Table</button>
+            </div>
+          </Demo>
+          <Demo label="Crimson — destructive / all-in">
+            <div className="row-lg" style={{flexWrap:"wrap"}}>
+              <button className="btn btn-danger btn-sm">Fold</button>
+              <button className="btn btn-danger">All In</button>
+              <button className="btn btn-success">Confirm Bet</button>
+              <button className="btn btn-ghost">Cancel</button>
+            </div>
+          </Demo>
+        </Section>
+
+        <Section num="B" title="Panels & Signs">
+          <div className="grid grid-2">
+            <div>
+              <div className="demo-label">Parchment panel</div>
+              <div className="panel">
+                <div className="panel-title">House Rules</div>
+                <p style={{margin:0, color:"var(--saddle-400)"}}>
+                  Dealer stands on 17. Insurance pays 2:1.
+                  Blackjack pays 3:2. No re-splitting aces.
+                </p>
+              </div>
+            </div>
+            <div>
+              <div className="demo-label">Wood panel</div>
+              <div className="panel panel-wood">
+                <div className="panel-title">Bounty</div>
+                <p style={{margin:0}}>
+                  First to a royal flush takes the pot. The pot keeps growing till somebody draws it.
+                </p>
+              </div>
+            </div>
+            <div>
+              <div className="demo-label">Gold panel</div>
+              <div className="panel panel-gold">
+                <div className="panel-title">JACKPOT</div>
+                <p style={{margin:0, fontFamily:"var(--font-display)", fontSize:"var(--fs-h2)"}}>$12,480</p>
+              </div>
+            </div>
+            <div>
+              <div className="demo-label">Hanging sign</div>
+              <div className="row" style={{gap:"var(--sp-3)", flexWrap:"wrap"}}>
+                <div className="sign">SALOON</div>
+                <div className="sign" style={{background:"var(--crimson-500)"}}>WANTED</div>
+                <div className="sign" style={{background:"var(--cactus-500)"}}>OPEN</div>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section num="C" title="Inputs · Stepper · Tabs">
+          <div className="grid grid-2">
+            <Demo label="Text input">
+              <div className="stack">
+                <div>
+                  <label className="label">Username</label>
+                  <input type="text" defaultValue="DocHolliday" />
+                </div>
+                <div>
+                  <label className="label">Wager amount</label>
+                  <input type="number" defaultValue="100" />
+                </div>
+              </div>
+            </Demo>
+            <Demo label="Bet stepper">
+              <BetStepperDemo />
+            </Demo>
+            <Demo label="Tabs / segmented">
+              <TabsDemo />
+            </Demo>
+            <Demo label="Badges">
+              <div className="row" style={{gap:"var(--sp-2)", flexWrap:"wrap"}}>
+                <span className="badge">Default</span>
+                <span className="badge badge-gold">Jackpot</span>
+                <span className="badge badge-crimson">Hot</span>
+                <span className="badge badge-cactus">Win</span>
+                <span className="badge badge-sky">Live</span>
+                <span className="badge badge-gold badge-glow">★ VIP</span>
+                <span className="tag-new">NEW</span>
+              </div>
+            </Demo>
+          </div>
+        </Section>
+
+        <Section num="D" title="Avatar · Username · Balance">
+          <Demo label="Balance bar — top-right of every game" dark>
+            <div className="row-lg" style={{flexWrap:"wrap"}}>
+              <div className="balance-bar">
+                <div className="avatar"><span style={{fontFamily:"var(--font-display)", fontSize:24}}>DH</span></div>
+                <div className="avatar-username">
+                  <span className="uname">DocHolliday</span>
+                  <span className="role">★ SHERIFF</span>
+                </div>
+                <div className="balance">$ 12,480</div>
+              </div>
+            </div>
+          </Demo>
+          <div className="grid grid-3">
+            <Demo label="Avatar sizes" dark>
+              <div className="row-lg">
+                <div className="avatar avatar-sm"><span style={{fontFamily:"var(--font-display)"}}>BB</span></div>
+                <div className="avatar"><span style={{fontFamily:"var(--font-display)", fontSize:24}}>WT</span></div>
+                <div className="avatar avatar-lg"><span style={{fontFamily:"var(--font-display)", fontSize:32}}>JS</span></div>
+              </div>
+            </Demo>
+            <Demo label="Just balance">
+              <div className="balance">$ 9,420</div>
+            </Demo>
+            <Demo label="Stat callouts">
+              <div className="row" style={{gap:"var(--sp-3)", flexWrap:"wrap"}}>
+                <Stat label="Pot" value="$2,450" color="money" />
+                <Stat label="Won" value="+$840" color="win" />
+              </div>
+            </Demo>
+          </div>
+        </Section>
+
+        <Section num="E" title="Leaderboard">
+          <div className="leaderboard">
+            <div className="leaderboard-row is-1">
+              <div className="rank">1</div>
+              <div className="player">
+                <div className="avatar avatar-sm"><span style={{fontFamily:"var(--font-display)"}}>DH</span></div>
+                DocHolliday
+              </div>
+              <div className="game">Poker</div>
+              <div className="winnings">+$48,200</div>
+            </div>
+            <div className="leaderboard-row is-2">
+              <div className="rank">2</div>
+              <div className="player">
+                <div className="avatar avatar-sm" style={{background:"var(--crimson-300)"}}><span style={{fontFamily:"var(--font-display)", color:"#fef6e4"}}>BS</span></div>
+                BillyTheStud
+              </div>
+              <div className="game">Crash</div>
+              <div className="winnings">+$31,750</div>
+            </div>
+            <div className="leaderboard-row is-3">
+              <div className="rank">3</div>
+              <div className="player">
+                <div className="avatar avatar-sm" style={{background:"var(--cactus-300)"}}><span style={{fontFamily:"var(--font-display)", color:"#fef6e4"}}>WT</span></div>
+                WyattTwirl
+              </div>
+              <div className="game">Blackjack</div>
+              <div className="winnings">+$22,180</div>
+            </div>
+            <div className="leaderboard-row">
+              <div className="rank">4</div>
+              <div className="player">
+                <div className="avatar avatar-sm" style={{background:"var(--sky-300)"}}><span style={{fontFamily:"var(--font-display)", color:"#fef6e4"}}>JS</span></div>
+                JesseSnake
+              </div>
+              <div className="game">Roulette</div>
+              <div className="winnings">+$14,090</div>
+            </div>
+            <div className="leaderboard-row">
+              <div className="rank">5</div>
+              <div className="player">
+                <div className="avatar avatar-sm" style={{background:"var(--saddle-300)"}}><span style={{fontFamily:"var(--font-display)", color:"#fef6e4"}}>AC</span></div>
+                AnnieCalamity
+              </div>
+              <div className="game">Plinko</div>
+              <div className="winnings">+$9,820</div>
+            </div>
+          </div>
+        </Section>
+
+        <Section num="F" title="Dividers">
+          <div className="stack-lg">
+            <div className="divider">★ Saloon Special ★</div>
+            <div className="divider">— end of round —</div>
+          </div>
+        </Section>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,651 @@
+/* ============================================================
+   LUCAS GAMES — COMPONENTS
+   Beveled buttons, wood panels, parchment cards, pixel inputs.
+   Depends on tokens.css.
+   ============================================================ */
+
+/* ============================================================
+   PIXEL CORNERS — clip-path "stepped" corners, faked with insets.
+   Use .pixel-corner-* on rectangles to get a 2px stepped corner
+   without manually drawing every pixel.
+   ============================================================ */
+.pixel-corner-2 {
+  clip-path: polygon(
+    0 4px, 4px 4px, 4px 0,
+    calc(100% - 4px) 0, calc(100% - 4px) 4px, 100% 4px,
+    100% calc(100% - 4px), calc(100% - 4px) calc(100% - 4px),
+    calc(100% - 4px) 100%, 4px 100%, 4px calc(100% - 4px),
+    0 calc(100% - 4px)
+  );
+}
+
+/* ============================================================
+   BUTTONS — Beveled wood with a hard drop shadow.
+   .btn        primary (gold)
+   .btn-wood   secondary (saddle)
+   .btn-danger crimson
+   .btn-ghost  parchment
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  font-family: var(--font-display);
+  font-size: var(--fs-body-lg);
+  line-height: 1;
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  color: var(--ink-900);
+  background: var(--gold-300);
+  border: var(--bw-button) solid var(--ink-900);
+  border-radius: var(--r-button);
+  padding: var(--sp-3) var(--sp-5);
+  cursor: pointer;
+  user-select: none;
+  box-shadow:
+    var(--bevel-light),
+    var(--bevel-dark),
+    var(--sh-button-rest);
+  transition:
+    transform var(--dur-quick) var(--ease-out),
+    box-shadow var(--dur-quick) var(--ease-out),
+    background var(--dur-quick);
+  text-shadow: 1px 1px 0 var(--gold-100);
+}
+.btn:hover {
+  background: var(--gold-100);
+  transform: translateY(-2px);
+  box-shadow:
+    var(--bevel-light),
+    var(--bevel-dark),
+    0 6px 0 0 var(--ink-900);
+}
+.btn:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 -2px 0 0 rgba(26,15,8,0.3),
+    var(--sh-button-press);
+}
+.btn:focus-visible { outline: none; box-shadow: var(--bevel-light), var(--bevel-dark), var(--sh-button-rest), var(--glow-gold); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Variants */
+.btn-wood {
+  background: var(--saddle-200);
+  color: var(--parchment-50);
+  text-shadow: 1px 1px 0 var(--saddle-500);
+  box-shadow: var(--bevel-wood), var(--sh-button-rest);
+}
+.btn-wood:hover { background: var(--saddle-100); }
+
+.btn-danger {
+  background: var(--crimson-300);
+  color: var(--parchment-50);
+  text-shadow: 1px 1px 0 var(--crimson-700);
+  box-shadow: var(--bevel-light), var(--bevel-dark), var(--sh-button-rest);
+}
+.btn-danger:hover { background: var(--crimson-100); color: var(--ink-900); }
+.btn-danger:focus-visible { box-shadow: var(--bevel-light), var(--bevel-dark), var(--sh-button-rest), var(--glow-crimson); }
+
+.btn-success {
+  background: var(--cactus-300);
+  color: var(--parchment-50);
+  text-shadow: 1px 1px 0 var(--cactus-700);
+}
+.btn-success:hover { background: var(--cactus-100); color: var(--ink-900); }
+
+.btn-ghost {
+  background: var(--parchment-100);
+  color: var(--ink-900);
+  text-shadow: 1px 1px 0 var(--parchment-50);
+}
+.btn-ghost:hover { background: var(--parchment-50); }
+
+.btn-sm {
+  font-size: var(--fs-small);
+  padding: var(--sp-2) var(--sp-3);
+  border-width: 2px;
+}
+.btn-lg {
+  font-size: var(--fs-h3);
+  padding: var(--sp-4) var(--sp-7);
+  border-width: 4px;
+}
+
+.btn-block { width: 100%; }
+
+/* ============================================================
+   PANELS — Parchment & Wood
+   ============================================================ */
+
+.panel {
+  background: var(--parchment-100);
+  border: var(--bw-panel) solid var(--ink-900);
+  padding: var(--sp-5);
+  box-shadow: var(--sh-card-rest);
+  position: relative;
+}
+.panel::before {
+  /* light bevel */
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: var(--bevel-light), var(--bevel-dark);
+}
+.panel-wood {
+  background: var(--saddle-200);
+  color: var(--parchment-50);
+  background-image:
+    /* faux wood grain — horizontal streaks */
+    repeating-linear-gradient(
+      0deg,
+      rgba(74, 40, 24, 0.10) 0,
+      rgba(74, 40, 24, 0.10) 2px,
+      transparent 2px,
+      transparent 8px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 233, 168, 0.06) 0,
+      rgba(255, 233, 168, 0.06) 1px,
+      transparent 1px,
+      transparent 16px
+    );
+}
+.panel-dark {
+  background: var(--saddle-500);
+  color: var(--parchment-50);
+}
+.panel-gold {
+  background: var(--gold-300);
+  color: var(--ink-900);
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  margin: 0 0 var(--sp-3) 0;
+  padding-bottom: var(--sp-2);
+  border-bottom: 3px dashed var(--saddle-300);
+  color: inherit;
+}
+
+/* SIGN — like a hanging saloon sign */
+.sign {
+  display: inline-block;
+  background: var(--saddle-200);
+  border: var(--bw-panel) solid var(--ink-900);
+  padding: var(--sp-3) var(--sp-5);
+  color: var(--parchment-50);
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  position: relative;
+  box-shadow: var(--bevel-wood), var(--sh-card-rest);
+  text-shadow: 2px 2px 0 var(--saddle-500);
+}
+.sign::before, .sign::after {
+  /* nail/rivet decoration */
+  content: "";
+  position: absolute;
+  top: 8px;
+  width: 8px; height: 8px;
+  background: var(--ink-900);
+  box-shadow: inset 1px 1px 0 0 var(--saddle-300);
+}
+.sign::before { left: 8px; }
+.sign::after  { right: 8px; }
+
+/* ============================================================
+   INPUTS — Pixel-bordered, parchment fill
+   ============================================================ */
+
+.input, input[type=text], input[type=number], textarea {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  background: var(--parchment-50);
+  color: var(--ink-900);
+  border: var(--bw-card) solid var(--ink-900);
+  padding: var(--sp-2) var(--sp-3);
+  outline: none;
+  width: 100%;
+  box-shadow: inset 0 3px 0 0 rgba(26,15,8,0.10);
+  transition: box-shadow var(--dur-quick);
+}
+.input:focus, input:focus, textarea:focus {
+  box-shadow: inset 0 3px 0 0 rgba(26,15,8,0.10), var(--glow-gold);
+}
+
+.label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--fs-small);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  color: var(--saddle-400);
+  margin-bottom: var(--sp-1);
+}
+
+/* ============================================================
+   BET STEPPER — - [ amount ] +
+   ============================================================ */
+.stepper {
+  display: inline-flex;
+  align-items: stretch;
+  border: var(--bw-card) solid var(--ink-900);
+  background: var(--parchment-50);
+  box-shadow: var(--sh-card-rest);
+}
+.stepper-btn {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  background: var(--saddle-200);
+  color: var(--parchment-50);
+  border: 0;
+  padding: 0 var(--sp-4);
+  cursor: pointer;
+  text-shadow: 1px 1px 0 var(--saddle-500);
+}
+.stepper-btn:hover { background: var(--saddle-100); }
+.stepper-btn:active { background: var(--saddle-300); }
+.stepper-amount {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: var(--sp-2) var(--sp-5);
+  border-left: 3px solid var(--ink-900);
+  border-right: 3px solid var(--ink-900);
+  background: var(--parchment-50);
+  min-width: 140px;
+}
+.stepper-amount .currency {
+  font-family: var(--font-display);
+  font-size: var(--fs-tiny);
+  color: var(--saddle-400);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+}
+.stepper-amount .value {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  color: var(--gold-500);
+  text-shadow: 2px 2px 0 var(--gold-100);
+  line-height: 1;
+}
+
+/* ============================================================
+   BADGES & PILLS
+   ============================================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-family: var(--font-display);
+  font-size: var(--fs-small);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  padding: var(--sp-1) var(--sp-2);
+  background: var(--parchment-200);
+  color: var(--saddle-500);
+  border: 2px solid var(--ink-900);
+  line-height: 1;
+}
+.badge-gold    { background: var(--gold-300);    color: var(--ink-900); }
+.badge-crimson { background: var(--crimson-300); color: var(--parchment-50); }
+.badge-cactus  { background: var(--cactus-300);  color: var(--parchment-50); }
+.badge-sky     { background: var(--sky-300);     color: var(--parchment-50); }
+.badge-glow    { box-shadow: var(--glow-gold); }
+
+/* HOT/NEW indicator */
+.tag-new {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: var(--fs-tiny);
+  letter-spacing: var(--ls-loose);
+  background: var(--crimson-300);
+  color: var(--parchment-50);
+  padding: 2px 6px;
+  border: 2px solid var(--ink-900);
+  text-transform: uppercase;
+  text-shadow: 1px 1px 0 var(--crimson-700);
+  transform: rotate(-3deg);
+}
+
+/* ============================================================
+   GAME TILES — for the home grid
+   ============================================================ */
+.tile {
+  position: relative;
+  background: var(--parchment-100);
+  border: var(--bw-panel) solid var(--ink-900);
+  padding: var(--sp-4);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  box-shadow: var(--sh-card-rest);
+  transition: transform var(--dur-quick) var(--ease-out),
+              box-shadow var(--dur-quick) var(--ease-out);
+  overflow: hidden;
+}
+.tile:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 0 0 var(--ink-900), var(--glow-gold);
+}
+.tile-art {
+  aspect-ratio: 4 / 3;
+  background: var(--saddle-300);
+  border: 3px solid var(--ink-900);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.tile-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-h4);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  color: var(--ink-900);
+  line-height: 1;
+}
+.tile-meta {
+  display: flex; align-items: center; justify-content: space-between;
+  font-family: var(--font-body);
+  font-size: var(--fs-small);
+  color: var(--saddle-400);
+}
+.tile-corner {
+  position: absolute;
+  top: 8px; right: 8px;
+  z-index: 2;
+}
+
+/* ============================================================
+   AVATAR + USERNAME + BALANCE BAR
+   ============================================================ */
+.balance-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  background: var(--saddle-500);
+  border: var(--bw-panel) solid var(--ink-900);
+  padding: var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-2);
+  color: var(--parchment-50);
+  box-shadow: var(--sh-card-rest);
+  position: relative;
+}
+.balance-bar::before {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  box-shadow: var(--bevel-wood);
+}
+.avatar {
+  width: 48px; height: 48px;
+  background: var(--gold-300);
+  border: 3px solid var(--ink-900);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.avatar-sm { width: 32px; height: 32px; border-width: 2px; }
+.avatar-lg { width: 64px; height: 64px; }
+.avatar-username {
+  display: flex; flex-direction: column; line-height: 1;
+}
+.avatar-username .uname {
+  font-family: var(--font-display);
+  font-size: var(--fs-body-lg);
+  letter-spacing: var(--ls-loose);
+  text-shadow: 2px 2px 0 var(--saddle-600);
+}
+.avatar-username .role {
+  font-family: var(--font-display);
+  font-size: var(--fs-tiny);
+  color: var(--gold-300);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+}
+
+.balance {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  color: var(--gold-300);
+  text-shadow: 2px 2px 0 var(--gold-700);
+  line-height: 1;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--saddle-600);
+  border: 2px solid var(--ink-900);
+}
+
+/* ============================================================
+   LEADERBOARD ROW
+   ============================================================ */
+.leaderboard {
+  border: var(--bw-panel) solid var(--ink-900);
+  background: var(--parchment-100);
+  box-shadow: var(--sh-card-rest);
+}
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 140px 140px;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 2px dashed var(--saddle-300);
+}
+.leaderboard-row:last-child { border-bottom: 0; }
+.leaderboard-row .rank {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  text-align: center;
+  line-height: 1;
+  color: var(--saddle-400);
+  text-shadow: 2px 2px 0 var(--parchment-200);
+}
+.leaderboard-row.is-1 .rank { color: var(--gold-500); text-shadow: 2px 2px 0 var(--gold-100); }
+.leaderboard-row.is-2 .rank { color: var(--saddle-300); text-shadow: 2px 2px 0 var(--parchment-200); }
+.leaderboard-row.is-3 .rank { color: var(--crimson-500); text-shadow: 2px 2px 0 var(--crimson-100); }
+.leaderboard-row .player {
+  display: flex; align-items: center; gap: var(--sp-3);
+  font-family: var(--font-display);
+  font-size: var(--fs-body-lg);
+  color: var(--ink-900);
+}
+.leaderboard-row .game {
+  font-family: var(--font-display);
+  font-size: var(--fs-small);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  color: var(--saddle-400);
+}
+.leaderboard-row .winnings {
+  text-align: right;
+  font-family: var(--font-display);
+  font-size: var(--fs-body-lg);
+  color: var(--gold-500);
+  text-shadow: 2px 2px 0 var(--gold-100);
+}
+
+/* ============================================================
+   TABS / SEGMENTED
+   ============================================================ */
+.tabs {
+  display: inline-flex;
+  background: var(--saddle-500);
+  border: 3px solid var(--ink-900);
+  padding: 3px;
+  gap: 3px;
+}
+.tab {
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  padding: var(--sp-2) var(--sp-4);
+  color: var(--parchment-200);
+  background: transparent;
+  border: 0; cursor: pointer;
+  line-height: 1;
+}
+.tab[aria-selected="true"], .tab.is-active {
+  background: var(--gold-300);
+  color: var(--ink-900);
+  box-shadow: var(--bevel-light), var(--bevel-dark);
+  text-shadow: 1px 1px 0 var(--gold-100);
+}
+
+/* ============================================================
+   DIVIDERS — saloon style
+   ============================================================ */
+.divider {
+  display: flex; align-items: center; gap: var(--sp-3);
+  color: var(--saddle-400);
+  font-family: var(--font-display);
+  font-size: var(--fs-small);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+}
+.divider::before, .divider::after {
+  content: "";
+  flex: 1;
+  height: 0;
+  border-top: 3px dashed var(--saddle-300);
+}
+
+/* ============================================================
+   NAV — Top header for the system
+   ============================================================ */
+.site-header {
+  background: var(--saddle-500);
+  border-bottom: var(--bw-panel) solid var(--ink-900);
+  padding: var(--sp-3) var(--sp-5);
+  display: flex; align-items: center; gap: var(--sp-5);
+  position: sticky; top: 0; z-index: 10;
+  box-shadow: var(--sh-card-rest);
+}
+.site-header .brand {
+  display: flex; align-items: center; gap: var(--sp-3);
+  text-decoration: none; border: 0;
+}
+.site-header .brand-mark {
+  width: 48px; height: 48px; flex-shrink: 0;
+}
+.site-header .brand-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  color: var(--gold-300);
+  letter-spacing: var(--ls-loose);
+  text-shadow: 2px 2px 0 var(--saddle-600);
+  text-transform: uppercase;
+  line-height: 1;
+}
+.site-header .brand-tag {
+  font-family: var(--font-display);
+  font-size: var(--fs-tiny);
+  color: var(--parchment-200);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+}
+.site-nav {
+  display: flex; gap: var(--sp-1);
+  margin-left: auto;
+}
+.site-nav a {
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  color: var(--parchment-200);
+  border: 0;
+  padding: var(--sp-2) var(--sp-3);
+  background: transparent;
+}
+.site-nav a:hover { color: var(--gold-300); background: var(--saddle-600); }
+.site-nav a[aria-current="page"] {
+  background: var(--gold-300);
+  color: var(--ink-900);
+  text-shadow: 1px 1px 0 var(--gold-100);
+}
+
+/* ============================================================
+   PAGE LAYOUT
+   ============================================================ */
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--sp-7) var(--sp-5) var(--sp-9);
+}
+.page-hero {
+  margin-bottom: var(--sp-7);
+}
+.page-hero .eyebrow {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: var(--fs-small);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  color: var(--saddle-400);
+  background: var(--parchment-200);
+  border: 2px solid var(--saddle-300);
+  padding: 2px var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.page-hero h1 {
+  font-size: var(--fs-display);
+  margin-bottom: var(--sp-3);
+}
+.page-hero p {
+  font-size: var(--fs-body-lg);
+  color: var(--saddle-400);
+  max-width: 60ch;
+}
+
+.section {
+  margin: var(--sp-8) 0;
+}
+.section-head {
+  display: flex; align-items: end; justify-content: space-between;
+  gap: var(--sp-5);
+  margin-bottom: var(--sp-5);
+  padding-bottom: var(--sp-3);
+  border-bottom: 4px solid var(--ink-900);
+}
+.section-head h2 {
+  font-size: var(--fs-h2);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-display);
+}
+.section-head .section-num {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  color: var(--saddle-300);
+}
+
+.grid { display: grid; gap: var(--sp-5); }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 900px) {
+  .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+.stack    { display: flex; flex-direction: column; gap: var(--sp-3); }
+.stack-lg { display: flex; flex-direction: column; gap: var(--sp-5); }
+.row      { display: flex; align-items: center; gap: var(--sp-3); }
+.row-lg   { display: flex; align-items: center; gap: var(--sp-5); }
+.center   { display: flex; align-items: center; justify-content: center; }
+.between  { display: flex; align-items: center; justify-content: space-between; }
+.wrap     { flex-wrap: wrap; }
+.text-mute  { color: var(--saddle-400); }
+.text-money { color: var(--gold-500); text-shadow: 2px 2px 0 var(--gold-100); }
+.uppercase { text-transform: uppercase; letter-spacing: var(--ls-loose); }

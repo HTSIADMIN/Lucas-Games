@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Screens — Lucas Games</title>
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="components.css" />
+<link rel="stylesheet" href="games.css" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  /* Screen frame — looks like a window into the app */
+  .screen {
+    background: var(--parchment-50);
+    border: 6px solid var(--ink-900);
+    box-shadow: var(--sh-table);
+    overflow: hidden;
+    margin-bottom: var(--sp-7);
+  }
+  .screen-chrome {
+    background: var(--saddle-500);
+    color: var(--parchment-50);
+    padding: var(--sp-3) var(--sp-4);
+    display: flex; align-items: center; gap: var(--sp-3);
+    border-bottom: 4px solid var(--ink-900);
+    font-family: var(--font-display);
+    letter-spacing: var(--ls-loose);
+    text-transform: uppercase;
+  }
+  .screen-chrome .dot { width: 12px; height: 12px; background: var(--gold-300); border: 2px solid var(--ink-900); }
+  .screen-body { padding: var(--sp-5); position: relative; }
+
+  /* Game tile art (placeholder pixel imagery) */
+  .art-poker { background:
+    repeating-linear-gradient(45deg, #6ba84f 0 4px, #3d6b2e 4px 8px); }
+  .art-blackjack { background: var(--cactus-500); }
+  .art-coinflip { background: var(--saddle-300); }
+  .art-craps { background: var(--crimson-500); }
+  .art-roulette { background: var(--ink-900); }
+  .art-slots { background: var(--gold-500); }
+  .art-plinko { background: var(--sky-500); }
+  .art-mines { background: var(--saddle-500); }
+  .art-crash { background: var(--saddle-600); }
+
+  .tile-glyph {
+    font-family: var(--font-display);
+    font-size: 56px;
+    color: var(--parchment-50);
+    text-shadow: 3px 3px 0 var(--ink-900);
+    line-height: 1;
+  }
+
+  /* In-game (poker) layout */
+  .table-felt {
+    background: var(--cactus-500);
+    background-image:
+      repeating-linear-gradient(45deg,
+        rgba(0,0,0,0.06) 0, rgba(0,0,0,0.06) 2px,
+        transparent 2px, transparent 6px);
+    border: 6px solid var(--ink-900);
+    border-radius: 24px;
+    padding: var(--sp-7) var(--sp-5);
+    box-shadow: var(--sh-table);
+    position: relative;
+    color: var(--parchment-50);
+  }
+  .seat {
+    background: var(--saddle-500);
+    border: 3px solid var(--ink-900);
+    padding: var(--sp-2) var(--sp-3);
+    color: var(--parchment-50);
+    display: flex; align-items: center; gap: var(--sp-2);
+    font-family: var(--font-display);
+    box-shadow: var(--sh-card-rest);
+  }
+  .seat.you { background: var(--gold-300); color: var(--ink-900); }
+  .seat .seat-name { font-size: var(--fs-body); line-height:1; }
+  .seat .seat-stack { font-size: var(--fs-small); color: var(--gold-300); }
+  .seat.you .seat-stack { color: var(--saddle-500); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" data-presets="env,react">
+
+const GAMES = [
+  { id:"poker",     name:"Hold'em Poker", glyph:"♠",  meta:"6 tables open",  hot:true,  art:"art-poker" },
+  { id:"blackjack", name:"Blackjack",     glyph:"21", meta:"3:2 payouts",    art:"art-blackjack" },
+  { id:"coinflip",  name:"Coinflip",      glyph:"$",  meta:"Heads or tails", isNew:true, art:"art-coinflip" },
+  { id:"craps",     name:"Craps",         glyph:"⚂",  meta:"Roll to win",    art:"art-craps" },
+  { id:"roulette",  name:"Roulette",      glyph:"36", meta:"American",       art:"art-roulette" },
+  { id:"slots",     name:"Slots",         glyph:"7",  meta:"Lucky 7s",       hot:true, art:"art-slots" },
+  { id:"plinko",    name:"Plinko",        glyph:"●",  meta:"3x max bucket",  art:"art-plinko" },
+  { id:"mines",     name:"Mines",         glyph:"✸",  meta:"5×5 grid",       isNew:true, art:"art-mines" },
+  { id:"crash",     name:"Crash",         glyph:"▲",  meta:"Live multiplier", art:"art-crash" },
+];
+
+function GameTile({ game }) {
+  return (
+    <div className="tile">
+      {game.hot   && <span className="tile-corner badge badge-crimson">★ HOT</span>}
+      {game.isNew && <span className="tile-corner tag-new">NEW</span>}
+      <div className={"tile-art " + game.art}>
+        <span className="tile-glyph">{game.glyph}</span>
+      </div>
+      <div className="tile-name">{game.name}</div>
+      <div className="tile-meta">
+        <span>{game.meta}</span>
+        <span style={{color:"var(--gold-500)"}}>PLAY →</span>
+      </div>
+    </div>
+  );
+}
+
+function HomeScreen() {
+  return (
+    <div className="screen" data-screen-label="01 Home Lobby">
+      <div className="screen-chrome">
+        <div className="dot"></div><div className="dot" style={{background:"var(--crimson-300)"}}></div><div className="dot" style={{background:"var(--cactus-300)"}}></div>
+        <span style={{marginLeft:"var(--sp-3)"}}>lucasgames.app · lobby</span>
+      </div>
+      <div className="screen-body" style={{background:"var(--parchment-50)"}}>
+        {/* Top bar */}
+        <div className="row" style={{justifyContent:"space-between", marginBottom:"var(--sp-5)", flexWrap:"wrap", gap:"var(--sp-3)"}}>
+          <div className="row" style={{gap:"var(--sp-3)"}}>
+            <img src="assets/logo-mark.svg" style={{width:48, height:48, imageRendering:"pixelated"}} alt=""/>
+            <div>
+              <div style={{fontFamily:"var(--font-display)", fontSize:"var(--fs-h3)", color:"var(--ink-900)", lineHeight:1, textTransform:"uppercase", letterSpacing:"var(--ls-loose)"}}>Lucas Games</div>
+              <div style={{fontFamily:"var(--font-display)", fontSize:"var(--fs-tiny)", color:"var(--saddle-400)", letterSpacing:"var(--ls-loose)"}}>★ PIXEL SALOON ★</div>
+            </div>
+          </div>
+          <div className="balance-bar">
+            <div className="avatar"><span style={{fontFamily:"var(--font-display)", fontSize:24}}>DH</span></div>
+            <div className="avatar-username">
+              <span className="uname">DocHolliday</span>
+              <span className="role">★ SHERIFF</span>
+            </div>
+            <div className="balance">$ 12,480</div>
+          </div>
+        </div>
+
+        {/* Hero callout */}
+        <div className="panel panel-wood" style={{marginBottom:"var(--sp-5)", display:"flex", alignItems:"center", justifyContent:"space-between", gap:"var(--sp-5)", flexWrap:"wrap"}}>
+          <div>
+            <div className="badge badge-gold" style={{marginBottom:"var(--sp-2)"}}>WEEKLY JACKPOT</div>
+            <div style={{fontFamily:"var(--font-display)", fontSize:"56px", color:"var(--gold-300)", textShadow:"3px 3px 0 var(--saddle-600)", lineHeight:1}}>$48,200</div>
+            <div style={{color:"var(--parchment-200)", marginTop:"var(--sp-2)"}}>Pot grows till somebody draws a royal flush.</div>
+          </div>
+          <button className="btn btn-lg">Take A Seat</button>
+        </div>
+
+        {/* Tabs */}
+        <div className="row" style={{justifyContent:"space-between", marginBottom:"var(--sp-4)"}}>
+          <div className="tabs">
+            <button className="tab" aria-selected="true">All</button>
+            <button className="tab">Cards</button>
+            <button className="tab">Dice</button>
+            <button className="tab">Live</button>
+          </div>
+          <span className="badge">{GAMES.length} games</span>
+        </div>
+
+        {/* Tile grid */}
+        <div className="grid grid-3">
+          {GAMES.map(g => <GameTile key={g.id} game={g} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PokerTableScreen() {
+  return (
+    <div className="screen" data-screen-label="02 Poker Table">
+      <div className="screen-chrome">
+        <div className="dot"></div><div className="dot" style={{background:"var(--crimson-300)"}}></div><div className="dot" style={{background:"var(--cactus-300)"}}></div>
+        <span style={{marginLeft:"var(--sp-3)"}}>lucasgames.app · hold'em · table 4</span>
+      </div>
+      <div className="screen-body" style={{background:"var(--saddle-50)"}}>
+        <div className="table-felt">
+          {/* Top — opponents */}
+          <div className="row" style={{justifyContent:"space-around", marginBottom:"var(--sp-5)", flexWrap:"wrap", gap:"var(--sp-3)"}}>
+            <div className="seat">
+              <div className="avatar avatar-sm" style={{background:"var(--crimson-300)"}}><span style={{fontFamily:"var(--font-display)", fontSize:14}}>BS</span></div>
+              <div><div className="seat-name">BillyTheStud</div><div className="seat-stack">$ 4,200</div></div>
+            </div>
+            <div className="seat">
+              <div className="avatar avatar-sm" style={{background:"var(--sky-300)"}}><span style={{fontFamily:"var(--font-display)", fontSize:14}}>JS</span></div>
+              <div><div className="seat-name">JesseSnake</div><div className="seat-stack">$ 8,140</div></div>
+            </div>
+            <div className="seat">
+              <div className="avatar avatar-sm" style={{background:"var(--cactus-300)"}}><span style={{fontFamily:"var(--font-display)", fontSize:14}}>WT</span></div>
+              <div><div className="seat-name">WyattTwirl</div><div className="seat-stack">$ 2,860</div></div>
+            </div>
+          </div>
+
+          {/* Center — community cards + pot */}
+          <div className="stack-lg" style={{alignItems:"center"}}>
+            <Stat label="POT" value="$ 2,450" color="money" glow />
+            <div className="row" style={{gap:"var(--sp-2)"}}>
+              <PlayingCard rank="A" suit="hearts"   size="md" />
+              <PlayingCard rank="K" suit="hearts"   size="md" />
+              <PlayingCard rank="10" suit="hearts"  size="md" />
+              <PlayingCard faceDown size="md" />
+              <PlayingCard faceDown size="md" />
+            </div>
+            <div className="row" style={{gap:"var(--sp-3)"}}>
+              <Chip color="red" size={36} stack={2} />
+              <Chip color="blue" size={36} stack={4} />
+              <Chip color="black" size={36} stack={1} />
+              <Chip color="gold" size={36} stack={2} />
+            </div>
+          </div>
+
+          {/* Player row */}
+          <div className="row" style={{justifyContent:"space-between", alignItems:"end", marginTop:"var(--sp-7)", flexWrap:"wrap", gap:"var(--sp-4)"}}>
+            <div className="seat you">
+              <div className="avatar avatar-sm" style={{background:"var(--saddle-500)", color:"var(--gold-300)"}}><span style={{fontFamily:"var(--font-display)", fontSize:14}}>DH</span></div>
+              <div><div className="seat-name">DocHolliday (you)</div><div className="seat-stack">$ 12,480</div></div>
+            </div>
+            <div className="row" style={{gap:"var(--sp-3)"}}>
+              <PlayingCard rank="Q" suit="hearts" size="md" hoverable />
+              <PlayingCard rank="J" suit="hearts" size="md" hoverable />
+            </div>
+            <div className="row" style={{gap:"var(--sp-2)"}}>
+              <button className="btn btn-danger">Fold</button>
+              <button className="btn btn-wood">Check</button>
+              <button className="btn">Raise $250</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CrashScreen() {
+  return (
+    <div className="screen" data-screen-label="03 Crash">
+      <div className="screen-chrome">
+        <div className="dot"></div><div className="dot" style={{background:"var(--crimson-300)"}}></div><div className="dot" style={{background:"var(--cactus-300)"}}></div>
+        <span style={{marginLeft:"var(--sp-3)"}}>lucasgames.app · crash</span>
+      </div>
+      <div className="screen-body" style={{background:"var(--saddle-500)"}}>
+        <div className="grid" style={{gridTemplateColumns:"2fr 1fr", gap:"var(--sp-5)"}}>
+          <div>
+            <div className="row" style={{justifyContent:"space-between", marginBottom:"var(--sp-3)"}}>
+              <span className="badge badge-crimson">LIVE · ROUND #3,841</span>
+              <span className="badge">14 players</span>
+            </div>
+            <div className="panel panel-dark" style={{padding:"var(--sp-7)", textAlign:"center"}}>
+              <div style={{fontFamily:"var(--font-display)", fontSize:"120px", color:"var(--neon-gold)", textShadow:"6px 6px 0 var(--ink-900), 0 0 32px rgba(255,216,77,0.5)", lineHeight:1, letterSpacing:"0.02em"}}>
+                2.34×
+              </div>
+              <div style={{fontFamily:"var(--font-display)", fontSize:"var(--fs-h4)", color:"var(--cactus-300)", marginTop:"var(--sp-3)", letterSpacing:"var(--ls-loose)"}}>↑ ↑ ↑ RISING</div>
+            </div>
+            <div className="row" style={{gap:"var(--sp-3)", marginTop:"var(--sp-4)"}}>
+              <button className="btn btn-lg btn-block btn-success" style={{flex:1}}>CASH OUT — $ 234</button>
+            </div>
+          </div>
+          <div className="stack">
+            <div className="panel">
+              <div className="panel-title">Your Bet</div>
+              <div className="stack">
+                <BetStepperLite />
+                <button className="btn btn-block">Place $100</button>
+              </div>
+            </div>
+            <div className="panel">
+              <div className="panel-title">Last 8 Rounds</div>
+              <div className="row" style={{flexWrap:"wrap", gap:"var(--sp-2)"}}>
+                <span className="badge badge-cactus">3.4×</span>
+                <span className="badge badge-crimson">1.1×</span>
+                <span className="badge badge-cactus">5.8×</span>
+                <span className="badge badge-cactus">2.0×</span>
+                <span className="badge badge-crimson">1.0×</span>
+                <span className="badge badge-gold">12.7×</span>
+                <span className="badge badge-cactus">2.6×</span>
+                <span className="badge badge-crimson">1.3×</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BetStepperLite() {
+  const [val, setVal] = React.useState(100);
+  return (
+    <div className="stepper">
+      <button className="stepper-btn" onClick={() => setVal(Math.max(1, val - 25))}>−</button>
+      <div className="stepper-amount">
+        <span className="currency">Bet</span>
+        <span className="value">${val}</span>
+      </div>
+      <button className="stepper-btn" onClick={() => setVal(val + 25)}>+</button>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <div data-screen-label="Screens">
+      <LG_Header current="screens.html" />
+      <main className="page">
+        <PageHero
+          eyebrow="04 — In Context"
+          title="Screens"
+          lede="The full saloon. Every component, every game piece, assembled into the actual screens players will see."
+        />
+
+        <Section num="A" title="Home — Lobby">
+          <HomeScreen />
+        </Section>
+
+        <Section num="B" title="In-Game — Poker Table">
+          <PokerTableScreen />
+        </Section>
+
+        <Section num="C" title="In-Game — Crash">
+          <CrashScreen />
+        </Section>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
