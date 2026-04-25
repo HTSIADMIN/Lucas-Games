@@ -1,0 +1,325 @@
+// Supabase adapter — same async signatures as mock.ts.
+// Used when NEXT_PUBLIC_SUPABASE_URL is set.
+// Always uses the service-role key (server-only). Never imported by client code.
+
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import {
+  EarnCooldown,
+  GameSession,
+  MinesGame,
+  PinAttempts,
+  PlinkoDrop,
+  User,
+  UserPublic,
+  UserSession,
+  WalletTransaction,
+} from "./types";
+
+let _client: SupabaseClient | null = null;
+function client(): SupabaseClient {
+  if (_client) return _client;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Supabase env not configured (NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY required).");
+  }
+  _client = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  return _client;
+}
+
+function unwrap<T>(res: { data: T | null; error: { message: string } | null }, ctx: string): T {
+  if (res.error) throw new Error(`${ctx}: ${res.error.message}`);
+  if (res.data === null) throw new Error(`${ctx}: null data`);
+  return res.data;
+}
+
+// ============ USERS ============
+export async function listUsersPublic(): Promise<UserPublic[]> {
+  const { data, error } = await client()
+    .from("users_public")
+    .select("id, username, avatar_color, initials, last_seen_at")
+    .order("last_seen_at", { ascending: false, nullsFirst: false });
+  if (error) throw new Error(`listUsersPublic: ${error.message}`);
+  return (data ?? []) as UserPublic[];
+}
+
+export async function getUserById(id: string): Promise<User | null> {
+  const { data, error } = await client().from("users").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`getUserById: ${error.message}`);
+  return (data as User | null) ?? null;
+}
+
+export async function getUserByUsername(username: string): Promise<User | null> {
+  const { data, error } = await client()
+    .from("users")
+    .select("*")
+    .ilike("username", username)
+    .maybeSingle();
+  if (error) throw new Error(`getUserByUsername: ${error.message}`);
+  return (data as User | null) ?? null;
+}
+
+export async function insertUser(input: Omit<User, "created_at" | "last_seen_at" | "is_active">): Promise<User> {
+  const { data, error } = await client().from("users").insert({
+    id: input.id,
+    username: input.username,
+    avatar_color: input.avatar_color,
+    initials: input.initials,
+    pin_hash: input.pin_hash,
+  }).select("*").single();
+  if (error) throw new Error(`insertUser: ${error.message}`);
+  return data as User;
+}
+
+export async function touchUserLastSeen(id: string): Promise<void> {
+  const { error } = await client().from("users").update({ last_seen_at: new Date().toISOString() }).eq("id", id);
+  if (error) throw new Error(`touchUserLastSeen: ${error.message}`);
+}
+
+// ============ SESSIONS ============
+export async function insertSession(s: UserSession): Promise<void> {
+  const { error } = await client().from("user_sessions").insert(s);
+  if (error) throw new Error(`insertSession: ${error.message}`);
+}
+export async function getSession(jti: string): Promise<UserSession | null> {
+  const { data, error } = await client().from("user_sessions").select("*").eq("jti", jti).maybeSingle();
+  if (error) throw new Error(`getSession: ${error.message}`);
+  return (data as UserSession | null) ?? null;
+}
+export async function revokeSession(jti: string): Promise<void> {
+  const { error } = await client().from("user_sessions").update({ revoked: true }).eq("jti", jti);
+  if (error) throw new Error(`revokeSession: ${error.message}`);
+}
+
+// ============ PIN ATTEMPTS ============
+export async function getPinAttempts(userId: string): Promise<PinAttempts | null> {
+  const { data, error } = await client().from("pin_attempts").select("*").eq("user_id", userId).maybeSingle();
+  if (error) throw new Error(`getPinAttempts: ${error.message}`);
+  return (data as PinAttempts | null) ?? null;
+}
+export async function bumpPinAttempts(userId: string): Promise<PinAttempts> {
+  const FIFTEEN_MIN = 15 * 60 * 1000;
+  const now = new Date();
+  const existing = await getPinAttempts(userId);
+  let row: PinAttempts;
+  if (!existing) {
+    row = { user_id: userId, count: 1, window_started_at: now.toISOString() };
+    const { error } = await client().from("pin_attempts").insert(row);
+    if (error) throw new Error(`bumpPinAttempts insert: ${error.message}`);
+  } else if (now.getTime() - new Date(existing.window_started_at).getTime() > FIFTEEN_MIN) {
+    row = { user_id: userId, count: 1, window_started_at: now.toISOString() };
+    const { error } = await client().from("pin_attempts").update(row).eq("user_id", userId);
+    if (error) throw new Error(`bumpPinAttempts reset: ${error.message}`);
+  } else {
+    row = { ...existing, count: existing.count + 1 };
+    const { error } = await client().from("pin_attempts").update({ count: row.count }).eq("user_id", userId);
+    if (error) throw new Error(`bumpPinAttempts inc: ${error.message}`);
+  }
+  return row;
+}
+export async function resetPinAttempts(userId: string): Promise<void> {
+  const { error } = await client().from("pin_attempts").delete().eq("user_id", userId);
+  if (error) throw new Error(`resetPinAttempts: ${error.message}`);
+}
+
+// ============ WALLET ============
+export async function insertWalletTransaction(
+  input: Omit<WalletTransaction, "id" | "created_at">
+): Promise<WalletTransaction> {
+  if (input.ref_kind && input.ref_id) {
+    const { data: existing, error: lookupErr } = await client()
+      .from("wallet_transactions")
+      .select("*")
+      .eq("ref_kind", input.ref_kind)
+      .eq("ref_id", input.ref_id)
+      .maybeSingle();
+    if (lookupErr) throw new Error(`insertWalletTransaction lookup: ${lookupErr.message}`);
+    if (existing) return existing as WalletTransaction;
+  }
+  const { data, error } = await client()
+    .from("wallet_transactions")
+    .insert({
+      user_id: input.user_id,
+      delta: input.delta,
+      reason: input.reason,
+      ref_kind: input.ref_kind,
+      ref_id: input.ref_id,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(`insertWalletTransaction: ${error.message}`);
+  return data as WalletTransaction;
+}
+
+export async function walletBalance(userId: string): Promise<number> {
+  const { data, error } = await client()
+    .from("wallet_balances")
+    .select("balance")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(`walletBalance: ${error.message}`);
+  return Number((data as { balance?: number | string } | null)?.balance ?? 0);
+}
+
+export async function recentTransactions(userId: string, limit = 20): Promise<WalletTransaction[]> {
+  const { data, error } = await client()
+    .from("wallet_transactions")
+    .select("*")
+    .eq("user_id", userId)
+    .order("id", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`recentTransactions: ${error.message}`);
+  return (data ?? []) as WalletTransaction[];
+}
+
+// ============ GAME SESSIONS ============
+export async function insertGameSession(
+  input: Omit<GameSession, "created_at" | "settled_at">
+): Promise<GameSession> {
+  const { data, error } = await client().from("game_sessions").insert({
+    id: input.id,
+    user_id: input.user_id,
+    game: input.game,
+    bet: input.bet,
+    payout: input.payout,
+    state: input.state,
+    status: input.status,
+  }).select("*").single();
+  if (error) throw new Error(`insertGameSession: ${error.message}`);
+  return data as GameSession;
+}
+export async function settleGameSession(
+  id: string, payout: number, state?: Record<string, unknown>
+): Promise<GameSession | null> {
+  const update: Record<string, unknown> = {
+    status: "settled",
+    payout,
+    settled_at: new Date().toISOString(),
+  };
+  if (state) update.state = state;
+  const { data, error } = await client().from("game_sessions").update(update).eq("id", id).select("*").maybeSingle();
+  if (error) throw new Error(`settleGameSession: ${error.message}`);
+  return (data as GameSession | null) ?? null;
+}
+export async function getGameSession(id: string): Promise<GameSession | null> {
+  const { data, error } = await client().from("game_sessions").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`getGameSession: ${error.message}`);
+  return (data as GameSession | null) ?? null;
+}
+export async function updateGameSession(
+  id: string, patch: Partial<GameSession>
+): Promise<GameSession | null> {
+  const { data, error } = await client().from("game_sessions").update(patch).eq("id", id).select("*").maybeSingle();
+  if (error) throw new Error(`updateGameSession: ${error.message}`);
+  return (data as GameSession | null) ?? null;
+}
+
+// ============ EARN COOLDOWNS ============
+export async function getCooldown(userId: string, kind: string): Promise<EarnCooldown | null> {
+  const { data, error } = await client()
+    .from("earn_cooldowns")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("kind", kind)
+    .maybeSingle();
+  if (error) throw new Error(`getCooldown: ${error.message}`);
+  return (data as EarnCooldown | null) ?? null;
+}
+export async function setCooldown(userId: string, kind: string, availableAt: Date): Promise<void> {
+  const { error } = await client()
+    .from("earn_cooldowns")
+    .upsert({ user_id: userId, kind, available_at: availableAt.toISOString() }, { onConflict: "user_id,kind" });
+  if (error) throw new Error(`setCooldown: ${error.message}`);
+}
+
+// ============ LEADERBOARD ============
+export async function leaderboard() {
+  const { data, error } = await client().from("leaderboard").select("*").limit(50);
+  if (error) throw new Error(`leaderboard: ${error.message}`);
+  // The view returns balance as a string from numeric() in some cases; coerce.
+  return (data ?? []).map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    username: r.username as string,
+    avatar_color: r.avatar_color as string,
+    initials: r.initials as string,
+    balance: Number(r.balance ?? 0),
+    rank: Number(r.rank ?? 0),
+  }));
+}
+
+// ============ MINES ============
+export async function insertMinesGame(
+  m: Omit<MinesGame, "created_at" | "ended_at">
+): Promise<MinesGame> {
+  const { data, error } = await client().from("mines_games").insert(m).select("*").single();
+  if (error) throw new Error(`insertMinesGame: ${error.message}`);
+  return data as MinesGame;
+}
+export async function getMinesGame(id: string): Promise<MinesGame | null> {
+  const { data, error } = await client().from("mines_games").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`getMinesGame: ${error.message}`);
+  return (data as MinesGame | null) ?? null;
+}
+export async function updateMinesGame(
+  id: string, patch: Partial<MinesGame>
+): Promise<MinesGame | null> {
+  const { data, error } = await client().from("mines_games").update(patch).eq("id", id).select("*").maybeSingle();
+  if (error) throw new Error(`updateMinesGame: ${error.message}`);
+  return (data as MinesGame | null) ?? null;
+}
+
+// ============ PLINKO ============
+export async function insertPlinkoDrop(
+  d: Omit<PlinkoDrop, "created_at">
+): Promise<PlinkoDrop> {
+  const { data, error } = await client().from("plinko_drops").insert(d).select("*").single();
+  if (error) throw new Error(`insertPlinkoDrop: ${error.message}`);
+  return data as PlinkoDrop;
+}
+
+// ============ SHOP / INVENTORY ============
+export async function listInventory(userId: string): Promise<string[]> {
+  const { data, error } = await client().from("player_inventory").select("item_id").eq("user_id", userId);
+  if (error) throw new Error(`listInventory: ${error.message}`);
+  return ((data ?? []) as { item_id: string }[]).map((r) => r.item_id);
+}
+export async function ownsItem(userId: string, itemId: string): Promise<boolean> {
+  const { count, error } = await client()
+    .from("player_inventory")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("item_id", itemId);
+  if (error) throw new Error(`ownsItem: ${error.message}`);
+  return (count ?? 0) > 0;
+}
+export async function grantItem(userId: string, itemId: string): Promise<boolean> {
+  const { error } = await client()
+    .from("player_inventory")
+    .insert({ user_id: userId, item_id: itemId })
+    .select();
+  if (error) {
+    // 23505 = unique violation = already owned. Return false rather than throw.
+    if (error.message.includes("duplicate") || (error as { code?: string }).code === "23505") return false;
+    throw new Error(`grantItem: ${error.message}`);
+  }
+  return true;
+}
+export async function setEquipped(
+  userId: string,
+  patch: Partial<Pick<User, "avatar_color" | "equipped_frame" | "equipped_card_deck" | "equipped_theme">>
+): Promise<User | null> {
+  const update: Record<string, unknown> = {};
+  if (patch.avatar_color !== undefined) update.avatar_color = patch.avatar_color;
+  if (patch.equipped_frame !== undefined) update.equipped_frame = patch.equipped_frame;
+  if (patch.equipped_card_deck !== undefined) update.equipped_card_deck = patch.equipped_card_deck;
+  if (patch.equipped_theme !== undefined) update.equipped_theme = patch.equipped_theme;
+  if (Object.keys(update).length === 0) return await getUserById(userId);
+  const { data, error } = await client().from("users").update(update).eq("id", userId).select("*").maybeSingle();
+  if (error) throw new Error(`setEquipped: ${error.message}`);
+  return (data as User | null) ?? null;
+}
+
+// Note: cosmetic_items table is unused by the app — catalog lives in src/lib/shop/catalog.ts.
+// If you ever want to move catalog into Postgres, seed the table from CATALOG and read here.

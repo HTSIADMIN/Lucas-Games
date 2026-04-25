@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
   const sessionId = randomUUID();
   try {
-    debit({
+    await debit({
       userId: s.user.id,
       amount: v.bet,
       reason: "crash_bet",
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   const crashAtX = pickCrashPoint();
   const startedAt = Date.now();
 
-  insertGameSession({
+  await insertGameSession({
     id: sessionId,
     user_id: s.user.id,
     game: "crash",
@@ -51,6 +51,6 @@ export async function POST(req: Request) {
     sessionId,
     startedAt,
     bet: v.bet,
-    balance: getBalance(s.user.id),
+    balance: await getBalance(s.user.id),
   });
 }

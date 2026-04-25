@@ -11,7 +11,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ sessionId: st
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { sessionId } = await ctx.params;
-  const session = getGameSession(sessionId);
+  const session = await getGameSession(sessionId);
   if (!session) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (session.user_id !== s.user.id) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (session.game !== "crash") return NextResponse.json({ error: "wrong_game" }, { status: 400 });
@@ -23,7 +23,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ sessionId: st
 
   // If we've already passed the crash point on the server clock, the ride is over — no payout.
   if (liveX >= state.crash_at_x) {
-    settleGameSession(sessionId, 0, {
+    await settleGameSession(sessionId, 0, {
       ...state,
       busted: true,
       bust_at_x: state.crash_at_x,
@@ -34,21 +34,21 @@ export async function POST(_req: Request, ctx: { params: Promise<{ sessionId: st
       busted: true,
       crashAtX: state.crash_at_x,
       payout: 0,
-      balance: getBalance(s.user.id),
+      balance: await getBalance(s.user.id),
     });
   }
 
   // Settle at server-side multiplier.
   const cashoutX = Math.floor(liveX * 100) / 100;
   const payout = Math.floor(session.bet * cashoutX);
-  credit({
+  await credit({
     userId: s.user.id,
     amount: payout,
     reason: "crash_cashout",
     refKind: "crash",
     refId: `${sessionId}:cashout`,
   });
-  settleGameSession(sessionId, payout, { ...state, cashout_at_x: cashoutX });
+  await settleGameSession(sessionId, payout, { ...state, cashout_at_x: cashoutX });
 
   return NextResponse.json({
     ok: true,
@@ -56,6 +56,6 @@ export async function POST(_req: Request, ctx: { params: Promise<{ sessionId: st
     cashoutX,
     crashAtX: state.crash_at_x,
     payout,
-    balance: getBalance(s.user.id),
+    balance: await getBalance(s.user.id),
   });
 }

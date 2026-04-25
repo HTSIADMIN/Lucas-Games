@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
   try {
     const sessionId = randomUUID();
-    debit({
+    await debit({
       userId: s.user.id,
       amount: bet,
       reason: "blackjack_bet",
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     });
 
     const state = startHand(bet);
-    insertGameSession({
+    await insertGameSession({
       id: sessionId,
       user_id: s.user.id,
       game: "blackjack",
@@ -40,12 +40,12 @@ export async function POST(req: Request) {
       status: "open",
     });
 
-    let balance = getBalance(s.user.id);
+    let balance = await getBalance(s.user.id);
     let payout = 0;
     if (isTerminal(state.status)) {
       payout = payoutFor(state);
       if (payout > 0) {
-        credit({
+        await credit({
           userId: s.user.id,
           amount: payout,
           reason: "blackjack_settle",
@@ -53,8 +53,8 @@ export async function POST(req: Request) {
           refId: `${sessionId}:settle`,
         });
       }
-      settleGameSession(sessionId, payout, serialize(state));
-      balance = getBalance(s.user.id);
+      await settleGameSession(sessionId, payout, serialize(state));
+      balance = await getBalance(s.user.id);
     }
 
     return NextResponse.json({

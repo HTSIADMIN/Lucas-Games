@@ -10,7 +10,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ gameId: strin
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { gameId } = await ctx.params;
-  const game = getMinesGame(gameId);
+  const game = await getMinesGame(gameId);
   if (!game) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (game.user_id !== s.user.id) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (game.status !== "active") return NextResponse.json({ error: "not_active" }, { status: 400 });
@@ -21,14 +21,14 @@ export async function POST(_req: Request, ctx: { params: Promise<{ gameId: strin
   }
 
   const payout = Math.floor(game.bet * game.current_multiplier);
-  credit({
+  await credit({
     userId: s.user.id,
     amount: payout,
     reason: "mines_cashout",
     refKind: "mines",
     refId: `${gameId}:cashout`,
   });
-  updateMinesGame(gameId, {
+  await updateMinesGame(gameId, {
     status: "cashed",
     payout,
     ended_at: new Date().toISOString(),
@@ -41,6 +41,6 @@ export async function POST(_req: Request, ctx: { params: Promise<{ gameId: strin
     multiplier: game.current_multiplier,
     layout: game.layout,
     revealed: game.revealed,
-    balance: getBalance(s.user.id),
+    balance: await getBalance(s.user.id),
   });
 }

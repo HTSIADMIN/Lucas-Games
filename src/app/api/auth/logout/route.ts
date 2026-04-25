@@ -10,7 +10,7 @@ export async function POST() {
   const token = jar.get(SESSION_COOKIE)?.value;
   if (token) {
     const payload = await verifySession(token);
-    if (payload) revokeSession(payload.jti);
+    if (payload) await revokeSession(payload.jti);
   }
   jar.delete(SESSION_COOKIE);
   return NextResponse.json({ ok: true });

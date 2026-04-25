@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export async function GET() {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const cd = getCooldown(s.user.id, "daily_spin");
+  const cd = await getCooldown(s.user.id, "daily_spin");
   const availableAt = cd ? new Date(cd.available_at).toISOString() : null;
   const now = Date.now();
   const ready = !cd || new Date(cd.available_at).getTime() <= now;
@@ -21,7 +21,7 @@ export async function POST() {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const cd = getCooldown(s.user.id, "daily_spin");
+  const cd = await getCooldown(s.user.id, "daily_spin");
   if (cd && new Date(cd.available_at).getTime() > Date.now()) {
     return NextResponse.json(
       { error: "cooldown", availableAt: cd.available_at },
@@ -31,7 +31,7 @@ export async function POST() {
 
   const result = spinWheel();
   const claimId = randomUUID();
-  credit({
+  await credit({
     userId: s.user.id,
     amount: result.amount,
     reason: "daily_spin",
@@ -40,7 +40,7 @@ export async function POST() {
   });
 
   const next = new Date(Date.now() + COOLDOWN_HOURS * 60 * 60 * 1000);
-  setCooldown(s.user.id, "daily_spin", next);
+  await setCooldown(s.user.id, "daily_spin", next);
 
   return NextResponse.json({
     ok: true,
@@ -48,6 +48,6 @@ export async function POST() {
     amount: result.amount,
     label: result.label,
     availableAt: next.toISOString(),
-    balance: getBalance(s.user.id),
+    balance: await getBalance(s.user.id),
   });
 }

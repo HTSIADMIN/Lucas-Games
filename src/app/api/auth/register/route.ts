@@ -47,7 +47,7 @@ export async function POST(req: Request) {
   if (!/^\d{4}$/.test(pin)) {
     return NextResponse.json({ error: "pin_format" }, { status: 400 });
   }
-  if (getUserByUsername(username)) {
+  if (await getUserByUsername(username)) {
     return NextResponse.json({ error: "username_taken" }, { status: 409 });
   }
 
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
       ? body.avatarColor
       : AVATAR_PALETTE[Math.floor(Math.random() * AVATAR_PALETTE.length)];
 
-  insertUser({
+  await insertUser({
     id,
     username,
     avatar_color,
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     pin_hash,
   });
 
-  credit({
+  await credit({
     userId: id,
     amount: SIGNUP_BONUS,
     reason: "signup_bonus",
@@ -76,14 +76,14 @@ export async function POST(req: Request) {
 
   const jti = randomUUID();
   const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
-  insertSession({
+  await insertSession({
     jti,
     user_id: id,
     issued_at: new Date().toISOString(),
     expires_at: expiresAt.toISOString(),
     revoked: false,
   });
-  touchUserLastSeen(id);
+  await touchUserLastSeen(id);
 
   const token = await signSession({ sub: id, username, jti });
   const jar = await cookies();

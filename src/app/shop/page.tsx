@@ -9,9 +9,9 @@ import { ShopClient } from "./ShopClient";
 export default async function ShopPage() {
   const s = await readSession();
   if (!s) redirect("/sign-in");
-  const user = getUserById(s.user.id)!;
-  const owned = listInventory(user.id);
-  const balance = getBalance(user.id);
+  const user = (await getUserById(s.user.id))!;
+  const owned = await listInventory(user.id);
+  const balance = await getBalance(user.id);
 
   return (
     <>

@@ -11,16 +11,10 @@ export async function readSession(): Promise<{
   if (!token) return null;
   const payload = await verifySession(token);
   if (!payload) return null;
-  const sess = getSession(payload.jti);
+  const sess = await getSession(payload.jti);
   if (!sess || sess.revoked) return null;
   if (new Date(sess.expires_at).getTime() < Date.now()) return null;
-  const user = getUserById(payload.sub);
+  const user = await getUserById(payload.sub);
   if (!user || !user.is_active) return null;
   return { payload, user: { id: user.id, username: user.username } };
-}
-
-export async function requireSession() {
-  const s = await readSession();
-  if (!s) throw new Response("unauthorized", { status: 401 });
-  return s;
 }

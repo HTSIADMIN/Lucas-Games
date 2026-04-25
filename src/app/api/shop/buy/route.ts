@@ -16,13 +16,13 @@ export async function POST(req: Request) {
   const item = body.itemId ? findItem(body.itemId) : undefined;
   if (!item) return NextResponse.json({ error: "item_not_found" }, { status: 404 });
 
-  if (ownsItem(s.user.id, item.id)) {
+  if (await ownsItem(s.user.id, item.id)) {
     return NextResponse.json({ error: "already_owned" }, { status: 409 });
   }
 
   if (item.price > 0) {
     try {
-      debit({
+      await debit({
         userId: s.user.id,
         amount: item.price,
         reason: "shop_purchase",
@@ -35,11 +35,11 @@ export async function POST(req: Request) {
     }
   }
 
-  grantItem(s.user.id, item.id);
+  await grantItem(s.user.id, item.id);
 
   return NextResponse.json({
     ok: true,
     itemId: item.id,
-    balance: getBalance(s.user.id),
+    balance: await getBalance(s.user.id),
   });
 }

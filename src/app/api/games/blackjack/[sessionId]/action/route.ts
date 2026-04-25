@@ -31,7 +31,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ sessionId: str
     return NextResponse.json({ error: "action_invalid" }, { status: 400 });
   }
 
-  const session = getGameSession(sessionId);
+  const session = await getGameSession(sessionId);
   if (!session) return NextResponse.json({ error: "session_not_found" }, { status: 404 });
   if (session.user_id !== s.user.id) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (session.game !== "blackjack") return NextResponse.json({ error: "wrong_game" }, { status: 400 });
@@ -43,7 +43,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ sessionId: str
   try {
     if (action === "double") {
       const additional = doubleAdditional(state);
-      debit({
+      await debit({
         userId: s.user.id,
         amount: additional,
         reason: "blackjack_double",
@@ -62,11 +62,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ sessionId: str
   }
 
   let payout: number | null = null;
-  let balance = getBalance(s.user.id);
+  let balance = await getBalance(s.user.id);
   if (isTerminal(state.status)) {
     payout = payoutFor(state);
     if (payout > 0) {
-      credit({
+      await credit({
         userId: s.user.id,
         amount: payout,
         reason: "blackjack_settle",
@@ -74,10 +74,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ sessionId: str
         refId: `${sessionId}:settle`,
       });
     }
-    settleGameSession(sessionId, payout, state as unknown as Record<string, unknown>);
-    balance = getBalance(s.user.id);
+    await settleGameSession(sessionId, payout, state as unknown as Record<string, unknown>);
+    balance = await getBalance(s.user.id);
   } else {
-    updateGameSession(sessionId, { state: state as unknown as Record<string, unknown> });
+    await updateGameSession(sessionId, { state: state as unknown as Record<string, unknown> });
   }
 
   return NextResponse.json({

@@ -25,7 +25,7 @@ export async function POST(req: Request) {
 
   const id = randomUUID();
   try {
-    debit({
+    await debit({
       userId: s.user.id,
       amount: v.bet,
       reason: "mines_bet",
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
   }
 
   const layout = makeLayout(mineCount);
-  insertMinesGame({
+  await insertMinesGame({
     id,
     user_id: s.user.id,
     bet: v.bet,
@@ -61,6 +61,6 @@ export async function POST(req: Request) {
     status: "active",
     bet: v.bet,
     payout: 0,
-    balance: getBalance(s.user.id),
+    balance: await getBalance(s.user.id),
   });
 }

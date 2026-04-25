@@ -9,7 +9,7 @@ export async function GET() {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   return NextResponse.json({
-    balance: getBalance(s.user.id),
-    transactions: recentTransactions(s.user.id, 20),
+    balance: await getBalance(s.user.id),
+    transactions: await recentTransactions(s.user.id, 20),
   });
 }

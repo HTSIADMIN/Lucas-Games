@@ -7,7 +7,7 @@ export default async function LeaderboardPage() {
   const s = await readSession();
   if (!s) redirect("/sign-in");
 
-  const rows = leaderboard().slice(0, 50);
+  const rows = (await leaderboard()).slice(0, 50);
 
   return (
     <>

@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const r = playOneShot({
+    const r = await playOneShot({
       userId: s.user.id,
       game: "dice",
       bet: v.bet,

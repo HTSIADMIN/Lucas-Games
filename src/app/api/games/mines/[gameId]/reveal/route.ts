@@ -19,7 +19,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ gameId: string
     return NextResponse.json({ error: "cell_invalid" }, { status: 400 });
   }
 
-  const game = getMinesGame(gameId);
+  const game = await getMinesGame(gameId);
   if (!game) return NextResponse.json({ error: "not_found" }, { status: 404 });
   if (game.user_id !== s.user.id) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (game.status !== "active") return NextResponse.json({ error: "not_active" }, { status: 400 });
@@ -30,7 +30,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ gameId: string
     game.revealed.slice(0, cell) + (isMine ? "x" : "r") + game.revealed.slice(cell + 1);
 
   if (isMine) {
-    updateMinesGame(gameId, {
+    await updateMinesGame(gameId, {
       revealed: newRevealed,
       status: "busted",
       payout: 0,
@@ -47,7 +47,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ gameId: string
       nextMultiplier: 0,
       bet: game.bet,
       payout: 0,
-      balance: getBalance(s.user.id),
+      balance: await getBalance(s.user.id),
     });
   }
 

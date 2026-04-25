@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   const id = randomUUID();
   try {
-    debit({
+    await debit({
       userId: s.user.id,
       amount: v.bet,
       reason: "plinko_bet",
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   const r = drop(rows, risk, v.bet);
   const seed = randomBytes(8).toString("hex");
 
-  insertPlinkoDrop({
+  await insertPlinkoDrop({
     id,
     user_id: s.user.id,
     bet: v.bet,
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (r.payout > 0) {
-    credit({
+    await credit({
       userId: s.user.id,
       amount: r.payout,
       reason: "plinko_win",
@@ -77,6 +77,6 @@ export async function POST(req: NextRequest) {
     table: r.table,
     rows,
     risk,
-    balance: getBalance(s.user.id),
+    balance: await getBalance(s.user.id),
   });
 }

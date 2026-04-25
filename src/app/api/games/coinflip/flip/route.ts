@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   const bet = v.bet;
 
   try {
-    const r = playOneShot({
+    const r = await playOneShot({
       userId: s.user.id,
       game: "coinflip",
       bet,

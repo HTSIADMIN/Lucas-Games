@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
   const sessionId = randomUUID();
   try {
-    debit({
+    await debit({
       userId: s.user.id,
       amount: total,
       reason: "roulette_bet",
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
   const result = spin(bets);
 
-  insertGameSession({
+  await insertGameSession({
     id: sessionId,
     user_id: s.user.id,
     game: "roulette",
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
   });
 
   if (result.totalPayout > 0) {
-    credit({
+    await credit({
       userId: s.user.id,
       amount: result.totalPayout,
       reason: "roulette_settle",
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       refId: `${sessionId}:settle`,
     });
   }
-  settleGameSession(sessionId, result.totalPayout, { bets, ...result });
+  await settleGameSession(sessionId, result.totalPayout, { bets, ...result });
 
   return NextResponse.json({
     ok: true,
@@ -70,6 +70,6 @@ export async function POST(req: Request) {
     rows: result.rows,
     totalBet: result.totalBet,
     totalPayout: result.totalPayout,
-    balance: getBalance(s.user.id),
+    balance: await getBalance(s.user.id),
   });
 }

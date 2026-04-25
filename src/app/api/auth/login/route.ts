@@ -30,12 +30,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "bad_input" }, { status: 400 });
   }
 
-  const user = getUserById(userId);
+  const user = await getUserById(userId);
   if (!user || !user.is_active) {
     return NextResponse.json({ error: "unknown_user" }, { status: 401 });
   }
 
-  const attempts = bumpPinAttempts(userId);
+  const attempts = await bumpPinAttempts(userId);
   if (attempts.count > MAX_ATTEMPTS) {
     return NextResponse.json({ error: "too_many_attempts" }, { status: 429 });
   }
@@ -45,18 +45,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "wrong_pin" }, { status: 401 });
   }
 
-  resetPinAttempts(userId);
+  await resetPinAttempts(userId);
 
   const jti = randomUUID();
   const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
-  insertSession({
+  await insertSession({
     jti,
     user_id: user.id,
     issued_at: new Date().toISOString(),
     expires_at: expiresAt.toISOString(),
     revoked: false,
   });
-  touchUserLastSeen(user.id);
+  await touchUserLastSeen(user.id);
 
   const token = await signSession({
     sub: user.id,

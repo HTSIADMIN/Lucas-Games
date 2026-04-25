@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
 
   try {
-    const r = playOneShot({
+    const r = await playOneShot({
       userId: s.user.id,
       game: "slots",
       bet: v.bet,

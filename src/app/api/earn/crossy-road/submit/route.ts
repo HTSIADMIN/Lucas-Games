@@ -47,12 +47,12 @@ export async function POST(req: Request) {
       score: effective,
       payout: 0,
       reason: "below_minimum",
-      balance: getBalance(s.user.id),
+      balance: await getBalance(s.user.id),
     });
   }
 
   REDEEMED.add(payload.jti);
-  credit({
+  await credit({
     userId: s.user.id,
     amount: payout,
     reason: "crossy_road",
@@ -64,6 +64,6 @@ export async function POST(req: Request) {
     ok: true,
     score: effective,
     payout,
-    balance: getBalance(s.user.id),
+    balance: await getBalance(s.user.id),
   });
 }

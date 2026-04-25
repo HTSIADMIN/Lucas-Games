@@ -20,17 +20,16 @@ export function validateBet(bet: unknown): { ok: true; bet: number } | { ok: fal
  *   debit(bet) → run engine → credit(payout if any) → settle session.
  * Returns the new balance and the engine's outcome.
  */
-export function playOneShot<T extends { payout: number }>(input: {
+export async function playOneShot<T extends { payout: number }>(input: {
   userId: string;
   game: string;
   bet: number;
   state: Record<string, unknown>;
   runEngine: () => T;
-}): { sessionId: string; balance: number; outcome: T } {
+}): Promise<{ sessionId: string; balance: number; outcome: T }> {
   const sessionId = randomUUID();
 
-  // Debit first — throws if insufficient_funds.
-  debit({
+  await debit({
     userId: input.userId,
     amount: input.bet,
     reason: `${input.game}_bet`,
@@ -38,7 +37,7 @@ export function playOneShot<T extends { payout: number }>(input: {
     refId: `${sessionId}:bet`,
   });
 
-  insertGameSession({
+  await insertGameSession({
     id: sessionId,
     user_id: input.userId,
     game: input.game,
@@ -51,7 +50,7 @@ export function playOneShot<T extends { payout: number }>(input: {
   const outcome = input.runEngine();
 
   if (outcome.payout > 0) {
-    credit({
+    await credit({
       userId: input.userId,
       amount: outcome.payout,
       reason: `${input.game}_win`,
@@ -60,7 +59,7 @@ export function playOneShot<T extends { payout: number }>(input: {
     });
   }
 
-  settleGameSession(sessionId, outcome.payout, { ...input.state, ...outcome });
+  await settleGameSession(sessionId, outcome.payout, { ...input.state, ...outcome });
 
-  return { sessionId, balance: getBalance(input.userId), outcome };
+  return { sessionId, balance: await getBalance(input.userId), outcome };
 }

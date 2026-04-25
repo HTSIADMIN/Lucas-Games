@@ -19,8 +19,8 @@ export async function GameShell({
 }) {
   const s = await readSession();
   if (!s) redirect("/sign-in");
-  const user = getUserById(s.user.id)!;
-  const balance = getBalance(user.id);
+  const user = (await getUserById(s.user.id))!;
+  const balance = await getBalance(user.id);
 
   return (
     <>

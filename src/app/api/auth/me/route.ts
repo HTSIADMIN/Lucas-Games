@@ -9,6 +9,6 @@ export async function GET() {
   if (!s) return NextResponse.json({ user: null }, { status: 401 });
   return NextResponse.json({
     user: { id: s.user.id, username: s.user.username },
-    balance: getBalance(s.user.id),
+    balance: await getBalance(s.user.id),
   });
 }
