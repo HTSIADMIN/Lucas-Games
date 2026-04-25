@@ -1,26 +1,206 @@
 @import "tailwindcss";
 
+/* ============================================================
+   M6X11 PIXEL FONT
+   ============================================================ */
+@font-face {
+  font-family: "M6X11";
+  src: url("/fonts/m6x11.ttf") format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: block;
+}
+
+/* ============================================================
+   LUCAS GAMES — DESIGN TOKENS
+   Cozy pixel tavern × western × PS1-era pixel art.
+   ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* SADDLE */
+  --saddle-50:  #f1d9b3;
+  --saddle-100: #e8c089;
+  --saddle-200: #d4a574;
+  --saddle-300: #a87545;
+  --saddle-400: #6b3f24;
+  --saddle-500: #4a2818;
+  --saddle-600: #2a1810;
+
+  /* PARCHMENT */
+  --parchment-50:  #fef6e4;
+  --parchment-100: #fbe9c4;
+  --parchment-200: #f4dba0;
+  --parchment-300: #e8c468;
+
+  /* GOLD */
+  --gold-100: #ffe9a8;
+  --gold-300: #f5c842;
+  --gold-500: #c8941d;
+  --gold-700: #7a5510;
+
+  /* CRIMSON */
+  --crimson-100: #ffb8a8;
+  --crimson-300: #e05a3c;
+  --crimson-500: #8b3a3a;
+  --crimson-700: #4a1a1a;
+
+  /* CACTUS */
+  --cactus-100: #b8d99a;
+  --cactus-300: #6ba84f;
+  --cactus-500: #3d6b2e;
+  --cactus-700: #1f3818;
+
+  /* SKY */
+  --sky-100: #c9e4f2;
+  --sky-300: #5fa8d3;
+  --sky-500: #2c6a8e;
+  --sky-700: #143348;
+
+  /* INK */
+  --ink-1000: #1a0f08;
+  --ink-900:  #2a1810;
+  --ink-800:  #3d2418;
+
+  /* NEON accents */
+  --neon-gold:    #ffd84d;
+  --neon-crimson: #ff5544;
+  --neon-cactus:  #8aff5a;
+  --neon-sky:     #5fdcff;
+
+  /* SUITS */
+  --suit-spades:   var(--ink-900);
+  --suit-clubs:    var(--cactus-500);
+  --suit-hearts:   var(--crimson-500);
+  --suit-diamonds: var(--sky-500);
+
+  /* SEMANTIC */
+  --bg:            var(--parchment-50);
+  --bg-deep:       var(--saddle-50);
+  --bg-lift:       var(--parchment-100);
+  --surface:       var(--parchment-100);
+  --surface-edge:  var(--saddle-300);
+  --surface-panel: var(--saddle-200);
+  --fg:            var(--ink-900);
+  --fg-muted:      var(--saddle-400);
+  --fg-dim:        var(--saddle-300);
+  --fg-on-wood:    var(--parchment-50);
+  --fg-on-dark:    var(--parchment-50);
+  --stroke:        var(--ink-900);
+  --stroke-soft:   var(--saddle-400);
+  --success:       var(--cactus-500);
+  --warn:          var(--gold-500);
+  --danger:        var(--crimson-500);
+  --info:          var(--sky-500);
+  --money:         var(--gold-300);
+  --money-shadow:  var(--gold-500);
+
+  /* TYPE */
+  --font-display: "M6X11", "VT323", ui-monospace, monospace;
+  --font-body:    "M6X11", "VT323", ui-monospace, monospace;
+  --font-mono:    "M6X11", "VT323", ui-monospace, monospace;
+
+  --fs-display:  88px;
+  --fs-h1:       56px;
+  --fs-h2:       40px;
+  --fs-h3:       32px;
+  --fs-h4:       24px;
+  --fs-body-lg:  24px;
+  --fs-body:     20px;
+  --fs-small:    16px;
+  --fs-tiny:     12px;
+
+  --lh-tight: 1;
+  --lh-snug:  1.1;
+  --lh-body:  1.25;
+
+  --ls-tight: 0;
+  --ls-loose: 0.04em;
+  --ls-display: 0.02em;
+
+  /* SPACING */
+  --sp-0: 2px; --sp-1: 4px; --sp-2: 8px; --sp-3: 12px;
+  --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+  --sp-7: 48px; --sp-8: 64px; --sp-9: 96px;
+
+  /* RADIUS */
+  --r-0: 0;
+  --r-card: 0;
+  --r-chip: 999px;
+  --r-button: 0;
+
+  /* PIXEL CHROME */
+  --bw-thin: 2px;
+  --bw-card: 3px;
+  --bw-button: 3px;
+  --bw-panel: 4px;
+  --bw-chunky: 6px;
+
+  --sh-card-rest:    0 4px 0 0 var(--ink-900);
+  --sh-card-hover:   0 6px 0 0 var(--ink-900);
+  --sh-card-press:   0 1px 0 0 var(--ink-900);
+  --sh-button-rest:  0 4px 0 0 var(--ink-900);
+  --sh-button-press: 0 1px 0 0 var(--ink-900);
+  --sh-popover:      0 8px 0 0 var(--ink-900);
+  --sh-table:        0 12px 0 0 var(--ink-900);
+
+  --bevel-light: inset 0 3px 0 0 rgba(255, 246, 220, 0.55);
+  --bevel-dark:  inset 0 -3px 0 0 rgba(26, 15, 8, 0.35);
+  --bevel-wood:  inset 0 3px 0 0 rgba(255, 233, 168, 0.5),
+                 inset 0 -3px 0 0 rgba(26, 15, 8, 0.4);
+
+  --glow-gold:    0 0 0 2px var(--neon-gold), 0 0 16px rgba(255, 216, 77, 0.65);
+  --glow-crimson: 0 0 0 2px var(--neon-crimson), 0 0 16px rgba(255, 85, 68, 0.65);
+  --glow-cactus:  0 0 0 2px var(--neon-cactus), 0 0 14px rgba(138, 255, 90, 0.55);
+  --glow-sky:     0 0 0 2px var(--neon-sky), 0 0 14px rgba(95, 220, 255, 0.55);
+
+  /* MOTION */
+  --ease-snap:  cubic-bezier(0.5, 1.6, 0.4, 1);
+  --ease-out:   cubic-bezier(0.2, 0.9, 0.3, 1);
+  --ease-in:    cubic-bezier(0.6, 0, 0.8, 0.4);
+  --dur-quick:  100ms;
+  --dur-snap:   180ms;
+  --dur-flop:   320ms;
 }
 
+/* Bridge tokens into Tailwind v4 */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-surface: var(--surface);
+  --color-saddle: var(--saddle-300);
+  --color-saddle-dark: var(--saddle-500);
+  --color-parchment: var(--parchment-100);
+  --color-gold: var(--gold-300);
+  --color-crimson: var(--crimson-500);
+  --color-cactus: var(--cactus-500);
+  --color-sky: var(--sky-500);
+  --color-ink: var(--ink-900);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ============================================================
+   GLOBAL DEFAULTS
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  margin: 0;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(168, 117, 69, 0.05) 0, transparent 40%),
+    radial-gradient(circle at 88% 72%, rgba(168, 117, 69, 0.05) 0, transparent 40%);
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+img, svg, canvas {
+  image-rendering: pixelated;
 }
+
+::selection { background: var(--gold-300); color: var(--ink-900); }
