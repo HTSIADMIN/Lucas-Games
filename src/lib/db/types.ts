@@ -11,6 +11,15 @@ export type User = {
   created_at: string;
   last_seen_at: string | null;
   is_active: boolean;
+  equipped_frame?: string | null;
+  equipped_card_deck?: string;
+  equipped_theme?: string;
+};
+
+export type PlayerInventoryRow = {
+  user_id: string;
+  item_id: string;
+  acquired_at: string;
 };
 
 export type UserPublic = Pick<User, "id" | "username" | "avatar_color" | "initials" | "last_seen_at">;

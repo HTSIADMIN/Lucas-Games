@@ -11,6 +11,7 @@ import {
   GameSession,
   MinesGame,
   PinAttempts,
+  PlayerInventoryRow,
   PlinkoDrop,
   User,
   UserSession,
@@ -28,6 +29,7 @@ type Schema = {
   crash_bets: CrashBet[];
   plinko_drops: PlinkoDrop[];
   mines_games: MinesGame[];
+  player_inventory: PlayerInventoryRow[];
   _walletSeq: number;
   _crashBetSeq: number;
 };
@@ -46,6 +48,7 @@ const EMPTY: Schema = {
   crash_bets: [],
   plinko_drops: [],
   mines_games: [],
+  player_inventory: [],
   _walletSeq: 0,
   _crashBetSeq: 0,
 };
@@ -70,14 +73,19 @@ function save(db: Schema) {
   fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
 }
 
-// Single-process in-memory cache with lazy load + write-through.
-let cache: Schema | null = null;
+// Cache lives on globalThis so it survives Next.js HMR module reloads
+// (a plain `let` would reset every time a route recompiles, leaving
+// reads stale relative to writes performed on a different module instance).
+// Goes away when Supabase replaces this layer.
+type GlobalCache = { lgDb?: Schema };
+const g = globalThis as unknown as GlobalCache;
+
 function db(): Schema {
-  if (!cache) cache = load();
-  return cache;
+  if (!g.lgDb) g.lgDb = load();
+  return g.lgDb;
 }
 function commit() {
-  if (cache) save(cache);
+  if (g.lgDb) save(g.lgDb);
 }
 
 // ============ USERS ============
@@ -302,6 +310,40 @@ export function insertPlinkoDrop(d: Omit<PlinkoDrop, "created_at">): PlinkoDrop 
   db().plinko_drops.push(row);
   commit();
   return row;
+}
+
+// ============ SHOP / INVENTORY ============
+export function listInventory(userId: string): string[] {
+  return db().player_inventory.filter((r) => r.user_id === userId).map((r) => r.item_id);
+}
+
+export function ownsItem(userId: string, itemId: string): boolean {
+  return db().player_inventory.some((r) => r.user_id === userId && r.item_id === itemId);
+}
+
+export function grantItem(userId: string, itemId: string): boolean {
+  if (ownsItem(userId, itemId)) return false;
+  db().player_inventory.push({
+    user_id: userId,
+    item_id: itemId,
+    acquired_at: new Date().toISOString(),
+  });
+  commit();
+  return true;
+}
+
+export function setEquipped(
+  userId: string,
+  patch: Partial<Pick<User, "avatar_color" | "equipped_frame" | "equipped_card_deck" | "equipped_theme">>
+) {
+  const u = db().users.find((x) => x.id === userId);
+  if (!u) return null;
+  if (patch.avatar_color !== undefined) u.avatar_color = patch.avatar_color;
+  if (patch.equipped_frame !== undefined) u.equipped_frame = patch.equipped_frame;
+  if (patch.equipped_card_deck !== undefined) u.equipped_card_deck = patch.equipped_card_deck;
+  if (patch.equipped_theme !== undefined) u.equipped_theme = patch.equipped_theme;
+  commit();
+  return u;
 }
 
 // ============ DEV: reset (for testing) ============
