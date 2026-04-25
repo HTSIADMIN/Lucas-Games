@@ -7,15 +7,15 @@ import { getUserById } from "@/lib/db";
 import { SignOutButton } from "./SignOutButton";
 
 const GAMES = [
-  { slug: "blackjack", name: "Blackjack", tag: "CLASSIC" },
-  { slug: "slots",     name: "Slots",     tag: "JACKPOT" },
-  { slug: "poker",     name: "Poker",     tag: "MULTI" },
-  { slug: "plinko",    name: "Plinko",    tag: "PHYSICS" },
-  { slug: "coinflip",  name: "Coin Flip", tag: "QUICK" },
-  { slug: "mines",     name: "Mines",     tag: "RISKY" },
-  { slug: "dice",      name: "Dice",      tag: "QUICK" },
-  { slug: "crash",     name: "Crash",     tag: "LIVE" },
-  { slug: "roulette",  name: "Roulette",  tag: "CLASSIC" },
+  { slug: "coinflip",  name: "Coin Flip", tag: "QUICK",   live: true  },
+  { slug: "dice",      name: "Dice",      tag: "QUICK",   live: true  },
+  { slug: "slots",     name: "Slots",     tag: "JACKPOT", live: true  },
+  { slug: "blackjack", name: "Blackjack", tag: "CLASSIC", live: false },
+  { slug: "poker",     name: "Poker",     tag: "MULTI",   live: false },
+  { slug: "plinko",    name: "Plinko",    tag: "PHYSICS", live: false },
+  { slug: "mines",     name: "Mines",     tag: "RISKY",   live: false },
+  { slug: "crash",     name: "Crash",     tag: "LIVE",    live: false },
+  { slug: "roulette",  name: "Roulette",  tag: "CLASSIC", live: false },
 ];
 
 const EARN_BACKS = [
@@ -54,7 +54,13 @@ export default async function LobbyPage() {
 
         <div className="grid grid-3">
           {GAMES.map((g) => (
-            <Link key={g.slug} href={`/games/${g.slug}`} className="tile">
+            <Link
+              key={g.slug}
+              href={g.live ? `/games/${g.slug}` : "#"}
+              className="tile"
+              style={!g.live ? { opacity: 0.55, cursor: "not-allowed", pointerEvents: "none" } : undefined}
+              aria-disabled={!g.live || undefined}
+            >
               <div className="tile-art">
                 <span
                   style={{
@@ -69,8 +75,10 @@ export default async function LobbyPage() {
               </div>
               <div className="tile-name">{g.name}</div>
               <div className="tile-meta">
-                <span className="badge">{g.tag}</span>
-                <span>Coming soon →</span>
+                <span className={`badge ${g.live ? "badge-cactus" : ""}`}>
+                  {g.live ? "OPEN" : g.tag}
+                </span>
+                <span>{g.live ? "Play →" : "Coming soon"}</span>
               </div>
             </Link>
           ))}
