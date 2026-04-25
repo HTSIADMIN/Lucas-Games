@@ -19,8 +19,8 @@ const GAMES = [
 ];
 
 const EARN_BACKS = [
-  { slug: "daily-spin",  name: "Daily Spin",  tag: "ONCE / DAY" },
-  { slug: "crossy-road", name: "Crossy Road", tag: "FREE" },
+  { slug: "daily-spin",  name: "Daily Spin",  tag: "ONCE / DAY", live: true },
+  { slug: "crossy-road", name: "Crossy Road", tag: "FREE",       live: true },
 ];
 
 export default async function LobbyPage() {
@@ -92,14 +92,17 @@ export default async function LobbyPage() {
           {EARN_BACKS.map((g) => (
             <Link
               key={g.slug}
-              href={`/earn/${g.slug}`}
+              href={g.live ? `/earn/${g.slug}` : "#"}
               className="tile"
-              style={{ background: "var(--gold-100)" }}
+              style={{
+                background: "var(--gold-100)",
+                ...(g.live ? {} : { opacity: 0.55, cursor: "not-allowed", pointerEvents: "none" }),
+              }}
             >
               <div className="tile-name">{g.name}</div>
               <div className="tile-meta">
                 <span className="badge badge-gold">{g.tag}</span>
-                <span>Coming soon →</span>
+                <span>{g.live ? "Play →" : "Coming soon"}</span>
               </div>
             </Link>
           ))}
