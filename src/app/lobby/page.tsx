@@ -1,10 +1,10 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
-import { PLACEHOLDER_PLAYERS } from "@/lib/placeholderPlayers";
+import { readSession } from "@/lib/auth/session";
+import { getBalance } from "@/lib/wallet";
+import { getUserById } from "@/lib/db";
+import { SignOutButton } from "./SignOutButton";
 
 const GAMES = [
   { slug: "blackjack", name: "Blackjack", tag: "CLASSIC" },
@@ -18,28 +18,17 @@ const GAMES = [
   { slug: "roulette",  name: "Roulette",  tag: "CLASSIC" },
 ];
 
-export default function LobbyPage() {
-  const router = useRouter();
-  const [playerName, setPlayerName] = useState<string>("");
+const EARN_BACKS = [
+  { slug: "daily-spin",  name: "Daily Spin",  tag: "ONCE / DAY" },
+  { slug: "crossy-road", name: "Crossy Road", tag: "FREE" },
+];
 
-  useEffect(() => {
-    const id = sessionStorage.getItem("lg_player");
-    if (!id) {
-      router.replace("/sign-in");
-      return;
-    }
-    if (id.startsWith("new:")) {
-      setPlayerName(id.slice(4));
-    } else {
-      const p = PLACEHOLDER_PLAYERS.find((pp) => pp.id === id);
-      setPlayerName(p?.username ?? "Stranger");
-    }
-  }, [router]);
+export default async function LobbyPage() {
+  const s = await readSession();
+  if (!s) redirect("/sign-in");
 
-  function signOut() {
-    sessionStorage.removeItem("lg_player");
-    router.push("/sign-in");
-  }
+  const user = getUserById(s.user.id)!;
+  const balance = getBalance(user.id);
 
   return (
     <>
@@ -47,18 +36,16 @@ export default function LobbyPage() {
       <main className="page">
         <section className="row-lg" style={{ marginBottom: "var(--sp-7)", flexWrap: "wrap" }}>
           <div className="balance-bar">
-            <div className="avatar">
-              {playerName ? playerName.slice(0, 2).toUpperCase() : "..."}
+            <div className="avatar" style={{ background: user.avatar_color }}>
+              {user.initials}
             </div>
             <div className="avatar-username">
-              <div className="uname">{playerName || "..."}</div>
+              <div className="uname">{user.username}</div>
               <div className="role">PLAYER</div>
             </div>
-            <div className="balance">500,000 ¢</div>
+            <div className="balance">{balance.toLocaleString()} ¢</div>
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={signOut}>
-            Sign out
-          </button>
+          <SignOutButton />
         </section>
 
         <section style={{ marginBottom: "var(--sp-5)" }}>
@@ -83,6 +70,27 @@ export default function LobbyPage() {
               <div className="tile-name">{g.name}</div>
               <div className="tile-meta">
                 <span className="badge">{g.tag}</span>
+                <span>Coming soon →</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        <section style={{ margin: "var(--sp-7) 0 var(--sp-5)" }}>
+          <div className="divider">Free Coins When You're Broke</div>
+        </section>
+
+        <div className="grid grid-2">
+          {EARN_BACKS.map((g) => (
+            <Link
+              key={g.slug}
+              href={`/earn/${g.slug}`}
+              className="tile"
+              style={{ background: "var(--gold-100)" }}
+            >
+              <div className="tile-name">{g.name}</div>
+              <div className="tile-meta">
+                <span className="badge badge-gold">{g.tag}</span>
                 <span>Coming soon →</span>
               </div>
             </Link>

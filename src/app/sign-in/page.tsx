@@ -1,39 +1,67 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PLACEHOLDER_PLAYERS, type PlaceholderPlayer } from "@/lib/placeholderPlayers";
+
+type Player = {
+  id: string;
+  username: string;
+  avatar_color: string;
+  initials: string;
+};
 
 export default function SignInPage() {
   const router = useRouter();
-  const [selected, setSelected] = useState<PlaceholderPlayer | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Player | null>(null);
   const [creating, setCreating] = useState(false);
   const [pin, setPin] = useState("");
   const [shaking, setShaking] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [newUsername, setNewUsername] = useState("");
   const [newPin, setNewPin] = useState("");
 
-  function press(digit: string) {
-    if (pin.length >= 4) return;
+  useEffect(() => {
+    fetch("/api/auth/players")
+      .then((r) => r.json())
+      .then((d) => setPlayers(d.players ?? []))
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function press(digit: string) {
+    if (pin.length >= 4 || submitting) return;
     const next = pin + digit;
     setPin(next);
     if (next.length === 4 && selected) {
-      if (next === selected.pin) {
-        sessionStorage.setItem("lg_player", selected.id);
+      setSubmitting(true);
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: selected.id, pin: next }),
+      });
+      if (res.ok) {
         router.push("/lobby");
       } else {
+        const data = await res.json().catch(() => ({}));
         setShaking(true);
         setTimeout(() => {
           setShaking(false);
           setPin("");
+          setSubmitting(false);
+          if (data.error === "too_many_attempts") {
+            setErrorMsg("Too many tries. Take five.");
+          } else {
+            setErrorMsg("Wrong PIN. Try again.");
+          }
         }, 500);
       }
     }
   }
 
-  function backspace() {
-    setPin((p) => p.slice(0, -1));
-  }
+  function backspace() { setPin((p) => p.slice(0, -1)); }
+  function clearPin() { setPin(""); }
 
   function reset() {
     setSelected(null);
@@ -41,14 +69,33 @@ export default function SignInPage() {
     setPin("");
     setNewUsername("");
     setNewPin("");
+    setErrorMsg(null);
   }
 
-  function createAccount(e: React.FormEvent) {
+  async function createAccount(e: React.FormEvent) {
     e.preventDefault();
     if (newUsername.trim().length < 2) return;
     if (!/^\d{4}$/.test(newPin)) return;
-    sessionStorage.setItem("lg_player", "new:" + newUsername);
-    router.push("/lobby");
+    setSubmitting(true);
+    setErrorMsg(null);
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: newUsername.trim(), pin: newPin }),
+    });
+    if (res.ok) {
+      router.push("/lobby");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      const msg: Record<string, string> = {
+        username_taken: "That name's already taken.",
+        username_length: "Name must be 2–16 characters.",
+        username_chars: "Letters, numbers, spaces, dashes, underscores only.",
+        pin_format: "PIN must be exactly 4 digits.",
+      };
+      setErrorMsg(msg[data.error] ?? "Could not create player.");
+      setSubmitting(false);
+    }
   }
 
   // ============ AVATAR GRID ============
@@ -62,53 +109,60 @@ export default function SignInPage() {
           </p>
         </div>
 
-        <div className="grid grid-4">
-          {PLACEHOLDER_PLAYERS.map((p) => (
+        {loading ? (
+          <p className="text-mute" style={{ textAlign: "center" }}>Loading players...</p>
+        ) : (
+          <div className="grid grid-4">
+            {players.map((p) => (
+              <button
+                key={p.id}
+                className="tile"
+                onClick={() => setSelected(p)}
+                style={{ alignItems: "center", textAlign: "center" }}
+              >
+                <div
+                  className="avatar avatar-lg"
+                  style={{ background: p.avatar_color, fontSize: "var(--fs-h2)" }}
+                >
+                  {p.initials}
+                </div>
+                <div className="tile-name">{p.username}</div>
+              </button>
+            ))}
+
             <button
-              key={p.id}
               className="tile"
-              onClick={() => setSelected(p)}
-              style={{ alignItems: "center", textAlign: "center" }}
+              onClick={() => setCreating(true)}
+              style={{
+                alignItems: "center",
+                textAlign: "center",
+                background: "var(--parchment-200)",
+                borderStyle: "dashed",
+              }}
             >
               <div
                 className="avatar avatar-lg"
-                style={{ background: p.avatarColor, fontSize: "var(--fs-h2)" }}
+                style={{
+                  background: "var(--parchment-50)",
+                  fontSize: "var(--fs-display)",
+                  color: "var(--saddle-400)",
+                }}
               >
-                {p.initials}
+                +
               </div>
-              <div className="tile-name">{p.username}</div>
+              <div className="tile-name">New Player</div>
               <div className="tile-meta" style={{ width: "100%", justifyContent: "center" }}>
-                <span className="badge badge-gold">RANK {p.rank}</span>
+                <span className="badge">SIT DOWN</span>
               </div>
             </button>
-          ))}
+          </div>
+        )}
 
-          <button
-            className="tile"
-            onClick={() => setCreating(true)}
-            style={{
-              alignItems: "center",
-              textAlign: "center",
-              background: "var(--parchment-200)",
-              borderStyle: "dashed",
-            }}
-          >
-            <div
-              className="avatar avatar-lg"
-              style={{
-                background: "var(--parchment-50)",
-                fontSize: "var(--fs-display)",
-                color: "var(--saddle-400)",
-              }}
-            >
-              +
-            </div>
-            <div className="tile-name">New Player</div>
-            <div className="tile-meta" style={{ width: "100%", justifyContent: "center" }}>
-              <span className="badge">SIT DOWN</span>
-            </div>
-          </button>
-        </div>
+        {players.length === 0 && !loading && (
+          <p className="text-mute" style={{ textAlign: "center", marginTop: "var(--sp-5)" }}>
+            No one's here yet. Pull up a new chair to get started.
+          </p>
+        )}
       </main>
     );
   }
@@ -147,6 +201,10 @@ export default function SignInPage() {
             />
           </div>
 
+          {errorMsg && (
+            <p style={{ color: "var(--crimson-500)", marginBottom: "var(--sp-3)" }}>{errorMsg}</p>
+          )}
+
           <div className="row" style={{ justifyContent: "space-between" }}>
             <button type="button" className="btn btn-ghost" onClick={reset}>
               ← Back
@@ -154,9 +212,9 @@ export default function SignInPage() {
             <button
               type="submit"
               className="btn"
-              disabled={newUsername.trim().length < 2 || !/^\d{4}$/.test(newPin)}
+              disabled={submitting || newUsername.trim().length < 2 || !/^\d{4}$/.test(newPin)}
             >
-              Sit Down
+              {submitting ? "Saddling up..." : "Sit Down"}
             </button>
           </div>
         </form>
@@ -171,7 +229,7 @@ export default function SignInPage() {
         <div
           className="avatar avatar-lg"
           style={{
-            background: selected!.avatarColor,
+            background: selected!.avatar_color,
             fontSize: "var(--fs-h2)",
             margin: "0 auto var(--sp-4)",
           }}
@@ -191,22 +249,22 @@ export default function SignInPage() {
           ))}
         </div>
 
+        {errorMsg && (
+          <p style={{ color: "var(--crimson-500)", marginBottom: "var(--sp-3)" }}>{errorMsg}</p>
+        )}
+
         <div className="pinpad" style={{ marginBottom: "var(--sp-5)" }}>
           {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
-            <button key={d} type="button" onClick={() => press(d)}>{d}</button>
+            <button key={d} type="button" onClick={() => press(d)} disabled={submitting}>{d}</button>
           ))}
-          <button type="button" onClick={backspace} aria-label="backspace">←</button>
-          <button type="button" onClick={() => press("0")}>0</button>
-          <button type="button" onClick={() => setPin("")} aria-label="clear">C</button>
+          <button type="button" onClick={backspace} aria-label="backspace" disabled={submitting}>←</button>
+          <button type="button" onClick={() => press("0")} disabled={submitting}>0</button>
+          <button type="button" onClick={clearPin} aria-label="clear" disabled={submitting}>C</button>
         </div>
 
         <button type="button" className="btn btn-ghost btn-block" onClick={reset}>
           ← Pick someone else
         </button>
-
-        <p className="text-mute" style={{ fontSize: "var(--fs-tiny)", marginTop: "var(--sp-4)" }}>
-          (placeholder data — try PIN 0000)
-        </p>
       </div>
     </main>
   );
