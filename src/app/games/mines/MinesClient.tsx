@@ -202,7 +202,7 @@ export function MinesClient() {
             }}
           >
             {game.status === "cashed"
-              ? `Cashed out · ×${game.multiplier} · +${game.payout.toLocaleString()} ¢`
+              ? `Cashed · Bet ${game.bet.toLocaleString()} · ×${game.multiplier} → +${(game.payout - game.bet).toLocaleString()} ¢`
               : "Boom!"}
           </div>
         )}
@@ -240,7 +240,7 @@ export function MinesClient() {
           <div className="stack-lg">
             <p className="text-mute">
               {game.status === "cashed"
-                ? `You walked away with ${game.payout.toLocaleString()} Coins.`
+                ? `You bet ${game.bet.toLocaleString()} and walked away with ${(game.payout - game.bet).toLocaleString()} ¢ profit.`
                 : "The mine got you. Want another go?"}
             </p>
             <button className="btn btn-block" onClick={newRound} disabled={busy}>

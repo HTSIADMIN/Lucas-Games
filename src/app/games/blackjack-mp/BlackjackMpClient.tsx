@@ -297,7 +297,14 @@ export function BlackjackMpClient() {
               <p className="text-money" style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)" }}>
                 {(() => {
                   const totalPayout = mySeats.reduce((sum, s) => sum + s.payout, 0);
-                  return totalPayout > 0 ? `+${totalPayout.toLocaleString()} ¢` : "Lost the bet";
+                  const totalStake = mySeats.reduce((sum, s) => sum + (s.doubled ? s.bet * 2 : s.bet), 0);
+                  const net = totalPayout - totalStake;
+                  if (totalPayout <= 0) return `Lost ${totalStake.toLocaleString()} ¢`;
+                  return net > 0
+                    ? `+${net.toLocaleString()} ¢`
+                    : net === 0
+                    ? `Push · stake returned`
+                    : `${net.toLocaleString()} ¢`;
                 })()}
               </p>
             )}
@@ -330,7 +337,9 @@ function statusLabel(seat: SeatView) {
     standing: "STAND",
     busted: "BUST",
     blackjack: "BLACKJACK!",
-    done: seat.payout > 0 ? `+${seat.payout.toLocaleString()}` : "LOST",
+    done: seat.payout > 0
+      ? `+${(seat.payout - (seat.doubled ? seat.bet * 2 : seat.bet)).toLocaleString()}`
+      : "LOST",
   } as const)[seat.status];
 }
 function tone(status: SeatView["status"]) {

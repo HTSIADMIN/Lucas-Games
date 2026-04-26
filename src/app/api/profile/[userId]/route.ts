@@ -144,9 +144,11 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
     },
     xp: {
       ...(() => {
-        const xp = xpFromCoinsWagered(totalBet);
+        // XP from net wins per game (positive nets only). Mirrors getUserLevel.
+        const netWon = gamesPlayed.reduce((s, g) => s + (g.net > 0 ? g.net : 0), 0);
+        const xp = xpFromCoinsWagered(netWon);
         const l = levelFromXp(xp);
-        return { xp, ...l };
+        return { xp, ...l, totalNetWon: netWon };
       })(),
     },
   });

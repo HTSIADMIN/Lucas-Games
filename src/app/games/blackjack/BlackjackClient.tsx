@@ -185,7 +185,7 @@ export function BlackjackClient() {
             }}
           >
             {STATUS_LABEL[hand.status]}
-            {hand.payout !== null && hand.payout > 0 && ` · +${hand.payout.toLocaleString()} ¢`}
+            {hand.payout !== null && hand.payout > 0 && ` · Bet ${hand.bet.toLocaleString()} → +${(hand.payout - (hand.doubled ? hand.bet * 2 : hand.bet)).toLocaleString()} ¢`}
           </div>
         )}
 

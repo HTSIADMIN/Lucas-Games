@@ -230,7 +230,9 @@ export function RouletteClient() {
                   {labelBet(r as RouletteBet)}
                 </span>
                 <span style={{ color: r.win ? "var(--cactus-500)" : "var(--crimson-500)" }}>
-                  {r.win ? `+${r.payout.toLocaleString()}` : `-${r.amount.toLocaleString()}`}
+                  {r.win
+                    ? `+${(r.payout - r.amount).toLocaleString()}`
+                    : `-${r.amount.toLocaleString()}`}
                 </span>
               </div>
             ))}

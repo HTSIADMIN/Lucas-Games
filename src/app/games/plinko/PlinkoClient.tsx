@@ -289,7 +289,10 @@ export function PlinkoClient() {
                 : "var(--crimson-500)",
             }}
           >
-            ×{result.multiplier} → {result.payout > 0 ? `+${result.payout.toLocaleString()} ¢` : "Bust"}
+            Bet {bet.toLocaleString()} · ×{result.multiplier} →{" "}
+            {result.payout > 0
+              ? `${result.payout > bet ? "+" : ""}${(result.payout - bet).toLocaleString()} ¢`
+              : `-${bet.toLocaleString()} ¢`}
           </div>
         )}
 

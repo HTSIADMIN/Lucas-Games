@@ -151,7 +151,7 @@ export function CoinflipDuelClient() {
                 }}
               >
                 {flash.result.toUpperCase()} ·{" "}
-                {flash.youWon ? `+${flash.payout.toLocaleString()} ¢` : "Lost the duel"}
+                {flash.youWon ? `+${(flash.payout / 2).toLocaleString()} ¢` : "Lost the duel"}
               </div>
             )}
           </div>

@@ -130,10 +130,10 @@ export function SlotsClient() {
             }}
           >
             {result.kind === "three"
-              ? `JACKPOT! ×${result.multiplier} → +${result.payout.toLocaleString()} ¢`
+              ? `JACKPOT! Bet ${bet.toLocaleString()} · ×${result.multiplier} → +${(result.payout - bet).toLocaleString()} ¢`
               : result.kind === "two"
-              ? `Pair ×${result.multiplier} → +${result.payout.toLocaleString()} ¢`
-              : "No match"}
+              ? `Pair · Bet ${bet.toLocaleString()} · ×${result.multiplier} → +${(result.payout - bet).toLocaleString()} ¢`
+              : `Bet ${bet.toLocaleString()} · no match`}
           </div>
         )}
         {error && (

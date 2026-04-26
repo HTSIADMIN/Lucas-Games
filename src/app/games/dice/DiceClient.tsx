@@ -96,7 +96,9 @@ export function DiceClient() {
               background: result.win ? "var(--cactus-500)" : "var(--crimson-500)",
             }}
           >
-            {result.win ? `+${result.payout.toLocaleString()} ¢ (×${result.multiplier})` : "Bust"}
+            {result.win
+              ? `Bet ${bet.toLocaleString()} · ×${result.multiplier} → +${(result.payout - bet).toLocaleString()} ¢`
+              : `Bet ${bet.toLocaleString()} · bust`}
           </div>
         )}
         {error && (

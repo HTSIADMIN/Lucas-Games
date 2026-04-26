@@ -1,10 +1,11 @@
-// Server-side helper: total wagered + level lookup.
-// Single SUM query against wallet_transactions for *_bet rows.
+// Server-side XP / level calculation. XP comes from NET profit on
+// settled games — not from how much you wagered. Big wins on big bets
+// reward you, but burning a thousand 100¢ bets that break even doesn't.
 
 import { levelFromXp, xpFromCoinsWagered } from "./xp";
 
 export async function getUserLevel(userId: string): Promise<{
-  totalWagered: number;
+  totalNetWon: number;
   xp: number;
   level: number;
   intoLevelXp: number;
@@ -14,7 +15,7 @@ export async function getUserLevel(userId: string): Promise<{
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   );
 
-  let totalWagered = 0;
+  let totalNetWon = 0;
   if (useSupabase) {
     const { createClient } = await import("@supabase/supabase-js");
     const supa = createClient(
@@ -23,20 +24,19 @@ export async function getUserLevel(userId: string): Promise<{
       { auth: { persistSession: false, autoRefreshToken: false } },
     );
     const { data } = await supa
-      .from("wallet_transactions")
-      .select("delta, reason")
-      .eq("user_id", userId);
+      .from("game_sessions")
+      .select("bet, payout, status")
+      .eq("user_id", userId)
+      .eq("status", "settled");
     if (data) {
-      for (const r of data as { delta: number; reason: string }[]) {
-        const d = Number(r.delta);
-        if (d < 0 && (r.reason.endsWith("_bet") || r.reason === "crash_bet")) {
-          totalWagered += -d;
-        }
+      for (const r of data as { bet: number | string; payout: number | string }[]) {
+        const net = Number(r.payout) - Number(r.bet);
+        if (net > 0) totalNetWon += net;
       }
     }
   }
 
-  const xp = xpFromCoinsWagered(totalWagered);
+  const xp = xpFromCoinsWagered(totalNetWon);
   const l = levelFromXp(xp);
-  return { totalWagered, xp, ...l };
+  return { totalNetWon, xp, ...l };
 }

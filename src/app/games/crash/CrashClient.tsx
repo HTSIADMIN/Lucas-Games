@@ -312,7 +312,7 @@ export function CrashClient() {
               <p className="text-mute">Bet: {myBet.amount.toLocaleString()} ¢</p>
               {myCashedOut ? (
                 <p style={{ color: "var(--cactus-500)" }}>
-                  Cashed at {myBet.cashoutX!.toFixed(2)}× → +{myBet.payout.toLocaleString()} ¢
+                  Cashed at {myBet.cashoutX!.toFixed(2)}× → +{(myBet.payout - myBet.amount).toLocaleString()} ¢
                 </p>
               ) : (
                 <p style={{ color: "var(--crimson-500)" }}>Busted at {round?.crashAtX?.toFixed(2)}×</p>
@@ -402,7 +402,7 @@ export function CrashClient() {
                     </div>
                     {out ? (
                       <span style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "var(--cactus-500)" }}>
-                        {b.cashoutX!.toFixed(2)}× +{b.payout.toLocaleString()}
+                        {b.cashoutX!.toFixed(2)}× +{(b.payout - b.amount).toLocaleString()}
                       </span>
                     ) : busted ? (
                       <span style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "var(--crimson-500)" }}>

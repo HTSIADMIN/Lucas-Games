@@ -77,7 +77,9 @@ export function CoinFlipClient() {
               background: result.win ? "var(--cactus-500)" : "var(--crimson-500)",
             }}
           >
-            {result.win ? `+${result.payout.toLocaleString()} ¢` : "Bust"}
+            {result.win
+              ? `Bet ${bet.toLocaleString()} → +${(result.payout - bet).toLocaleString()} ¢`
+              : `Bet ${bet.toLocaleString()} · bust`}
           </div>
         )}
         {error && (
