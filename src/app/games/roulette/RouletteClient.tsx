@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { colorOf, type RouletteBet, type RouletteBetType } from "@/lib/games/roulette/engine";
 
@@ -15,16 +15,24 @@ type Result = {
 
 const CHIP_VALUES = [100, 500, 1_000, 5_000, 25_000];
 
-// European single-zero wheel order, clockwise from 0.
+// European single-zero wheel order — used for the random strip filler so
+// the distribution of colors is correct on the rolling reel.
 const WHEEL_ORDER = [
   0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5,
   24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
 ];
-const SLOT_COUNT = WHEEL_ORDER.length; // 37
-const SLOT_DEG = 360 / SLOT_COUNT;
 
 const HISTORY_LEN = 12;
-const SPIN_MS = 3500;
+const SPIN_MS = 5500;       // CSGO-style openings feel right around 5–6s
+const REEL_TILE_W = 88;     // px — each slot tile width
+const REEL_GAP = 6;
+const REEL_STEP = REEL_TILE_W + REEL_GAP;
+// How many tiles fly past before stopping (in addition to the index of the
+// winning tile from the strip start). More = longer scroll.
+const REEL_PAD_TILES = 60;
+// Extra random tiles tacked on after the winning tile so the reel doesn't
+// reveal where it stops.
+const REEL_TAIL_TILES = 20;
 
 const CHIP_COLORS: Record<number, { bg: string; ring: string; fg: string }> = {
   100:    { bg: "#fef6e4", ring: "#1a0f08", fg: "#1a0f08" },
@@ -36,7 +44,8 @@ const CHIP_COLORS: Record<number, { bg: string; ring: string; fg: string }> = {
 
 export function RouletteClient() {
   const router = useRouter();
-  const wheelCanvasRef = useRef<HTMLCanvasElement>(null);
+  const reelContainerRef = useRef<HTMLDivElement>(null);
+  const reelStripRef = useRef<HTMLDivElement>(null);
   const [chip, setChip] = useState(1_000);
   const [bets, setBets] = useState<RouletteBet[]>([]);
   const [busy, setBusy] = useState(false);
@@ -46,64 +55,15 @@ export function RouletteClient() {
   const [history, setHistory] = useState<{ n: number; color: "red" | "black" | "green" }[]>([]);
   const [spinning, setSpinning] = useState(false);
   const [hoverPreview, setHoverPreview] = useState<{ label: string; payout: number } | null>(null);
-
-  // Animation state lives on refs so the rAF loop doesn't re-create.
-  const wheelRotRef = useRef(0);          // wheel rotation (radians)
-  const ballRotRef = useRef(Math.PI);     // ball angular position (radians)
-  const wheelTargetRef = useRef(0);
-  const ballTargetRef = useRef(Math.PI);
-  const animStartRef = useRef<number | null>(null);
-  const idleSpinRef = useRef(0);
+  // Tile strip for the current spin. Regenerated per spin so each open is
+  // visually fresh.
+  const [reelTiles, setReelTiles] = useState<number[]>(() => idleStrip());
+  // Index of the winning tile in the strip (where the pointer should land).
+  const [reelTargetIdx, setReelTargetIdx] = useState<number | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => setBalance(d.balance ?? null));
   }, []);
-
-  // Wheel render loop — mounts once.
-  useEffect(() => {
-    const canvasEl = wheelCanvasRef.current;
-    if (!canvasEl) return;
-    const ctxOrNull = canvasEl.getContext("2d");
-    if (!ctxOrNull) return;
-    const canvas: HTMLCanvasElement = canvasEl;
-    const ctx: CanvasRenderingContext2D = ctxOrNull;
-
-    let raf = 0;
-    let last = performance.now();
-
-    function frame(now: number) {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-
-      const animStart = animStartRef.current;
-      if (animStart !== null) {
-        const t = Math.min(1, (now - animStart) / SPIN_MS);
-        const eased = easeOutCubic(t);
-        wheelRotRef.current = wheelTargetRef.current * eased;
-        // Ball spins opposite, at higher angular velocity, then settles.
-        ballRotRef.current = ballTargetRef.current * eased + Math.PI * 6 * (1 - eased);
-        if (t >= 1) {
-          // Lock in
-          wheelRotRef.current = wheelTargetRef.current;
-          ballRotRef.current = ballTargetRef.current;
-          animStartRef.current = null;
-        }
-      } else if (!spinningRef.current) {
-        // Slow idle drift so the wheel doesn't look frozen.
-        idleSpinRef.current += dt * 0.12;
-        wheelRotRef.current = idleSpinRef.current;
-      }
-
-      drawWheel(ctx, canvas.width, canvas.height, wheelRotRef.current, ballRotRef.current);
-      raf = requestAnimationFrame(frame);
-    }
-    raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  // Mirror `spinning` to a ref so the rAF loop sees the latest value.
-  const spinningRef = useRef(false);
-  useEffect(() => { spinningRef.current = spinning; }, [spinning]);
 
   function addBet(type: RouletteBetType, value?: number) {
     if (spinning) return;
@@ -154,30 +114,48 @@ export function RouletteClient() {
       return;
     }
 
-    // Position the winning slot at the top (12 o'clock pointer).
-    const idx = WHEEL_ORDER.indexOf(data.winning);
-    // Wheel rotates so target slot ends at angle = -π/2 (top).
-    // Slot i sits at i * SLOT_DEG (deg) clockwise from 12 — the wheel canvas
-    // draws slots starting from the top. We want totalRotRad such that
-    // (idx * slotRad + totalRotRad) % 2π == 0 (slot 0 of wheel = top before
-    // any rotation, but we want WINNING at top), i.e. totalRot = -idx * slotRad.
-    const slotRad = (SLOT_DEG * Math.PI) / 180;
-    const baseTarget = -idx * slotRad;
-    // Add several full rotations for visual drama.
-    const targetRot = baseTarget + Math.PI * 2 * 5 + (Math.random() - 0.5) * (slotRad * 0.4);
+    // Build a fresh strip: a long run of random fillers, then the winning
+    // tile at index `targetIdx`, then a few more random tiles after so the
+    // reel doesn't visibly stop at the end.
+    const targetIdx = REEL_PAD_TILES;
+    const strip: number[] = [];
+    for (let i = 0; i < targetIdx; i++) strip.push(randomReelNumber());
+    strip.push(data.winning);
+    for (let i = 0; i < REEL_TAIL_TILES; i++) strip.push(randomReelNumber());
 
-    // Ball lands at the same angular position as the winning slot but
-    // counter-rotates with extra revolutions for the bouncy feel.
-    const ballTarget = -baseTarget + Math.PI * 2 * 8;
+    // Snap to start position (no transition), then trigger the eased slide
+    // on the next frame so the browser actually animates.
+    const stripEl = reelStripRef.current;
+    const containerEl = reelContainerRef.current;
+    if (stripEl && containerEl) {
+      stripEl.style.transition = "none";
+      stripEl.style.transform = "translateX(0px)";
+      // Force reflow to commit the snap before re-applying the transition.
+      // (eslint-disable-next-line)
+      void stripEl.offsetWidth;
+    }
 
-    wheelRotRef.current = 0;
-    ballRotRef.current = Math.PI;
-    wheelTargetRef.current = targetRot;
-    ballTargetRef.current = ballTarget;
-    animStartRef.current = performance.now();
+    setReelTiles(strip);
+    setReelTargetIdx(targetIdx);
     setSpinning(true);
 
-    // Resolve UI after the spin animation completes.
+    // Compute the final translateX to land the target tile under the pointer.
+    // Pointer sits at the horizontal center of the container. We want the
+    // CENTER of the target tile to align with that point.
+    requestAnimationFrame(() => {
+      const cw = containerEl?.clientWidth ?? 720;
+      const targetCenter = targetIdx * REEL_STEP + REEL_TILE_W / 2;
+      // Add ±35% of a tile-width of jitter so the pointer never lands dead
+      // center — the small offset reads as "just barely landed on" the tile.
+      const jitter = (Math.random() - 0.5) * REEL_TILE_W * 0.7;
+      const finalX = -(targetCenter - cw / 2) + jitter;
+      if (stripEl) {
+        stripEl.style.transition = `transform ${SPIN_MS}ms cubic-bezier(0.08, 0.82, 0.17, 1)`;
+        stripEl.style.transform = `translateX(${finalX}px)`;
+      }
+    });
+
+    // Resolve UI after the slide completes.
     setTimeout(() => {
       setBusy(false);
       setSpinning(false);
@@ -204,70 +182,34 @@ export function RouletteClient() {
             currentResult={result ? { n: result.winning, color: result.color } : null}
           />
 
-          <div
-            className="center"
-            style={{
-              background: "radial-gradient(circle at 50% 40%, #4a2818, #1a0f08)",
-              border: "4px solid var(--ink-900)",
-              padding: "var(--sp-4)",
-              position: "relative",
-              flexDirection: "column",
-              gap: "var(--sp-3)",
-            }}
-          >
-            <canvas
-              ref={wheelCanvasRef}
-              width={320}
-              height={320}
+          <ReelStrip
+            tiles={reelTiles}
+            containerRef={reelContainerRef}
+            stripRef={reelStripRef}
+            spinning={spinning}
+            targetIdx={reelTargetIdx}
+            result={result}
+          />
+
+          {result && !spinning && (
+            <div
+              className="sign"
               style={{
-                imageRendering: "auto",
-                maxWidth: "100%",
-                width: "100%",
-                height: "auto",
-                maxHeight: 360,
+                background: result.totalPayout > result.totalBet
+                  ? "var(--cactus-500)"
+                  : result.totalPayout > 0
+                  ? "var(--saddle-300)"
+                  : "var(--crimson-500)",
+                marginTop: "var(--sp-3)",
                 display: "block",
+                textAlign: "center",
               }}
-            />
-            {result && !spinning && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 12,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  fontFamily: "var(--font-display)",
-                  fontSize: 36,
-                  color:
-                    result.color === "red" ? "var(--crimson-300)" :
-                    result.color === "black" ? "var(--parchment-50)" :
-                    "var(--cactus-300)",
-                  textShadow: "3px 3px 0 var(--ink-900), 0 0 16px rgba(245, 200, 66, 0.5)",
-                  background: "rgba(26, 15, 8, 0.8)",
-                  padding: "4px 14px",
-                  border: "3px solid var(--ink-900)",
-                }}
-              >
-                {result.winning}
-              </div>
-            )}
-            {result && !spinning && (
-              <div
-                className="sign"
-                style={{
-                  background: result.totalPayout > result.totalBet
-                    ? "var(--cactus-500)"
-                    : result.totalPayout > 0
-                    ? "var(--saddle-300)"
-                    : "var(--crimson-500)",
-                  marginTop: "var(--sp-2)",
-                }}
-              >
-                {result.totalPayout > 0
-                  ? `+${(result.totalPayout - result.totalBet).toLocaleString()} ¢`
-                  : "House wins"}
-              </div>
-            )}
-          </div>
+            >
+              {result.totalPayout > 0
+                ? `${result.winning} ${result.color.toUpperCase()} · +${(result.totalPayout - result.totalBet).toLocaleString()} ¢`
+                : `${result.winning} ${result.color.toUpperCase()} · House wins`}
+            </div>
+          )}
         </div>
 
         {/* Felt betting table */}
@@ -365,140 +307,217 @@ export function RouletteClient() {
 }
 
 // ============================================================
-// Wheel canvas renderer
+// CSGO-style horizontal reel strip
 // ============================================================
 
-function drawWheel(ctx: CanvasRenderingContext2D, W: number, H: number, wheelRot: number, ballRot: number) {
-  ctx.clearRect(0, 0, W, H);
-  const cx = W / 2;
-  const cy = H / 2;
-  const outerR = Math.min(W, H) / 2 - 6;
-  const slotInnerR = outerR * 0.62;
-  const hubR = outerR * 0.32;
-  const ballR = outerR * 0.69;
+function ReelStrip({
+  tiles,
+  containerRef,
+  stripRef,
+  spinning,
+  targetIdx,
+  result,
+}: {
+  tiles: number[];
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  stripRef: React.RefObject<HTMLDivElement | null>;
+  spinning: boolean;
+  targetIdx: number | null;
+  result: Result | null;
+}) {
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: "relative",
+        background: "linear-gradient(180deg, #2a1810, #1a0f08)",
+        border: "4px solid var(--ink-900)",
+        padding: "var(--sp-3)",
+        overflow: "hidden",
+        boxShadow: "inset 0 0 24px rgba(0, 0, 0, 0.8)",
+      }}
+    >
+      {/* Center pointer (top + bottom triangles + vertical line) */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: 0,
+          bottom: 0,
+          width: 0,
+          transform: "translateX(-50%)",
+          zIndex: 5,
+          pointerEvents: "none",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: -1,
+            top: 4,
+            bottom: 4,
+            width: 3,
+            background: "var(--gold-300)",
+            boxShadow: "0 0 12px var(--gold-300)",
+          }}
+        />
+        {/* Top arrow */}
+        <div
+          style={{
+            position: "absolute",
+            top: -2,
+            left: -8,
+            width: 0,
+            height: 0,
+            borderLeft: "8px solid transparent",
+            borderRight: "8px solid transparent",
+            borderTop: "10px solid var(--gold-300)",
+            filter: "drop-shadow(0 0 6px var(--gold-300))",
+          }}
+        />
+        {/* Bottom arrow */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: -2,
+            left: -8,
+            width: 0,
+            height: 0,
+            borderLeft: "8px solid transparent",
+            borderRight: "8px solid transparent",
+            borderBottom: "10px solid var(--gold-300)",
+            filter: "drop-shadow(0 0 6px var(--gold-300))",
+          }}
+        />
+      </div>
 
-  // Outer brass rim
-  const rimGrad = ctx.createRadialGradient(cx, cy - outerR / 2, outerR * 0.2, cx, cy, outerR);
-  rimGrad.addColorStop(0, "#ffd84d");
-  rimGrad.addColorStop(0.6, "#c8941d");
-  rimGrad.addColorStop(1, "#7a5510");
-  ctx.fillStyle = rimGrad;
-  ctx.beginPath();
-  ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
-  ctx.fill();
+      {/* Edge fades — soft mask on either end so tiles fade in/out smoothly */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 56,
+          background: "linear-gradient(90deg, rgba(26, 15, 8, 0.95), transparent)",
+          zIndex: 4,
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: 56,
+          background: "linear-gradient(270deg, rgba(26, 15, 8, 0.95), transparent)",
+          zIndex: 4,
+          pointerEvents: "none",
+        }}
+      />
 
-  // Inner felt ring
-  ctx.fillStyle = "#1f3818";
-  ctx.beginPath();
-  ctx.arc(cx, cy, outerR * 0.92, 0, Math.PI * 2);
-  ctx.fill();
+      {/* The sliding strip */}
+      <div
+        ref={stripRef}
+        style={{
+          display: "flex",
+          gap: REEL_GAP,
+          willChange: "transform",
+          // The transform is applied imperatively in spin().
+        }}
+      >
+        {tiles.map((n, i) => (
+          <ReelTile
+            key={i}
+            n={n}
+            highlight={!spinning && targetIdx !== null && i === targetIdx && result !== null}
+          />
+        ))}
+      </div>
 
-  // Slots
-  const slotRad = (SLOT_DEG * Math.PI) / 180;
-  for (let i = 0; i < SLOT_COUNT; i++) {
-    const n = WHEEL_ORDER[i];
-    const c = colorOf(n);
-    const a0 = wheelRot + i * slotRad - Math.PI / 2 - slotRad / 2;
-    const a1 = a0 + slotRad;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, outerR * 0.92, a0, a1);
-    ctx.closePath();
-    ctx.fillStyle = c === "red" ? "#c93a2c" : c === "black" ? "#1a0f08" : "#3d6b2e";
-    ctx.fill();
-    ctx.strokeStyle = "#2a1810";
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-  }
-
-  // Slot numbers
-  ctx.fillStyle = "#fef6e4";
-  ctx.font = "bold 12px 'M6X11', monospace";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  const labelR = outerR * 0.78;
-  for (let i = 0; i < SLOT_COUNT; i++) {
-    const n = WHEEL_ORDER[i];
-    const a = wheelRot + i * slotRad - Math.PI / 2;
-    const tx = cx + Math.cos(a) * labelR;
-    const ty = cy + Math.sin(a) * labelR;
-    ctx.save();
-    ctx.translate(tx, ty);
-    ctx.rotate(a + Math.PI / 2);
-    ctx.fillText(String(n), 0, 0);
-    ctx.restore();
-  }
-
-  // Inner ring (separates slots from hub)
-  ctx.strokeStyle = "#7a5510";
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.arc(cx, cy, slotInnerR, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // Hub (wood)
-  const hubGrad = ctx.createRadialGradient(cx, cy - hubR / 2, hubR * 0.2, cx, cy, hubR);
-  hubGrad.addColorStop(0, "#a87545");
-  hubGrad.addColorStop(1, "#4a2818");
-  ctx.fillStyle = hubGrad;
-  ctx.beginPath();
-  ctx.arc(cx, cy, hubR, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#1a0f08";
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  // Hub spokes (rotate with the wheel)
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(wheelRot);
-  ctx.strokeStyle = "rgba(26, 15, 8, 0.5)";
-  ctx.lineWidth = 3;
-  for (let i = 0; i < 4; i++) {
-    const a = (Math.PI / 2) * i;
-    ctx.beginPath();
-    ctx.moveTo(Math.cos(a) * 6, Math.sin(a) * 6);
-    ctx.lineTo(Math.cos(a) * hubR, Math.sin(a) * hubR);
-    ctx.stroke();
-  }
-  // Center pin
-  ctx.fillStyle = "#f5c842";
-  ctx.beginPath();
-  ctx.arc(0, 0, 6, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  // Ball (orbits at fixed radius — track itself doesn't rotate)
-  const ballAngle = ballRot - Math.PI / 2;
-  const bx = cx + Math.cos(ballAngle) * ballR;
-  const by = cy + Math.sin(ballAngle) * ballR;
-  ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
-  ctx.shadowBlur = 6;
-  ctx.fillStyle = "#fef6e4";
-  ctx.beginPath();
-  ctx.arc(bx, by, 6, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = "#fff";
-  ctx.beginPath();
-  ctx.arc(bx - 1.5, by - 1.5, 2, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Top pointer
-  ctx.fillStyle = "#f5c842";
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - outerR + 2);
-  ctx.lineTo(cx - 8, cy - outerR - 14);
-  ctx.lineTo(cx + 8, cy - outerR - 14);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#1a0f08";
-  ctx.lineWidth = 2;
-  ctx.stroke();
+      {/* Idle hint when nothing has happened yet */}
+      {!spinning && !result && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+            fontFamily: "var(--font-display)",
+            color: "var(--parchment-200)",
+            fontSize: 14,
+            letterSpacing: "var(--ls-loose)",
+            textTransform: "uppercase",
+            textShadow: "2px 2px 0 var(--ink-900)",
+            zIndex: 6,
+          }}
+        >
+          Place bets &amp; spin
+        </div>
+      )}
+    </div>
+  );
 }
 
-function easeOutCubic(t: number): number {
-  return 1 - Math.pow(1 - t, 3);
+function ReelTile({ n, highlight }: { n: number; highlight: boolean }) {
+  const c = colorOf(n);
+  const bg = c === "red" ? "#c93a2c" : c === "black" ? "#1a0f08" : "#3d6b2e";
+  return (
+    <div
+      style={{
+        flexShrink: 0,
+        width: REEL_TILE_W,
+        height: 110,
+        background: bg,
+        border: highlight ? "4px solid var(--gold-300)" : "3px solid var(--ink-900)",
+        boxShadow: highlight
+          ? "var(--glow-gold), inset 0 0 0 1px rgba(255,255,255,0.2)"
+          : "inset 0 -3px 0 rgba(0,0,0,0.4), inset 0 3px 0 rgba(255,255,255,0.18)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "var(--font-display)",
+        fontSize: 38,
+        color: "#fef6e4",
+        letterSpacing: "var(--ls-tight)",
+        textShadow: "2px 2px 0 rgba(0, 0, 0, 0.7)",
+        position: "relative",
+        animation: highlight ? "lg-rl-pulse 0.9s ease-in-out infinite" : undefined,
+      }}
+    >
+      <style>{`
+        @keyframes lg-rl-pulse {
+          0%, 100% { box-shadow: var(--glow-gold), inset 0 0 0 1px rgba(255,255,255,0.2); transform: scale(1); }
+          50% { box-shadow: 0 0 28px rgba(245, 200, 66, 1), inset 0 0 0 2px rgba(255,255,255,0.4); transform: scale(1.04); }
+        }
+      `}</style>
+      {n}
+    </div>
+  );
+}
+
+// =============================================================
+// Reel strip helpers
+// =============================================================
+
+// Pick a random number in a way that matches a real European wheel's
+// red/black/green distribution (since that's what `WHEEL_ORDER` represents).
+function randomReelNumber(): number {
+  return WHEEL_ORDER[Math.floor(Math.random() * WHEEL_ORDER.length)];
+}
+
+// Idle filler — just a slice of the wheel order so the static strip looks
+// like a real strip even before any spin has happened.
+function idleStrip(): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < 24; i++) out.push(WHEEL_ORDER[i % WHEEL_ORDER.length]);
+  return out;
 }
 
 // ============================================================
