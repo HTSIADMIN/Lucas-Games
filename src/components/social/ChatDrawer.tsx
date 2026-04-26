@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useLive } from "./LiveProvider";
 import { GameIcon } from "@/components/GameIcon";
+import { Avatar } from "@/components/Avatar";
 
 export function ChatDrawer({ currentUserId }: { currentUserId: string | null }) {
-  const { chat, bets } = useLive();
+  const { chat, bets, championId } = useLive();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"chat" | "bets">("chat");
   const [draft, setDraft] = useState("");
@@ -188,11 +189,11 @@ export function ChatDrawer({ currentUserId }: { currentUserId: string | null }) 
               ? chat.length === 0
                 ? <p className="text-mute" style={{ textAlign: "center", marginTop: "var(--sp-7)" }}>Be the first to say something.</p>
                 : chat.map((m) => (
-                    <ChatLine key={m.id} m={m} mine={m.user_id === currentUserId} />
+                    <ChatLine key={m.id} m={m} mine={m.user_id === currentUserId} championId={championId} />
                   ))
               : bets.length === 0
                 ? <p className="text-mute" style={{ textAlign: "center", marginTop: "var(--sp-7)" }}>Big wins and bigger losses show up here.</p>
-                : bets.map((b) => <BetLine key={b.id} b={b} />)
+                : bets.map((b) => <BetLine key={b.id} b={b} championId={championId} />)
             }
           </div>
 
@@ -243,16 +244,34 @@ function tabStyle(active: boolean): React.CSSProperties {
   };
 }
 
-function ChatLine({ m, mine }: { m: { id: number; body: string; kind: string; username: string; avatar_color: string; initials: string; created_at: string }; mine: boolean }) {
+function ChatLine({ m, mine, championId }: {
+  m: {
+    id: number;
+    user_id?: string;
+    body: string;
+    kind: string;
+    username: string;
+    avatar_color: string;
+    initials: string;
+    equipped_frame?: string | null;
+    equipped_hat?: string | null;
+    created_at: string;
+  };
+  mine: boolean;
+  championId: string | null;
+}) {
   const isTip = m.kind === "tip";
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-      <div
-        className="avatar avatar-sm"
-        style={{ background: m.avatar_color, fontSize: 11, width: 24, height: 24, borderWidth: 2, flexShrink: 0 }}
-      >
-        {m.initials}
-      </div>
+      <Avatar
+        initials={m.initials}
+        color={m.avatar_color}
+        size={26}
+        fontSize={11}
+        frame={m.equipped_frame ?? null}
+        hat={m.equipped_hat ?? null}
+        champion={!!m.user_id && m.user_id === championId}
+      />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: "var(--font-display)", fontSize: 13, color: mine ? "var(--gold-500)" : "var(--saddle-500)" }}>
           {m.username}
@@ -275,7 +294,22 @@ function ChatLine({ m, mine }: { m: { id: number; body: string; kind: string; us
   );
 }
 
-function BetLine({ b }: { b: { id: string; username: string; avatarColor: string; initials: string; game: string; bet: number; payout: number; net: number } }) {
+function BetLine({ b, championId }: {
+  b: {
+    id: string;
+    userId?: string;
+    username: string;
+    avatarColor: string;
+    initials: string;
+    frame?: string | null;
+    hat?: string | null;
+    game: string;
+    bet: number;
+    payout: number;
+    net: number;
+  };
+  championId: string | null;
+}) {
   const win = b.net > 0;
   return (
     <div style={{
@@ -286,12 +320,15 @@ function BetLine({ b }: { b: { id: string; username: string; avatarColor: string
       background: win ? "var(--cactus-100)" : "var(--crimson-100)",
       border: "2px solid var(--ink-900)",
     }}>
-      <div
-        className="avatar avatar-sm"
-        style={{ background: b.avatarColor, fontSize: 11, width: 24, height: 24, borderWidth: 2, flexShrink: 0 }}
-      >
-        {b.initials}
-      </div>
+      <Avatar
+        initials={b.initials}
+        color={b.avatarColor}
+        size={26}
+        fontSize={11}
+        frame={b.frame ?? null}
+        hat={b.hat ?? null}
+        champion={!!b.userId && b.userId === championId}
+      />
       <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-display)", fontSize: 13 }}>
         <span>{b.username}</span>
         <span style={{ color: "var(--saddle-400)" }}> · {b.game}</span>

@@ -6,6 +6,15 @@ import { ChatDrawer } from "./ChatDrawer";
 import { PresenceRail } from "./PresenceRail";
 import type { ChatMessagePublic } from "@/lib/db";
 
+export type Me = {
+  id: string;
+  username: string;
+  avatarColor: string;
+  initials: string;
+  frame?: string | null;
+  hat?: string | null;
+};
+
 // Single client wrapper used by every authed page. Loads:
 //   - Realtime presence (who's online + which game)
 //   - Global chat (history + live)
@@ -17,16 +26,18 @@ export function AppLive({
   initialChat,
   game,
   showRail = true,
+  championId = null,
   children,
 }: {
-  me: { id: string; username: string; avatarColor: string; initials: string } | null;
+  me: Me | null;
   initialChat: ChatMessagePublic[];
   game: string;
   showRail?: boolean;
+  championId?: string | null;
   children: ReactNode;
 }) {
   return (
-    <LiveProvider me={me} initialChat={initialChat} game={game}>
+    <LiveProvider me={me} initialChat={initialChat} game={game} championId={championId}>
       {showRail && <PresenceRail currentUserId={me?.id ?? null} />}
       {children}
       {me && <ChatDrawer currentUserId={me.id} />}

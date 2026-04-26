@@ -9,6 +9,8 @@ export type PresenceMember = {
   username: string;
   avatarColor: string;
   initials: string;
+  frame?: string | null;
+  hat?: string | null;
   game: string | null; // 'lobby' | 'slots' | 'crash' | etc.
   joinedAt: number;
 };
@@ -19,6 +21,8 @@ export type LiveBet = {
   username: string;
   avatarColor: string;
   initials: string;
+  frame?: string | null;
+  hat?: string | null;
   game: string;
   bet: number;
   payout: number;
@@ -31,6 +35,7 @@ type LiveCtx = {
   presence: PresenceMember[];
   bets: LiveBet[];
   chat: ChatMessagePublic[];
+  championId: string | null;
   pushChat: (m: ChatMessagePublic) => void;
 };
 
@@ -39,6 +44,7 @@ const Ctx = createContext<LiveCtx>({
   presence: [],
   bets: [],
   chat: [],
+  championId: null,
   pushChat: () => {},
 });
 
@@ -52,11 +58,20 @@ export function LiveProvider({
   me,
   initialChat,
   game,
+  championId = null,
   children,
 }: {
-  me: { id: string; username: string; avatarColor: string; initials: string } | null;
+  me: {
+    id: string;
+    username: string;
+    avatarColor: string;
+    initials: string;
+    frame?: string | null;
+    hat?: string | null;
+  } | null;
   initialChat: ChatMessagePublic[];
   game: string; // current page identifier
+  championId?: string | null;
   children: React.ReactNode;
 }) {
   const [presence, setPresence] = useState<PresenceMember[]>([]);
@@ -95,7 +110,13 @@ export function LiveProvider({
           if (Math.abs(net) < BIG_BET_THRESHOLD) return;
           // Look up user info for the avatar.
           const { data } = await supa.from("users_public").select("*").eq("id", row.user_id).maybeSingle();
-          const u = (data ?? {}) as { username?: string; avatar_color?: string; initials?: string };
+          const u = (data ?? {}) as {
+            username?: string;
+            avatar_color?: string;
+            initials?: string;
+            equipped_frame?: string | null;
+            equipped_hat?: string | null;
+          };
           setBets((prev) =>
             [
               {
@@ -104,6 +125,8 @@ export function LiveProvider({
                 username: u.username ?? "?",
                 avatarColor: u.avatar_color ?? "var(--gold-300)",
                 initials: u.initials ?? "??",
+                frame: u.equipped_frame ?? null,
+                hat: u.equipped_hat ?? null,
                 game: row.game,
                 bet: row.bet,
                 payout: row.payout,
@@ -162,6 +185,8 @@ export function LiveProvider({
           username: me.username,
           avatarColor: me.avatarColor,
           initials: me.initials,
+          frame: me.frame ?? null,
+          hat: me.hat ?? null,
           game: gameRef.current,
           joinedAt: Date.now(),
         } satisfies PresenceMember);
@@ -175,6 +200,8 @@ export function LiveProvider({
         username: me.username,
         avatarColor: me.avatarColor,
         initials: me.initials,
+        frame: me.frame ?? null,
+        hat: me.hat ?? null,
         game: gameRef.current,
         joinedAt: Date.now(),
       });
@@ -199,6 +226,8 @@ export function LiveProvider({
       username: me.username,
       avatarColor: me.avatarColor,
       initials: me.initials,
+      frame: me.frame ?? null,
+      hat: me.hat ?? null,
       game,
       joinedAt: Date.now(),
     });
@@ -262,8 +291,8 @@ export function LiveProvider({
   }, [me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = useMemo(
-    () => ({ ready, presence, bets, chat, pushChat }),
-    [ready, presence, bets, chat],
+    () => ({ ready, presence, bets, chat, championId, pushChat }),
+    [ready, presence, bets, chat, championId],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -452,6 +452,8 @@ export async function insertChatMessage(
     username: u?.username ?? "?",
     avatar_color: u?.avatar_color ?? "var(--gold-300)",
     initials: u?.initials ?? "??",
+    equipped_frame: u?.equipped_frame ?? null,
+    equipped_hat: u?.equipped_hat ?? null,
   };
 }
 
@@ -464,6 +466,8 @@ export async function recentChatMessages(limit = 50): Promise<ChatMessagePublic[
       username: u?.username ?? "?",
       avatar_color: u?.avatar_color ?? "var(--gold-300)",
       initials: u?.initials ?? "??",
+      equipped_frame: u?.equipped_frame ?? null,
+      equipped_hat: u?.equipped_hat ?? null,
     };
   });
 }

@@ -2,6 +2,7 @@
 
 import { useLive } from "./LiveProvider";
 import { GameIcon } from "@/components/GameIcon";
+import { Avatar } from "@/components/Avatar";
 
 const GAME_LABEL: Record<string, string> = {
   lobby: "Lobby",
@@ -22,7 +23,7 @@ const GAME_LABEL: Record<string, string> = {
 };
 
 export function PresenceRail({ currentUserId }: { currentUserId: string | null }) {
-  const { presence, ready } = useLive();
+  const { presence, ready, championId } = useLive();
   if (!ready || presence.length === 0) return null;
 
   return (
@@ -68,12 +69,15 @@ export function PresenceRail({ currentUserId }: { currentUserId: string | null }
               border: `2px solid ${isMe ? "var(--gold-300)" : "var(--ink-900)"}`,
             }}
           >
-            <div
-              className="avatar avatar-sm"
-              style={{ background: m.avatarColor, fontSize: 12, width: 24, height: 24, borderWidth: 2 }}
-            >
-              {m.initials}
-            </div>
+            <Avatar
+              initials={m.initials}
+              color={m.avatarColor}
+              size={26}
+              fontSize={11}
+              frame={m.frame ?? null}
+              hat={m.hat ?? null}
+              champion={m.userId === championId}
+            />
             <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.1 }}>
               <span
                 style={{

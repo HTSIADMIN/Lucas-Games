@@ -4,6 +4,7 @@ import { AppLive } from "@/components/social/AppLive";
 import { readSession } from "@/lib/auth/session";
 import { getUserById, listInventory, recentChatMessages } from "@/lib/db";
 import { getBalance } from "@/lib/wallet";
+import { getChampionId } from "@/lib/champion";
 import { CATALOG } from "@/lib/shop/catalog";
 import { ShopClient } from "./ShopClient";
 
@@ -14,18 +15,21 @@ export default async function ShopPage() {
   const owned = await listInventory(user.id);
   const balance = await getBalance(user.id);
   const initialChat = await recentChatMessages(50);
+  const championId = await getChampionId();
   const me = {
     id: user.id,
     username: user.username,
     avatarColor: user.avatar_color,
     initials: user.initials,
+    frame: user.equipped_frame ?? null,
+    hat: user.equipped_hat ?? null,
   };
 
   return (
     <>
       <SiteHeader current="shop" />
       <main className="page">
-        <AppLive me={me} initialChat={initialChat} game="shop">
+        <AppLive me={me} initialChat={initialChat} game="shop" championId={championId}>
         <h1 style={{ fontSize: "var(--fs-h1)", marginBottom: "var(--sp-2)" }}>The General Store</h1>
         <p className="text-mute" style={{ marginBottom: "var(--sp-6)" }}>
           Spend Coins on flair. Cosmetic only — pure flex.

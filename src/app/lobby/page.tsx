@@ -55,13 +55,15 @@ export default async function LobbyPage() {
     username: user.username,
     avatarColor: user.avatar_color,
     initials: user.initials,
+    frame: user.equipped_frame ?? null,
+    hat: user.equipped_hat ?? null,
   };
 
   return (
     <>
       <SiteHeader current="lobby" />
       <main className="page">
-        <AppLive me={me} initialChat={initialChat} game="lobby">
+        <AppLive me={me} initialChat={initialChat} game="lobby" championId={championId}>
         <section className="row-lg" style={{ marginBottom: "var(--sp-7)", flexWrap: "wrap" }}>
           <div className="balance-bar">
             <Avatar

@@ -40,13 +40,15 @@ export async function GameShell({
     username: user.username,
     avatarColor: user.avatar_color,
     initials: user.initials,
+    frame: user.equipped_frame ?? null,
+    hat: user.equipped_hat ?? null,
   };
 
   return (
     <>
       <SiteHeader current="lobby" />
       <main className="page">
-        <AppLive me={me} initialChat={initialChat} game={game}>
+        <AppLive me={me} initialChat={initialChat} game={game} championId={championId}>
           <div className="row-lg" style={{ marginBottom: "var(--sp-6)", flexWrap: "wrap" }}>
             <Link href="/lobby" className="btn btn-ghost btn-sm">← Lobby</Link>
             <div className="balance-bar">

@@ -30,7 +30,7 @@ export async function GET() {
     .from("game_sessions")
     .select(`
       id, user_id, game, bet, payout, settled_at, created_at,
-      users:users!inner(username, avatar_color, initials)
+      users:users!inner(username, avatar_color, initials, equipped_frame, equipped_hat)
     `)
     .eq("status", "settled")
     .gte("created_at", since)
@@ -39,7 +39,13 @@ export async function GET() {
 
   if (error || !data) return NextResponse.json({ bets: [] });
 
-  type UserBlob = { username: string; avatar_color: string; initials: string };
+  type UserBlob = {
+    username: string;
+    avatar_color: string;
+    initials: string;
+    equipped_frame: string | null;
+    equipped_hat: string | null;
+  };
   type Row = {
     id: string;
     user_id: string;
@@ -63,6 +69,8 @@ export async function GET() {
         username: u?.username ?? "?",
         avatarColor: u?.avatar_color ?? "var(--gold-300)",
         initials: u?.initials ?? "??",
+        frame: u?.equipped_frame ?? null,
+        hat: u?.equipped_hat ?? null,
         game: r.game,
         bet,
         payout,
