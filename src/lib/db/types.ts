@@ -22,6 +22,22 @@ export type PlayerInventoryRow = {
   acquired_at: string;
 };
 
+export type ChatMessage = {
+  id: number;
+  user_id: string;
+  body: string;
+  kind: "message" | "tip" | "system";
+  ref_kind: string | null;
+  ref_id: string | null;
+  created_at: string;
+};
+
+export type ChatMessagePublic = ChatMessage & {
+  username: string;
+  avatar_color: string;
+  initials: string;
+};
+
 export type UserPublic = Pick<User, "id" | "username" | "avatar_color" | "initials" | "last_seen_at">;
 
 export type UserSession = {

@@ -57,4 +57,7 @@ export const ownsItem              = impl.ownsItem;
 export const grantItem             = impl.grantItem;
 export const setEquipped           = impl.setEquipped;
 
+export const insertChatMessage     = impl.insertChatMessage;
+export const recentChatMessages    = impl.recentChatMessages;
+
 export * from "./types";

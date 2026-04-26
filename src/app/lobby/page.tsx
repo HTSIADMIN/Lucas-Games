@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
+import { AppLive } from "@/components/social/AppLive";
 import { readSession } from "@/lib/auth/session";
 import { getBalance } from "@/lib/wallet";
-import { getUserById } from "@/lib/db";
+import { getUserById, recentChatMessages } from "@/lib/db";
 import { SignOutButton } from "./SignOutButton";
 
 const GAMES = [
@@ -29,11 +30,19 @@ export default async function LobbyPage() {
 
   const user = (await getUserById(s.user.id))!;
   const balance = await getBalance(user.id);
+  const initialChat = await recentChatMessages(50);
+  const me = {
+    id: user.id,
+    username: user.username,
+    avatarColor: user.avatar_color,
+    initials: user.initials,
+  };
 
   return (
     <>
       <SiteHeader current="lobby" />
       <main className="page">
+        <AppLive me={me} initialChat={initialChat} game="lobby">
         <section className="row-lg" style={{ marginBottom: "var(--sp-7)", flexWrap: "wrap" }}>
           <div className="balance-bar">
             <div className="avatar" style={{ background: user.avatar_color }}>
@@ -107,6 +116,7 @@ export default async function LobbyPage() {
             </Link>
           ))}
         </div>
+        </AppLive>
       </main>
     </>
   );

@@ -21,6 +21,7 @@ const PROTECTED_PREFIXES = [
   "/api/earn",
   "/api/shop",
   "/api/leaderboard",
+  "/api/chat",
 ];
 
 export async function middleware(req: NextRequest) {
@@ -62,5 +63,6 @@ export const config = {
     "/api/earn/:path*",
     "/api/shop/:path*",
     "/api/leaderboard/:path*",
+    "/api/chat/:path*",
   ],
 };

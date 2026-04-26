@@ -5,6 +5,7 @@ export default function PlinkoPage() {
   return (
     <GameShell
       title="Plinko"
+      game="plinko"
       blurb="Drop a chip. Pegs do the rest. Outer buckets pay big."
     >
       <PlinkoClient />

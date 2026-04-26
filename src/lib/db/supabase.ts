@@ -4,6 +4,8 @@
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
+  ChatMessage,
+  ChatMessagePublic,
   EarnCooldown,
   GameSession,
   MinesGame,
@@ -319,6 +321,41 @@ export async function setEquipped(
   const { data, error } = await client().from("users").update(update).eq("id", userId).select("*").maybeSingle();
   if (error) throw new Error(`setEquipped: ${error.message}`);
   return (data as User | null) ?? null;
+}
+
+// ============ CHAT ============
+export async function insertChatMessage(
+  input: Omit<ChatMessage, "id" | "created_at">
+): Promise<ChatMessagePublic> {
+  const { data: msg, error } = await client()
+    .from("chat_messages")
+    .insert({
+      user_id: input.user_id,
+      body: input.body,
+      kind: input.kind,
+      ref_kind: input.ref_kind,
+      ref_id: input.ref_id,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(`insertChatMessage: ${error.message}`);
+  const u = await getUserById(input.user_id);
+  return {
+    ...(msg as ChatMessage),
+    username: u?.username ?? "?",
+    avatar_color: u?.avatar_color ?? "var(--gold-300)",
+    initials: u?.initials ?? "??",
+  };
+}
+
+export async function recentChatMessages(limit = 50): Promise<ChatMessagePublic[]> {
+  const { data, error } = await client()
+    .from("chat_messages_public")
+    .select("*")
+    .limit(limit);
+  if (error) throw new Error(`recentChatMessages: ${error.message}`);
+  // The view returns descending; reverse for chronological in the UI.
+  return ((data ?? []) as ChatMessagePublic[]).slice().reverse();
 }
 
 // Note: cosmetic_items table is unused by the app — catalog lives in src/lib/shop/catalog.ts.

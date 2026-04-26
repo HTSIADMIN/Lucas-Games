@@ -5,6 +5,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  ChatMessage,
+  ChatMessagePublic,
   CrashBet,
   CrashRound,
   EarnCooldown,
@@ -31,8 +33,10 @@ type Schema = {
   plinko_drops: PlinkoDrop[];
   mines_games: MinesGame[];
   player_inventory: PlayerInventoryRow[];
+  chat_messages: ChatMessage[];
   _walletSeq: number;
   _crashBetSeq: number;
+  _chatSeq: number;
 };
 
 const DATA_DIR = path.join(process.cwd(), ".data");
@@ -41,8 +45,8 @@ const DB_PATH = path.join(DATA_DIR, "db.json");
 const EMPTY: Schema = {
   users: [], user_sessions: [], pin_attempts: [], wallet_transactions: [],
   game_sessions: [], earn_cooldowns: [], crash_rounds: [], crash_bets: [],
-  plinko_drops: [], mines_games: [], player_inventory: [],
-  _walletSeq: 0, _crashBetSeq: 0,
+  plinko_drops: [], mines_games: [], player_inventory: [], chat_messages: [],
+  _walletSeq: 0, _crashBetSeq: 0, _chatSeq: 0,
 };
 
 function load(): Schema {
@@ -246,6 +250,36 @@ export async function grantItem(userId: string, itemId: string): Promise<boolean
   db().player_inventory.push({ user_id: userId, item_id: itemId, acquired_at: new Date().toISOString() });
   commit(); return true;
 }
+// ============ CHAT ============
+export async function insertChatMessage(
+  input: Omit<ChatMessage, "id" | "created_at">
+): Promise<ChatMessagePublic> {
+  db()._chatSeq += 1;
+  const msg: ChatMessage = { ...input, id: db()._chatSeq, created_at: new Date().toISOString() };
+  db().chat_messages.push(msg);
+  commit();
+  const u = db().users.find((x) => x.id === input.user_id);
+  return {
+    ...msg,
+    username: u?.username ?? "?",
+    avatar_color: u?.avatar_color ?? "var(--gold-300)",
+    initials: u?.initials ?? "??",
+  };
+}
+
+export async function recentChatMessages(limit = 50): Promise<ChatMessagePublic[]> {
+  const all = db().chat_messages.slice().sort((a, b) => b.id - a.id).slice(0, limit);
+  return all.reverse().map((m) => {
+    const u = db().users.find((x) => x.id === m.user_id);
+    return {
+      ...m,
+      username: u?.username ?? "?",
+      avatar_color: u?.avatar_color ?? "var(--gold-300)",
+      initials: u?.initials ?? "??",
+    };
+  });
+}
+
 export async function setEquipped(
   userId: string,
   patch: Partial<Pick<User, "avatar_color" | "equipped_frame" | "equipped_card_deck" | "equipped_theme">>

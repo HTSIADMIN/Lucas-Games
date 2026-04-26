@@ -5,6 +5,7 @@ export default function DailySpinPage() {
   return (
     <GameShell
       title="Daily Spin"
+      game="daily-spin"
       blurb="Once every 24 hours. Free Coins. Don't waste it."
     >
       <DailySpinClient />
