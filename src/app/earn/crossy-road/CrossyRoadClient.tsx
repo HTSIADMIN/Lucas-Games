@@ -141,12 +141,17 @@ export function CrossyRoadClient() {
           }
         });
 
-        // Collision check
+        // Collision check — proper AABB. Both player and car are rectangles
+        // in tile space: player roughly [playerX + 0.15, playerX + 0.85],
+        // car [cx, cx + cw]. Overlap iff player.end > car.start AND
+        // player.start < car.end.
         const lane = lanes.get(playerY);
         if (lane && lane.kind === "road" && lane.cars) {
           const cw = lane.carWidth ?? 1;
+          const playerStart = playerX + 0.15;
+          const playerEnd = playerX + 0.85;
           for (const cx of lane.cars) {
-            if (playerX >= cx - cw + 0.05 && playerX <= cx + cw - 0.05) {
+            if (cx + cw > playerStart && cx < playerEnd) {
               phaseRef.current = "dead";
               setPhase("dead");
               setHighScore((h) => Math.max(h, playerY));
