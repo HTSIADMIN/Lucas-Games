@@ -51,7 +51,7 @@ const C = {
 
 type Px = [x: number, y: number, w: number, h: number, color: string];
 
-const ICONS: Record<IconName, Px[]> = {
+const ICONS: Partial<Record<IconName, Px[]>> = {
   // ============ SLOTS ============
   // BOOT — brown cowboy boot
   "slot.boot": [
@@ -465,338 +465,635 @@ const ICONS: Record<IconName, Px[]> = {
     [3, 5, 2, 1, C.neonGold],
   ],
 
-  // ============ LOBBY TILE ART ============
-  // COINFLIP — single big coin spinning edge
+};
+
+// =============================================================
+// LOBBY TILE ART — 32×32 grid
+// One miniature scene per game, hand-laid. Drawn at higher resolution than
+// the 16-grid icons above so the lobby cards have room for actual detail.
+// =============================================================
+const LOBBY_ICONS_32: Partial<Record<IconName, Px[]>> = {
+  // ----- Coin Flip — single big spinning coin with $ -----
   "lobby.coinflip": [
-    [5, 2, 6, 1, C.goldD],
-    [3, 3, 10, 1, C.goldD],
-    [2, 4, 12, 8, C.gold],
-    [3, 12, 10, 1, C.goldD],
-    [5, 13, 6, 1, C.goldDD],
-    [2, 4, 1, 8, C.goldD],
-    [13, 4, 1, 8, C.goldD],
-    // dollar sign center
-    [7, 5, 2, 1, C.ink],
-    [6, 6, 1, 1, C.ink],
-    [7, 7, 2, 1, C.ink],
-    [9, 8, 1, 2, C.ink],
-    [7, 10, 2, 1, C.ink],
-    [7, 4, 2, 1, C.ink],
-    [7, 11, 2, 1, C.ink],
-    // shine
-    [3, 5, 2, 1, C.neonGold],
-    [4, 4, 1, 1, C.neonGold],
+    // Coin disc, octagonal staircase
+    [12,  4,  8, 1, C.goldD],
+    [10,  5, 12, 1, C.goldD],
+    [ 8,  6, 16, 1, C.goldD],
+    [ 9,  6, 14, 1, C.gold],
+    [ 7,  7, 18, 1, C.goldD],
+    [ 8,  7, 16, 1, C.gold],
+    [ 6,  8, 20, 1, C.goldD],
+    [ 7,  8, 18, 1, C.gold],
+    [ 5,  9, 22, 14, C.goldD],
+    [ 6,  9, 20, 14, C.gold],
+    [ 6, 23, 20, 1, C.goldD],
+    [ 7, 23, 18, 1, C.gold],
+    [ 7, 24, 18, 1, C.goldD],
+    [ 8, 24, 16, 1, C.gold],
+    [ 8, 25, 16, 1, C.goldD],
+    [ 9, 25, 14, 1, C.gold],
+    [10, 26, 12, 1, C.goldD],
+    [12, 27,  8, 1, C.goldD],
+    // Inner shine arc (top-left)
+    [ 9,  9, 12, 1, C.goldL],
+    [ 7, 11,  3, 1, C.goldL],
+    [ 6, 13,  2, 4, C.goldL],
+    [ 8, 10,  2, 1, C.neonGold],
+    // $ symbol
+    [15,  8,  2, 16, C.ink],
+    [11, 10,  9, 2, C.ink],
+    [11, 11,  3, 3, C.ink],
+    [11, 14,  9, 2, C.ink],
+    [18, 15,  3, 3, C.ink],
+    [11, 18,  9, 2, C.ink],
+    [11, 21,  3, 3, C.ink],
+    [18, 11,  3, 1, C.inkSoft],
+    [11, 21,  3, 1, C.inkSoft],
+    // Tiny shine highlight
+    [10, 10,  1, 1, C.parchL],
+    // Motion arcs (subtle, top + bottom)
+    [12,  2,  2, 1, C.goldL],
+    [16,  1,  2, 1, C.gold],
+    [20,  2,  2, 1, C.goldL],
+    [12, 29,  2, 1, C.goldL],
+    [18, 30,  2, 1, C.gold],
   ],
 
-  // COINFLIP DUEL — two crossed coins
+  // ----- Coin Flip Duel — two crossed coins, big -----
   "lobby.coinflip_duel": [
-    // back coin (slightly smaller, top-left)
-    [1, 1, 7, 1, C.goldD],
-    [0, 2, 9, 5, C.gold],
-    [1, 7, 7, 1, C.goldD],
-    [4, 3, 1, 4, C.ink],
-    [3, 4, 1, 1, C.ink],
-    [3, 5, 1, 1, C.ink],
-    // front coin (bottom-right)
-    [8, 8, 7, 1, C.goldD],
-    [7, 9, 9, 5, C.gold],
-    [8, 14, 7, 1, C.goldD],
-    [11, 10, 1, 4, C.ink],
-    [10, 11, 1, 1, C.ink],
-    [10, 12, 1, 1, C.ink],
-    // shines
-    [1, 3, 1, 1, C.neonGold],
-    [8, 10, 1, 1, C.neonGold],
+    // Back coin (top-left, slightly tilted)
+    [ 5,  3, 10, 1, C.goldD],
+    [ 3,  4, 14, 1, C.goldD],
+    [ 4,  4, 12, 1, C.gold],
+    [ 2,  5, 16, 9, C.goldD],
+    [ 3,  5, 14, 9, C.gold],
+    [ 3, 14, 14, 1, C.goldD],
+    [ 4, 14, 12, 1, C.gold],
+    [ 5, 15, 10, 1, C.goldD],
+    // Back coin "H"
+    [ 6,  7, 1, 5, C.ink],
+    [13,  7, 1, 5, C.ink],
+    [ 7,  9, 6, 1, C.ink],
+    [ 4,  6, 1, 1, C.goldL],
+    [ 5,  5, 2, 1, C.goldL],
+    // Front coin (bottom-right)
+    [16, 16, 12, 1, C.goldD],
+    [14, 17, 16, 1, C.goldD],
+    [15, 17, 14, 1, C.gold],
+    [13, 18, 18, 11, C.goldD],
+    [14, 18, 16, 11, C.gold],
+    [14, 29, 16, 1, C.goldD],
+    [15, 29, 14, 1, C.gold],
+    [16, 30, 12, 1, C.goldD],
+    // Front coin "T"
+    [18, 21,  8, 1, C.ink],
+    [21, 21,  2, 5, C.ink],
+    [15, 19,  2, 1, C.goldL],
+    [16, 18,  3, 1, C.goldL],
+    // Sparks between
+    [12, 12, 1, 1, C.neonGold],
+    [16, 13, 1, 1, C.neonGold],
+    [13, 14, 1, 1, C.neonGold],
   ],
 
-  // DICE — two pip dice
+  // ----- Dice — pair of pixel dice, white + red -----
   "lobby.dice": [
-    // die 1 (back)
-    [1, 1, 8, 8, C.parchL],
-    [1, 1, 8, 1, C.parchM],
-    [1, 8, 8, 1, C.parchD],
-    [1, 1, 1, 8, C.parchD],
-    [8, 1, 1, 8, C.parchD],
-    // pips on die 1 (showing 5)
-    [3, 3, 1, 1, C.ink],
-    [6, 3, 1, 1, C.ink],
-    [4, 4, 1, 1, C.ink],
-    [3, 6, 1, 1, C.ink],
-    [6, 6, 1, 1, C.ink],
-    // die 2 (front, offset)
-    [7, 7, 8, 8, C.crimson],
-    [7, 7, 8, 1, C.neonCrim],
-    [7, 14, 8, 1, C.crimsonD],
-    [7, 7, 1, 8, C.crimsonD],
-    [14, 7, 1, 8, C.crimsonD],
-    // pips on die 2 (showing 3)
-    [9, 9, 1, 1, C.parchL],
-    [11, 11, 1, 1, C.parchL],
-    [13, 13, 1, 1, C.parchL],
+    // White die (back-left)
+    [ 4,  3, 14, 14, C.parchL],
+    [ 4,  3, 14,  1, C.parchM],
+    [ 4, 16, 14,  1, C.parchD],
+    [ 4,  3,  1, 14, C.parchM],
+    [17,  3,  1, 14, C.parchD],
+    // 5-pips
+    [ 6,  5,  2, 2, C.ink],
+    [14,  5,  2, 2, C.ink],
+    [10,  9,  2, 2, C.ink],
+    [ 6, 13,  2, 2, C.ink],
+    [14, 13,  2, 2, C.ink],
+    // Red die (front-right)
+    [14, 14, 14, 14, C.crimson],
+    [14, 14, 14,  1, C.neonCrim],
+    [14, 27, 14,  1, C.crimsonDD],
+    [14, 14,  1, 14, C.neonCrim],
+    [27, 14,  1, 14, C.crimsonDD],
+    // 3-pips diagonal
+    [16, 16,  2, 2, C.parchL],
+    [20, 20,  2, 2, C.parchL],
+    [24, 24,  2, 2, C.parchL],
+    // Felt shadow under
+    [ 4, 28, 24,  1, C.shadow],
+    [ 6, 29, 20,  1, C.inkSoft],
   ],
 
-  // SLOTS — slot machine
+  // ----- Slots — slot machine cabinet -----
   "lobby.slots": [
-    // body
-    [2, 2, 12, 12, C.crimsonD],
-    [2, 2, 12, 1, C.crimson],
-    [2, 13, 12, 1, C.crimsonDD],
-    [2, 2, 1, 12, C.crimson],
-    [13, 2, 1, 12, C.crimsonDD],
-    // screen
-    [3, 4, 10, 6, C.ink],
-    // reels
-    [4, 5, 2, 4, C.parchL],
-    [7, 5, 2, 4, C.parchL],
-    [10, 5, 2, 4, C.parchL],
-    // symbols
-    [4, 6, 2, 1, C.crimson],
-    [7, 6, 2, 1, C.gold],
-    [10, 6, 2, 1, C.cactus],
-    // lever
-    [14, 4, 1, 4, C.goldD],
-    [14, 3, 2, 1, C.gold],
-    // coin tray
-    [4, 11, 8, 1, C.gold],
-    [5, 12, 6, 1, C.goldD],
+    // Marquee top (gold)
+    [ 4,  2, 24,  3, C.gold],
+    [ 4,  2, 24,  1, C.goldL],
+    [ 4,  4, 24,  1, C.goldD],
+    // Cabinet body
+    [ 3,  5, 26, 22, C.crimson],
+    [ 3,  5, 26,  1, C.neonCrim],
+    [ 3, 26, 26,  1, C.crimsonDD],
+    [ 3,  5,  1, 22, C.crimsonD],
+    [28,  5,  1, 22, C.crimsonDD],
+    // Reel window (dark inset)
+    [ 5, 10, 18, 10, C.ink],
+    [ 5, 10, 18,  1, C.shadow],
+    // Three reels
+    [ 6, 11,  5,  8, C.parchL],
+    [12, 11,  5,  8, C.parchL],
+    [18, 11,  5,  8, C.parchL],
+    // Symbols on reels: cherry / bell / star
+    [ 7, 13,  3,  3, C.crimson],
+    [ 8, 12,  1,  1, C.cactus], // stem
+    [13, 13,  3,  3, C.gold],
+    [13, 16,  3,  1, C.goldD],
+    [19, 12,  1,  1, C.gold],   // star top
+    [18, 13,  3,  1, C.gold],
+    [19, 14,  1,  3, C.gold],
+    [18, 15,  3,  1, C.gold],
+    // Gold trim around the reel window
+    [ 4,  9, 20,  1, C.goldD],
+    [ 4, 20, 20,  1, C.goldD],
+    // Lever
+    [27,  6,  3,  3, C.crimson],
+    [28,  9,  1,  6, C.gold],
+    [27, 14,  3,  2, C.crimsonD],
+    // Coin tray
+    [ 5, 22, 18,  3, C.saddleD],
+    [ 5, 22, 18,  1, C.saddle],
+    // JACKPOT band on marquee
+    [ 7,  3,  2,  1, C.ink],
+    [10,  3,  2,  1, C.ink],
+    [13,  3,  2,  1, C.ink],
+    [16,  3,  2,  1, C.ink],
+    [19,  3,  2,  1, C.ink],
+    [22,  3,  2,  1, C.ink],
   ],
 
-  // BLACKJACK — A and K cards fanned
+  // ----- Blackjack — fanned cards over a chip -----
   "lobby.blackjack": [
-    // back card (K)
-    [2, 3, 6, 10, C.parchL],
-    [2, 3, 6, 1, C.parchD],
-    [2, 12, 6, 1, C.parchD],
-    [2, 3, 1, 10, C.parchD],
-    [7, 3, 1, 10, C.parchD],
-    [3, 5, 1, 1, C.ink],
-    [4, 4, 1, 1, C.ink],
-    [4, 6, 1, 1, C.ink],
-    [5, 5, 1, 1, C.ink],
+    // Back card (K) — leftmost, slight rotation feel via stacking
+    [ 4,  6,  9, 22, C.parchL],
+    [ 4,  6,  9,  1, C.parchM],
+    [ 4, 27,  9,  1, C.parchD],
+    [ 4,  6,  1, 22, C.parchM],
+    [12,  6,  1, 22, C.parchD],
+    // K corner — small spade
+    [ 6,  9,  1,  1, C.ink],
+    [ 6, 10,  3,  1, C.ink],
+    [ 5, 11,  5,  3, C.ink],
     // K letter
-    [3, 9, 1, 3, C.ink],
-    [5, 9, 1, 1, C.ink],
-    [6, 10, 1, 1, C.ink],
-    [5, 11, 1, 1, C.ink],
-    // front card (A) — slightly to right and up
-    [8, 2, 6, 10, C.parchL],
-    [8, 2, 6, 1, C.parchD],
-    [8, 11, 6, 1, C.parchD],
-    [8, 2, 1, 10, C.parchD],
-    [13, 2, 1, 10, C.parchD],
-    // big A spade
-    [10, 4, 2, 1, C.ink],
-    [9, 5, 4, 2, C.ink],
-    [10, 7, 2, 1, C.ink],
-    [9, 7, 1, 1, C.ink],
-    [12, 7, 1, 1, C.ink],
-    // letter A
-    [9, 9, 1, 2, C.ink],
-    [11, 9, 1, 2, C.ink],
-    [9, 9, 3, 1, C.ink],
-    [9, 10, 3, 1, C.ink],
+    [ 6, 18,  1,  4, C.ink],
+    [ 9, 18,  1,  1, C.ink],
+    [10, 19,  1,  1, C.ink],
+    [ 9, 20,  1,  1, C.ink],
+    [10, 21,  1,  1, C.ink],
+    // Middle card (A) — overlap right
+    [11,  4,  9, 22, C.parchL],
+    [11,  4,  9,  1, C.parchM],
+    [11, 25,  9,  1, C.parchD],
+    [11,  4,  1, 22, C.parchM],
+    [19,  4,  1, 22, C.parchD],
+    // big spade in middle
+    [14, 10,  3,  1, C.ink],
+    [13, 11,  5,  4, C.ink],
+    [12, 13,  7,  2, C.ink],
+    [15, 15,  1,  2, C.ink],
+    // A letter
+    [13, 17,  1,  4, C.ink],
+    [17, 17,  1,  4, C.ink],
+    [13, 17,  5,  1, C.ink],
+    [13, 19,  5,  1, C.ink],
+    // Front card (heart) — right
+    [18,  3,  9, 22, C.parchL],
+    [18,  3,  9,  1, C.parchM],
+    [18, 24,  9,  1, C.parchD],
+    [18,  3,  1, 22, C.parchM],
+    [26,  3,  1, 22, C.parchD],
+    // heart shape
+    [20,  9,  2,  2, C.crimson],
+    [23,  9,  2,  2, C.crimson],
+    [20, 11,  5,  2, C.crimson],
+    [21, 13,  3,  1, C.crimson],
+    [22, 14,  1,  1, C.crimson],
+    // J letter
+    [22, 16,  1,  4, C.crimson],
+    [20, 19,  3,  1, C.crimson],
+    [20, 18,  1,  1, C.crimson],
+    // Chip stack at bottom-left
+    [ 2, 25,  9,  3, C.crimsonDD],
+    [ 2, 25,  9,  1, C.crimson],
+    [ 3, 24,  7,  1, C.parchL],
+    [ 3, 24,  1,  1, C.crimson],
+    [ 9, 24,  1,  1, C.crimson],
+    [ 6, 24,  1,  1, C.crimson],
+    [ 2, 28,  9,  2, C.crimsonD],
+    [ 2, 30,  9,  1, C.shadow],
   ],
 
-  // ROULETTE — wheel from above
+  // ----- Roulette — top-down wheel -----
   "lobby.roulette": [
-    // outer ring
-    [5, 1, 6, 1, C.saddleD],
-    [3, 2, 10, 1, C.saddleD],
-    [2, 3, 12, 1, C.saddleD],
-    [1, 4, 14, 8, C.saddleD],
-    [2, 12, 12, 1, C.saddleD],
-    [3, 13, 10, 1, C.saddleD],
-    [5, 14, 6, 1, C.saddleD],
-    // inner red/black/red
-    [3, 4, 4, 7, C.crimsonDD],
-    [7, 4, 2, 7, C.ink],
-    [9, 4, 4, 7, C.crimsonDD],
-    // hub
-    [6, 6, 4, 4, C.gold],
-    [7, 7, 2, 2, C.neonGold],
-    // ball
-    [11, 5, 1, 1, C.parchL],
+    // Outer brass rim
+    [12,  2,  8, 1, C.gold],
+    [ 9,  3, 14, 1, C.gold],
+    [ 7,  4, 18, 1, C.gold],
+    [ 5,  5, 22, 1, C.gold],
+    [ 4,  6, 24, 2, C.gold],
+    [ 3,  8, 26, 16, C.gold],
+    [ 4, 24, 24, 2, C.gold],
+    [ 5, 26, 22, 1, C.gold],
+    [ 7, 27, 18, 1, C.gold],
+    [ 9, 28, 14, 1, C.gold],
+    [12, 29,  8, 1, C.gold],
+    // Inner felt ring
+    [11,  4, 10, 1, C.cactusD],
+    [ 8,  5, 16, 1, C.cactusD],
+    [ 6,  6, 20, 2, C.cactusD],
+    [ 5,  8, 22, 16, C.cactusD],
+    [ 6, 24, 20, 2, C.cactusD],
+    [ 8, 26, 16, 1, C.cactusD],
+    [11, 27, 10, 1, C.cactusD],
+    // Wedges (red/black/green simplified)
+    [13,  6, 6, 2, C.crimson],
+    [ 7,  9, 4, 4, C.ink],
+    [21,  9, 4, 4, C.crimson],
+    [ 7, 19, 4, 4, C.crimson],
+    [21, 19, 4, 4, C.ink],
+    [13, 24, 6, 2, C.ink],
+    [11, 12, 4, 4, C.crimson],
+    [17, 12, 4, 4, C.ink],
+    [11, 16, 4, 4, C.ink],
+    [17, 16, 4, 4, C.crimson],
+    // Hub
+    [13, 13, 6, 6, C.gold],
+    [13, 13, 6, 1, C.goldL],
+    [13, 18, 6, 1, C.goldD],
+    [14, 14, 4, 4, C.neonGold],
+    [15, 15, 2, 2, C.goldDD],
+    // Ball at the top of the track
+    [16,  6, 2, 2, C.parchL],
+    [16,  6, 1, 1, C.white],
   ],
 
-  // MINES — grid of squares with one bomb
+  // ----- Mines — 4×4 grid with bomb + gem -----
   "lobby.mines": [
-    // 4x4 grid
-    [1, 1, 14, 14, C.saddleD],
-    // tiles
-    [2, 2, 3, 3, C.parchM],
-    [6, 2, 3, 3, C.parchM],
-    [10, 2, 3, 3, C.parchM],
-    [2, 6, 3, 3, C.parchM],
-    [6, 6, 3, 3, C.ink],
-    [10, 6, 3, 3, C.parchM],
-    [2, 10, 3, 3, C.parchM],
-    [6, 10, 3, 3, C.parchM],
-    [10, 10, 3, 3, C.parchM],
-    // bomb in center tile
-    [7, 7, 1, 1, C.crimson],
-    [7, 7, 1, 1, C.neonCrim],
-    // gem on top-right
-    [11, 3, 1, 1, C.cactusL],
-    [11, 4, 1, 1, C.cactusD],
+    // Frame
+    [ 2,  2, 28, 28, C.saddleD],
+    [ 2,  2, 28,  1, C.saddleM],
+    [ 2, 29, 28,  1, C.shadow],
+    // 16 tiles in 4×4 grid (each 6×6 with 1px gap)
+    // Hidden tiles
+    ...mineTile(4, 4),
+    ...mineTile(11, 4),
+    ...mineTile(25, 4),
+    ...mineTile(4, 11),
+    ...mineTile(11, 11),
+    ...mineTile(18, 11),
+    ...mineTile(4, 18),
+    ...mineTile(11, 18),
+    ...mineTile(18, 18),
+    ...mineTile(25, 18),
+    ...mineTile(4, 25),
+    ...mineTile(18, 25),
+    ...mineTile(25, 25),
+    // Revealed bomb at center (replaces tile @ 18,4)
+    [18,  4,  6,  6, C.parchM],
+    [18,  4,  6,  1, C.parchD],
+    [22,  6,  3,  3, C.ink],
+    [21,  5,  4,  4, C.ink],
+    [22,  4,  1,  1, C.crimson], // fuse spark
+    [22,  3,  1,  1, C.neonGold],
+    [22,  6,  1,  1, C.parchL], // shine
+    // Revealed gem (replaces tile @ 25,11)
+    [25, 11,  6,  6, C.parchM],
+    [27, 12,  2,  1, C.cactusL],
+    [26, 13,  4,  1, C.cactus],
+    [27, 14,  2,  2, C.cactus],
+    [28, 15,  1,  1, C.cactusD],
+    [27, 16,  1,  1, C.cactusD],
+    // Revealed gem (replaces tile @ 11, 25 -> use 11,25 for second gem)
+    [11, 25,  6,  6, C.parchM],
+    [13, 26,  2,  1, C.skyL],
+    [12, 27,  4,  1, C.sky],
+    [13, 28,  2,  2, C.sky],
+    [14, 29,  1,  1, C.skyD],
   ],
 
-  // PLINKO — board with peg dots and ball
+  // ----- Plinko — pegboard with ball + bottom buckets -----
   "lobby.plinko": [
-    // background
-    [1, 1, 14, 14, C.saddleD],
-    [2, 2, 12, 12, C.parchM],
-    // pegs (rows of small dots)
-    [4, 4, 1, 1, C.ink],
-    [8, 4, 1, 1, C.ink],
-    [12, 4, 1, 1, C.ink],
-    [3, 7, 1, 1, C.ink],
-    [6, 7, 1, 1, C.ink],
-    [10, 7, 1, 1, C.ink],
-    [13, 7, 1, 1, C.ink],
-    [4, 10, 1, 1, C.ink],
-    [8, 10, 1, 1, C.ink],
-    [12, 10, 1, 1, C.ink],
-    // ball
-    [7, 3, 2, 1, C.gold],
-    [7, 2, 2, 1, C.neonGold],
-    // bottom buckets
-    [2, 13, 4, 1, C.gold],
-    [6, 13, 4, 1, C.crimson],
-    [10, 13, 4, 1, C.gold],
+    // Frame
+    [ 2,  2, 28, 28, C.ink],
+    [ 3,  3, 26, 26, C.saddleD],
+    // Pegs (5 rows: 5/4/5/4/5 staggered)
+    ...pegRow(8, [6, 12, 18, 24]),
+    ...pegRow(12, [9, 15, 21]),
+    ...pegRow(16, [6, 12, 18, 24]),
+    ...pegRow(20, [9, 15, 21]),
+    // Ball at top
+    [15,  4, 3, 1, C.gold],
+    [14,  5, 5, 3, C.neonGold],
+    [15,  8, 3, 1, C.goldD],
+    [15,  5, 1, 1, C.parchL],
+    // Bottom buckets
+    [ 3, 24,  6, 5, C.cactusD],
+    [ 9, 24,  6, 5, C.gold],
+    [15, 24,  6, 5, C.crimson],
+    [21, 24,  6, 5, C.gold],
+    [ 3, 24,  6, 1, C.cactus],
+    [ 9, 24,  6, 1, C.goldL],
+    [15, 24,  6, 1, C.neonCrim],
+    [21, 24,  6, 1, C.goldL],
+    // Center pop bucket label "x"
+    [16, 26, 1, 1, C.ink],
+    [17, 27, 1, 1, C.ink],
+    [16, 27, 1, 1, C.ink],
+    [17, 26, 1, 1, C.ink],
+    [10, 26, 3, 1, C.ink],
+    [11, 27, 1, 1, C.ink],
   ],
 
-  // CRASH — rocket on rising line
+  // ----- Crash — rocket on rising trail -----
   "lobby.crash": [
-    // rising line
-    [1, 13, 2, 1, C.crimson],
-    [3, 12, 2, 1, C.crimson],
-    [5, 11, 2, 1, C.crimson],
-    [7, 9, 2, 1, C.crimson],
-    [9, 7, 2, 1, C.crimson],
-    [11, 5, 2, 1, C.crimson],
-    // rocket body
-    [11, 2, 3, 4, C.parchL],
-    [11, 2, 1, 4, C.parchD],
-    // rocket nose
-    [12, 1, 1, 1, C.crimson],
-    // rocket fins
-    [10, 5, 1, 2, C.crimsonD],
-    [14, 5, 1, 2, C.crimsonD],
-    // window
-    [12, 3, 1, 1, C.sky],
-    // exhaust
-    [11, 6, 3, 1, C.gold],
-    [12, 7, 1, 1, C.neonGold],
+    // Trail (parabolic dotted curve from bottom-left up-right)
+    [ 2, 28, 2, 1, C.crimson],
+    [ 4, 27, 2, 1, C.crimson],
+    [ 6, 25, 2, 1, C.crimson],
+    [ 8, 23, 2, 1, C.crimson],
+    [10, 20, 2, 1, C.crimson],
+    [12, 17, 2, 1, C.crimson],
+    [14, 14, 2, 1, C.crimson],
+    [16, 11, 2, 1, C.crimson],
+    [18,  9, 2, 1, C.crimson],
+    [ 4, 28, 2, 1, C.crimsonDD],
+    [ 6, 26, 2, 1, C.crimsonDD],
+    [ 8, 24, 2, 1, C.crimsonDD],
+    [10, 21, 2, 1, C.crimsonDD],
+    [12, 18, 2, 1, C.crimsonDD],
+    [14, 15, 2, 1, C.crimsonDD],
+    [16, 12, 2, 1, C.crimsonDD],
+    // Rocket body
+    [22,  4,  4,  8, C.parchL],
+    [22,  4,  1,  8, C.parchD],
+    [25,  4,  1,  8, C.parchM],
+    // Nose cone (top-right)
+    [24,  2,  2,  2, C.crimson],
+    [25,  1,  1,  1, C.crimson],
+    // Body trim
+    [22,  6,  4,  1, C.crimsonD],
+    [22,  9,  4,  1, C.crimsonD],
+    // Window
+    [23,  7,  2,  2, C.sky],
+    [23,  7,  1,  1, C.skyL],
+    // Fins
+    [20,  9,  2,  3, C.crimsonDD],
+    [26,  9,  2,  3, C.crimsonDD],
+    [20, 11,  2,  1, C.crimsonD],
+    [26, 11,  2,  1, C.crimsonD],
+    // Exhaust flame
+    [22, 12,  4,  2, C.gold],
+    [23, 14,  2,  2, C.neonGold],
+    [23, 16,  2,  1, C.crimson],
+    // Stars
+    [ 4,  4,  1,  1, C.parchL],
+    [ 8,  6,  1,  1, C.parchL],
+    [12,  3,  1,  1, C.parchL],
+    [18,  2,  1,  1, C.parchL],
+    [ 6,  2,  1,  1, C.parchL],
   ],
 
-  // POKER — chip + cards
+  // ----- Poker — chip stack + cards -----
   "lobby.poker": [
-    // chip behind
-    [1, 6, 7, 1, C.crimsonD],
-    [0, 7, 9, 5, C.crimson],
-    [1, 12, 7, 1, C.crimsonD],
-    [3, 8, 3, 3, C.parchL],
-    [4, 9, 1, 1, C.crimson],
-    // cards (small fan)
-    [9, 2, 5, 8, C.parchL],
-    [9, 2, 5, 1, C.parchD],
-    [9, 9, 5, 1, C.parchD],
-    [9, 2, 1, 8, C.parchD],
-    [13, 2, 1, 8, C.parchD],
-    // heart on card
-    [10, 4, 1, 1, C.crimson],
-    [12, 4, 1, 1, C.crimson],
-    [10, 5, 3, 1, C.crimson],
-    [11, 6, 1, 1, C.crimson],
+    // Background card-back fan
+    [ 4, 14, 12, 16, C.crimsonD],
+    [ 4, 14, 12,  1, C.crimson],
+    [ 4, 29, 12,  1, C.crimsonDD],
+    [15, 14,  1, 16, C.crimsonDD],
+    [ 4, 14,  1, 16, C.crimson],
+    // Diamond pattern on back
+    [ 8, 18,  4,  1, C.gold],
+    [ 7, 19,  6,  1, C.gold],
+    [ 6, 20,  8,  1, C.gold],
+    [ 7, 21,  6,  1, C.gold],
+    [ 8, 22,  4,  1, C.gold],
+    [ 9, 23,  2,  1, C.gold],
+    // Front card — face up A♠
+    [14,  6, 12, 18, C.parchL],
+    [14,  6, 12,  1, C.parchM],
+    [14, 23, 12,  1, C.parchD],
+    [25,  6,  1, 18, C.parchD],
+    [14,  6,  1, 18, C.parchM],
+    // big A
+    [18, 11,  4,  1, C.ink],
+    [17, 12,  6,  4, C.ink],
+    [16, 14,  8,  2, C.ink],
+    [19, 16,  2,  2, C.ink],
+    // letter A
+    [16, 18,  1,  3, C.ink],
+    [22, 18,  1,  3, C.ink],
+    [16, 18,  7,  1, C.ink],
+    [16, 20,  7,  1, C.ink],
+    // Chip stack on left bottom
+    [ 2, 24,  8,  3, C.gold],
+    [ 2, 24,  8,  1, C.goldL],
+    [ 2, 27,  8,  3, C.crimson],
+    [ 2, 27,  8,  1, C.neonCrim],
+    [ 2, 23,  8,  1, C.crimsonD],
+    [ 2, 30,  8,  1, C.shadow],
+    // Chip top
+    [ 3, 22,  6,  1, C.parchL],
+    [ 3, 22,  6,  1, C.parchL],
+    [ 4, 21,  4,  1, C.gold],
   ],
 
-  // DAILY SPIN — wheel of fortune
+  // ----- Daily Spin — vertical wheel of fortune -----
   "lobby.daily_spin": [
-    // wheel rim
-    [5, 1, 6, 1, C.gold],
-    [3, 2, 10, 1, C.gold],
-    [2, 3, 12, 9, C.gold],
-    [3, 12, 10, 1, C.gold],
-    [5, 13, 6, 1, C.gold],
-    // wedges
-    [3, 3, 5, 5, C.crimson],
-    [8, 3, 5, 5, C.cactus],
-    [3, 8, 5, 4, C.sky],
-    [8, 8, 5, 4, C.crimsonD],
-    // hub
-    [7, 7, 2, 2, C.ink],
-    // pointer (top)
-    [7, 0, 2, 2, C.ink],
+    // Wheel rim
+    [10,  3, 12, 1, C.goldD],
+    [ 7,  4, 18, 1, C.goldD],
+    [ 5,  5, 22, 1, C.goldD],
+    [ 4,  6, 24, 1, C.goldD],
+    [ 3,  7, 26, 18, C.goldD],
+    [ 4, 25, 24, 1, C.goldD],
+    [ 5, 26, 22, 1, C.goldD],
+    [ 7, 27, 18, 1, C.goldD],
+    [10, 28, 12, 1, C.goldD],
+    // Wedges (4 colors)
+    [11,  6, 10, 1, C.crimson],
+    [ 8,  7, 16, 9, C.crimson],
+    [ 5,  9, 22, 7, C.crimson],
+    [ 4, 11, 24,  5, C.crimson],
+    [11, 16, 10, 1, C.cactus],
+    [ 8, 17, 16, 8, C.cactus],
+    [ 5, 17, 22, 7, C.cactus],
+    [ 4, 17, 24,  5, C.cactus],
+    [ 4, 16, 12,  1, C.skyD],
+    [ 4, 17, 12,  7, C.sky],
+    [ 5, 21, 11,  4, C.sky],
+    [ 7, 23, 9,  3, C.sky],
+    [16,  7, 12,  1, C.gold],
+    [16,  7, 12,  9, C.gold],
+    [16,  8, 11,  8, C.gold],
+    // Center hub
+    [14, 14,  4,  4, C.ink],
+    [15, 15,  2,  2, C.parchL],
+    // Pointer at top
+    [15,  1,  2,  4, C.ink],
+    [14,  1,  4,  2, C.ink],
+    [15,  2,  2,  3, C.crimson],
+    [14,  4,  4,  1, C.crimsonD],
   ],
 
-  // CROSSY ROAD — chicken on stripes
+  // ----- Crossy Road — chicken hopping on striped road -----
   "lobby.crossy_road": [
-    // road stripes
-    [0, 12, 16, 1, C.ink],
-    [0, 14, 16, 1, C.ink],
-    [0, 13, 2, 1, C.parchL],
-    [4, 13, 2, 1, C.parchL],
-    [8, 13, 2, 1, C.parchL],
-    [12, 13, 2, 1, C.parchL],
-    // chicken body
-    [6, 6, 4, 4, C.parchL],
-    [7, 5, 2, 1, C.parchL],
+    // Sky / grass stripe
+    [ 0,  0, 32, 8, C.cactusL],
+    [ 0,  4, 32, 1, C.cactus],
+    // Road
+    [ 0,  8, 32, 24, C.ink],
+    [ 0, 28, 32,  1, C.shadow],
+    // Lane stripes (dashed)
+    [ 1, 15, 4, 2, C.parchL],
+    [ 9, 15, 4, 2, C.parchL],
+    [17, 15, 4, 2, C.parchL],
+    [25, 15, 4, 2, C.parchL],
+    [ 1, 23, 4, 2, C.gold],
+    [ 9, 23, 4, 2, C.gold],
+    [17, 23, 4, 2, C.gold],
+    [25, 23, 4, 2, C.gold],
+    // Chicken body (centered, mid-hop)
+    [12, 11,  8,  6, C.parchL],
+    [12, 11,  8,  1, C.parchM],
+    [11, 12,  1,  4, C.parchL],
+    [20, 12,  1,  4, C.parchL],
+    // belly shadow
+    [13, 16,  6,  1, C.parchD],
     // beak
-    [10, 7, 1, 1, C.gold],
+    [20, 13,  3,  2, C.gold],
+    [20, 14,  3,  1, C.goldD],
     // eye
-    [8, 6, 1, 1, C.ink],
-    // comb
-    [7, 4, 1, 1, C.crimson],
-    [8, 4, 1, 1, C.crimson],
-    // legs
-    [7, 10, 1, 2, C.gold],
-    [9, 10, 1, 2, C.gold],
+    [17, 12,  2,  2, C.parchL],
+    [18, 13,  1,  1, C.ink],
+    // comb red
+    [13,  9,  2,  1, C.crimson],
+    [15,  9,  2,  1, C.crimson],
+    [13, 10,  6,  1, C.crimson],
+    // legs (dangling mid-hop)
+    [13, 17,  2,  3, C.gold],
+    [17, 17,  2,  3, C.gold],
+    [12, 20,  3,  1, C.goldD],
+    [16, 20,  3,  1, C.goldD],
+    // Hop arc dots
+    [ 6,  9, 1, 1, C.parchM],
+    [ 8,  7, 1, 1, C.parchM],
+    [10,  6, 1, 1, C.parchM],
   ],
 
-  // FLAPPY — bird with wings out
+  // ----- Flappy — bird between pipes -----
   "lobby.flappy": [
-    // body
-    [5, 5, 6, 6, C.gold],
-    [4, 6, 1, 4, C.gold],
-    [11, 6, 1, 4, C.gold],
-    // belly
-    [6, 8, 4, 2, C.parchL],
+    // Sky
+    [ 0,  0, 32, 28, C.skyL],
+    // Ground
+    [ 0, 28, 32,  4, C.saddle],
+    [ 0, 28, 32,  1, C.saddleM],
+    // Top pipe (left-tall)
+    [ 4,  0,  8, 14, C.cactus],
+    [ 4,  0,  1, 14, C.cactusD],
+    [11,  0,  1, 14, C.cactusL],
+    [ 4, 12, 8,  1, C.cactusD],
+    [ 3, 12, 10, 4, C.cactus],
+    [ 3, 12, 10, 1, C.cactusL],
+    [ 3, 15, 10, 1, C.cactusD],
+    // Bottom pipe (right-tall)
+    [22, 18,  8, 14, C.cactus],
+    [22, 18,  1, 14, C.cactusD],
+    [29, 18,  1, 14, C.cactusL],
+    [22, 18,  8,  1, C.cactusL],
+    [21, 14, 10, 4, C.cactus],
+    [21, 14, 10, 1, C.cactusL],
+    [21, 17, 10, 1, C.cactusD],
+    // Bird
+    [14, 14,  6,  6, C.gold],
+    [14, 14,  6,  1, C.goldL],
+    [13, 15,  1,  4, C.gold],
+    [20, 15,  1,  4, C.goldD],
+    // belly white
+    [15, 17,  4,  3, C.parchL],
     // beak
-    [11, 7, 2, 2, C.crimson],
+    [20, 16,  3,  2, C.crimson],
+    [20, 17,  3,  1, C.crimsonD],
     // eye
-    [9, 6, 1, 1, C.parchL],
-    [9, 6, 1, 1, C.ink],
-    // wing
-    [3, 7, 2, 3, C.goldD],
-    // legs
-    [6, 11, 1, 2, C.crimson],
-    [9, 11, 1, 2, C.crimson],
-    // pipe (right)
-    [13, 0, 3, 5, C.cactus],
-    [13, 11, 3, 5, C.cactus],
-    [13, 5, 3, 1, C.cactusD],
-    [13, 10, 3, 1, C.cactusD],
+    [18, 15,  2,  2, C.parchL],
+    [19, 15,  1,  1, C.ink],
+    // wing flap
+    [12, 17,  2,  3, C.goldD],
+    [11, 18,  1,  2, C.goldDD],
+    // Cloud
+    [ 5, 22,  4,  1, C.parchL],
+    [ 4, 23,  6,  2, C.parchL],
+    [22,  3,  4,  1, C.parchL],
+    [21,  4,  6,  2, C.parchL],
   ],
 
-  // MONOPOLY — top hat on a property card
+  // ----- Monopoly — top hat on property card -----
   "lobby.monopoly": [
-    // card
-    [2, 3, 12, 11, C.parchL],
-    [2, 3, 12, 1, C.crimson],
-    [2, 13, 12, 1, C.parchD],
-    [2, 3, 1, 11, C.parchD],
-    [13, 3, 1, 11, C.parchD],
-    // top hat
-    [6, 6, 4, 4, C.ink],
-    [5, 9, 6, 1, C.ink],
-    [4, 10, 8, 1, C.ink],
-    // hat band
-    [6, 8, 4, 1, C.crimson],
-    // dollar
-    [7, 11, 1, 2, C.cactusD],
-    [6, 12, 3, 1, C.cactusD],
+    // Card
+    [ 4,  4, 24, 26, C.parchL],
+    [ 4,  4, 24,  1, C.parchM],
+    [ 4, 29, 24,  1, C.parchD],
+    [ 4,  4,  1, 26, C.parchM],
+    [27,  4,  1, 26, C.parchD],
+    // Top color band (purple/crimson "owned" stripe)
+    [ 4,  4, 24,  6, C.crimson],
+    [ 4,  4, 24,  1, C.neonCrim],
+    [ 4,  9, 24,  1, C.crimsonD],
+    // Card title text marks
+    [ 7, 11, 18, 1, C.ink],
+    [ 7, 13,  8, 1, C.saddleD],
+    [16, 13,  6, 1, C.saddleD],
+    // Top hat (centered on card)
+    [10, 14, 12, 9, C.ink],
+    [10, 14, 12, 1, C.shadow],
+    [21, 14,  1, 9, C.shadow],
+    // Hat band (red)
+    [10, 19, 12, 2, C.crimson],
+    [10, 19, 12, 1, C.crimsonD],
+    // Hat brim
+    [ 7, 22, 18, 3, C.ink],
+    [ 7, 22, 18, 1, C.shadow],
+    [ 7, 25, 18, 1, C.shadow],
+    // Hat shine
+    [12, 15,  2, 4, C.inkSoft],
+    // Dollar sign on card bottom
+    [13, 26,  2,  1, C.cactusD],
+    [11, 27,  6,  1, C.cactus],
+    [13, 28,  2,  1, C.cactusD],
+    [13, 27,  2,  1, C.cactus],
+    [16, 27,  1,  1, C.cactus],
   ],
 };
+
+// Tile helpers for the icon definitions above.
+function mineTile(x: number, y: number): Px[] {
+  return [
+    [x, y, 6, 6, C.saddle],
+    [x, y, 6, 1, C.saddleM],
+    [x, y + 5, 6, 1, C.shadow],
+    [x, y, 1, 6, C.saddleM],
+    [x + 5, y, 1, 6, C.saddleD],
+    [x + 1, y + 1, 4, 4, C.saddle],
+  ];
+}
+function pegRow(y: number, xs: number[]): Px[] {
+  const out: Px[] = [];
+  for (const x of xs) {
+    out.push([x, y, 2, 2, C.gold]);
+    out.push([x, y, 2, 1, C.goldL]);
+    out.push([x, y + 1, 2, 1, C.goldDD]);
+  }
+  return out;
+}
 
 export function GameIcon({
   name,
@@ -809,6 +1106,26 @@ export function GameIcon({
   className?: string;
   style?: CSSProperties;
 }) {
+  // Lobby icons are drawn on a 32-grid for extra detail; everything else
+  // uses the original 16-grid sprite system.
+  const lobbyRects = LOBBY_ICONS_32[name as keyof typeof LOBBY_ICONS_32];
+  if (lobbyRects) {
+    return (
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 32 32"
+        shapeRendering="crispEdges"
+        className={className}
+        style={{ display: "inline-block", verticalAlign: "middle", ...style }}
+        aria-hidden
+      >
+        {lobbyRects.map(([x, y, w, h, c], i) => (
+          <rect key={i} x={x} y={y} width={w} height={h} fill={c} />
+        ))}
+      </svg>
+    );
+  }
   const rects = ICONS[name];
   if (!rects) return null;
   return (
