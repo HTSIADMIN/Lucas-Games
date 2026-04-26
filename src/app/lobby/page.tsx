@@ -8,7 +8,8 @@ import { getUserById, recentChatMessages } from "@/lib/db";
 import { SignOutButton } from "./SignOutButton";
 
 const GAMES = [
-  { slug: "coinflip",  name: "Coin Flip", tag: "QUICK",   live: true  },
+  { slug: "coinflip",      name: "Coin Flip",       tag: "QUICK", live: true },
+  { slug: "coinflip-duel", name: "Coin Flip Duel",  tag: "PvP",   live: true },
   { slug: "dice",      name: "Dice",      tag: "QUICK",   live: true  },
   { slug: "slots",     name: "Slots",     tag: "JACKPOT", live: true  },
   { slug: "blackjack-mp", name: "Blackjack Table", tag: "MULTI", live: true  },

@@ -79,4 +79,10 @@ export const getBlackjackSeat        = impl.getBlackjackSeat;
 export const insertBlackjackSeat     = impl.insertBlackjackSeat;
 export const updateBlackjackSeat     = impl.updateBlackjackSeat;
 
+export const listOpenCoinflipDuels   = impl.listOpenCoinflipDuels;
+export const listRecentCoinflipDuels = impl.listRecentCoinflipDuels;
+export const getCoinflipDuel         = impl.getCoinflipDuel;
+export const insertCoinflipDuel      = impl.insertCoinflipDuel;
+export const updateCoinflipDuel      = impl.updateCoinflipDuel;
+
 export * from "./types";

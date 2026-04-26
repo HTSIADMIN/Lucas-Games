@@ -166,3 +166,16 @@ export type MinesGame = {
   created_at: string;
   ended_at: string | null;
 };
+
+export type CoinflipDuel = {
+  id: string;
+  challenger_id: string;
+  challenger_side: "heads" | "tails";
+  wager: number;
+  acceptor_id: string | null;
+  result: "heads" | "tails" | null;
+  winner_id: string | null;
+  status: "open" | "resolved" | "cancelled";
+  created_at: string;
+  resolved_at: string | null;
+};

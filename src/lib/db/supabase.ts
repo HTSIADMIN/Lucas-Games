@@ -8,6 +8,7 @@ import {
   BlackjackSeat,
   ChatMessage,
   ChatMessagePublic,
+  CoinflipDuel,
   CrashBet,
   CrashRound,
   EarnCooldown,
@@ -441,6 +442,47 @@ export async function listOpenCrashBets(roundId: string): Promise<CrashBet[]> {
     .is("cashout_at_x", null);
   if (error) throw new Error(`listOpenCrashBets: ${error.message}`);
   return (data ?? []) as CrashBet[];
+}
+
+// ============ COIN FLIP DUELS ============
+export async function listOpenCoinflipDuels(): Promise<CoinflipDuel[]> {
+  const { data, error } = await client()
+    .from("coinflip_duels")
+    .select("*")
+    .eq("status", "open")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`listOpenCoinflipDuels: ${error.message}`);
+  return (data ?? []) as CoinflipDuel[];
+}
+export async function listRecentCoinflipDuels(limit = 20): Promise<CoinflipDuel[]> {
+  const { data, error } = await client()
+    .from("coinflip_duels")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`listRecentCoinflipDuels: ${error.message}`);
+  return (data ?? []) as CoinflipDuel[];
+}
+export async function getCoinflipDuel(id: string): Promise<CoinflipDuel | null> {
+  const { data, error } = await client().from("coinflip_duels").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`getCoinflipDuel: ${error.message}`);
+  return (data as CoinflipDuel | null) ?? null;
+}
+export async function insertCoinflipDuel(duel: CoinflipDuel): Promise<CoinflipDuel> {
+  const { data, error } = await client().from("coinflip_duels").insert({
+    id: duel.id,
+    challenger_id: duel.challenger_id,
+    challenger_side: duel.challenger_side,
+    wager: duel.wager,
+    status: duel.status,
+  }).select("*").single();
+  if (error) throw new Error(`insertCoinflipDuel: ${error.message}`);
+  return data as CoinflipDuel;
+}
+export async function updateCoinflipDuel(id: string, patch: Partial<CoinflipDuel>): Promise<CoinflipDuel | null> {
+  const { data, error } = await client().from("coinflip_duels").update(patch).eq("id", id).select("*").maybeSingle();
+  if (error) throw new Error(`updateCoinflipDuel: ${error.message}`);
+  return (data as CoinflipDuel | null) ?? null;
 }
 
 // ============ BLACKJACK MULTIPLAYER ============

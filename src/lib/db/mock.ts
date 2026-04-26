@@ -9,6 +9,7 @@ import {
   BlackjackSeat,
   ChatMessage,
   ChatMessagePublic,
+  CoinflipDuel,
   CrashBet,
   CrashRound,
   EarnCooldown,
@@ -38,6 +39,7 @@ type Schema = {
   chat_messages: ChatMessage[];
   blackjack_rounds: BlackjackRound[];
   blackjack_seats: BlackjackSeat[];
+  coinflip_duels: CoinflipDuel[];
   _walletSeq: number;
   _crashBetSeq: number;
   _chatSeq: number;
@@ -51,7 +53,7 @@ const EMPTY: Schema = {
   users: [], user_sessions: [], pin_attempts: [], wallet_transactions: [],
   game_sessions: [], earn_cooldowns: [], crash_rounds: [], crash_bets: [],
   plinko_drops: [], mines_games: [], player_inventory: [], chat_messages: [],
-  blackjack_rounds: [], blackjack_seats: [],
+  blackjack_rounds: [], blackjack_seats: [], coinflip_duels: [],
   _walletSeq: 0, _crashBetSeq: 0, _chatSeq: 0, _bjSeatSeq: 0,
 };
 
@@ -329,6 +331,30 @@ export async function updateCrashBet(
 
 export async function listOpenCrashBets(roundId: string): Promise<CrashBet[]> {
   return db().crash_bets.filter((b) => b.round_id === roundId && b.cashout_at_x === null);
+}
+
+// ============ COIN FLIP DUELS ============
+export async function listOpenCoinflipDuels(): Promise<CoinflipDuel[]> {
+  return db().coinflip_duels
+    .filter((d) => d.status === "open")
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+export async function listRecentCoinflipDuels(limit = 20): Promise<CoinflipDuel[]> {
+  return db().coinflip_duels
+    .slice()
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, limit);
+}
+export async function getCoinflipDuel(id: string): Promise<CoinflipDuel | null> {
+  return db().coinflip_duels.find((d) => d.id === id) ?? null;
+}
+export async function insertCoinflipDuel(duel: CoinflipDuel): Promise<CoinflipDuel> {
+  db().coinflip_duels.push(duel); commit(); return duel;
+}
+export async function updateCoinflipDuel(id: string, patch: Partial<CoinflipDuel>): Promise<CoinflipDuel | null> {
+  const d = db().coinflip_duels.find((x) => x.id === id);
+  if (!d) return null;
+  Object.assign(d, patch); commit(); return d;
 }
 
 // ============ BLACKJACK MULTIPLAYER ============

@@ -22,6 +22,16 @@ const RISK_OPTIONS: { value: PlinkoRisk; label: string }[] = [
   { value: "high", label: "HIGH" },
 ];
 
+type Ghost = {
+  id: string;
+  username: string;
+  avatarColor: string;
+  initials: string;
+  rows: PlinkoRows;
+  bucket: number;
+  startedAt: number; // when we mounted it locally
+};
+
 export function PlinkoClient() {
   const router = useRouter();
   const [bet, setBet] = useState(1_000);
@@ -33,9 +43,59 @@ export function PlinkoClient() {
   const [result, setResult] = useState<DropResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
+  const [ghosts, setGhosts] = useState<Ghost[]>([]);
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => setBalance(d.balance ?? null));
+  }, []);
+
+  // Poll for other players' recent drops and spawn ghost chips on our board.
+  useEffect(() => {
+    const seen = new Set<string>();
+    let cancelled = false;
+    async function poll() {
+      try {
+        const r = await fetch("/api/games/plinko/recent");
+        if (!r.ok) return;
+        const d = await r.json();
+        if (cancelled || !Array.isArray(d.drops)) return;
+        const now = Date.now();
+        const fresh: Ghost[] = [];
+        for (const drop of d.drops as Array<{
+          id: string; username: string; avatarColor: string; initials: string;
+          rows: number; bucket: number; at: number;
+        }>) {
+          if (seen.has(drop.id)) continue;
+          // Only animate drops that arrived in the last 5s (otherwise they're old).
+          if (now - drop.at > 5000) {
+            seen.add(drop.id);
+            continue;
+          }
+          seen.add(drop.id);
+          fresh.push({
+            id: drop.id,
+            username: drop.username,
+            avatarColor: drop.avatarColor,
+            initials: drop.initials,
+            rows: drop.rows as PlinkoRows,
+            bucket: drop.bucket,
+            startedAt: now,
+          });
+        }
+        if (fresh.length > 0) {
+          setGhosts((prev) => [...prev, ...fresh]);
+          // Clean up after the 2.5s animation + a bit of fade.
+          for (const g of fresh) {
+            setTimeout(() => {
+              setGhosts((prev) => prev.filter((x) => x.id !== g.id));
+            }, 3000);
+          }
+        }
+      } catch { /* ignore */ }
+    }
+    poll();
+    const t = setInterval(poll, 3000);
+    return () => { cancelled = true; clearInterval(t); };
   }, []);
 
   const previewTable = bucketTable(rows, risk);
@@ -121,6 +181,61 @@ export function PlinkoClient() {
                 }}
               />
             )}
+
+            {/* Ghost chips — other players' recent drops drift down on your board. */}
+            {ghosts
+              .filter((g) => g.rows === rows)
+              .map((g) => {
+                // Map the friend's bucket onto our visible bucket lane (same row count).
+                const totalBuckets = g.rows + 1;
+                const leftPct = ((g.bucket + 0.5) / totalBuckets) * 100;
+                return (
+                  <div
+                    key={g.id}
+                    style={{
+                      position: "absolute",
+                      top: 16,
+                      left: `${leftPct}%`,
+                      transform: "translateX(-50%)",
+                      animation: "plinkoGhost 2.4s ease-in forwards",
+                      pointerEvents: "none",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 2,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 10,
+                        height: 10,
+                        background: g.avatarColor,
+                        border: "2px solid var(--ink-900)",
+                        borderRadius: 999,
+                        opacity: 0.7,
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontSize: 9,
+                        color: "var(--parchment-50)",
+                        textShadow: "1px 1px 0 var(--ink-900)",
+                        opacity: 0.7,
+                        letterSpacing: "var(--ls-loose)",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {g.initials}
+                    </span>
+                  </div>
+                );
+              })}
+            <style>{`@keyframes plinkoGhost {
+              0%   { top: 16px; opacity: 0.85; }
+              80%  { opacity: 0.6; }
+              100% { top: calc(100% - 36px); opacity: 0; }
+            }`}</style>
           </div>
 
           {/* Buckets */}
