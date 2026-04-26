@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { readSession } from "@/lib/auth/session";
 import { getBalance } from "@/lib/wallet";
-import { getMinesGame, updateMinesGame } from "@/lib/db";
+import { getMinesGame, insertGameSession, updateMinesGame } from "@/lib/db";
 import { GRID, countSafe, multiplierFor } from "@/lib/games/mines/engine";
 
 export const runtime = "nodejs";
@@ -35,6 +36,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ gameId: string
       status: "busted",
       payout: 0,
       ended_at: new Date().toISOString(),
+    });
+    // Record for the bets feed.
+    await insertGameSession({
+      id: randomUUID(),
+      user_id: s.user.id,
+      game: "mines",
+      bet: game.bet,
+      payout: 0,
+      state: { mineCount: game.mine_count, busted: true },
+      status: "settled",
     });
     return NextResponse.json({
       ok: true,

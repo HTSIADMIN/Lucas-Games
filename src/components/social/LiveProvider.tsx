@@ -232,6 +232,35 @@ export function LiveProvider({
     return () => { cancelled = true; clearInterval(t); };
   }, [me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Polling for the big-bets feed — same pattern as chat. Backed by
+  // /api/feed/big-bets which queries settled game_sessions in the last
+  // 10 minutes filtered to wins/losses ≥ 50k.
+  useEffect(() => {
+    if (!me) return;
+    let cancelled = false;
+    async function poll() {
+      try {
+        const r = await fetch("/api/feed/big-bets");
+        if (!r.ok) return;
+        const data = await r.json();
+        if (cancelled || !Array.isArray(data.bets)) return;
+        setBets((prev) => {
+          const byId = new Map<string, LiveBet>();
+          for (const m of prev) byId.set(m.id, m);
+          for (const b of data.bets as LiveBet[]) byId.set(b.id, b);
+          return Array.from(byId.values())
+            .sort((a, b) => b.at - a.at)
+            .slice(0, MAX_BETS);
+        });
+      } catch {
+        // ignore
+      }
+    }
+    poll();
+    const t = setInterval(poll, 4000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const value = useMemo(
     () => ({ ready, presence, bets, chat, pushChat }),
     [ready, presence, bets, chat],

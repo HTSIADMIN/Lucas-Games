@@ -46,6 +46,7 @@ export function CrossyRoadClient() {
   const [error, setError] = useState<string | null>(null);
   const runTokenRef = useRef<string | null>(null);
   const startedAtRef = useRef<number>(0);
+  const resetFnRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -74,9 +75,11 @@ export function CrossyRoadClient() {
       playerY = 0;
       cameraY = 0;
       for (let y = 0; y < ROWS_VISIBLE + 4; y++) ensureLane(y);
+      setScore(0);
     }
 
     reset();
+    resetFnRef.current = reset;
 
     function tryMove(dx: number, dy: number) {
       if (phaseRef.current !== "playing") return;
@@ -127,30 +130,36 @@ export function CrossyRoadClient() {
       const dt = Math.min(0.05, (t - lastT) / 1000);
       lastT = t;
 
-      // Advance cars
+      // Advance cars. Wrap so cars are always either fully on-screen or
+      // fully off-screen — never a partial sliver overlapping the edge,
+      // which used to cause "invisible car" deaths.
       if (phaseRef.current === "playing") {
         lanes.forEach((lane) => {
           if (lane.kind === "road" && lane.cars && lane.speed) {
             const dir = lane.reverse ? -1 : 1;
+            const cw = lane.carWidth ?? 1;
             lane.cars = lane.cars.map((cx) => {
               let nx = cx + dir * lane.speed! * dt;
-              if (nx > COLS + 1) nx -= COLS + 2;
-              if (nx < -2) nx += COLS + 2;
+              // Right-moving: when left edge passes the right wall, wrap to off-screen-left.
+              if (nx > COLS) nx = -cw;
+              // Left-moving: when right edge passes the left wall, wrap to off-screen-right.
+              if (nx + cw < 0) nx = COLS;
               return nx;
             });
           }
         });
 
-        // Collision check — proper AABB. Both player and car are rectangles
-        // in tile space: player roughly [playerX + 0.15, playerX + 0.85],
-        // car [cx, cx + cw]. Overlap iff player.end > car.start AND
-        // player.start < car.end.
+        // Collision — generous to the player. Visual sprite is
+        // [playerX + 0.125, playerX + 0.875]; hitbox is tighter at
+        // [playerX + 0.25, playerX + 0.75] so grazes survive.
         const lane = lanes.get(playerY);
         if (lane && lane.kind === "road" && lane.cars) {
           const cw = lane.carWidth ?? 1;
-          const playerStart = playerX + 0.15;
-          const playerEnd = playerX + 0.85;
+          const playerStart = playerX + 0.25;
+          const playerEnd = playerX + 0.75;
           for (const cx of lane.cars) {
+            // Skip cars fully off-screen — they can't collide regardless.
+            if (cx + cw <= 0 || cx >= COLS) continue;
             if (cx + cw > playerStart && cx < playerEnd) {
               phaseRef.current = "dead";
               setPhase("dead");
@@ -217,7 +226,8 @@ export function CrossyRoadClient() {
   async function start() {
     setError(null);
     setSubmission(null);
-    setScore(0);
+    // Reset world before fetching token — clears player position, lanes, score.
+    resetFnRef.current();
     const res = await fetch("/api/earn/crossy-road/start", { method: "POST" });
     const data = await res.json();
     if (!res.ok) {

@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 import { readSession } from "@/lib/auth/session";
 import { validateBet } from "@/lib/games/common";
 import { credit, debit, getBalance } from "@/lib/wallet";
-import { insertPlinkoDrop } from "@/lib/db";
+import { insertGameSession, insertPlinkoDrop } from "@/lib/db";
 import { drop, type PlinkoRisk, type PlinkoRows } from "@/lib/games/plinko/engine";
 
 export const runtime = "nodejs";
@@ -67,6 +67,17 @@ export async function POST(req: NextRequest) {
       refId: `${id}:win`,
     });
   }
+
+  // Record for the bets feed.
+  await insertGameSession({
+    id,
+    user_id: s.user.id,
+    game: "plinko",
+    bet: v.bet,
+    payout: r.payout,
+    state: { rows, risk, bucket: r.bucket, multiplier: r.multiplier },
+    status: "settled",
+  });
 
   return NextResponse.json({
     ok: true,

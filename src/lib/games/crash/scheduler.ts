@@ -10,12 +10,12 @@ import { randomBytes, randomUUID } from "node:crypto";
 import {
   getActiveCrashRound,
   insertCrashRound,
+  insertGameSession,
   listOpenCrashBets,
   updateCrashBet,
   updateCrashRound,
   type CrashRound,
 } from "@/lib/db";
-import { credit } from "@/lib/wallet";
 import { multiplierAt, pickCrashPoint, timeForMultiplier } from "./engine";
 
 export const BET_WINDOW_MS = 10_000;
@@ -91,6 +91,16 @@ async function advance(): Promise<CrashRound | null> {
       const open = await listOpenCrashBets(r.id);
       for (const b of open) {
         await updateCrashBet(b.id, { cashout_at_x: 0, payout: 0 });
+        // Record for the bets feed.
+        await insertGameSession({
+          id: randomUUID(),
+          user_id: b.user_id,
+          game: "crash",
+          bet: b.bet,
+          payout: 0,
+          state: { round_id: r.id, busted: true, crash_at_x: Number(r.crash_at_x) },
+          status: "settled",
+        });
       }
     }
   }

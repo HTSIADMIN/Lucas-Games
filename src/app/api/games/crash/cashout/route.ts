@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { readSession } from "@/lib/auth/session";
 import { credit, getBalance } from "@/lib/wallet";
-import { getCrashBet, getCrashRound, updateCrashBet } from "@/lib/db";
+import { getCrashBet, insertGameSession, updateCrashBet } from "@/lib/db";
 import { multiplierAt } from "@/lib/games/crash/engine";
 import { getCrashState } from "@/lib/games/crash/scheduler";
 
@@ -34,6 +35,16 @@ export async function POST() {
   if (liveX >= crashAtX) {
     // Server clock says round is done — record bust; the scheduler will mark round crashed momentarily.
     await updateCrashBet(bet.id, { cashout_at_x: 0, payout: 0 });
+    // Record for the bets feed.
+    await insertGameSession({
+      id: randomUUID(),
+      user_id: s.user.id,
+      game: "crash",
+      bet: bet.bet,
+      payout: 0,
+      state: { round_id: round.id, busted: true, crash_at_x: crashAtX },
+      status: "settled",
+    });
     return NextResponse.json({
       ok: true,
       busted: true,
@@ -59,6 +70,16 @@ export async function POST() {
     cashout_at_x: cashoutX,
     payout,
     cashed_out_at: new Date().toISOString(),
+  });
+  // Record for the bets feed.
+  await insertGameSession({
+    id: randomUUID(),
+    user_id: s.user.id,
+    game: "crash",
+    bet: bet.bet,
+    payout,
+    state: { round_id: round.id, cashout_at_x: cashoutX },
+    status: "settled",
   });
 
   return NextResponse.json({
