@@ -204,6 +204,34 @@ export function LiveProvider({
     });
   }, [game, me]);
 
+  // Polling fallback for chat — Realtime postgres_changes can be flaky in
+  // some browsers / network conditions, so we poll every 3s and merge by id.
+  // If Realtime is working, this is just redundant (idempotent merge).
+  useEffect(() => {
+    if (!me) return;
+    let cancelled = false;
+    async function poll() {
+      try {
+        const r = await fetch("/api/chat/recent");
+        if (!r.ok) return;
+        const data = await r.json();
+        if (cancelled || !Array.isArray(data.messages)) return;
+        setChat((prev) => {
+          const byId = new Map<number, ChatMessagePublic>();
+          for (const m of prev) byId.set(m.id, m);
+          for (const m of data.messages as ChatMessagePublic[]) byId.set(m.id, m);
+          return Array.from(byId.values())
+            .sort((a, b) => a.id - b.id)
+            .slice(-MAX_CHAT);
+        });
+      } catch {
+        // ignore — best effort
+      }
+    }
+    const t = setInterval(poll, 3000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, [me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const value = useMemo(
     () => ({ ready, presence, bets, chat, pushChat }),
     [ready, presence, bets, chat],
