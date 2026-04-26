@@ -45,8 +45,9 @@ function pick<T>(arr: readonly T[]): T {
 
 // Difficulty curve. y is the highest row the player has reached.
 function difficultyAt(y: number) {
-  // First 5 rows always grass. Then road probability ramps from 0.30 → ~0.85.
-  const roadProb = y < 5 ? 0 : Math.min(0.85, 0.30 + (y - 5) * 0.012);
+  // First 3 rows always grass (spawn zone, handled below). Then road
+  // probability ramps from a higher baseline so the start isn't trivial.
+  const roadProb = y < 3 ? 0 : Math.min(0.90, 0.45 + (y - 3) * 0.012);
   // Car speed bounds (tiles/sec) widen with depth.
   const speedMin = 0.8 + Math.min(1.6, y * 0.018);
   const speedMax = 2.0 + Math.min(4.0, y * 0.05);
@@ -55,15 +56,18 @@ function difficultyAt(y: number) {
   return { roadProb, speedMin, speedMax, carBonus };
 }
 
-function makeLane(y: number, prevWasRoad: boolean): Lane {
+// `prevGrassRun` is the count of consecutive grass lanes immediately before
+// this one. Each one ratchets the road probability up by 18 percentage points,
+// so a stretch of 6 grasses in a row is essentially impossible.
+function makeLane(y: number, prevGrassRun: number): Lane {
   // First strip is the safe spawn zone.
   if (y === 0 || y < 3) {
     return { y, kind: "grass", decorations: makeGrassDecorations(y, true) };
   }
   const d = difficultyAt(y);
-  // Never two roads of identical direction back to back at low difficulty
-  // (more forgiving for new players).
-  const isRoad = !prevWasRoad && Math.random() < d.roadProb;
+  const grassPenalty = prevGrassRun * 0.18;
+  const effectiveRoadProb = Math.min(0.97, d.roadProb + grassPenalty);
+  const isRoad = Math.random() < effectiveRoadProb;
   if (!isRoad) {
     return { y, kind: "grass", decorations: makeGrassDecorations(y, false) };
   }
@@ -147,9 +151,15 @@ export function CrossyRoadClient() {
 
     function ensureLane(y: number) {
       if (!lanes.has(y) && y >= 0) {
-        const prev = lanes.get(y - 1);
-        const prevWasRoad = !!prev && prev.kind === "road";
-        lanes.set(y, makeLane(y, prevWasRoad));
+        // Walk back through the freshly-generated lanes to count how many
+        // grass tiles in a row precede this one, then bias toward a road.
+        let run = 0;
+        for (let k = y - 1; k >= 0; k--) {
+          const lane = lanes.get(k);
+          if (!lane || lane.kind !== "grass") break;
+          run++;
+        }
+        lanes.set(y, makeLane(y, run));
       }
     }
 
