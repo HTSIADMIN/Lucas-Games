@@ -172,49 +172,57 @@ export function RouletteClient() {
   const canSpin = !busy && stake > 0 && (balance == null || balance >= stake);
 
   return (
-    <div className="grid grid-2" style={{ alignItems: "start", gap: "var(--sp-4)" }}>
-      <div className="stack-lg">
-        {/* Wheel */}
-        <div className="panel" style={{ padding: "var(--sp-4)" }}>
-          <div className="panel-title">The Wheel</div>
+    <div className="stack-lg" style={{ gap: "var(--sp-4)" }}>
+      {/* Wheel */}
+      <div className="panel" style={{ padding: "var(--sp-4)" }}>
+        <div className="panel-title">The Wheel</div>
 
-          <HistoryStrip
-            history={history}
-            currentResult={result ? { n: result.winning, color: result.color } : null}
-          />
+        <HistoryStrip
+          history={history}
+          currentResult={result ? { n: result.winning, color: result.color } : null}
+        />
 
-          <ReelStrip
-            tiles={reelTiles}
-            containerRef={reelContainerRef}
-            stripRef={reelStripRef}
-            spinning={spinning}
-            targetIdx={reelTargetIdx}
-            result={result}
-          />
+        <ReelStrip
+          tiles={reelTiles}
+          containerRef={reelContainerRef}
+          stripRef={reelStripRef}
+          spinning={spinning}
+          targetIdx={reelTargetIdx}
+          result={result}
+        />
 
-          {result && !spinning && (
-            <div
-              className="sign"
-              style={{
-                background: result.totalPayout > result.totalBet
-                  ? "var(--cactus-500)"
-                  : result.totalPayout > 0
-                  ? "var(--saddle-300)"
-                  : "var(--crimson-500)",
-                marginTop: "var(--sp-3)",
-                display: "block",
-                textAlign: "center",
-              }}
-            >
-              {result.totalPayout > 0
-                ? `${result.winning} ${result.color.toUpperCase()} · +${(result.totalPayout - result.totalBet).toLocaleString()} ¢`
-                : `${result.winning} ${result.color.toUpperCase()} · House wins`}
-            </div>
-          )}
-        </div>
+        {result && !spinning && (
+          <div
+            className="sign"
+            style={{
+              background: result.totalPayout > result.totalBet
+                ? "var(--cactus-500)"
+                : result.totalPayout > 0
+                ? "var(--saddle-300)"
+                : "var(--crimson-500)",
+              marginTop: "var(--sp-3)",
+              display: "block",
+              textAlign: "center",
+            }}
+          >
+            {result.totalPayout > 0
+              ? `${result.winning} ${result.color.toUpperCase()} · +${(result.totalPayout - result.totalBet).toLocaleString()} ¢`
+              : `${result.winning} ${result.color.toUpperCase()} · House wins`}
+          </div>
+        )}
+      </div>
 
-        {/* Felt betting table */}
-        <div className="panel" style={{ padding: "var(--sp-3)", background: "#1f3818", borderColor: "var(--ink-900)" }}>
+      {/* Felt betting table — full width, scrolls horizontally on narrow viewports */}
+      <div
+        className="panel"
+        style={{
+          padding: "var(--sp-3)",
+          background: "#1f3818",
+          borderColor: "var(--ink-900)",
+          overflowX: "auto",
+        }}
+      >
+        <div style={{ minWidth: 540 }}>
           <FeltTable
             onPick={addBet}
             onRemove={removeBet}
@@ -224,84 +232,88 @@ export function RouletteClient() {
             chip={chip}
             setHover={setHoverPreview}
           />
-          {error && <p style={{ color: "var(--crimson-300)", marginTop: "var(--sp-3)" }}>{labelFor(error)}</p>}
         </div>
+        {error && <p style={{ color: "var(--crimson-300)", marginTop: "var(--sp-3)" }}>{labelFor(error)}</p>}
       </div>
 
-      <div className="stack-lg">
-        <div className="panel" style={{ padding: "var(--sp-5)" }}>
+      {/* Controls — chip / bets / spin laid out as 3 panels on desktop, stack on mobile */}
+      <div className="grid grid-3" style={{ gap: "var(--sp-4)" }}>
+        <div className="panel" style={{ padding: "var(--sp-4)" }}>
           <div className="panel-title">Pick a Chip</div>
           <div className="row" style={{ flexWrap: "wrap", gap: "var(--sp-2)" }}>
             {CHIP_VALUES.map((v) => (
               <ChipSwatch key={v} amount={v} active={chip === v} onClick={() => setChip(v)} />
             ))}
           </div>
-          <p className="text-mute" style={{ marginTop: "var(--sp-3)", fontSize: "var(--fs-small)" }}>
-            Click any cell on the felt to drop a chip. Right-click or shift-click to remove a stack.
+          <p className="text-mute" style={{ marginTop: "var(--sp-3)", fontSize: 12 }}>
+            Tap a cell to drop a chip. Right-click / shift-click removes.
           </p>
         </div>
 
-        <div className="panel" style={{ padding: "var(--sp-5)" }}>
+        <div className="panel" style={{ padding: "var(--sp-4)" }}>
           <div className="panel-title">Your Bets</div>
           {bets.length === 0 ? (
-            <p className="text-mute">
+            <p className="text-mute" style={{ fontSize: 13 }}>
               {hoverPreview
                 ? <>Hovering <b>{hoverPreview.label}</b> — pays {hoverPreview.payout}× stake.</>
-                : "Drop a chip on the felt to begin."}
+                : "Drop a chip on the felt."}
             </p>
           ) : (
-            <div className="stack">
+            <div className="stack" style={{ maxHeight: 180, overflowY: "auto" }}>
               {bets.map((b, i) => (
                 <div
                   key={i}
                   className="between"
-                  style={{ padding: "var(--sp-2) 0", borderBottom: "2px dashed var(--saddle-300)" }}
+                  style={{ padding: "4px 0", borderBottom: "2px dashed var(--saddle-300)", fontSize: 13 }}
                 >
                   <span style={{ fontFamily: "var(--font-display)", textTransform: "uppercase" }}>
                     {labelBet(b)}
                   </span>
-                  <span className="text-money">{b.amount.toLocaleString()} ¢</span>
+                  <span className="text-money">{b.amount.toLocaleString()}</span>
                 </div>
               ))}
-              <div className="between" style={{ marginTop: "var(--sp-3)" }}>
-                <span className="uppercase">Total</span>
-                <span className="text-money" style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)" }}>
-                  {stake.toLocaleString()} ¢
-                </span>
-              </div>
             </div>
           )}
-
-          <div className="row" style={{ marginTop: "var(--sp-5)", gap: "var(--sp-2)" }}>
-            <button className="btn btn-ghost btn-block" onClick={clearBets} disabled={busy || bets.length === 0 || spinning}>
-              Clear
-            </button>
-            <button className="btn btn-block" onClick={spin} disabled={!canSpin || spinning}>
-              {spinning ? "Spinning..." : "Spin"}
-            </button>
+          <div className="between" style={{ marginTop: "var(--sp-3)" }}>
+            <span className="uppercase" style={{ fontSize: 12 }}>Total</span>
+            <span className="text-money" style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h4)" }}>
+              {stake.toLocaleString()} ¢
+            </span>
           </div>
         </div>
 
-        {result && !spinning && (
-          <div className="panel" style={{ padding: "var(--sp-5)" }}>
-            <div className="panel-title">Last Spin</div>
-            <p className="text-mute" style={{ marginBottom: "var(--sp-3)" }}>
-              Winning: <b>{result.winning}</b> ({result.color})
-            </p>
-            {result.rows.map((r, i) => (
-              <div
-                key={i}
-                className="between"
-                style={{ padding: "var(--sp-2) 0", borderBottom: "2px dashed var(--saddle-300)" }}
-              >
-                <span style={{ fontFamily: "var(--font-display)" }}>{labelBet(r)}</span>
-                <span style={{ color: r.win ? "var(--cactus-500)" : "var(--crimson-500)" }}>
-                  {r.win ? `+${(r.payout - r.amount).toLocaleString()}` : `-${r.amount.toLocaleString()}`}
-                </span>
-              </div>
-            ))}
+        <div className="panel" style={{ padding: "var(--sp-4)" }}>
+          <div className="panel-title">Action</div>
+          <div className="stack" style={{ gap: "var(--sp-2)" }}>
+            <button className="btn btn-block" onClick={spin} disabled={!canSpin || spinning}>
+              {spinning ? "Spinning..." : "Spin"}
+            </button>
+            <button className="btn btn-ghost btn-block" onClick={clearBets} disabled={busy || bets.length === 0 || spinning}>
+              Clear
+            </button>
           </div>
-        )}
+          {result && !spinning && (
+            <div style={{ marginTop: "var(--sp-3)", fontSize: 12 }}>
+              <div className="text-mute" style={{ marginBottom: 4 }}>
+                Last: <b>{result.winning}</b> ({result.color})
+              </div>
+              <div className="stack" style={{ gap: 0, maxHeight: 100, overflowY: "auto" }}>
+                {result.rows.map((r, i) => (
+                  <div
+                    key={i}
+                    className="between"
+                    style={{ padding: "2px 0", borderBottom: "1px dashed var(--saddle-300)", fontSize: 12 }}
+                  >
+                    <span style={{ fontFamily: "var(--font-display)" }}>{labelBet(r)}</span>
+                    <span style={{ color: r.win ? "var(--cactus-500)" : "var(--crimson-500)" }}>
+                      {r.win ? `+${(r.payout - r.amount).toLocaleString()}` : `-${r.amount.toLocaleString()}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -606,10 +618,10 @@ function FeltTable({
     background: bg,
     color: "#fef6e4",
     fontFamily: "var(--font-display)",
-    fontSize: 13,
+    fontSize: 12,
     border: "2px solid var(--ink-900)",
     cursor: disabled ? "not-allowed" : "pointer",
-    height: 34,
+    height: 30,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -637,7 +649,7 @@ function FeltTable({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "40px repeat(12, 1fr) 40px",
+          gridTemplateColumns: "32px repeat(12, 1fr) 32px",
           gap: 2,
         }}
       >
@@ -650,8 +662,8 @@ function FeltTable({
           style={{
             ...cellStyle("#3d6b2e"),
             gridRow: "1 / span 3",
-            height: 34 * 3 + 4,
-            fontSize: 20,
+            height: 30 * 3 + 4,
+            fontSize: 18,
             border: highlight === 0 ? "3px solid var(--gold-300)" : "2px solid var(--ink-900)",
           }}
         >
@@ -702,7 +714,7 @@ function FeltTable({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "40px repeat(3, 1fr) 40px",
+          gridTemplateColumns: "32px repeat(3, 1fr) 32px",
           gap: 2,
           marginTop: 2,
         }}
@@ -733,7 +745,7 @@ function FeltTable({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "40px repeat(6, 1fr) 40px",
+          gridTemplateColumns: "32px repeat(6, 1fr) 32px",
           gap: 2,
           marginTop: 2,
         }}
