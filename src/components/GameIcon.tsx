@@ -475,13 +475,9 @@ const ICONS: Partial<Record<IconName, Px[]>> = {
 // =============================================================
 const LOBBY_ICONS_128: Partial<Record<IconName, Px[]>> = {
 
-  // ----- Coin Flip — gold coin with embossed $ + motion arcs -----
+  // ----- Coin Flip — single clean gold coin, no background or motion -----
   "lobby.coinflip": [
-    // Drop shadow (ellipse-ish under the coin)
-    [38, 110, 52, 6, C.shadow],
-    [44, 116, 40, 4, C.shadow],
-    // Coin disc — chunky pixel circle, ~96 wide
-    // top staircase
+    // Coin disc — chunky pixel circle, ~96 wide, centered at (64,64)
     [52, 16, 24,  4, C.goldDD],
     [40, 20, 48,  4, C.goldDD],
     [32, 24, 64,  4, C.goldDD],
@@ -519,16 +515,13 @@ const LOBBY_ICONS_128: Partial<Record<IconName, Px[]>> = {
     [36, 92, 56,  4, C.gold],
     [40, 96, 48,  4, C.gold],
     [48,100, 32,  4, C.gold],
-    // top-left crescent shine (lighter gold + neon)
+    // top-left crescent shine (lighter gold)
     [40, 28, 12,  4, C.goldL],
     [32, 32, 16,  4, C.goldL],
     [28, 36, 20,  4, C.goldL],
     [24, 40, 16,  4, C.goldL],
     [20, 44, 16, 12, C.goldL],
     [24, 56, 12,  4, C.goldL],
-    [28, 36,  8,  4, C.neonGold],
-    [24, 40, 12,  4, C.neonGold],
-    [24, 48,  8,  4, C.neonGold],
     // $ sign — chunky and centered
     [60, 32,  8, 64, C.ink],
     [44, 36, 40,  8, C.ink],
@@ -539,16 +532,54 @@ const LOBBY_ICONS_128: Partial<Record<IconName, Px[]>> = {
     [40, 80, 12, 12, C.ink],
     [76, 80, 12, 12, C.ink],
     [44, 84, 40,  8, C.ink],
-    [40, 40,  8,  4, C.inkSoft],
-    [80, 84,  4,  4, C.inkSoft],
-    [44, 44,  4,  4, C.inkSoft],
-    // motion arcs (top + bottom) — small streaks
-    [40,  4, 12,  4, C.gold],
-    [56,  0, 16,  4, C.goldL],
-    [76,  4, 12,  4, C.gold],
-    [40, 120, 12, 4, C.goldD],
-    [56, 124, 16, 4, C.gold],
-    [76, 120, 12, 4, C.goldD],
+  ],
+
+  // ----- Coin Flip Duel — two overlapping coins (H + T), no sparks -----
+  "lobby.coinflip_duel": [
+    // Back coin — centered around (44, 44), ~56 wide
+    [32, 20, 24,  4, C.goldDD],
+    [24, 24, 40,  4, C.goldDD],
+    [20, 28, 48,  4, C.goldDD],
+    [16, 32, 56, 28, C.goldDD],
+    [20, 60, 48,  4, C.goldDD],
+    [24, 64, 40,  4, C.goldDD],
+    [32, 68, 24,  4, C.goldDD],
+    // inner gold body
+    [36, 24, 16,  4, C.gold],
+    [28, 28, 32,  4, C.gold],
+    [24, 32, 40, 24, C.gold],
+    [28, 56, 32,  4, C.gold],
+    [36, 60, 16,  4, C.gold],
+    // shine on top-left
+    [28, 28,  8,  4, C.goldL],
+    [24, 32, 12,  4, C.goldL],
+    [22, 36,  8,  8, C.goldL],
+    // letter H
+    [28, 32,  4, 24, C.ink],
+    [52, 32,  4, 24, C.ink],
+    [32, 42, 20,  4, C.ink],
+
+    // Front coin — centered around (84, 80), ~56 wide
+    [72, 56, 24,  4, C.goldDD],
+    [64, 60, 40,  4, C.goldDD],
+    [60, 64, 48,  4, C.goldDD],
+    [56, 68, 56, 28, C.goldDD],
+    [60, 96, 48,  4, C.goldDD],
+    [64,100, 40,  4, C.goldDD],
+    [72,104, 24,  4, C.goldDD],
+    // inner gold body
+    [76, 60, 16,  4, C.gold],
+    [68, 64, 32,  4, C.gold],
+    [64, 68, 40, 24, C.gold],
+    [68, 92, 32,  4, C.gold],
+    [76, 96, 16,  4, C.gold],
+    // shine on top-left
+    [68, 64,  8,  4, C.goldL],
+    [64, 68, 12,  4, C.goldL],
+    [62, 72,  8,  8, C.goldL],
+    // letter T
+    [70, 70, 28,  4, C.ink],
+    [82, 74,  4, 22, C.ink],
   ],
 
   // ----- Roulette — top-down brass-rim wheel + ball at top -----
@@ -931,80 +962,48 @@ const LOBBY_ICONS_128: Partial<Record<IconName, Px[]>> = {
     [108,76,  4,  4, C.parchL],
   ],
 
-  // ----- Crossy Road — chicken hopping over road -----
+  // ----- Crossy Road — chicken sprite, no background -----
   "lobby.crossy_road": [
-    // Sky / grass top
-    [ 0,  0,128, 32, C.cactusL],
-    [ 0,  0,128,  4, C.cactus],
-    [ 0, 28,128,  4, C.cactus],
-    // Road
-    [ 0, 32,128, 96, C.ink],
-    [ 0,124,128,  4, C.shadow],
-    // Lane stripes (white dashes on top of dark road)
-    [ 0, 56, 16,  6, C.parchL],
-    [32, 56, 16,  6, C.parchL],
-    [64, 56, 16,  6, C.parchL],
-    [96, 56, 16,  6, C.parchL],
-    [ 0, 88, 16,  6, C.gold],
-    [32, 88, 16,  6, C.gold],
-    [64, 88, 16,  6, C.gold],
-    [96, 88, 16,  6, C.gold],
-    [ 0,116, 16,  6, C.parchL],
-    [32,116, 16,  6, C.parchL],
-    [64,116, 16,  6, C.parchL],
-    [96,116, 16,  6, C.parchL],
-    // Tree on left of grass
-    [12,  4, 16, 16, C.cactusD],
-    [16,  0, 12,  8, C.cactusD],
-    [20,  0,  4,  4, C.cactus],
-    [16,  4,  4,  4, C.cactus],
-    [16, 20,  8, 12, C.saddleD],
-    // Tree on right
-    [104,  4, 16, 16, C.cactusD],
-    [108,  0, 12,  8, C.cactusD],
-    [112,  0,  4,  4, C.cactus],
-    [108,  4,  4,  4, C.cactus],
-    [108, 20,  8, 12, C.saddleD],
-    // Hop-arc dotted shadow
-    [40, 76,  6,  6, C.shadow],
-    // Chicken — body
-    [56, 36, 16, 24, C.parchL],
-    [56, 36, 16,  4, C.parchM],
-    [52, 40,  4, 16, C.parchL],
-    [72, 40,  4, 16, C.parchL],
-    [56, 56, 16,  4, C.parchD],
-    // Chicken belly white
-    [56, 52, 16,  4, C.parchL],
-    // Comb (red)
-    [60, 28,  4,  4, C.crimson],
-    [64, 28,  4,  4, C.crimson],
-    [60, 32,  8,  4, C.crimson],
-    [56, 32,  4,  4, C.crimson],
-    // Beak
-    [72, 44,  8,  6, C.gold],
-    [72, 50,  8,  4, C.goldD],
-    // Eye
-    [64, 40,  6,  6, C.parchL],
-    [66, 42,  4,  4, C.ink],
-    // Wing tucked
-    [52, 48,  4, 12, C.parchM],
-    // Legs
-    [56, 60,  4, 12, C.gold],
-    [68, 60,  4, 12, C.gold],
-    [52, 72,  8,  4, C.goldD],
-    [64, 72,  8,  4, C.goldD],
-    // Approaching wagon (tiny)
-    [88, 80, 32, 12, C.crimson],
-    [88, 80, 32,  4, C.crimsonD],
-    [88, 80,  4, 12, C.crimsonDD],
-    [116,80,  4, 12, C.crimsonDD],
-    [92, 92, 24,  4, C.shadow],
-    [88, 84, 16,  4, C.skyL],   // window
-    // Wagon wheels
-    [92, 92,  6,  6, C.ink],
-    [110,92,  6,  6, C.ink],
-    [94, 94,  2,  2, C.parchL],
-    [112,94,  2,  2, C.parchL],
+    // Comb — three red spikes on top of head
+    [44, 16,  4,  8, C.crimson],
+    [52, 12,  4, 12, C.crimson],
+    [60, 16,  4,  8, C.crimson],
+    [44, 24, 24,  4, C.crimsonD],
+    // Head (white block)
+    [40, 28, 32, 16, C.parchL],
+    [40, 28, 32,  4, C.parchM],
+    [40, 40, 32,  4, C.parchD],
+    // Eye + pupil
+    [56, 32,  6,  6, C.parchL],
+    [58, 34,  4,  4, C.ink],
+    // Beak — gold to the right
+    [72, 32, 12,  8, C.gold],
+    [72, 36, 12,  4, C.goldD],
+    // Body — rounded white oval
+    [32, 44, 56, 44, C.parchL],
+    [28, 48,  4, 36, C.parchL],
+    [88, 48,  4, 36, C.parchL],
+    [24, 56,  4, 24, C.parchL],
+    [92, 56,  4, 24, C.parchL],
+    [28, 44, 60,  4, C.parchM],
+    [28, 80, 60,  8, C.parchD],
+    // Wing
+    [36, 56, 16, 20, C.parchM],
+    [32, 60,  4, 16, C.parchM],
+    [36, 56, 16,  4, C.parchD],
+    // Tail tuft on left side
+    [20, 60,  8, 16, C.parchL],
+    [20, 60,  4, 16, C.parchD],
+    // Legs (gold)
+    [44, 88,  6, 18, C.gold],
+    [44, 88,  6,  4, C.goldD],
+    [70, 88,  6, 18, C.gold],
+    [70, 88,  6,  4, C.goldD],
+    // Feet
+    [40,106, 14,  4, C.gold],
+    [40,110, 14,  2, C.goldD],
+    [66,106, 14,  4, C.gold],
+    [66,110, 14,  2, C.goldD],
   ],
 
   // ----- Flappy — bird mid-flap between pipes + sky -----
@@ -1073,49 +1072,31 @@ const LOBBY_ICONS_128: Partial<Record<IconName, Px[]>> = {
     [122, 24, 6, 36, C.cactusD],
   ],
 
-  // ----- Monopoly — top hat on a property card -----
+  // ----- Monopoly — single black top hat, no card or background -----
   "lobby.monopoly": [
-    // Felt background
-    [ 0,  0,128,128, C.cactusD],
-    [ 0,  0,128,  4, C.cactus],
-    // Card
-    [16, 16, 96, 96, C.parchL],
-    [16, 16, 96,  4, C.parchM],
-    [16,108, 96,  4, C.parchD],
-    [16, 16,  4, 96, C.parchM],
-    [108,16,  4, 96, C.parchD],
-    // Top color band (purple/red ownership stripe)
-    [16, 16, 96, 24, C.crimson],
-    [16, 16, 96,  4, C.neonCrim],
-    [16, 36, 96,  4, C.crimsonD],
-    // Card title text marks (faux text)
-    [24, 44, 80,  2, C.ink],
-    [24, 50, 64,  2, C.saddleD],
-    [24, 56, 48,  2, C.saddleD],
-    // Top hat — band
-    [40, 60, 48, 32, C.ink],
-    [40, 60, 48,  4, C.shadow],
-    [84, 60,  4, 32, C.shadow],
-    [40, 78, 48,  6, C.crimson],
-    [40, 78, 48,  2, C.crimsonD],
-    // Brim
-    [28, 88, 72, 12, C.ink],
-    [28, 88, 72,  2, C.shadow],
-    [28, 98, 72,  2, C.shadow],
-    // Hat shine
-    [44, 64,  4, 12, C.inkSoft],
-    [50, 64,  2,  4, C.inkSoft],
-    // $ sign at bottom
-    [54,108,  4, 16, C.cactusL],
-    [44,112, 24,  4, C.cactus],
-    [44,118, 24,  4, C.cactus],
-    [44,108, 28,  4, C.cactus],
-    [60, 96,  4,  4, C.cactusL],
-    // Coin under card
-    [96, 96, 16, 16, C.gold],
-    [98, 98, 12, 12, C.goldD],
-    [100,100, 8,  8, C.gold],
-    [104,104, 4,  4, C.neonGold],
+    // Stovepipe (vertical body) — y 16..88
+    [36, 16, 56, 72, C.ink],
+    [36, 16, 56,  4, C.shadow],   // top edge dark
+    [36, 16,  4, 72, C.shadow],   // left edge dark
+    [88, 16,  4, 72, C.inkSoft],  // right edge soft highlight
+    // Inner shine slash (top-left → middle)
+    [42, 22,  6, 32, C.inkSoft],
+    [44, 22,  4, 16, C.saddleD],
+    // Hat band — red ribbon (with darker top + bottom edges)
+    [36, 76, 56, 12, C.crimson],
+    [36, 76, 56,  4, C.crimsonD],
+    [36, 84, 56,  4, C.crimsonDD],
+    // Buckle — gold square on the band
+    [60, 76,  8, 12, C.gold],
+    [60, 76,  8,  4, C.goldL],
+    [64, 80,  4,  4, C.goldDD],
+    // Brim — wider than stovepipe, sits below
+    [12, 88,104, 16, C.ink],
+    [12, 88,104,  4, C.shadow],   // top edge dark
+    [12,100,104,  4, C.shadow],   // bottom edge dark
+    // Brim end caps (slight darker rounding)
+    [12, 88, 12, 16, C.shadow],
+    [104,88, 12, 16, C.shadow],
   ],
 };
 
