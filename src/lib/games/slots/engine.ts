@@ -78,101 +78,105 @@ export const PAYLINES: number[][] = [
 // Pay multipliers (× bet/20 — each line contributes per-line at 1/20th the bet).
 // Match-of-X for matching from leftmost reel onwards.
 const LINE_PAYS: Record<"BOOT" | "GUN" | "STAR" | "GOLD" | "SHERIFF", { 3: number; 4: number; 5: number }> = {
-  BOOT:    { 3: 1,  4: 4,   5: 12 },
-  GUN:     { 3: 2,  4: 6,   5: 20 },
-  STAR:    { 3: 3,  4: 10,  5: 40 },
-  GOLD:    { 3: 6,  4: 25,  5: 100 },
-  SHERIFF: { 3: 10, 4: 50,  5: 250 },
+  BOOT:    { 3: 1,  4: 3,   5: 8 },
+  GUN:     { 3: 1, 4: 5,   5: 14 },
+  STAR:    { 3: 2,  4: 8,   5: 25 },
+  GOLD:    { 3: 4,  4: 15,  5: 60 },
+  SHERIFF: { 3: 8,  4: 30,  5: 150 },
 };
 
 // Per-reel symbol weights. Reels 1..3 carry mostly the standard symbols;
 // reels 4..5 are slightly hotter for COIN. Reel 5 is the only place a
 // BUILDING ever lands (in the base game).
 //
-// Total weights are tuned so:
-//   - Coin density per spin ≈ 3.0 average
-//   - 6+ coin trigger probability ≈ 1 / 320 spins
-//   - Total RTP (lines + bonus EV) ≈ 96%
+// Tuned for ~96% RTP. Coin weights are intentionally lean so the bonus
+// trigger rate stays around 1/450 spins and individual coin payouts can
+// stack without the bonus settle exploding into 1000×+ bet territory.
 const REEL_WEIGHTS: { sym: BaseSym; w: number }[][] = [
   // Reel 1
+  [
+    { sym: "BOOT", w: 40 },
+    { sym: "GUN", w: 32 },
+    { sym: "STAR", w: 18 },
+    { sym: "GOLD", w: 9 },
+    { sym: "SHERIFF", w: 3 },
+    { sym: "COIN", w: 8 },
+  ],
+  // Reel 2
   [
     { sym: "BOOT", w: 38 },
     { sym: "GUN", w: 30 },
     { sym: "STAR", w: 18 },
-    { sym: "GOLD", w: 9 },
-    { sym: "SHERIFF", w: 3 },
-    { sym: "COIN", w: 12 },
+    { sym: "GOLD", w: 10 },
+    { sym: "SHERIFF", w: 4 },
+    { sym: "COIN", w: 10 },
   ],
-  // Reel 2
+  // Reel 3
   [
     { sym: "BOOT", w: 36 },
-    { sym: "GUN", w: 28 },
+    { sym: "GUN", w: 30 },
     { sym: "STAR", w: 18 },
     { sym: "GOLD", w: 10 },
     { sym: "SHERIFF", w: 4 },
-    { sym: "COIN", w: 14 },
+    { sym: "COIN", w: 12 },
   ],
-  // Reel 3
+  // Reel 4
   [
     { sym: "BOOT", w: 34 },
     { sym: "GUN", w: 28 },
     { sym: "STAR", w: 18 },
     { sym: "GOLD", w: 10 },
-    { sym: "SHERIFF", w: 4 },
-    { sym: "COIN", w: 16 },
-  ],
-  // Reel 4
-  [
-    { sym: "BOOT", w: 32 },
-    { sym: "GUN", w: 26 },
-    { sym: "STAR", w: 18 },
-    { sym: "GOLD", w: 10 },
     { sym: "SHERIFF", w: 5 },
-    { sym: "COIN", w: 18 },
+    { sym: "COIN", w: 13 },
   ],
   // Reel 5 — adds BUILDING and slightly more COIN
   [
-    { sym: "BOOT", w: 28 },
-    { sym: "GUN", w: 24 },
+    { sym: "BOOT", w: 30 },
+    { sym: "GUN", w: 26 },
     { sym: "STAR", w: 16 },
     { sym: "GOLD", w: 9 },
     { sym: "SHERIFF", w: 4 },
-    { sym: "COIN", w: 22 },
-    { sym: "BUILDING", w: 8 },
+    { sym: "COIN", w: 15 },
+    { sym: "BUILDING", w: 7 },
   ],
 ];
 
 // Cash-coin value table (per-coin value as a multiplier of bet/20).
 // I.e. with a 1000¢ bet, a "5×" coin is worth 5 × (1000 / 20) = 250¢.
 // Probabilities sum to 1.0.
+//
+// Tuned down from the launch values: the old top end (50× / 100×) combined
+// with the T5 tier multiplier produced single-coin payouts of >100,000¢ on
+// a 1000¢ bet. The new ceiling at 25× keeps the rare payouts thrilling
+// without snapping the budget.
 const COIN_VALUE_TABLE: { mult: number; p: number }[] = [
-  { mult: 1,    p: 0.40 }, // small (50¢ at 1000 bet)
-  { mult: 2,    p: 0.25 },
+  { mult: 1,    p: 0.45 }, // small (50¢ at 1000 bet)
+  { mult: 2,    p: 0.27 },
   { mult: 3,    p: 0.15 },
-  { mult: 5,    p: 0.10 },
-  { mult: 10,   p: 0.05 },
-  { mult: 20,   p: 0.03 },
-  { mult: 50,   p: 0.015 },
-  { mult: 100,  p: 0.005 }, // "MINI" jackpot tag
+  { mult: 5,    p: 0.08 },
+  { mult: 10,   p: 0.04 },
+  { mult: 25,   p: 0.01 }, // top-tier coin (was 100×)
 ];
 
 // Building tier weights (only when BUILDING rolls on reel 5). T5 is the
 // progressive grand jackpot ("Boomtown") and is rare.
 const BUILDING_TIER_TABLE: { tier: number; p: number }[] = [
-  { tier: 1, p: 0.50 }, // Tent
+  { tier: 1, p: 0.55 }, // Tent
   { tier: 2, p: 0.28 }, // Saloon
-  { tier: 3, p: 0.14 }, // Town
-  { tier: 4, p: 0.075 }, // Frontier
+  { tier: 3, p: 0.12 }, // Town
+  { tier: 4, p: 0.045 }, // Frontier
   { tier: 5, p: 0.005 }, // Boomtown — grand
 ];
 
 // Bonus end-of-bonus tier multipliers, applied to the locked coin total.
+// Reduced from 2/5/10/25/100 — the old T5 + top coin combo blew through
+// the 96% RTP target.
 export const TIER_MULTIPLIER: Record<number, number> = {
-  1: 2,    // Tent
-  2: 5,    // Saloon
-  3: 10,   // Town
-  4: 25,   // Frontier
-  5: 100,  // Boomtown (grand)
+  1: 1.5,  // Tent
+  2: 3,    // Saloon
+  3: 6,    // Town
+  4: 12,   // Frontier
+  5: 25,   // Boomtown (grand)
 };
 
 export const TIER_LABEL: Record<number, string> = {

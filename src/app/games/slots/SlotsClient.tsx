@@ -56,11 +56,10 @@ const SYM_ICON: Record<Sym, IconName> = {
 };
 
 const COIN_TIER_COLOR = (mult: number): { bg: string; ring: string; fg: string } => {
-  if (mult >= 100) return { bg: "#ffd84d", ring: "#7a5510", fg: "#1a0f08" };  // Mini
-  if (mult >= 50)  return { bg: "#e87a3a", ring: "#4a1a1a", fg: "#fef6e4" };
-  if (mult >= 20)  return { bg: "#c93a2c", ring: "#1a0f08", fg: "#fef6e4" };
-  if (mult >= 10)  return { bg: "#5fa8d3", ring: "#143348", fg: "#fef6e4" };
-  if (mult >= 5)   return { bg: "#6ba84f", ring: "#1f3818", fg: "#fef6e4" };
+  if (mult >= 25)  return { bg: "#ffd84d", ring: "#7a5510", fg: "#1a0f08" };  // top-tier
+  if (mult >= 10)  return { bg: "#e87a3a", ring: "#4a1a1a", fg: "#fef6e4" };
+  if (mult >= 5)   return { bg: "#c93a2c", ring: "#1a0f08", fg: "#fef6e4" };
+  if (mult >= 3)   return { bg: "#5fa8d3", ring: "#143348", fg: "#fef6e4" };
   return { bg: "#f5c842", ring: "#7a5510", fg: "#1a0f08" };
 };
 
@@ -1002,11 +1001,11 @@ function BuildingTiers() {
 function Paytable() {
   const SYMS: Sym[] = ["BOOT", "GUN", "STAR", "GOLD", "SHERIFF"];
   const PAYS: Record<Sym, { 3: number; 4: number; 5: number }> = {
-    BOOT:    { 3: 1,  4: 4,   5: 12 },
-    GUN:     { 3: 2,  4: 6,   5: 20 },
-    STAR:    { 3: 3,  4: 10,  5: 40 },
-    GOLD:    { 3: 6,  4: 25,  5: 100 },
-    SHERIFF: { 3: 10, 4: 50,  5: 250 },
+    BOOT:    { 3: 1, 4: 3,   5: 8 },
+    GUN:     { 3: 1, 4: 5,   5: 14 },
+    STAR:    { 3: 2, 4: 8,   5: 25 },
+    GOLD:    { 3: 4, 4: 15,  5: 60 },
+    SHERIFF: { 3: 8, 4: 30,  5: 150 },
   };
   return (
     <div className="panel" style={{ padding: "var(--sp-5)" }}>
@@ -1042,7 +1041,7 @@ function Paytable() {
 }
 
 function CoinTable() {
-  const COINS = [1, 2, 3, 5, 10, 20, 50, 100];
+  const COINS = [1, 2, 3, 5, 10, 25];
   return (
     <div className="panel" style={{ padding: "var(--sp-5)" }}>
       <div className="panel-title">Cash Coins</div>
@@ -1076,7 +1075,7 @@ function CoinTable() {
         })}
       </div>
       <p className="text-mute" style={{ fontSize: 11, marginTop: "var(--sp-3)" }}>
-        100× = Mini jackpot tag.
+        Each coin pays its multiplier × bet/20. 25× is the jackpot coin.
       </p>
     </div>
   );
@@ -1086,8 +1085,6 @@ function CoinTable() {
 // Helpers
 // =============================================================
 function formatCoin(mult: number): string {
-  if (mult >= 100) return "MINI";
-  if (mult >= 10) return `${mult}×`;
   return `${mult}×`;
 }
 
