@@ -71,6 +71,31 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     status: "settled",
   });
 
+  // Hydrate challenger + acceptor for the client-side flip overlay.
+  let challengerUser: { username: string; avatar_color: string; initials: string } | null = null;
+  let acceptorUser: { username: string; avatar_color: string; initials: string } | null = null;
+  const useSupabase = !!(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+  if (useSupabase) {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supa = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+    const { data } = await supa
+      .from("users_public")
+      .select("id, username, avatar_color, initials")
+      .in("id", [duel.challenger_id, s.user.id]);
+    if (data) {
+      for (const u of data as Array<{ id: string; username: string; avatar_color: string; initials: string }>) {
+        if (u.id === duel.challenger_id) challengerUser = u;
+        if (u.id === s.user.id) acceptorUser = u;
+      }
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     result,
@@ -78,5 +103,19 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     youWon: winnerId === s.user.id,
     payout: winnerId === s.user.id ? pot : 0,
     balance: await getBalance(s.user.id),
+    duel: {
+      id,
+      challenger_id: duel.challenger_id,
+      challenger_side: duel.challenger_side,
+      wager: duel.wager,
+      acceptor_id: s.user.id,
+      result,
+      winner_id: winnerId,
+      status: "resolved",
+      created_at: duel.created_at,
+      resolved_at: new Date().toISOString(),
+      challenger: challengerUser,
+      acceptor: acceptorUser,
+    },
   });
 }
