@@ -746,8 +746,8 @@ function HistoryStrip({
       style={{
         display: "flex",
         gap: 4,
-        flexWrap: "nowrap",
-        overflowX: "auto",
+        flexWrap: "wrap",
+        alignItems: "center",
         margin: "0 0 var(--sp-3)",
         padding: "var(--sp-2)",
         background: "var(--saddle-600)",
