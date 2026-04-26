@@ -90,8 +90,14 @@ function commit() { if (g.lgDb) save(g.lgDb); }
 
 // ============ USERS ============
 export async function listUsersPublic(): Promise<UserPublic[]> {
-  return db().users.filter((u) => u.is_active).map(({ id, username, avatar_color, initials, last_seen_at }) => ({
-    id, username, avatar_color, initials, last_seen_at,
+  return db().users.filter((u) => u.is_active).map((u) => ({
+    id: u.id,
+    username: u.username,
+    avatar_color: u.avatar_color,
+    initials: u.initials,
+    last_seen_at: u.last_seen_at,
+    equipped_frame: u.equipped_frame ?? null,
+    equipped_hat: u.equipped_hat ?? null,
   }));
 }
 

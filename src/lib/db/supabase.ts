@@ -49,7 +49,7 @@ function unwrap<T>(res: { data: T | null; error: { message: string } | null }, c
 export async function listUsersPublic(): Promise<UserPublic[]> {
   const { data, error } = await client()
     .from("users_public")
-    .select("id, username, avatar_color, initials, last_seen_at")
+    .select("id, username, avatar_color, initials, last_seen_at, equipped_frame, equipped_hat")
     .order("last_seen_at", { ascending: false, nullsFirst: false });
   if (error) throw new Error(`listUsersPublic: ${error.message}`);
   return (data ?? []) as UserPublic[];

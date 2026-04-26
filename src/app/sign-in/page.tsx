@@ -2,17 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Avatar } from "@/components/Avatar";
 
 type Player = {
   id: string;
   username: string;
   avatar_color: string;
   initials: string;
+  equipped_frame?: string | null;
+  equipped_hat?: string | null;
 };
 
 export default function SignInPage() {
   const router = useRouter();
   const [players, setPlayers] = useState<Player[]>([]);
+  const [championId, setChampionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Player | null>(null);
   const [creating, setCreating] = useState(false);
@@ -26,7 +30,10 @@ export default function SignInPage() {
   useEffect(() => {
     fetch("/api/auth/players")
       .then((r) => r.json())
-      .then((d) => setPlayers(d.players ?? []))
+      .then((d) => {
+        setPlayers(d.players ?? []);
+        setChampionId(d.championId ?? null);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -120,11 +127,16 @@ export default function SignInPage() {
                 onClick={() => setSelected(p)}
                 style={{ alignItems: "center", textAlign: "center" }}
               >
-                <div
-                  className="avatar avatar-lg"
-                  style={{ background: p.avatar_color, fontSize: "var(--fs-h2)" }}
-                >
-                  {p.initials}
+                <div style={{ display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4 }}>
+                  <Avatar
+                    initials={p.initials}
+                    color={p.avatar_color}
+                    size={88}
+                    fontSize={28}
+                    frame={p.equipped_frame ?? null}
+                    hat={p.equipped_hat ?? null}
+                    champion={p.id === championId}
+                  />
                 </div>
                 <div className="tile-name">{p.username}</div>
               </button>
@@ -226,15 +238,16 @@ export default function SignInPage() {
   return (
     <main className="page" style={{ maxWidth: "440px" }}>
       <div className="panel" style={{ padding: "var(--sp-7)", textAlign: "center" }}>
-        <div
-          className="avatar avatar-lg"
-          style={{
-            background: selected!.avatar_color,
-            fontSize: "var(--fs-h2)",
-            margin: "0 auto var(--sp-4)",
-          }}
-        >
-          {selected!.initials}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "var(--sp-4)" }}>
+          <Avatar
+            initials={selected!.initials}
+            color={selected!.avatar_color}
+            size={104}
+            fontSize={36}
+            frame={selected!.equipped_frame ?? null}
+            hat={selected!.equipped_hat ?? null}
+            champion={selected!.id === championId}
+          />
         </div>
         <h2 style={{ fontSize: "var(--fs-h2)", marginBottom: "var(--sp-2)" }}>
           {selected!.username}

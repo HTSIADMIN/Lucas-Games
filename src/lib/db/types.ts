@@ -139,7 +139,10 @@ export type BlackjackSeat = {
   placed_at: string;
 };
 
-export type UserPublic = Pick<User, "id" | "username" | "avatar_color" | "initials" | "last_seen_at">;
+export type UserPublic = Pick<User, "id" | "username" | "avatar_color" | "initials" | "last_seen_at"> & {
+  equipped_frame?: string | null;
+  equipped_hat?: string | null;
+};
 
 export type UserSession = {
   jti: string;
