@@ -11,7 +11,37 @@ export function ChatDrawer({ currentUserId }: { currentUserId: string | null }) 
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSeenId, setLastSeenId] = useState<number>(0);
   const messagesRef = useRef<HTMLDivElement>(null);
+
+  // Anchor on first mount: latest existing message becomes "seen" so
+  // history doesn't show as unread.
+  useEffect(() => {
+    if (lastSeenId === 0 && chat.length > 0) {
+      setLastSeenId(chat[chat.length - 1].id);
+    }
+  }, [chat, lastSeenId]);
+
+  // Mark read when the chat tab is open.
+  useEffect(() => {
+    if (open && tab === "chat" && chat.length > 0) {
+      setLastSeenId(chat[chat.length - 1].id);
+    }
+  }, [open, tab, chat]);
+
+  // Unread count: own messages don't count.
+  const unread = chat.filter((m) => m.id > lastSeenId && m.user_id !== currentUserId).length;
+
+  // Tab-title flash so the notification reads even when window unfocused.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const original = "Lucas Games";
+    if (!open && unread > 0) {
+      document.title = `(${unread > 9 ? "9+" : unread}) ${original}`;
+    } else {
+      document.title = original;
+    }
+  }, [open, unread]);
 
   useEffect(() => {
     if (!open) return;
@@ -49,28 +79,62 @@ export function ChatDrawer({ currentUserId }: { currentUserId: string | null }) 
   return (
     <>
       {/* Floating launcher */}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-label={open ? "Close chat" : "Open chat"}
-        style={{
-          position: "fixed",
-          right: 16,
-          bottom: 16,
-          width: 56,
-          height: 56,
-          background: "var(--gold-300)",
-          border: "4px solid var(--ink-900)",
-          boxShadow: open ? "var(--sh-button-press)" : "var(--sh-card-rest)",
-          fontFamily: "var(--font-display)",
-          fontSize: 24,
-          color: "var(--ink-900)",
-          cursor: "pointer",
-          zIndex: 100,
-        }}
-      >
-        {open ? "×" : "💬"}
-      </button>
+      <div style={{ position: "fixed", right: 16, bottom: 16, zIndex: 100 }}>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-label={open ? "Close chat" : "Open chat"}
+          style={{
+            position: "relative",
+            width: 56,
+            height: 56,
+            background: "var(--gold-300)",
+            border: "4px solid var(--ink-900)",
+            boxShadow: open
+              ? "var(--sh-button-press)"
+              : unread > 0
+              ? "var(--sh-card-rest), var(--glow-gold)"
+              : "var(--sh-card-rest)",
+            fontFamily: "var(--font-display)",
+            fontSize: 24,
+            color: "var(--ink-900)",
+            cursor: "pointer",
+            animation: !open && unread > 0 ? "chatPulse 1.4s ease-in-out infinite" : undefined,
+          }}
+        >
+          {open ? "×" : "💬"}
+        </button>
+        {!open && unread > 0 && (
+          <span
+            style={{
+              position: "absolute",
+              top: -8,
+              right: -8,
+              minWidth: 24,
+              height: 24,
+              padding: "0 6px",
+              background: "var(--crimson-300)",
+              color: "var(--parchment-50)",
+              border: "3px solid var(--ink-900)",
+              borderRadius: 999,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: "var(--font-display)",
+              fontSize: 13,
+              textShadow: "1px 1px 0 var(--crimson-700)",
+              boxShadow: "var(--sh-card-rest)",
+              pointerEvents: "none",
+            }}
+          >
+            {unread > 9 ? "9+" : unread}
+          </span>
+        )}
+        <style>{`@keyframes chatPulse {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(-3px); }
+        }`}</style>
+      </div>
 
       {/* Drawer */}
       {open && (

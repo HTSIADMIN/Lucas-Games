@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CosmeticItem } from "@/lib/shop/catalog";
+import { rarityOf, RARITY_COLOR } from "@/lib/shop/catalog";
 
 type Equipped = {
   avatar_color: string;
@@ -121,37 +122,72 @@ export function ShopClient({
                 const ownedNow = owned.has(item.id) || item.price === 0;
                 const equippedNow = isEquipped(item);
                 const cantAfford = !ownedNow && balance < item.price;
+                const rarity = rarityOf(item.price);
+                const rarityTone = RARITY_COLOR[rarity];
                 return (
-                  <div key={item.id} className="tile">
-                    <div className="tile-art" style={cosmeticPreview(item)}>
-                      {item.kind === "avatar_color" && (
-                        <div
-                          className="avatar avatar-lg"
-                          style={{
-                            background: (item.meta as { color?: string }).color,
-                            fontSize: 24,
-                          }}
-                        >
-                          ?
-                        </div>
-                      )}
-                      {item.kind === "frame" && (
-                        <div
-                          className="avatar avatar-lg"
-                          style={{
-                            background: "var(--gold-300)",
-                            border: `${(item.meta as { width?: number }).width ?? 6}px solid ${(item.meta as { color?: string }).color}`,
-                            fontSize: 22,
-                          }}
-                        >
-                          {(item.meta as { badge?: string }).badge ?? "?"}
-                        </div>
-                      )}
-                      {item.kind === "card_deck" && <span style={{ fontSize: 36, color: "var(--parchment-50)" }}>♠ ♥</span>}
-                      {item.kind === "theme" && <span style={{ fontSize: 36, color: "var(--parchment-50)" }}>🎨</span>}
+                  <div
+                    key={item.id}
+                    className="tile"
+                    style={{
+                      position: "relative",
+                      boxShadow: rarity === "legendary"
+                        ? "var(--sh-card-rest), var(--glow-gold)"
+                        : "var(--sh-card-rest)",
+                    }}
+                  >
+                    {/* Rarity badge top-right */}
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 8,
+                        right: 8,
+                        background: rarityTone.bg,
+                        color: rarityTone.fg,
+                        border: "2px solid var(--ink-900)",
+                        padding: "2px 6px",
+                        fontFamily: "var(--font-display)",
+                        fontSize: 10,
+                        textTransform: "uppercase",
+                        letterSpacing: "var(--ls-loose)",
+                        zIndex: 2,
+                      }}
+                    >
+                      {rarity}
+                    </span>
+                    {/* Equipped pin top-left */}
+                    {equippedNow && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: 8,
+                          left: 8,
+                          background: "var(--cactus-300)",
+                          color: "var(--parchment-50)",
+                          border: "2px solid var(--ink-900)",
+                          padding: "2px 6px",
+                          fontFamily: "var(--font-display)",
+                          fontSize: 10,
+                          textTransform: "uppercase",
+                          letterSpacing: "var(--ls-loose)",
+                          textShadow: "1px 1px 0 var(--cactus-700)",
+                          zIndex: 2,
+                        }}
+                      >
+                        Equipped
+                      </span>
+                    )}
+                    <div
+                      className="tile-art"
+                      style={{
+                        background: rarityBg(rarity),
+                      }}
+                    >
+                      <ItemPreview item={item} />
                     </div>
                     <div className="tile-name">{item.name}</div>
-                    <div className="text-mute" style={{ fontSize: "var(--fs-small)" }}>{item.description}</div>
+                    <div className="text-mute" style={{ fontSize: "var(--fs-small)" }}>
+                      {item.description}
+                    </div>
                     <div className="tile-meta">
                       <span className="text-money" style={{ fontFamily: "var(--font-display)" }}>
                         {item.price === 0 ? "FREE" : `${item.price.toLocaleString()} ¢`}
@@ -187,8 +223,69 @@ export function ShopClient({
   );
 }
 
-function cosmeticPreview(_item: CosmeticItem) {
-  return { background: "var(--saddle-500)" };
+function rarityBg(rarity: ReturnType<typeof rarityOf>): string {
+  switch (rarity) {
+    case "common":    return "linear-gradient(180deg, var(--saddle-400), var(--saddle-500))";
+    case "rare":      return "linear-gradient(180deg, var(--sky-500), var(--saddle-500))";
+    case "epic":      return "linear-gradient(180deg, var(--crimson-500), var(--saddle-500))";
+    case "legendary": return "linear-gradient(180deg, var(--gold-500), var(--saddle-500))";
+  }
+}
+
+function ItemPreview({ item }: { item: CosmeticItem }) {
+  if (item.kind === "avatar_color") {
+    return (
+      <div
+        className="avatar avatar-lg"
+        style={{ background: (item.meta as { color?: string }).color, fontSize: 24 }}
+      >
+        ?
+      </div>
+    );
+  }
+  if (item.kind === "frame") {
+    const m = item.meta as { width?: number; color?: string; badge?: string; glow?: boolean };
+    return (
+      <div
+        className="avatar avatar-lg"
+        style={{
+          background: "var(--gold-300)",
+          border: `${m.width ?? 6}px solid ${m.color}`,
+          fontSize: 22,
+          boxShadow: m.glow ? `0 0 16px ${m.color}` : undefined,
+        }}
+      >
+        {m.badge ?? "?"}
+      </div>
+    );
+  }
+  if (item.kind === "card_deck") {
+    return (
+      <div className="row" style={{ gap: 4 }}>
+        <span style={{ fontSize: 32, color: "var(--parchment-50)", textShadow: "2px 2px 0 var(--ink-900)" }}>♠</span>
+        <span style={{ fontSize: 32, color: "var(--crimson-300)", textShadow: "2px 2px 0 var(--ink-900)" }}>♥</span>
+        <span style={{ fontSize: 32, color: "var(--ink-900)", textShadow: "2px 2px 0 var(--parchment-50)" }}>♣</span>
+        <span style={{ fontSize: 32, color: "var(--sky-300)", textShadow: "2px 2px 0 var(--ink-900)" }}>♦</span>
+      </div>
+    );
+  }
+  // theme
+  return (
+    <div className="row" style={{ gap: 6 }}>
+      {["var(--saddle-300)", "var(--gold-300)", "var(--crimson-300)", "var(--cactus-300)"].map((c) => (
+        <span
+          key={c}
+          style={{
+            display: "inline-block",
+            width: 24,
+            height: 24,
+            background: c,
+            border: "2px solid var(--ink-900)",
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 function labelFor(code: string) {

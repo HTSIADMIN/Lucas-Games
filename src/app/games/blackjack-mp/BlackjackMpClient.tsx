@@ -83,7 +83,7 @@ export function BlackjackMpClient() {
     router.refresh();
   }
 
-  async function action(act: "hit" | "stand" | "double") {
+  async function action(act: "hit" | "stand" | "double" | "split") {
     setBusy(true); setError(null);
     const res = await fetch("/api/games/blackjack-mp/action", {
       method: "POST",
@@ -99,9 +99,32 @@ export function BlackjackMpClient() {
   }
 
   const me = meRef.current;
-  const mySeat = seats.find((s) => s.userId === me);
-  const isMyTurn = round?.status === "player_turn" && round.currentUserId === me;
+  const mySeats = seats.filter((s) => s.userId === me);
+  // The actively-playing hand for the current user (after split, there may be multiple).
+  const mySeat = mySeats.find((s) => s.status === "playing") ?? mySeats[0];
+  const isMyTurn = round?.status === "player_turn" && round.currentUserId === me && mySeat?.status === "playing";
   const isBetting = round?.status === "betting";
+
+  // Split-eligibility check (same value, fresh 2-card hand).
+  function rankValue(rank: string): number {
+    if (rank === "A") return 11;
+    if (rank === "J" || rank === "Q" || rank === "K") return 10;
+    return Number(rank) || 0;
+  }
+  const canSplit = !!(
+    mySeat &&
+    mySeat.status === "playing" &&
+    mySeat.hand.length === 2 &&
+    rankValue(mySeat.hand[0].rank) === rankValue(mySeat.hand[1].rank) &&
+    (balance == null || balance >= mySeat.bet)
+  );
+  const canDouble = !!(
+    mySeat &&
+    mySeat.status === "playing" &&
+    mySeat.hand.length === 2 &&
+    !mySeat.doubled &&
+    (balance == null || balance >= mySeat.bet)
+  );
 
   const secondsLeft = (() => {
     if (isBetting && round?.betCloseAt) {
@@ -228,18 +251,28 @@ export function BlackjackMpClient() {
           <div className="stack-lg">
             <p className="text-mute">
               Hand: <b>{mySeat.handTotal}</b> · Dealer shows <b>{round?.dealerTotal ?? "—"}</b>
+              {mySeats.length > 1 && (
+                <span> · Hand {mySeats.findIndex((s) => s.status === "playing") + 1} of {mySeats.length}</span>
+              )}
             </p>
             <div className="row" style={{ flexWrap: "wrap" }}>
               <button className="btn btn-block" onClick={() => action("hit")} disabled={busy}>Hit</button>
               <button className="btn btn-wood btn-block" onClick={() => action("stand")} disabled={busy}>Stand</button>
             </div>
-            {mySeat.hand.length === 2 && !mySeat.doubled && (balance == null || balance >= mySeat.bet) && (
-              <button className="btn btn-danger btn-block" onClick={() => action("double")} disabled={busy}>
-                Double (+{mySeat.bet.toLocaleString()} ¢)
-              </button>
-            )}
+            <div className="row" style={{ flexWrap: "wrap" }}>
+              {canDouble && (
+                <button className="btn btn-danger btn-block" onClick={() => action("double")} disabled={busy}>
+                  Double (+{mySeat.bet.toLocaleString()} ¢)
+                </button>
+              )}
+              {canSplit && (
+                <button className="btn btn-success btn-block" onClick={() => action("split")} disabled={busy}>
+                  Split (+{mySeat.bet.toLocaleString()} ¢)
+                </button>
+              )}
+            </div>
           </div>
-        ) : !mySeat && isBetting ? (
+        ) : mySeats.length === 0 && isBetting ? (
           <div className="stack-lg">
             <BetInput value={bet} onChange={setBet} max={Math.max(100, balance ?? 100)} disabled={busy} />
             <button
@@ -250,15 +283,22 @@ export function BlackjackMpClient() {
               {busy ? "..." : `Sit Down (${bet.toLocaleString()} ¢)`}
             </button>
           </div>
-        ) : mySeat ? (
+        ) : mySeats.length > 0 ? (
           <div className="stack-lg">
             <p className="text-mute">
-              You bet <b>{mySeat.bet.toLocaleString()} ¢</b>{mySeat.doubled && " (doubled)"}
+              {mySeats.length === 1 ? (
+                <>You bet <b>{mySeats[0].bet.toLocaleString()} ¢</b>{mySeats[0].doubled && " (doubled)"}</>
+              ) : (
+                <>{mySeats.length} hands · total stake <b>{mySeats.reduce((sum, s) => sum + (s.doubled ? s.bet * 2 : s.bet), 0).toLocaleString()} ¢</b></>
+              )}
             </p>
-            <p style={{ color: tone(mySeat.status) }}>{statusBlurb(mySeat, round?.status)}</p>
-            {mySeat.status === "done" && (
-              <p className={mySeat.payout > 0 ? "text-money" : ""} style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)" }}>
-                {mySeat.payout > 0 ? `+${mySeat.payout.toLocaleString()} ¢` : "Lost the bet"}
+            <p style={{ color: tone(mySeat!.status) }}>{statusBlurb(mySeat!, round?.status)}</p>
+            {mySeats.every((s) => s.status === "done") && (
+              <p className="text-money" style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)" }}>
+                {(() => {
+                  const totalPayout = mySeats.reduce((sum, s) => sum + s.payout, 0);
+                  return totalPayout > 0 ? `+${totalPayout.toLocaleString()} ¢` : "Lost the bet";
+                })()}
               </p>
             )}
           </div>
@@ -318,7 +358,9 @@ function labelFor(code: string) {
     not_player_turn: "Wait for your turn.",
     not_your_turn: "Not your turn.",
     no_active_seat: "No active hand.",
-    cant_double: "Can only double on the first action.",
+    cant_double: "Can only double on a 2-card hand.",
+    cant_split: "Can only split a pair of equal-rank cards.",
+    deck_empty: "Deck ran out — try again.",
   };
   return m[code] ?? "Something went wrong.";
 }

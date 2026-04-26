@@ -446,11 +446,11 @@ export async function listOpenCrashBets(roundId: string): Promise<CrashBet[]> {
 // ============ BLACKJACK MULTIPLAYER ============
 export async function getActiveBlackjackRound(): Promise<BlackjackRound | null> {
   // Return the latest non-settled round, or a recently-settled one within 7s cooldown.
-  const sevenSecAgo = new Date(Date.now() - 7000).toISOString();
+  const cooldownStart = new Date(Date.now() - 5000).toISOString();
   const { data, error } = await client()
     .from("blackjack_rounds")
     .select("*")
-    .or(`status.in.(betting,dealing,player_turn,dealer_turn),and(status.eq.settled,ended_at.gte.${sevenSecAgo})`)
+    .or(`status.in.(betting,dealing,player_turn,dealer_turn),and(status.eq.settled,ended_at.gte.${cooldownStart})`)
     .order("round_no", { ascending: false })
     .limit(1)
     .maybeSingle();

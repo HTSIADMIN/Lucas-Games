@@ -335,7 +335,7 @@ export async function listOpenCrashBets(roundId: string): Promise<CrashBet[]> {
 export async function getActiveBlackjackRound(): Promise<BlackjackRound | null> {
   return (
     db().blackjack_rounds
-      .filter((r) => r.status !== "settled" || (r.ended_at && Date.now() - new Date(r.ended_at).getTime() < 7000))
+      .filter((r) => r.status !== "settled" || (r.ended_at && Date.now() - new Date(r.ended_at).getTime() < 5000))
       .sort((a, b) => (b.round_no ?? 0) - (a.round_no ?? 0))[0] ?? null
   );
 }

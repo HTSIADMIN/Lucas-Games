@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
 import { validateBet } from "@/lib/games/common";
 import { debit, getBalance } from "@/lib/wallet";
-import { getBlackjackSeat, insertBlackjackSeat } from "@/lib/db";
+import { insertBlackjackSeat, listBlackjackSeats } from "@/lib/db";
 import { getBlackjackState } from "@/lib/games/blackjack-mp/scheduler";
 
 export const runtime = "nodejs";
@@ -21,8 +21,12 @@ export async function POST(req: Request) {
   if (!state.round) return NextResponse.json({ error: "no_round" }, { status: 400 });
   if (state.round.status !== "betting") return NextResponse.json({ error: "betting_closed" }, { status: 400 });
 
-  const existing = await getBlackjackSeat(state.round.id, s.user.id);
-  if (existing) return NextResponse.json({ error: "already_seated" }, { status: 409 });
+  // Block re-betting if user already has any seat in this round (split allowed
+  // mid-hand, but only one initial seat per buy-in).
+  const seats = await listBlackjackSeats(state.round.id);
+  if (seats.some((seat) => seat.user_id === s.user.id)) {
+    return NextResponse.json({ error: "already_seated" }, { status: 409 });
+  }
 
   try {
     await debit({
