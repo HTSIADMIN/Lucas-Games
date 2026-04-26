@@ -11,7 +11,7 @@ const GAMES = [
   { slug: "coinflip",  name: "Coin Flip", tag: "QUICK",   live: true  },
   { slug: "dice",      name: "Dice",      tag: "QUICK",   live: true  },
   { slug: "slots",     name: "Slots",     tag: "JACKPOT", live: true  },
-  { slug: "blackjack", name: "Blackjack", tag: "CLASSIC", live: true  },
+  { slug: "blackjack-mp", name: "Blackjack Table", tag: "MULTI", live: true  },
   { slug: "roulette",  name: "Roulette",  tag: "CLASSIC", live: true  },
   { slug: "mines",     name: "Mines",     tag: "RISKY",   live: true  },
   { slug: "plinko",    name: "Plinko",    tag: "PHYSICS", live: true  },

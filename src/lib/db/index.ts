@@ -70,4 +70,13 @@ export const insertCrashBet        = impl.insertCrashBet;
 export const updateCrashBet        = impl.updateCrashBet;
 export const listOpenCrashBets     = impl.listOpenCrashBets;
 
+export const getActiveBlackjackRound = impl.getActiveBlackjackRound;
+export const getBlackjackRound       = impl.getBlackjackRound;
+export const insertBlackjackRound    = impl.insertBlackjackRound;
+export const updateBlackjackRound    = impl.updateBlackjackRound;
+export const listBlackjackSeats      = impl.listBlackjackSeats;
+export const getBlackjackSeat        = impl.getBlackjackSeat;
+export const insertBlackjackSeat     = impl.insertBlackjackSeat;
+export const updateBlackjackSeat     = impl.updateBlackjackSeat;
+
 export * from "./types";

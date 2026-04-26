@@ -5,6 +5,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  BlackjackRound,
+  BlackjackSeat,
   ChatMessage,
   ChatMessagePublic,
   CrashBet,
@@ -34,9 +36,12 @@ type Schema = {
   mines_games: MinesGame[];
   player_inventory: PlayerInventoryRow[];
   chat_messages: ChatMessage[];
+  blackjack_rounds: BlackjackRound[];
+  blackjack_seats: BlackjackSeat[];
   _walletSeq: number;
   _crashBetSeq: number;
   _chatSeq: number;
+  _bjSeatSeq: number;
 };
 
 const DATA_DIR = path.join(process.cwd(), ".data");
@@ -46,7 +51,8 @@ const EMPTY: Schema = {
   users: [], user_sessions: [], pin_attempts: [], wallet_transactions: [],
   game_sessions: [], earn_cooldowns: [], crash_rounds: [], crash_bets: [],
   plinko_drops: [], mines_games: [], player_inventory: [], chat_messages: [],
-  _walletSeq: 0, _crashBetSeq: 0, _chatSeq: 0,
+  blackjack_rounds: [], blackjack_seats: [],
+  _walletSeq: 0, _crashBetSeq: 0, _chatSeq: 0, _bjSeatSeq: 0,
 };
 
 function load(): Schema {
@@ -323,6 +329,47 @@ export async function updateCrashBet(
 
 export async function listOpenCrashBets(roundId: string): Promise<CrashBet[]> {
   return db().crash_bets.filter((b) => b.round_id === roundId && b.cashout_at_x === null);
+}
+
+// ============ BLACKJACK MULTIPLAYER ============
+export async function getActiveBlackjackRound(): Promise<BlackjackRound | null> {
+  return (
+    db().blackjack_rounds
+      .filter((r) => r.status !== "settled" || (r.ended_at && Date.now() - new Date(r.ended_at).getTime() < 7000))
+      .sort((a, b) => (b.round_no ?? 0) - (a.round_no ?? 0))[0] ?? null
+  );
+}
+export async function getBlackjackRound(id: string): Promise<BlackjackRound | null> {
+  return db().blackjack_rounds.find((r) => r.id === id) ?? null;
+}
+export async function insertBlackjackRound(round: BlackjackRound): Promise<BlackjackRound> {
+  const max = db().blackjack_rounds.reduce((m, r) => Math.max(m, r.round_no ?? 0), 0);
+  const r = { ...round, round_no: round.round_no || max + 1 };
+  db().blackjack_rounds.push(r); commit(); return r;
+}
+export async function updateBlackjackRound(id: string, patch: Partial<BlackjackRound>): Promise<BlackjackRound | null> {
+  const r = db().blackjack_rounds.find((x) => x.id === id);
+  if (!r) return null;
+  Object.assign(r, patch); commit(); return r;
+}
+export async function listBlackjackSeats(roundId: string): Promise<BlackjackSeat[]> {
+  return db().blackjack_seats.filter((s) => s.round_id === roundId).sort((a, b) => a.id - b.id);
+}
+export async function getBlackjackSeat(roundId: string, userId: string): Promise<BlackjackSeat | null> {
+  return db().blackjack_seats.find((s) => s.round_id === roundId && s.user_id === userId) ?? null;
+}
+export async function insertBlackjackSeat(input: Omit<BlackjackSeat, "id" | "placed_at">): Promise<BlackjackSeat> {
+  if (db().blackjack_seats.some((s) => s.round_id === input.round_id && s.user_id === input.user_id)) {
+    throw new Error("seat_already_taken");
+  }
+  db()._bjSeatSeq += 1;
+  const seat: BlackjackSeat = { ...input, id: db()._bjSeatSeq, placed_at: new Date().toISOString() };
+  db().blackjack_seats.push(seat); commit(); return seat;
+}
+export async function updateBlackjackSeat(id: number, patch: Partial<BlackjackSeat>): Promise<BlackjackSeat | null> {
+  const s = db().blackjack_seats.find((x) => x.id === id);
+  if (!s) return null;
+  Object.assign(s, patch); commit(); return s;
 }
 
 // ============ CHAT ============

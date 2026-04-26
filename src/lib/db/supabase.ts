@@ -4,6 +4,8 @@
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
+  BlackjackRound,
+  BlackjackSeat,
   ChatMessage,
   ChatMessagePublic,
   CrashBet,
@@ -439,6 +441,65 @@ export async function listOpenCrashBets(roundId: string): Promise<CrashBet[]> {
     .is("cashout_at_x", null);
   if (error) throw new Error(`listOpenCrashBets: ${error.message}`);
   return (data ?? []) as CrashBet[];
+}
+
+// ============ BLACKJACK MULTIPLAYER ============
+export async function getActiveBlackjackRound(): Promise<BlackjackRound | null> {
+  // Return the latest non-settled round, or a recently-settled one within 7s cooldown.
+  const sevenSecAgo = new Date(Date.now() - 7000).toISOString();
+  const { data, error } = await client()
+    .from("blackjack_rounds")
+    .select("*")
+    .or(`status.in.(betting,dealing,player_turn,dealer_turn),and(status.eq.settled,ended_at.gte.${sevenSecAgo})`)
+    .order("round_no", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`getActiveBlackjackRound: ${error.message}`);
+  return (data as BlackjackRound | null) ?? null;
+}
+export async function getBlackjackRound(id: string): Promise<BlackjackRound | null> {
+  const { data, error } = await client().from("blackjack_rounds").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`getBlackjackRound: ${error.message}`);
+  return (data as BlackjackRound | null) ?? null;
+}
+export async function insertBlackjackRound(round: BlackjackRound): Promise<BlackjackRound> {
+  const { data, error } = await client().from("blackjack_rounds").insert({
+    id: round.id, status: round.status, bet_close_at: round.bet_close_at,
+    dealer_hand: round.dealer_hand, deck: round.deck,
+  }).select("*").single();
+  if (error) throw new Error(`insertBlackjackRound: ${error.message}`);
+  return data as BlackjackRound;
+}
+export async function updateBlackjackRound(id: string, patch: Partial<BlackjackRound>): Promise<BlackjackRound | null> {
+  const { data, error } = await client().from("blackjack_rounds").update(patch).eq("id", id).select("*").maybeSingle();
+  if (error) throw new Error(`updateBlackjackRound: ${error.message}`);
+  return (data as BlackjackRound | null) ?? null;
+}
+export async function listBlackjackSeats(roundId: string): Promise<BlackjackSeat[]> {
+  const { data, error } = await client().from("blackjack_seats").select("*").eq("round_id", roundId).order("id", { ascending: true });
+  if (error) throw new Error(`listBlackjackSeats: ${error.message}`);
+  return (data ?? []) as BlackjackSeat[];
+}
+export async function getBlackjackSeat(roundId: string, userId: string): Promise<BlackjackSeat | null> {
+  const { data, error } = await client().from("blackjack_seats").select("*").eq("round_id", roundId).eq("user_id", userId).maybeSingle();
+  if (error) throw new Error(`getBlackjackSeat: ${error.message}`);
+  return (data as BlackjackSeat | null) ?? null;
+}
+export async function insertBlackjackSeat(input: Omit<BlackjackSeat, "id" | "placed_at">): Promise<BlackjackSeat> {
+  const { data, error } = await client().from("blackjack_seats").insert({
+    round_id: input.round_id, user_id: input.user_id, bet: input.bet,
+    hand: input.hand, status: input.status, doubled: input.doubled, payout: input.payout,
+  }).select("*").single();
+  if (error) {
+    if ((error as { code?: string }).code === "23505") throw new Error("seat_already_taken");
+    throw new Error(`insertBlackjackSeat: ${error.message}`);
+  }
+  return data as BlackjackSeat;
+}
+export async function updateBlackjackSeat(id: number, patch: Partial<BlackjackSeat>): Promise<BlackjackSeat | null> {
+  const { data, error } = await client().from("blackjack_seats").update(patch).eq("id", id).select("*").maybeSingle();
+  if (error) throw new Error(`updateBlackjackSeat: ${error.message}`);
+  return (data as BlackjackSeat | null) ?? null;
 }
 
 // ============ CHAT ============

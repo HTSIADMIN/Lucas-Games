@@ -38,6 +38,32 @@ export type ChatMessagePublic = ChatMessage & {
   initials: string;
 };
 
+export type BlackjackRound = {
+  id: string;
+  round_no: number;
+  status: "betting" | "dealing" | "player_turn" | "dealer_turn" | "settled";
+  bet_close_at: string | null;
+  action_deadline_at: string | null;
+  current_user_id: string | null;
+  dealer_hand: { rank: string; suit: string }[];
+  deck: { rank: string; suit: string }[];
+  started_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+};
+
+export type BlackjackSeat = {
+  id: number;
+  round_id: string;
+  user_id: string;
+  bet: number;
+  hand: { rank: string; suit: string }[];
+  status: "waiting" | "playing" | "standing" | "busted" | "blackjack" | "done";
+  doubled: boolean;
+  payout: number;
+  placed_at: string;
+};
+
 export type UserPublic = Pick<User, "id" | "username" | "avatar_color" | "initials" | "last_seen_at">;
 
 export type UserSession = {
