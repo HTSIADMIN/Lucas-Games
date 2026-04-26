@@ -24,7 +24,24 @@ type BetView = {
   payout: number;
 };
 
+type HistoryRound = {
+  id: string;
+  roundNo: number;
+  crashAtX: number;
+};
+
 const POLL_MS = 1000;
+const HISTORY_LEN = 20;
+
+// Y-axis: log-scaled so the curve climbs naturally instead of always being
+// pinned to the top of the canvas. yMax is the displayed ceiling — auto-grows
+// as the multiplier climbs.
+const Y_BASE_MAX = 4.0;
+
+// Particle for the comet trail behind the leading edge.
+type Trail = { x: number; y: number; life: number };
+// Particle for the crash explosion.
+type Spark = { x: number; y: number; vx: number; vy: number; life: number; color: string };
 
 export function CrashClient() {
   const router = useRouter();
@@ -35,6 +52,7 @@ export function CrashClient() {
   const [autoEnabled, setAutoEnabled] = useState(false);
   const [round, setRound] = useState<RoundView | null>(null);
   const [bets, setBets] = useState<BetView[]>([]);
+  const [history, setHistory] = useState<HistoryRound[]>([]);
   const [serverOffsetMs, setServerOffsetMs] = useState(0);
   const [liveX, setLiveX] = useState(1.0);
   const [busy, setBusy] = useState(false);
@@ -45,8 +63,15 @@ export function CrashClient() {
   const phaseRef = useRef<RoundView["status"] | null>(null);
   const autoRef = useRef<{ on: boolean; at: number }>({ on: false, at: 2 });
   const cashedThisRoundRef = useRef(false);
+  // Refs for the render loop so it always sees the freshest values without
+  // re-creating its closure (the rAF loop is now mounted once).
+  const roundRef = useRef<RoundView | null>(null);
+  const offsetRef = useRef(0);
+  const betsRef = useRef<BetView[]>([]);
   useEffect(() => { autoRef.current = { on: autoEnabled, at: autoCashAt }; }, [autoEnabled, autoCashAt]);
-  useEffect(() => { phaseRef.current = round?.status ?? null; }, [round?.status]);
+  useEffect(() => { phaseRef.current = round?.status ?? null; roundRef.current = round; }, [round]);
+  useEffect(() => { offsetRef.current = serverOffsetMs; }, [serverOffsetMs]);
+  useEffect(() => { betsRef.current = bets; }, [bets]);
 
   // Get my user id once
   useEffect(() => {
@@ -75,41 +100,82 @@ export function CrashClient() {
     }
   }
 
+  async function refreshHistory() {
+    try {
+      const res = await fetch("/api/games/crash/history");
+      if (!res.ok) return;
+      const data = await res.json();
+      setHistory(data.rounds ?? []);
+    } catch {
+      // ignore
+    }
+  }
+
   useEffect(() => {
     refreshState();
+    refreshHistory();
     const t = setInterval(refreshState, POLL_MS);
     return () => clearInterval(t);
   }, []);
 
-  // Realtime: react instantly to crash_rounds + crash_bets changes (without waiting for poll)
+  // Refresh history whenever a round transitions out of "crashed".
+  useEffect(() => {
+    if (round?.status === "crashed") refreshHistory();
+  }, [round?.status, round?.id]);
+
+  // Realtime: react instantly to crash_rounds + crash_bets changes.
   useEffect(() => {
     const supa = getBrowserClient();
     if (!supa) return;
     const ch = supa.channel("lg-crash-feed");
-    ch.on("postgres_changes", { event: "*", schema: "public", table: "crash_rounds" }, () => refreshState())
+    ch.on("postgres_changes", { event: "*", schema: "public", table: "crash_rounds" }, () => { refreshState(); refreshHistory(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "crash_bets" }, () => refreshState())
       .subscribe();
     return () => { supa.removeChannel(ch); };
   }, []);
 
-  // Animation loop — pure function of started_at + serverOffset
+  // Animation loop — mounted once, reads everything via refs.
   useEffect(() => {
     let raf = 0;
     const points: { t: number; x: number }[] = [];
+    const trail: Trail[] = [];
+    const sparks: Spark[] = [];
+    let yMax = Y_BASE_MAX;
+    let lastFrameMs = performance.now();
+    let lastSeenRoundId: string | null = null;
+    let crashHandled = false;
+    let shake = 0;
 
-    function frame() {
-      const r = round;
+    function frame(now: number) {
+      const dt = Math.min(0.05, (now - lastFrameMs) / 1000);
+      lastFrameMs = now;
+      const r = roundRef.current;
+
+      // Reset on round change
+      if (r?.id !== lastSeenRoundId) {
+        lastSeenRoundId = r?.id ?? null;
+        points.length = 0;
+        trail.length = 0;
+        sparks.length = 0;
+        yMax = Y_BASE_MAX;
+        crashHandled = false;
+        shake = 0;
+      }
+
       if (r?.status === "running" && r.startedAt) {
         const startMs = new Date(r.startedAt).getTime();
-        const elapsed = (Date.now() + serverOffsetMs - startMs) / 1000;
+        const elapsed = (Date.now() + offsetRef.current - startMs) / 1000;
         const m = multiplierAt(elapsed);
         setLiveX(m);
         points.push({ t: elapsed, x: m });
-        if (points.length > 800) points.shift();
+        if (points.length > 1200) points.shift();
+        // Grow yMax smoothly so the curve has headroom.
+        const wanted = Math.max(Y_BASE_MAX, m * 1.25);
+        yMax += (wanted - yMax) * Math.min(1, dt * 4);
 
         // Auto-cashout
         if (autoRef.current.on && !cashedThisRoundRef.current) {
-          const myBet = bets.find((b) => b.userId === meRef.current);
+          const myBet = betsRef.current.find((b) => b.userId === meRef.current);
           if (myBet && myBet.cashoutX === null && m >= autoRef.current.at) {
             cashedThisRoundRef.current = true;
             cashout();
@@ -117,54 +183,238 @@ export function CrashClient() {
         }
       } else if (r?.status === "crashed" && r.crashAtX !== null) {
         setLiveX(r.crashAtX);
+        if (!crashHandled && points.length > 0) {
+          crashHandled = true;
+          shake = 1;
+          // Spawn an explosion at the crash point.
+          const last = points[points.length - 1];
+          const W = canvasRef.current?.width ?? 520;
+          const H = canvasRef.current?.height ?? 200;
+          const tMax = Math.max(8, last.t * 1.05);
+          const px = (last.t / tMax) * W;
+          const py = projectY(last.x, yMax, H);
+          for (let i = 0; i < 26; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 80 + Math.random() * 220;
+            sparks.push({
+              x: px,
+              y: py,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              life: 0.7 + Math.random() * 0.5,
+              color: Math.random() < 0.5 ? "#ff5544" : "#f5c842",
+            });
+          }
+        }
+        // Apply gravity + decay to sparks
+        for (const s of sparks) {
+          s.x += s.vx * dt;
+          s.y += s.vy * dt;
+          s.vy += 240 * dt;
+          s.life -= dt;
+        }
+        for (let i = sparks.length - 1; i >= 0; i--) if (sparks[i].life <= 0) sparks.splice(i, 1);
+        shake = Math.max(0, shake - dt * 1.4);
       } else {
         setLiveX(1.0);
       }
-      drawCurve(points);
+
+      // Trail behind leading edge — only when running
+      if (r?.status === "running" && points.length > 0) {
+        const last = points[points.length - 1];
+        trail.push({ x: last.t, y: last.x, life: 0.6 });
+      }
+      for (const t of trail) t.life -= dt;
+      for (let i = trail.length - 1; i >= 0; i--) if (trail[i].life <= 0) trail.splice(i, 1);
+
+      drawCurve(points, trail, sparks, yMax, shake);
       raf = requestAnimationFrame(frame);
     }
 
-    function drawCurve(pts: { t: number; x: number }[]) {
+    function projectY(x: number, max: number, H: number): number {
+      // Log-mapped y so 1× sits at bottom and yMax sits near top.
+      const minLog = 0; // log(1) = 0
+      const span = Math.log(max);
+      const v = Math.log(Math.max(1, x));
+      const ratio = (v - minLog) / Math.max(0.001, span);
+      const margin = 14;
+      return H - margin - ratio * (H - margin * 2);
+    }
+
+    function drawCurve(
+      pts: { t: number; x: number }[],
+      trailList: Trail[],
+      sparksList: Spark[],
+      curYMax: number,
+      shakeAmt: number,
+    ) {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       const W = canvas.width, H = canvas.height;
-      ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = "#4a2818";
+      const r = roundRef.current;
+      const isRunning = r?.status === "running";
+      const isCrashed = r?.status === "crashed";
+
+      // Apply shake
+      ctx.save();
+      if (shakeAmt > 0.01) {
+        const a = shakeAmt * 8;
+        ctx.translate((Math.random() - 0.5) * a, (Math.random() - 0.5) * a);
+      }
+
+      // Background (vertical gradient saddle → ink)
+      const bg = ctx.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, "#3d2418");
+      bg.addColorStop(1, "#1a0f08");
+      ctx.fillStyle = bg;
       ctx.fillRect(0, 0, W, H);
 
-      ctx.strokeStyle = "rgba(244, 219, 160, 0.15)";
-      ctx.lineWidth = 1;
-      for (let i = 1; i < 6; i++) {
-        const y = (H * i) / 6;
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      // Subtle starfield (deterministic from canvas size, looks ambient)
+      ctx.fillStyle = "rgba(255, 246, 228, 0.18)";
+      for (let i = 0; i < 18; i++) {
+        const sx = (i * 73) % W;
+        const sy = (i * 41) % H;
+        ctx.fillRect(sx, sy, 1, 1);
       }
 
-      if (pts.length < 2) return;
-      const last = pts[pts.length - 1];
-      const tMax = Math.max(8, last.t * 1.1);
-      const xMax = Math.max(2, last.x * 1.1);
+      // Y-axis multiplier guidelines (log-spaced)
+      const guidelines = [1.5, 2, 3, 5, 10, 20, 50, 100].filter((g) => g <= curYMax * 1.2);
+      ctx.strokeStyle = "rgba(244, 219, 160, 0.12)";
+      ctx.lineWidth = 1;
+      ctx.font = "11px 'M6X11', monospace";
+      ctx.fillStyle = "rgba(244, 219, 160, 0.45)";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      for (const g of guidelines) {
+        if (g > curYMax) continue;
+        const y = projectY(g, curYMax, H);
+        ctx.beginPath(); ctx.moveTo(28, y); ctx.lineTo(W, y); ctx.stroke();
+        ctx.fillText(`${g}×`, 4, y);
+      }
 
-      ctx.strokeStyle = round?.status === "crashed" ? "#e05a3c" : "#f5c842";
-      ctx.lineWidth = 4;
-      ctx.beginPath();
+      // Time tick marks every 2s
+      const last = pts[pts.length - 1];
+      const tMax = Math.max(8, last ? last.t * 1.05 : 8);
+      ctx.strokeStyle = "rgba(244, 219, 160, 0.08)";
+      for (let s = 2; s <= tMax; s += 2) {
+        const x = (s / tMax) * W;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      }
+
+      if (pts.length < 2) {
+        ctx.restore();
+        return;
+      }
+
+      // Build the curve path once (used for both fill and stroke).
+      const path = new Path2D();
+      path.moveTo(0, H);
       for (let i = 0; i < pts.length; i++) {
         const px = (pts[i].t / tMax) * W;
-        const py = H - ((pts[i].x - 1) / (xMax - 1)) * H;
-        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        const py = projectY(pts[i].x, curYMax, H);
+        if (i === 0) path.moveTo(px, py); else path.lineTo(px, py);
       }
-      ctx.stroke();
-      ctx.lineTo((last.t / tMax) * W, H);
-      ctx.lineTo(0, H);
-      ctx.closePath();
-      ctx.fillStyle = "rgba(245, 200, 66, 0.15)";
-      ctx.fill();
+
+      // Filled area under the curve
+      const fillPath = new Path2D();
+      fillPath.moveTo(0, H);
+      const startY = projectY(pts[0].x, curYMax, H);
+      fillPath.lineTo((pts[0].t / tMax) * W, startY);
+      for (let i = 1; i < pts.length; i++) {
+        fillPath.lineTo((pts[i].t / tMax) * W, projectY(pts[i].x, curYMax, H));
+      }
+      const lastPx = (last.t / tMax) * W;
+      fillPath.lineTo(lastPx, H);
+      fillPath.closePath();
+      const fillGrad = ctx.createLinearGradient(0, 0, 0, H);
+      if (isCrashed) {
+        fillGrad.addColorStop(0, "rgba(224, 90, 60, 0.45)");
+        fillGrad.addColorStop(1, "rgba(224, 90, 60, 0.00)");
+      } else {
+        fillGrad.addColorStop(0, "rgba(245, 200, 66, 0.45)");
+        fillGrad.addColorStop(1, "rgba(245, 200, 66, 0.00)");
+      }
+      ctx.fillStyle = fillGrad;
+      ctx.fill(fillPath);
+
+      // Glow pass (line, wider + soft)
+      const lineColor = isCrashed ? "#ff5544" : tierColor(last.x);
+      ctx.strokeStyle = lineColor;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.shadowColor = lineColor;
+      ctx.shadowBlur = isRunning ? 16 : 8;
+      ctx.lineWidth = 6;
+      ctx.stroke(path);
+      // Sharp pass over the top
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = isCrashed ? "#ffb8a8" : "#ffe9a8";
+      ctx.stroke(path);
+
+      // Trail dots fading behind the leading edge
+      for (const t of trailList) {
+        const tx = (t.x / tMax) * W;
+        const ty = projectY(t.y, curYMax, H);
+        const a = Math.max(0, t.life / 0.6);
+        ctx.fillStyle = `rgba(245, 200, 66, ${a * 0.45})`;
+        ctx.beginPath();
+        ctx.arc(tx, ty, 2 + a * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Comet head (only while running)
+      if (isRunning) {
+        const px = lastPx;
+        const py = projectY(last.x, curYMax, H);
+        const pulse = (Math.sin(performance.now() / 120) + 1) / 2;
+        ctx.shadowColor = lineColor;
+        ctx.shadowBlur = 18 + pulse * 8;
+        ctx.fillStyle = "#fef6e4";
+        ctx.beginPath();
+        ctx.arc(px, py, 5 + pulse * 1.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        // Inner core
+        ctx.fillStyle = lineColor;
+        ctx.beginPath();
+        ctx.arc(px, py, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Sparks (crash explosion)
+      for (const s of sparksList) {
+        const a = Math.max(0, s.life);
+        ctx.fillStyle = s.color;
+        ctx.globalAlpha = a;
+        ctx.fillRect(s.x - 1.5, s.y - 1.5, 3, 3);
+        ctx.globalAlpha = 1;
+      }
+
+      // CRASHED stamp
+      if (isCrashed) {
+        ctx.fillStyle = "rgba(224, 90, 60, 0.18)";
+        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "#ff5544";
+        ctx.font = "bold 28px 'M6X11', monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.shadowColor = "rgba(0,0,0,0.8)";
+        ctx.shadowBlur = 6;
+        ctx.fillText(`✕ ${r?.crashAtX?.toFixed(2)}×`, W / 2, H / 2);
+        ctx.shadowBlur = 0;
+      }
+
+      ctx.restore();
     }
 
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [round?.status, round?.startedAt, round?.crashAtX, serverOffsetMs, bets]);
+    // Mount once — refs supply current state to the loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function placeBet() {
     setBusy(true);
@@ -230,6 +480,9 @@ export function CrashClient() {
            "Loading..."}
         </div>
 
+        {/* History strip */}
+        <HistoryStrip history={history} liveCrashAt={isCrashed ? round?.crashAtX ?? null : null} />
+
         <div
           className="center"
           style={{
@@ -239,17 +492,21 @@ export function CrashClient() {
             position: "relative",
             flexDirection: "column",
             gap: "var(--sp-3)",
+            overflow: "hidden",
           }}
         >
+          {/* Big multiplier readout — pulses with value */}
           <div
             style={{
               fontFamily: "var(--font-display)",
-              fontSize: 96,
+              fontSize: 88,
               lineHeight: 1,
-              color: isCrashed ? "var(--crimson-300)" : (myCashedOut ? "var(--cactus-300)" : "var(--gold-300)"),
+              color: isCrashed ? "var(--crimson-300)" : (myCashedOut ? "var(--cactus-300)" : tierColor(liveX)),
               textShadow: isCrashed
-                ? "4px 4px 0 var(--ink-900), 0 0 20px rgba(224, 90, 60, 0.6)"
-                : "4px 4px 0 var(--ink-900)",
+                ? "4px 4px 0 var(--ink-900), 0 0 24px rgba(255, 85, 68, 0.8)"
+                : `4px 4px 0 var(--ink-900), 0 0 ${Math.min(40, 8 + liveX * 2)}px ${tierGlow(liveX)}`,
+              transform: isRunning ? `scale(${1 + Math.min(0.04, liveX * 0.005)})` : "none",
+              transition: "transform 120ms var(--ease-snap), color 200ms var(--ease-out)",
             }}
           >
             {isBetting ? `${secondsLeft}s` : `${liveX.toFixed(2)}×`}
@@ -258,14 +515,15 @@ export function CrashClient() {
             <div
               style={{
                 fontFamily: "var(--font-display)",
-                fontSize: 28,
+                fontSize: 24,
                 color: "var(--crimson-300)",
                 textShadow: "2px 2px 0 var(--ink-900)",
                 letterSpacing: "var(--ls-loose)",
                 textTransform: "uppercase",
+                animation: "crashShake 0.5s var(--ease-snap)",
               }}
             >
-              ✕ CRASHED
+              ✕ BUSTED
             </div>
           )}
           <div style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "var(--parchment-200)" }}>
@@ -276,14 +534,25 @@ export function CrashClient() {
           <canvas
             ref={canvasRef}
             width={520}
-            height={200}
+            height={220}
             style={{
-              imageRendering: "pixelated",
+              imageRendering: "auto",
               border: "3px solid var(--ink-900)",
               maxWidth: "100%",
+              width: "100%",
               height: "auto",
+              display: "block",
             }}
           />
+          <style>{`
+            @keyframes crashShake {
+              0% { transform: translateX(0); }
+              25% { transform: translateX(-6px); }
+              50% { transform: translateX(6px); }
+              75% { transform: translateX(-3px); }
+              100% { transform: translateX(0); }
+            }
+          `}</style>
         </div>
 
         {error && <p style={{ color: "var(--crimson-500)", marginTop: "var(--sp-3)" }}>{error}</p>}
@@ -420,6 +689,108 @@ export function CrashClient() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Color the multiplier text by tier — gold → amber → crimson as it climbs.
+function tierColor(x: number): string {
+  if (x < 1.5) return "#fef6e4";
+  if (x < 2)   return "#f5c842";
+  if (x < 3)   return "#ffd84d";
+  if (x < 5)   return "#ffb04a";
+  if (x < 10)  return "#e87a3a";
+  return "#ff5544";
+}
+function tierGlow(x: number): string {
+  if (x < 2)  return "rgba(245, 200, 66, 0.55)";
+  if (x < 5)  return "rgba(255, 176, 74, 0.65)";
+  if (x < 10) return "rgba(232, 122, 58, 0.75)";
+  return "rgba(255, 85, 68, 0.85)";
+}
+function pillBg(x: number): string {
+  if (x < 1.5) return "var(--crimson-300)";
+  if (x < 2)   return "var(--saddle-300)";
+  if (x < 5)   return "var(--gold-300)";
+  if (x < 10)  return "#ff9a3a";
+  return "var(--crimson-500)";
+}
+function pillFg(x: number): string {
+  if (x < 1.5) return "var(--parchment-50)";
+  if (x < 2)   return "var(--ink-900)";
+  if (x < 5)   return "var(--ink-900)";
+  if (x < 10)  return "var(--ink-900)";
+  return "var(--gold-300)";
+}
+
+function HistoryStrip({
+  history,
+  liveCrashAt,
+}: {
+  history: HistoryRound[];
+  liveCrashAt: number | null;
+}) {
+  // Most recent on the right. If a crash is currently displayed but hasn't
+  // landed in /history yet, prepend it visually so the player sees it.
+  const merged: HistoryRound[] = [...history];
+  if (
+    liveCrashAt !== null &&
+    (merged.length === 0 || merged[0].crashAtX !== liveCrashAt)
+  ) {
+    merged.unshift({ id: "live", roundNo: 0, crashAtX: liveCrashAt });
+  }
+  if (merged.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 4,
+        flexWrap: "nowrap",
+        overflowX: "auto",
+        margin: "0 0 var(--sp-3)",
+        padding: "var(--sp-2)",
+        background: "var(--saddle-600)",
+        border: "3px solid var(--ink-900)",
+        boxShadow: "var(--bevel-light)",
+      }}
+      aria-label="Recent crash multipliers"
+    >
+      <span
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: 11,
+          color: "var(--parchment-200)",
+          letterSpacing: "var(--ls-loose)",
+          textTransform: "uppercase",
+          alignSelf: "center",
+          padding: "0 6px",
+          flexShrink: 0,
+        }}
+      >
+        Last {Math.min(merged.length, HISTORY_LEN)}:
+      </span>
+      {merged.slice(0, HISTORY_LEN).map((r, i) => (
+        <span
+          key={`${r.id}-${i}`}
+          title={`Round #${r.roundNo} crashed at ${r.crashAtX.toFixed(2)}×`}
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 12,
+            background: pillBg(r.crashAtX),
+            color: pillFg(r.crashAtX),
+            padding: "3px 8px",
+            border: "2px solid var(--ink-900)",
+            letterSpacing: "var(--ls-loose)",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+            textShadow: r.crashAtX >= 10 ? "1px 1px 0 var(--ink-900)" : undefined,
+            boxShadow: r.crashAtX >= 10 ? "0 0 8px rgba(255, 85, 68, 0.6)" : undefined,
+          }}
+        >
+          {r.crashAtX.toFixed(2)}×
+        </span>
+      ))}
     </div>
   );
 }

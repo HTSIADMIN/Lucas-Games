@@ -62,6 +62,7 @@ export const recentChatMessages    = impl.recentChatMessages;
 
 export const getActiveCrashRound   = impl.getActiveCrashRound;
 export const getCrashRound         = impl.getCrashRound;
+export const listRecentCrashRounds = impl.listRecentCrashRounds;
 export const insertCrashRound      = impl.insertCrashRound;
 export const updateCrashRound      = impl.updateCrashRound;
 export const listCrashBets         = impl.listCrashBets;

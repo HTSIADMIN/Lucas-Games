@@ -59,6 +59,7 @@ export function FlappyClient() {
     function flap() {
       if (phaseRef.current === "playing") birdVy = FLAP_VY;
     }
+    flapFnRef.current = flap;
 
     function onKey(e: KeyboardEvent) {
       if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") {
@@ -208,6 +209,7 @@ export function FlappyClient() {
   }, []);
 
   const resetFnRef = useRef<() => void>(() => {});
+  const flapFnRef = useRef<() => void>(() => {});
 
   async function start() {
     setError(null);
@@ -266,6 +268,37 @@ export function FlappyClient() {
         <p className="text-mute" style={{ marginTop: "var(--sp-3)", textAlign: "center" }}>
           Space / click / tap to flap.
         </p>
+
+        {/* On-screen flap button — visible on mobile, useful on desktop too. */}
+        <button
+          type="button"
+          aria-label="Flap"
+          onPointerDown={(e) => { e.preventDefault(); flapFnRef.current(); }}
+          onClick={(e) => { e.preventDefault(); }}
+          disabled={phase !== "playing"}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            width: "100%",
+            marginTop: "var(--sp-3)",
+            padding: "var(--sp-4)",
+            fontFamily: "var(--font-display)",
+            fontSize: "var(--fs-h3)",
+            letterSpacing: "var(--ls-loose)",
+            textTransform: "uppercase",
+            background: phase === "playing" ? "var(--gold-300)" : "var(--saddle-300)",
+            color: "var(--ink-900)",
+            border: "3px solid var(--ink-900)",
+            cursor: phase === "playing" ? "pointer" : "not-allowed",
+            boxShadow: "var(--bevel-light), var(--bevel-dark)",
+            touchAction: "manipulation",
+            userSelect: "none",
+          }}
+        >
+          ↑ Flap
+        </button>
       </div>
 
       <div className="panel" style={{ padding: "var(--sp-6)" }}>

@@ -279,6 +279,13 @@ export async function getCrashRound(id: string): Promise<CrashRound | null> {
   return db().crash_rounds.find((r) => r.id === id) ?? null;
 }
 
+export async function listRecentCrashRounds(limit = 20): Promise<CrashRound[]> {
+  return db().crash_rounds
+    .filter((r) => r.status === "crashed" && r.crash_at_x !== null && r.crash_at_x !== undefined)
+    .sort((a, b) => (b.round_no ?? 0) - (a.round_no ?? 0))
+    .slice(0, limit);
+}
+
 export async function insertCrashRound(round: CrashRound): Promise<CrashRound> {
   // Ensure round_no auto-increments
   const max = db().crash_rounds.reduce((m, r) => Math.max(m, r.round_no ?? 0), 0);

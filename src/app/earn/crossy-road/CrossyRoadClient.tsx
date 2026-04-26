@@ -117,6 +117,7 @@ export function CrossyRoadClient() {
   const runTokenRef = useRef<string | null>(null);
   const startedAtRef = useRef<number>(0);
   const resetFnRef = useRef<() => void>(() => {});
+  const moveFnRef = useRef<(dx: number, dy: number) => void>(() => {});
   const coinsRef = useRef(0);
   const scoreRef = useRef(0);
 
@@ -185,6 +186,7 @@ export function CrossyRoadClient() {
 
     reset();
     resetFnRef.current = reset;
+    moveFnRef.current = (dx: number, dy: number) => tryMove(dx, dy);
 
     function tryMove(dx: number, dy: number) {
       if (phaseRef.current !== "playing") return;
@@ -670,6 +672,8 @@ export function CrossyRoadClient() {
         <p className="text-mute" style={{ marginTop: "var(--sp-3)", textAlign: "center" }}>
           Arrow keys / WASD. Up = forward. Edge trees block movement.
         </p>
+
+        <DPad disabled={phase !== "playing"} onMove={(dx, dy) => moveFnRef.current(dx, dy)} />
       </div>
 
       <div className="panel" style={{ padding: "var(--sp-6)" }}>
@@ -775,6 +779,68 @@ function StatBox({ label, value, tone }: { label: string; value: number; tone: "
       >
         {value}
       </div>
+    </div>
+  );
+}
+
+function DPad({
+  disabled,
+  onMove,
+}: {
+  disabled: boolean;
+  onMove: (dx: number, dy: number) => void;
+}) {
+  const press = (dx: number, dy: number) => (e: React.PointerEvent | React.MouseEvent) => {
+    e.preventDefault();
+    if (!disabled) onMove(dx, dy);
+  };
+  const btn = (label: string, dx: number, dy: number, gridArea: string) => (
+    <button
+      type="button"
+      aria-label={label}
+      onPointerDown={press(dx, dy)}
+      onClick={(e) => e.preventDefault()}
+      disabled={disabled}
+      style={{
+        gridArea,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "var(--font-display)",
+        fontSize: 28,
+        background: disabled ? "var(--saddle-300)" : "var(--gold-300)",
+        color: "var(--ink-900)",
+        border: "3px solid var(--ink-900)",
+        cursor: disabled ? "not-allowed" : "pointer",
+        boxShadow: "var(--bevel-light), var(--bevel-dark)",
+        touchAction: "manipulation",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        height: 56,
+        opacity: disabled ? 0.6 : 1,
+      }}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div
+      aria-label="On-screen movement controls"
+      style={{
+        display: "grid",
+        gridTemplateAreas: "'.    up   .' 'left .  right' '.    down .'",
+        gridTemplateColumns: "1fr 1fr 1fr",
+        gap: 6,
+        marginTop: "var(--sp-3)",
+        maxWidth: 240,
+        marginLeft: "auto",
+        marginRight: "auto",
+      }}
+    >
+      {btn("↑", 0, 1, "up")}
+      {btn("←", -1, 0, "left")}
+      {btn("→", 1, 0, "right")}
+      {btn("↓", 0, -1, "down")}
     </div>
   );
 }

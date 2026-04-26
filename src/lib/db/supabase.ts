@@ -352,6 +352,17 @@ export async function getCrashRound(id: string): Promise<CrashRound | null> {
   return (data as CrashRound | null) ?? null;
 }
 
+export async function listRecentCrashRounds(limit = 20): Promise<CrashRound[]> {
+  const { data, error } = await client()
+    .from("crash_rounds")
+    .select("*")
+    .eq("status", "crashed")
+    .order("round_no", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`listRecentCrashRounds: ${error.message}`);
+  return (data ?? []) as CrashRound[];
+}
+
 export async function insertCrashRound(round: CrashRound): Promise<CrashRound> {
   const { data, error } = await client()
     .from("crash_rounds")
