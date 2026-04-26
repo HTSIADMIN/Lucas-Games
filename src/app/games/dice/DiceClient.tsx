@@ -113,7 +113,7 @@ export function DiceClient() {
             style={{ justifyContent: "center", gap: "var(--sp-6)", flexWrap: "wrap" }}
           >
             <DiceCube rolling={rolling} />
-            <div style={{ textAlign: "center", minWidth: 220 }}>
+            <div style={{ textAlign: "center", flex: "1 1 220px", minWidth: 0 }}>
               <div
                 style={{
                   fontFamily: "var(--font-display)",

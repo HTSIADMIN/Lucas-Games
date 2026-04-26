@@ -262,7 +262,7 @@ export function MonopolyClient() {
               className="btn btn-lg"
               onClick={roll}
               disabled={busy || !state.ready}
-              style={{ minWidth: 220 }}
+              style={{ width: "min(220px, 100%)" }}
             >
               {rolling ? "Rolling..." : state.ready ? "Roll Dice" : `Next roll in ${cooldownStr}`}
             </button>
@@ -285,14 +285,14 @@ export function MonopolyClient() {
       <div className="panel" style={{ padding: "var(--sp-5)", marginBottom: "var(--sp-6)" }}>
         <div className="panel-title">Card Pack Store</div>
         <div className="row-lg" style={{ flexWrap: "wrap" }}>
-          <p className="text-mute" style={{ flex: 1, minWidth: 200 }}>
+          <p className="text-mute" style={{ flex: "1 1 200px", minWidth: 0 }}>
             {PACK_SIZE} property cards per pack. Higher tiers are rarer.
           </p>
           <button
             className="btn btn-lg"
             onClick={buyPack}
             disabled={busy || (balance != null && balance < PACK_PRICE)}
-            style={{ minWidth: 240 }}
+            style={{ flex: "1 1 200px" }}
           >
             Buy Pack ({PACK_PRICE.toLocaleString()} ¢)
           </button>
@@ -659,7 +659,8 @@ function ResultCard({ r }: { r: RollResult }) {
         color: "var(--parchment-50)",
         fontFamily: "var(--font-display)",
         textAlign: "center",
-        minWidth: 240,
+        maxWidth: "100%",
+        wordBreak: "break-word",
       }}
     >
       {r.earnedFromProperty && (

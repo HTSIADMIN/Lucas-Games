@@ -809,7 +809,11 @@ function BonusOverlay({
           <BonusStat label="Coins" value={`${bonus.coinsLocked} / 20`} tone="gold" />
           <BonusStat
             label="Pool"
-            value={`${(bonus.board.reduce((s, c) => s + (c.value ?? 0), 0) * TIER_MULTIPLIER[bonus.tier] * (bonus.bet / 20)).toLocaleString()} ¢`}
+            value={`${Math.floor(
+              bonus.board.reduce((s, c) => s + (c.value ?? 0), 0) *
+                TIER_MULTIPLIER[bonus.tier] *
+                (bonus.bet / 20)
+            ).toLocaleString()} ¢`}
             tone="cactus"
           />
         </div>
