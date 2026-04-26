@@ -327,11 +327,13 @@ export async function setEquipped(
 
 // ============ CRASH (multiplayer rounds) ============
 export async function getActiveCrashRound(): Promise<CrashRound | null> {
+  // Returns the most recent round in the active lifecycle (betting/running/crashed).
+  // Crashed rounds are returned during cooldown so the bust UI gets to render.
   const { data, error } = await client()
     .from("crash_rounds")
     .select("*")
-    .in("status", ["betting", "running"])
-    .order("round_no", { ascending: true })
+    .in("status", ["betting", "running", "crashed"])
+    .order("round_no", { ascending: false })
     .limit(1)
     .maybeSingle();
   if (error) throw new Error(`getActiveCrashRound: ${error.message}`);

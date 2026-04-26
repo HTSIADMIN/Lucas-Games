@@ -19,7 +19,7 @@ import { credit } from "@/lib/wallet";
 import { multiplierAt, pickCrashPoint, timeForMultiplier } from "./engine";
 
 export const BET_WINDOW_MS = 10_000;
-export const COOLDOWN_AFTER_CRASH_MS = 5_000;
+export const COOLDOWN_AFTER_CRASH_MS = 7_000;
 
 export type CrashStateView = {
   round: {

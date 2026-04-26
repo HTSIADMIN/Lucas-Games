@@ -252,10 +252,13 @@ export async function grantItem(userId: string, itemId: string): Promise<boolean
 }
 // ============ CRASH (multiplayer rounds) ============
 export async function getActiveCrashRound(): Promise<CrashRound | null> {
+  // Returns the most recent round in the active lifecycle (betting/running/crashed).
+  // Crashed rounds are returned during the post-crash cooldown so the scheduler
+  // and clients can show the bust before the next round opens.
   return (
     db().crash_rounds
-      .filter((r) => r.status === "betting" || r.status === "running")
-      .sort((a, b) => (a.round_no ?? 0) - (b.round_no ?? 0))[0] ?? null
+      .filter((r) => r.status === "betting" || r.status === "running" || r.status === "crashed")
+      .sort((a, b) => (b.round_no ?? 0) - (a.round_no ?? 0))[0] ?? null
   );
 }
 

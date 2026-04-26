@@ -209,6 +209,12 @@ export function CrashClient() {
     ? Math.max(0, Math.ceil((new Date(round.betCloseAt).getTime() - Date.now() - serverOffsetMs) / 1000))
     : 0;
 
+  // Cooldown countdown after a crash. Mirrors COOLDOWN_AFTER_CRASH_MS in the scheduler.
+  const COOLDOWN_MS = 7_000;
+  const nextRoundIn = isCrashed && round?.endedAt
+    ? Math.max(0, Math.ceil((new Date(round.endedAt).getTime() + COOLDOWN_MS - Date.now() - serverOffsetMs) / 1000))
+    : 0;
+
   // Player tag lookup from presence
   function tagFor(userId: string) {
     return presence.find((p) => p.userId === userId);
@@ -241,15 +247,31 @@ export function CrashClient() {
               fontSize: 96,
               lineHeight: 1,
               color: isCrashed ? "var(--crimson-300)" : (myCashedOut ? "var(--cactus-300)" : "var(--gold-300)"),
-              textShadow: "4px 4px 0 var(--ink-900)",
+              textShadow: isCrashed
+                ? "4px 4px 0 var(--ink-900), 0 0 20px rgba(224, 90, 60, 0.6)"
+                : "4px 4px 0 var(--ink-900)",
             }}
           >
             {isBetting ? `${secondsLeft}s` : `${liveX.toFixed(2)}×`}
           </div>
+          {isCrashed && (
+            <div
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 28,
+                color: "var(--crimson-300)",
+                textShadow: "2px 2px 0 var(--ink-900)",
+                letterSpacing: "var(--ls-loose)",
+                textTransform: "uppercase",
+              }}
+            >
+              💥 Crashed
+            </div>
+          )}
           <div style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "var(--parchment-200)" }}>
             {isBetting ? "Place your bet" :
              isRunning ? (myCashedOut ? `Cashed at ${myBet?.cashoutX?.toFixed(2)}×` : myBet ? "Cash out before bust" : "Watching this round") :
-             isCrashed ? `Bust at ${round?.crashAtX?.toFixed(2)}×` : "..."}
+             isCrashed ? `Bust at ${round?.crashAtX?.toFixed(2)}× — next round in ${nextRoundIn}s` : "..."}
           </div>
           <canvas
             ref={canvasRef}
@@ -329,7 +351,11 @@ export function CrashClient() {
                 onClick={placeBet}
                 disabled={busy || !isBetting || bet < 100 || (balance != null && balance < bet)}
               >
-                {!isBetting ? `Wait for next round (${secondsLeft}s)` : `Bet ${bet.toLocaleString()} ¢`}
+                {!isBetting
+                  ? isCrashed
+                    ? `Next round in ${nextRoundIn}s`
+                    : "Wait for next round..."
+                  : `Bet ${bet.toLocaleString()} ¢`}
               </button>
             </div>
           )}
