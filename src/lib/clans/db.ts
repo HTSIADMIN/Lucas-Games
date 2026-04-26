@@ -5,9 +5,11 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type {
   Clan,
+  ClanChatMessagePublic,
   ClanChest,
   ClanChestRewards,
   ClanChestTier,
+  ClanInvite,
   ClanMember,
   ClanSeason,
 } from "@/lib/db";
@@ -119,11 +121,17 @@ export async function createClan(input: {
   return clan as Clan;
 }
 
-export async function joinClan(input: { userId: string; clanId: string }): Promise<void> {
+export async function joinClan(input: {
+  userId: string;
+  clanId: string;
+  /** Set when joining via an accepted invite — bypasses invite_only check. */
+  viaInvite?: boolean;
+}): Promise<void> {
   // Atomic-ish: insert membership; bump member_count via RPC pattern.
   const clan = await getClan(input.clanId);
   if (!clan) throw new Error("clan_not_found");
   if (clan.member_count >= 8) throw new Error("clan_full");
+  if (clan.invite_only && !input.viaInvite) throw new Error("invite_only");
   const { error } = await client().from("clan_members").insert({
     clan_id: input.clanId,
     user_id: input.userId,
@@ -183,11 +191,13 @@ export async function updateClanSettings(input: {
   name?: string;
   tag?: string;
   animalIcon?: string;
+  inviteOnly?: boolean;
 }): Promise<Clan | null> {
   const patch: Record<string, unknown> = {};
   if (input.name !== undefined) patch.name = input.name;
   if (input.tag !== undefined) patch.tag = input.tag;
   if (input.animalIcon !== undefined) patch.animal_icon = input.animalIcon;
+  if (input.inviteOnly !== undefined) patch.invite_only = input.inviteOnly;
   if (Object.keys(patch).length === 0) return getClan(input.clanId);
   const { data, error } = await client()
     .from("clans")
@@ -419,4 +429,265 @@ export async function getBonusSpinTokens(userId: string): Promise<number> {
     .eq("id", userId)
     .maybeSingle();
   return Number((data as { bonus_spin_tokens?: number } | null)?.bonus_spin_tokens ?? 0);
+}
+
+// ============ V2: KICK + SETTINGS ============
+
+export async function kickMember(input: {
+  clanId: string;
+  leaderId: string;
+  targetUserId: string;
+}): Promise<void> {
+  if (input.targetUserId === input.leaderId) throw new Error("cant_kick_self");
+  // Confirm requester is the leader of this clan
+  const { data: lead } = await client()
+    .from("clan_members")
+    .select("role, clan_id")
+    .eq("user_id", input.leaderId)
+    .maybeSingle();
+  if (!lead || (lead as { role: string; clan_id: string }).clan_id !== input.clanId
+      || (lead as { role: string }).role !== "leader") {
+    throw new Error("not_leader");
+  }
+  // Confirm target is in the same clan
+  const { data: target } = await client()
+    .from("clan_members")
+    .select("clan_id, role")
+    .eq("user_id", input.targetUserId)
+    .maybeSingle();
+  if (!target || (target as { clan_id: string }).clan_id !== input.clanId) {
+    throw new Error("target_not_in_clan");
+  }
+  if ((target as { role: string }).role === "leader") throw new Error("cant_kick_leader");
+
+  await client().from("clan_members").delete().eq("user_id", input.targetUserId);
+  // Decrement member count
+  const { data: c } = await client()
+    .from("clans")
+    .select("member_count")
+    .eq("id", input.clanId)
+    .maybeSingle();
+  if (c) {
+    const newCount = Math.max(0, Number((c as { member_count: number }).member_count) - 1);
+    await client().from("clans").update({ member_count: newCount }).eq("id", input.clanId);
+  }
+}
+
+// ============ V2: INVITES ============
+
+export async function findUserByUsername(username: string): Promise<{ id: string; username: string } | null> {
+  const { data } = await client()
+    .from("users_public")
+    .select("id, username")
+    .ilike("username", username)
+    .maybeSingle();
+  return (data as { id: string; username: string } | null) ?? null;
+}
+
+export async function createClanInvite(input: {
+  clanId: string;
+  invitedBy: string;
+  inviteeId: string;
+}): Promise<ClanInvite> {
+  // Reject if invitee is already in a clan
+  const { data: existing } = await client()
+    .from("clan_members")
+    .select("user_id")
+    .eq("user_id", input.inviteeId)
+    .maybeSingle();
+  if (existing) throw new Error("user_already_in_clan");
+
+  const { data, error } = await client()
+    .from("clan_invites")
+    .insert({
+      clan_id: input.clanId,
+      invitee_id: input.inviteeId,
+      invited_by: input.invitedBy,
+      status: "pending",
+    })
+    .select("*")
+    .single();
+  if (error) {
+    if (error.message.includes("duplicate") || (error as { code?: string }).code === "23505") {
+      throw new Error("already_invited");
+    }
+    throw new Error(`createClanInvite: ${error.message}`);
+  }
+  return data as ClanInvite;
+}
+
+export async function listMyPendingInvites(userId: string): Promise<
+  (ClanInvite & { clan?: Clan; inviter_username?: string })[]
+> {
+  const { data } = await client()
+    .from("clan_invites")
+    .select("*")
+    .eq("invitee_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  const invites = (data ?? []) as ClanInvite[];
+  if (invites.length === 0) return [];
+  // Hydrate with clan + inviter username
+  const clanIds = Array.from(new Set(invites.map((i) => i.clan_id)));
+  const inviterIds = Array.from(new Set(invites.map((i) => i.invited_by)));
+  const [{ data: clansData }, { data: invitersData }] = await Promise.all([
+    client().from("clans").select("*").in("id", clanIds),
+    client().from("users_public").select("id, username").in("id", inviterIds),
+  ]);
+  const clansById = new Map(((clansData ?? []) as Clan[]).map((c) => [c.id, c]));
+  const invitersById = new Map(
+    ((invitersData ?? []) as { id: string; username: string }[]).map((u) => [u.id, u.username]),
+  );
+  return invites.map((i) => ({
+    ...i,
+    clan: clansById.get(i.clan_id),
+    inviter_username: invitersById.get(i.invited_by),
+  }));
+}
+
+export async function listClanPendingInvites(clanId: string): Promise<
+  (ClanInvite & { invitee_username?: string })[]
+> {
+  const { data } = await client()
+    .from("clan_invites")
+    .select("*")
+    .eq("clan_id", clanId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  const invites = (data ?? []) as ClanInvite[];
+  if (invites.length === 0) return [];
+  const inviteeIds = Array.from(new Set(invites.map((i) => i.invitee_id)));
+  const { data: usersData } = await client()
+    .from("users_public")
+    .select("id, username")
+    .in("id", inviteeIds);
+  const byId = new Map(
+    ((usersData ?? []) as { id: string; username: string }[]).map((u) => [u.id, u.username]),
+  );
+  return invites.map((i) => ({ ...i, invitee_username: byId.get(i.invitee_id) }));
+}
+
+export async function resolveInvite(input: {
+  inviteId: string;
+  userId: string;
+  action: "accept" | "decline";
+}): Promise<{ accepted: boolean; clanId?: string }> {
+  const { data: inv } = await client()
+    .from("clan_invites")
+    .select("*")
+    .eq("id", input.inviteId)
+    .eq("invitee_id", input.userId)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (!inv) throw new Error("invite_not_found");
+  const invite = inv as ClanInvite;
+
+  if (input.action === "decline") {
+    await client()
+      .from("clan_invites")
+      .update({ status: "declined", resolved_at: new Date().toISOString() })
+      .eq("id", input.inviteId);
+    return { accepted: false };
+  }
+
+  // Accept — try to join the clan first (bypass invite_only via viaInvite)
+  await joinClan({ userId: input.userId, clanId: invite.clan_id, viaInvite: true });
+  await client()
+    .from("clan_invites")
+    .update({ status: "accepted", resolved_at: new Date().toISOString() })
+    .eq("id", input.inviteId);
+  // Cancel any other pending invites for this user
+  await client()
+    .from("clan_invites")
+    .update({ status: "cancelled", resolved_at: new Date().toISOString() })
+    .eq("invitee_id", input.userId)
+    .eq("status", "pending");
+  return { accepted: true, clanId: invite.clan_id };
+}
+
+// ============ V2: CHAT ============
+
+export async function listClanChat(clanId: string, limit = 60): Promise<ClanChatMessagePublic[]> {
+  const { data, error } = await client()
+    .from("clan_chat_messages")
+    .select(`*, users:users!inner(username, avatar_color, initials, equipped_frame, equipped_hat)`)
+    .eq("clan_id", clanId)
+    .order("id", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`listClanChat: ${error.message}`);
+  type Row = {
+    id: number;
+    clan_id: string;
+    user_id: string;
+    body: string;
+    created_at: string;
+    users: {
+      username: string;
+      avatar_color: string;
+      initials: string;
+      equipped_frame: string | null;
+      equipped_hat: string | null;
+    } | null;
+  };
+  const rows = (data ?? []) as Row[];
+  return rows.reverse().map((r) => ({
+    id: r.id,
+    clan_id: r.clan_id,
+    user_id: r.user_id,
+    body: r.body,
+    created_at: r.created_at,
+    username: r.users?.username ?? "?",
+    avatar_color: r.users?.avatar_color ?? "var(--gold-300)",
+    initials: r.users?.initials ?? "??",
+    equipped_frame: r.users?.equipped_frame ?? null,
+    equipped_hat: r.users?.equipped_hat ?? null,
+  }));
+}
+
+export async function postClanChat(input: {
+  clanId: string;
+  userId: string;
+  body: string;
+}): Promise<void> {
+  // Confirm membership
+  const { data: m } = await client()
+    .from("clan_members")
+    .select("clan_id")
+    .eq("user_id", input.userId)
+    .maybeSingle();
+  if (!m || (m as { clan_id: string }).clan_id !== input.clanId) {
+    throw new Error("not_in_clan");
+  }
+  const { error } = await client().from("clan_chat_messages").insert({
+    clan_id: input.clanId,
+    user_id: input.userId,
+    body: input.body,
+  });
+  if (error) throw new Error(`postClanChat: ${error.message}`);
+}
+
+// ============ V2: HISTORY ============
+
+export async function listClanHistory(clanId: string, limit = 12): Promise<
+  { season_id: string; week_start: string; rank: number; total_xp: number }[]
+> {
+  const { data, error } = await client()
+    .from("clan_season_results")
+    .select(`*, clan_seasons:clan_seasons!inner(week_start)`)
+    .eq("clan_id", clanId)
+    .order("season_id", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`listClanHistory: ${error.message}`);
+  type Row = {
+    season_id: string;
+    rank: number;
+    total_xp: number;
+    clan_seasons: { week_start: string } | null;
+  };
+  return ((data ?? []) as Row[]).map((r) => ({
+    season_id: r.season_id,
+    week_start: r.clan_seasons?.week_start ?? "",
+    rank: r.rank,
+    total_xp: Number(r.total_xp),
+  }));
 }

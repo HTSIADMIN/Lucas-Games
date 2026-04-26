@@ -4,7 +4,11 @@ import {
   clanLeaderboard,
   ensureCurrentSeason,
   getMyClan,
+  listClanChat,
+  listClanHistory,
   listClanMembers,
+  listClanPendingInvites,
+  listMyPendingInvites,
   listMyUnopenedChests,
   clansEnabled,
 } from "@/lib/clans/db";
@@ -19,13 +23,27 @@ export async function GET() {
   // Ensure season + settle anything stale before reading the leaderboard.
   const season = await ensureCurrentSeason();
 
-  const [{ clan, membership }, leaderboard, chests] = await Promise.all([
+  const [{ clan, membership }, leaderboard, chests, myInvites] = await Promise.all([
     getMyClan(s.user.id),
     clanLeaderboard(50),
     listMyUnopenedChests(s.user.id),
+    listMyPendingInvites(s.user.id),
   ]);
 
-  const members = clan ? await listClanMembers(clan.id) : null;
+  let members = null;
+  let chat = null;
+  let history = null;
+  let pendingInvites = null;
+  if (clan) {
+    [members, chat, history] = await Promise.all([
+      listClanMembers(clan.id),
+      listClanChat(clan.id, 60),
+      listClanHistory(clan.id, 12),
+    ]);
+    if (membership?.role === "leader") {
+      pendingInvites = await listClanPendingInvites(clan.id);
+    }
+  }
 
   return NextResponse.json({
     enabled: true,
@@ -35,5 +53,9 @@ export async function GET() {
     members,
     leaderboard,
     chests,
+    myInvites,
+    chat,
+    history,
+    pendingInvites,
   });
 }

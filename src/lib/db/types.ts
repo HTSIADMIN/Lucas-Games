@@ -31,7 +31,34 @@ export type Clan = {
   founder_id: string;
   member_count: number;
   total_xp_week: number;
+  invite_only?: boolean;
   created_at: string;
+};
+
+export type ClanInvite = {
+  id: string;
+  clan_id: string;
+  invitee_id: string;
+  invited_by: string;
+  status: "pending" | "accepted" | "declined" | "cancelled";
+  created_at: string;
+  resolved_at: string | null;
+};
+
+export type ClanChatMessage = {
+  id: number;
+  clan_id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+};
+
+export type ClanChatMessagePublic = ClanChatMessage & {
+  username: string;
+  avatar_color: string;
+  initials: string;
+  equipped_frame?: string | null;
+  equipped_hat?: string | null;
 };
 
 export type ClanMember = {

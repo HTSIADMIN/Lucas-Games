@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { GameIcon } from "@/components/GameIcon";
+import { Avatar } from "@/components/Avatar";
+import { ProfileModal } from "@/components/social/ProfileModal";
 import {
   CLAN_ANIMALS,
   CLAN_FOUNDING_FEE,
@@ -13,21 +15,40 @@ import {
 import type {
   Clan,
   ClanAnimal,
+  ClanChatMessagePublic,
   ClanChest,
   ClanChestRewards,
   ClanChestTier,
+  ClanInvite,
   ClanMember,
   ClanSeason,
 } from "@/lib/db";
+
+type EnrichedMember = ClanMember & {
+  username?: string;
+  avatar_color?: string;
+  initials?: string;
+  equipped_frame?: string | null;
+  equipped_hat?: string | null;
+};
+
+type EnrichedInvite = ClanInvite & { clan?: Clan; inviter_username?: string };
+type ClanInviteOut = ClanInvite & { invitee_username?: string };
+
+type HistoryEntry = { season_id: string; week_start: string; rank: number; total_xp: number };
 
 type ApiState = {
   enabled: boolean;
   season?: ClanSeason | null;
   myClan?: Clan | null;
   myMembership?: ClanMember | null;
-  members?: (ClanMember & { username?: string; avatar_color?: string; initials?: string })[] | null;
+  members?: EnrichedMember[] | null;
   leaderboard?: Clan[];
   chests?: ClanChest[];
+  myInvites?: EnrichedInvite[];
+  chat?: ClanChatMessagePublic[] | null;
+  history?: HistoryEntry[] | null;
+  pendingInvites?: ClanInviteOut[] | null;
 };
 
 export function ClansClient({ meId }: { meId: string }) {
@@ -36,8 +57,11 @@ export function ClansClient({ meId }: { meId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
   const [openingChest, setOpeningChest] = useState<ClanChest | null>(null);
   const [openedRewards, setOpenedRewards] = useState<ClanChestRewards | null>(null);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
 
   async function refresh() {
     try {
@@ -51,7 +75,7 @@ export function ClansClient({ meId }: { meId: string }) {
 
   useEffect(() => {
     refresh();
-    const t = setInterval(refresh, 8000);
+    const t = setInterval(refresh, 6000);
     return () => clearInterval(t);
   }, []);
 
@@ -69,6 +93,7 @@ export function ClansClient({ meId }: { meId: string }) {
   const myClan = state.myClan ?? null;
   const isLeader = state.myMembership?.role === "leader";
   const chests = state.chests ?? [];
+  const myInvites = state.myInvites ?? [];
 
   return (
     <>
@@ -103,6 +128,90 @@ export function ClansClient({ meId }: { meId: string }) {
         </div>
       )}
 
+      {/* My pending invites */}
+      {myInvites.length > 0 && (
+        <div
+          className="panel"
+          style={{
+            padding: "var(--sp-4)",
+            marginBottom: "var(--sp-4)",
+            background: "var(--cactus-100)",
+            border: "3px solid var(--ink-900)",
+          }}
+        >
+          <div className="panel-title" style={{ fontSize: "var(--fs-h4)" }}>
+            Invites for you ({myInvites.length})
+          </div>
+          <div className="stack" style={{ gap: 8 }}>
+            {myInvites.map((inv) => (
+              <div
+                key={inv.id}
+                className="between"
+                style={{
+                  padding: "var(--sp-3)",
+                  background: "var(--parchment-100)",
+                  border: "2px solid var(--ink-900)",
+                  flexWrap: "wrap",
+                  gap: "var(--sp-2)",
+                }}
+              >
+                <div className="row" style={{ gap: 10 }}>
+                  {inv.clan && <ClanCrest animal={inv.clan.animal_icon} size={36} />}
+                  <div>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: 16 }}>
+                      {inv.clan?.name ?? "?"}{" "}
+                      <span className="text-mute" style={{ fontSize: 12 }}>
+                        [{inv.clan?.tag ?? "?"}]
+                      </span>
+                    </div>
+                    <div className="text-mute" style={{ fontSize: 12 }}>
+                      Invited by {inv.inviter_username ?? "?"}
+                    </div>
+                  </div>
+                </div>
+                <div className="row" style={{ gap: 6 }}>
+                  <button
+                    className="btn btn-sm"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true); setError(null);
+                      const r = await fetch(`/api/clans/invites/${inv.id}`, {
+                        method: "POST",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({ action: "accept" }),
+                      });
+                      const d = await r.json();
+                      setBusy(false);
+                      if (!r.ok) { setError(labelFor(d.error ?? "error")); return; }
+                      await refresh();
+                      router.refresh();
+                    }}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      await fetch(`/api/clans/invites/${inv.id}`, {
+                        method: "POST",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({ action: "decline" }),
+                      });
+                      setBusy(false);
+                      await refresh();
+                    }}
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Main grid: my-clan dashboard | leaderboard */}
       <div className="grid grid-2" style={{ gap: "var(--sp-4)", alignItems: "start" }}>
         {myClan ? (
@@ -112,6 +221,7 @@ export function ClansClient({ meId }: { meId: string }) {
             isLeader={isLeader}
             meId={meId}
             busy={busy}
+            onPickMember={(uid) => setProfileUserId(uid)}
             onLeave={async () => {
               if (!confirm("Leave the clan? Weekly XP stays with the clan.")) return;
               setBusy(true);
@@ -120,15 +230,42 @@ export function ClansClient({ meId }: { meId: string }) {
               router.refresh();
               setBusy(false);
             }}
+            onKick={async (userId, name) => {
+              if (!confirm(`Kick ${name}? They lose their seat in the clan.`)) return;
+              setBusy(true); setError(null);
+              const r = await fetch(`/api/clans/${myClan.id}/kick`, {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ userId }),
+              });
+              const d = await r.json();
+              setBusy(false);
+              if (!r.ok) { setError(labelFor(d.error ?? "error")); return; }
+              await refresh();
+            }}
+            onOpenSettings={() => setShowSettings(true)}
+            onOpenInvite={() => setShowInvite(true)}
+            pendingInvites={state.pendingInvites ?? []}
           />
         ) : (
-          <NoClanPanel
-            onCreate={() => setShowCreate(true)}
-          />
+          <NoClanPanel onCreate={() => setShowCreate(true)} />
         )}
 
         <Leaderboard clans={state.leaderboard ?? []} myClanId={myClan?.id ?? null} />
       </div>
+
+      {/* In-clan chat + history when in a clan */}
+      {myClan && (
+        <div className="grid grid-2" style={{ gap: "var(--sp-4)", marginTop: "var(--sp-4)", alignItems: "start" }}>
+          <ClanChat
+            clanId={myClan.id}
+            messages={state.chat ?? []}
+            meId={meId}
+            onSent={refresh}
+          />
+          <ClanHistory entries={state.history ?? []} />
+        </div>
+      )}
 
       {/* All clans grid (joinable) */}
       {!myClan && (state.leaderboard?.length ?? 0) > 0 && (
@@ -139,7 +276,8 @@ export function ClansClient({ meId }: { meId: string }) {
               <ClanCard
                 key={c.id}
                 clan={c}
-                joinable={c.member_count < CLAN_MAX_MEMBERS}
+                joinable={c.member_count < CLAN_MAX_MEMBERS && !c.invite_only}
+                inviteOnly={!!c.invite_only}
                 onJoin={async () => {
                   setBusy(true);
                   setError(null);
@@ -165,7 +303,7 @@ export function ClansClient({ meId }: { meId: string }) {
         </div>
       )}
 
-      {/* Create modal */}
+      {/* Modals */}
       {showCreate && (
         <CreateClanModal
           onClose={() => setShowCreate(false)}
@@ -176,8 +314,27 @@ export function ClansClient({ meId }: { meId: string }) {
           }}
         />
       )}
-
-      {/* Chest opening overlay */}
+      {showSettings && myClan && (
+        <SettingsModal
+          clan={myClan}
+          onClose={() => setShowSettings(false)}
+          onSaved={async () => {
+            setShowSettings(false);
+            await refresh();
+          }}
+        />
+      )}
+      {showInvite && myClan && (
+        <InviteModal
+          clanId={myClan.id}
+          pending={state.pendingInvites ?? []}
+          onClose={() => setShowInvite(false)}
+          onSent={refresh}
+        />
+      )}
+      {profileUserId && (
+        <ProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} />
+      )}
       {openingChest && (
         <ChestOpeningOverlay
           chest={openingChest}
@@ -202,9 +359,8 @@ export function ClansClient({ meId }: { meId: string }) {
 }
 
 // ============================================================
-// Sub-components
+// No-clan panel
 // ============================================================
-
 function NoClanPanel({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="panel" style={{ padding: "var(--sp-5)" }}>
@@ -217,57 +373,105 @@ function NoClanPanel({ onCreate }: { onCreate: () => void }) {
         Found a Clan ({CLAN_FOUNDING_FEE.toLocaleString()}¢)
       </button>
       <p className="text-mute" style={{ fontSize: 12, marginTop: "var(--sp-3)" }}>
-        Pick a name, a tag, an animal. Top clans win chests every week with
-        coins, monopoly cards, and bonus spins.
+        Top clans win chests every week with coins, monopoly cards, and bonus spins.
       </p>
     </div>
   );
 }
 
+// ============================================================
+// Clan dashboard (leader controls + members list + kick)
+// ============================================================
 function ClanDashboard({
   clan,
   members,
   isLeader,
   meId,
   busy,
+  onPickMember,
   onLeave,
+  onKick,
+  onOpenSettings,
+  onOpenInvite,
+  pendingInvites,
 }: {
   clan: Clan;
-  members: (ClanMember & { username?: string; avatar_color?: string; initials?: string })[];
+  members: EnrichedMember[];
   isLeader: boolean;
   meId: string;
   busy: boolean;
+  onPickMember: (userId: string) => void;
   onLeave: () => void;
+  onKick: (userId: string, name: string) => void;
+  onOpenSettings: () => void;
+  onOpenInvite: () => void;
+  pendingInvites: ClanInviteOut[];
 }) {
   return (
     <div className="panel" style={{ padding: "var(--sp-5)" }}>
-      <div className="row" style={{ gap: "var(--sp-3)", marginBottom: "var(--sp-3)" }}>
+      <div className="row" style={{ gap: "var(--sp-3)", marginBottom: "var(--sp-3)", alignItems: "center" }}>
         <ClanCrest animal={clan.animal_icon} size={56} />
-        <div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)" }}>
-            {clan.name} <span className="text-mute" style={{ fontSize: 14 }}>[{clan.tag}]</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <span>{clan.name}</span>
+            <span className="text-mute" style={{ fontSize: 14 }}>[{clan.tag}]</span>
+            {clan.invite_only && (
+              <span
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 11,
+                  background: "var(--saddle-500)",
+                  color: "var(--gold-300)",
+                  padding: "2px 6px",
+                  border: "2px solid var(--ink-900)",
+                  letterSpacing: "var(--ls-loose)",
+                }}
+              >
+                INVITE ONLY
+              </span>
+            )}
           </div>
           <div className="text-mute" style={{ fontSize: 13 }}>
             {clan.member_count} / {CLAN_MAX_MEMBERS} riders · {clan.total_xp_week.toLocaleString()} XP this week
           </div>
         </div>
         {isLeader && (
-          <span
-            style={{
-              marginLeft: "auto",
-              fontFamily: "var(--font-display)",
-              fontSize: 12,
-              background: "var(--gold-300)",
-              color: "var(--ink-900)",
-              padding: "2px 8px",
-              border: "2px solid var(--ink-900)",
-              letterSpacing: "var(--ls-loose)",
-            }}
-          >
-            LEADER
-          </span>
+          <div className="row" style={{ gap: 6, marginLeft: "auto" }}>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={onOpenInvite}
+              title="Invite a player"
+            >
+              Invite
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={onOpenSettings}
+              title="Clan settings"
+            >
+              ⚙ Settings
+            </button>
+          </div>
         )}
       </div>
+
+      {pendingInvites.length > 0 && (
+        <div
+          style={{
+            background: "var(--saddle-500)",
+            color: "var(--parchment-50)",
+            border: "2px solid var(--ink-900)",
+            padding: "var(--sp-2) var(--sp-3)",
+            fontSize: 12,
+            marginBottom: "var(--sp-3)",
+          }}
+        >
+          <span style={{ fontFamily: "var(--font-display)", color: "var(--gold-300)", marginRight: 6 }}>
+            Pending invites:
+          </span>
+          {pendingInvites.map((p) => p.invitee_username ?? "?").join(", ")}
+        </div>
+      )}
 
       <div className="divider" style={{ margin: "var(--sp-3) 0" }}>Members</div>
 
@@ -284,19 +488,31 @@ function ClanDashboard({
                 fontFamily: "var(--font-display)",
               }}
             >
-              <div className="row" style={{ gap: 8 }}>
-                <span
-                  className="avatar avatar-sm"
-                  style={{
-                    background: m.avatar_color ?? "var(--gold-300)",
-                    fontSize: 11,
-                    width: 28,
-                    height: 28,
-                    borderWidth: 2,
-                  }}
-                >
-                  {m.initials ?? "??"}
-                </span>
+              <button
+                type="button"
+                onClick={() => onPickMember(m.user_id)}
+                style={{
+                  background: "transparent",
+                  border: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  cursor: "pointer",
+                  color: "inherit",
+                  fontFamily: "inherit",
+                  textAlign: "left",
+                  padding: 0,
+                }}
+                title="View profile"
+              >
+                <Avatar
+                  initials={m.initials ?? "??"}
+                  color={m.avatar_color ?? "var(--gold-300)"}
+                  size={28}
+                  fontSize={11}
+                  frame={m.equipped_frame ?? null}
+                  hat={m.equipped_hat ?? null}
+                />
                 <div>
                   <div style={{ fontSize: 14 }}>
                     {m.username ?? "?"}
@@ -306,10 +522,32 @@ function ClanDashboard({
                     )}
                   </div>
                 </div>
+              </button>
+              <div className="row" style={{ gap: 8 }}>
+                <span className="text-money" style={{ fontSize: 14 }}>
+                  {Number(m.weekly_xp).toLocaleString()} XP
+                </span>
+                {isLeader && !isMe && m.role !== "leader" && (
+                  <button
+                    type="button"
+                    onClick={() => onKick(m.user_id, m.username ?? "this rider")}
+                    disabled={busy}
+                    title="Kick from clan"
+                    style={{
+                      background: "var(--crimson-500)",
+                      color: "var(--parchment-50)",
+                      border: "2px solid var(--ink-900)",
+                      padding: "1px 6px",
+                      fontFamily: "var(--font-display)",
+                      fontSize: 10,
+                      cursor: "pointer",
+                      letterSpacing: "var(--ls-loose)",
+                    }}
+                  >
+                    KICK
+                  </button>
+                )}
               </div>
-              <span className="text-money" style={{ fontSize: 14 }}>
-                {Number(m.weekly_xp).toLocaleString()} XP
-              </span>
             </div>
           );
         })}
@@ -327,6 +565,9 @@ function ClanDashboard({
   );
 }
 
+// ============================================================
+// Leaderboard
+// ============================================================
 function Leaderboard({ clans, myClanId }: { clans: Clan[]; myClanId: string | null }) {
   return (
     <div className="panel" style={{ padding: "var(--sp-5)" }}>
@@ -359,9 +600,13 @@ function Leaderboard({ clans, myClanId }: { clans: Clan[]; myClanId: string | nu
                   </span>
                   <ClanCrest animal={c.animal_icon} size={28} />
                   <div>
-                    <div style={{ fontSize: 14 }}>
-                      {c.name} <span className="text-mute" style={{ fontSize: 11 }}>[{c.tag}]</span>
-                      {isMine && <span className="tag-new" style={{ marginLeft: 6 }}>YOURS</span>}
+                    <div style={{ fontSize: 14, display: "flex", gap: 6, alignItems: "center" }}>
+                      {c.name}
+                      <span className="text-mute" style={{ fontSize: 11 }}>[{c.tag}]</span>
+                      {c.invite_only && (
+                        <span style={{ fontSize: 10, color: "var(--saddle-400)" }} title="Invite only">🔒</span>
+                      )}
+                      {isMine && <span className="tag-new" style={{ marginLeft: 4 }}>YOURS</span>}
                     </div>
                     <div className="text-mute" style={{ fontSize: 11 }}>
                       {c.member_count} member{c.member_count === 1 ? "" : "s"}
@@ -383,14 +628,19 @@ function Leaderboard({ clans, myClanId }: { clans: Clan[]; myClanId: string | nu
   );
 }
 
+// ============================================================
+// Clan card (browse list)
+// ============================================================
 function ClanCard({
   clan,
   joinable,
+  inviteOnly,
   onJoin,
   disabled,
 }: {
   clan: Clan;
   joinable: boolean;
+  inviteOnly: boolean;
   onJoin: () => void;
   disabled: boolean;
 }) {
@@ -403,7 +653,7 @@ function ClanCard({
             {clan.name}
           </div>
           <div className="text-mute" style={{ fontSize: 12 }}>
-            [{clan.tag}] · {clan.member_count}/{CLAN_MAX_MEMBERS}
+            [{clan.tag}] · {clan.member_count}/{CLAN_MAX_MEMBERS}{inviteOnly ? " · 🔒" : ""}
           </div>
         </div>
       </div>
@@ -416,12 +666,15 @@ function ClanCard({
         disabled={disabled || !joinable}
         style={{ marginTop: 8 }}
       >
-        {joinable ? "Join" : "Full"}
+        {inviteOnly ? "Invite only" : joinable ? "Join" : "Full"}
       </button>
     </div>
   );
 }
 
+// ============================================================
+// Create clan modal
+// ============================================================
 function CreateClanModal({
   onClose,
   onCreated,
@@ -453,90 +706,382 @@ function CreateClanModal({
   }
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(26, 15, 8, 0.78)",
-        zIndex: 200,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "var(--sp-4)",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="panel"
-        style={{
-          width: "min(560px, 100%)",
-          padding: "var(--sp-5)",
-          background: "var(--parchment-100)",
-          border: "4px solid var(--ink-900)",
-        }}
-      >
-        <div className="panel-title">Found a Clan</div>
-        <div className="stack-lg">
-          <div>
-            <label className="label">Name (2-20 chars)</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={20}
-              placeholder="The Black Dust Riders"
-              style={{ width: "100%" }}
-            />
+    <ModalShell onClose={onClose} title="Found a Clan">
+      <div className="stack-lg">
+        <div>
+          <label className="label">Name (2-20 chars)</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={20}
+            placeholder="The Black Dust Riders"
+            style={{ width: "100%" }}
+          />
+        </div>
+        <div>
+          <label className="label">Tag (2-4 chars)</label>
+          <input
+            type="text"
+            value={tag}
+            onChange={(e) => setTag(e.target.value.toUpperCase())}
+            maxLength={4}
+            placeholder="BDR"
+            style={{ width: "100%" }}
+          />
+        </div>
+        <div>
+          <label className="label">Animal</label>
+          <AnimalGrid value={animalIcon} onChange={setAnimalIcon} />
+        </div>
+        <button className="btn btn-lg btn-block" onClick={go} disabled={busy || !name || !tag}>
+          {busy ? "..." : `Found (${CLAN_FOUNDING_FEE.toLocaleString()}¢)`}
+        </button>
+        {error && <p style={{ color: "var(--crimson-500)" }}>{error}</p>}
+      </div>
+    </ModalShell>
+  );
+}
+
+// ============================================================
+// Settings modal (leader-only)
+// ============================================================
+function SettingsModal({
+  clan,
+  onClose,
+  onSaved,
+}: {
+  clan: Clan;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(clan.name);
+  const [tag, setTag] = useState(clan.tag);
+  const [animalIcon, setAnimalIcon] = useState<ClanAnimal>(clan.animal_icon);
+  const [inviteOnly, setInviteOnly] = useState<boolean>(!!clan.invite_only);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function go() {
+    setBusy(true); setError(null);
+    const r = await fetch(`/api/clans/${clan.id}/settings`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name, tag, animalIcon, inviteOnly }),
+    });
+    const d = await r.json();
+    setBusy(false);
+    if (!r.ok) { setError(labelFor(d.error ?? "error")); return; }
+    onSaved();
+  }
+
+  return (
+    <ModalShell onClose={onClose} title="Clan Settings">
+      <div className="stack-lg">
+        <div>
+          <label className="label">Name</label>
+          <input type="text" value={name} maxLength={20}
+            onChange={(e) => setName(e.target.value)} style={{ width: "100%" }} />
+        </div>
+        <div>
+          <label className="label">Tag</label>
+          <input type="text" value={tag} maxLength={4}
+            onChange={(e) => setTag(e.target.value.toUpperCase())} style={{ width: "100%" }} />
+        </div>
+        <div>
+          <label className="label">Animal</label>
+          <AnimalGrid value={animalIcon} onChange={setAnimalIcon} />
+        </div>
+        <div>
+          <label className="label">Membership</label>
+          <div className="row" style={{ gap: 8 }}>
+            <button
+              type="button"
+              className={`btn btn-block ${!inviteOnly ? "" : "btn-ghost"}`}
+              onClick={() => setInviteOnly(false)}
+            >
+              Open
+            </button>
+            <button
+              type="button"
+              className={`btn btn-block ${inviteOnly ? "" : "btn-ghost"}`}
+              onClick={() => setInviteOnly(true)}
+            >
+              Invite only
+            </button>
           </div>
+          <p className="text-mute" style={{ fontSize: 12, marginTop: 6 }}>
+            Open: anyone can join. Invite only: members must accept an invite from a leader.
+          </p>
+        </div>
+        <button className="btn btn-lg btn-block" onClick={go} disabled={busy}>
+          {busy ? "Saving..." : "Save changes"}
+        </button>
+        {error && <p style={{ color: "var(--crimson-500)" }}>{error}</p>}
+      </div>
+    </ModalShell>
+  );
+}
+
+// ============================================================
+// Invite modal (leader-only)
+// ============================================================
+function InviteModal({
+  clanId,
+  pending,
+  onClose,
+  onSent,
+}: {
+  clanId: string;
+  pending: ClanInviteOut[];
+  onClose: () => void;
+  onSent: () => void;
+}) {
+  const [username, setUsername] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState<string | null>(null);
+
+  async function go() {
+    if (!username.trim()) return;
+    setBusy(true); setError(null); setSent(null);
+    const r = await fetch(`/api/clans/${clanId}/invite`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: username.trim() }),
+    });
+    const d = await r.json();
+    setBusy(false);
+    if (!r.ok) { setError(labelFor(d.error ?? "error")); return; }
+    setSent(d.username ?? username.trim());
+    setUsername("");
+    onSent();
+  }
+
+  return (
+    <ModalShell onClose={onClose} title="Invite a player">
+      <div className="stack-lg">
+        <div>
+          <label className="label">Username</label>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Their exact username"
+            style={{ width: "100%" }}
+            onKeyDown={(e) => { if (e.key === "Enter") go(); }}
+          />
+        </div>
+        <button className="btn btn-lg btn-block" onClick={go} disabled={busy || !username.trim()}>
+          {busy ? "Sending..." : "Send invite"}
+        </button>
+        {sent && <p className="text-money" style={{ fontFamily: "var(--font-display)" }}>Invite sent to {sent}!</p>}
+        {error && <p style={{ color: "var(--crimson-500)" }}>{error}</p>}
+
+        {pending.length > 0 && (
           <div>
-            <label className="label">Tag (2-4 chars)</label>
-            <input
-              type="text"
-              value={tag}
-              onChange={(e) => setTag(e.target.value.toUpperCase())}
-              maxLength={4}
-              placeholder="BDR"
-              style={{ width: "100%" }}
-            />
-          </div>
-          <div>
-            <label className="label">Animal</label>
-            <div className="grid grid-4" style={{ gap: 6 }}>
-              {CLAN_ANIMALS.map((a) => (
-                <button
-                  key={a.key}
-                  type="button"
-                  onClick={() => setAnimalIcon(a.key)}
-                  style={{
-                    background: animalIcon === a.key ? "var(--gold-300)" : "var(--parchment-50)",
-                    border: animalIcon === a.key ? "3px solid var(--ink-900)" : "2px solid var(--saddle-300)",
-                    padding: "var(--sp-2)",
-                    cursor: "pointer",
-                    fontFamily: "var(--font-display)",
-                    fontSize: 11,
-                    letterSpacing: "var(--ls-loose)",
-                    textTransform: "uppercase",
-                    boxShadow: animalIcon === a.key ? "var(--glow-gold)" : undefined,
-                  }}
-                >
-                  <ClanCrest animal={a.key} size={48} />
-                  <div>{a.name}</div>
-                </button>
+            <div className="divider">Pending</div>
+            <div className="stack" style={{ gap: 4 }}>
+              {pending.map((p) => (
+                <div key={p.id} className="between" style={{ padding: "var(--sp-2) 0", fontSize: 13 }}>
+                  <span>{p.invitee_username ?? "?"}</span>
+                  <span className="text-mute" style={{ fontSize: 11 }}>
+                    {new Date(p.created_at).toLocaleDateString()}
+                  </span>
+                </div>
               ))}
             </div>
           </div>
-          <button className="btn btn-lg btn-block" onClick={go} disabled={busy || !name || !tag}>
-            {busy ? "..." : `Found (${CLAN_FOUNDING_FEE.toLocaleString()}¢)`}
-          </button>
-          {error && <p style={{ color: "var(--crimson-500)" }}>{error}</p>}
-          <button className="btn btn-ghost btn-block" onClick={onClose}>Cancel</button>
-        </div>
+        )}
       </div>
+    </ModalShell>
+  );
+}
+
+// ============================================================
+// Clan chat
+// ============================================================
+function ClanChat({
+  clanId,
+  messages,
+  meId,
+  onSent,
+}: {
+  clanId: string;
+  messages: ClanChatMessagePublic[];
+  meId: string;
+  onSent: () => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom on new messages.
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages.length]);
+
+  async function send() {
+    if (!draft.trim() || sending) return;
+    setSending(true); setErr(null);
+    const r = await fetch(`/api/clans/${clanId}/chat`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ body: draft.trim() }),
+    });
+    const d = await r.json();
+    setSending(false);
+    if (!r.ok) { setErr(labelFor(d.error ?? "error")); return; }
+    setDraft("");
+    onSent();
+  }
+
+  return (
+    <div className="panel" style={{ padding: "var(--sp-5)", display: "flex", flexDirection: "column" }}>
+      <div className="panel-title">Clan Chat</div>
+      <div
+        ref={scrollerRef}
+        style={{
+          flex: 1,
+          minHeight: 220,
+          maxHeight: 320,
+          overflowY: "auto",
+          padding: "var(--sp-2)",
+          background: "var(--parchment-200)",
+          border: "2px solid var(--saddle-300)",
+          marginBottom: "var(--sp-3)",
+        }}
+      >
+        {messages.length === 0 ? (
+          <p className="text-mute" style={{ fontSize: 13, textAlign: "center", marginTop: "var(--sp-4)" }}>
+            No messages yet. Say hello.
+          </p>
+        ) : (
+          <div className="stack" style={{ gap: 6 }}>
+            {messages.map((m) => {
+              const mine = m.user_id === meId;
+              return (
+                <div
+                  key={m.id}
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "flex-start",
+                  }}
+                >
+                  <Avatar
+                    initials={m.initials}
+                    color={m.avatar_color}
+                    size={26}
+                    fontSize={10}
+                    frame={m.equipped_frame ?? null}
+                    hat={m.equipped_hat ?? null}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: 13,
+                      color: mine ? "var(--gold-500)" : "var(--saddle-500)",
+                    }}>
+                      {m.username}
+                    </div>
+                    <div style={{ fontSize: 14, wordBreak: "break-word" }}>
+                      {m.body}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <div className="row" style={{ gap: 6 }}>
+        <input
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") send(); }}
+          maxLength={500}
+          placeholder="Yell at your clanmates..."
+          style={{ flex: 1 }}
+          disabled={sending}
+        />
+        <button className="btn" onClick={send} disabled={sending || !draft.trim()}>
+          Send
+        </button>
+      </div>
+      {err && <p style={{ color: "var(--crimson-500)", marginTop: 6, fontSize: 12 }}>{err}</p>}
     </div>
   );
 }
 
+// ============================================================
+// Clan history
+// ============================================================
+function ClanHistory({ entries }: { entries: HistoryEntry[] }) {
+  return (
+    <div className="panel" style={{ padding: "var(--sp-5)" }}>
+      <div className="panel-title">Past Seasons</div>
+      {entries.length === 0 ? (
+        <p className="text-mute" style={{ fontSize: 13 }}>
+          No past seasons yet. Win some games this week to write some history.
+        </p>
+      ) : (
+        <div className="stack" style={{ gap: 0 }}>
+          {entries.map((e) => {
+            const tier =
+              e.rank === 1 ? "legendary" :
+              e.rank <= 3 ? "epic" :
+              e.rank <= 10 ? "rare" : "none";
+            const tierColor =
+              tier === "legendary" ? "var(--gold-300)" :
+              tier === "epic" ? "var(--crimson-300)" :
+              tier === "rare" ? "var(--sky-300)" :
+              "var(--saddle-300)";
+            return (
+              <div
+                key={e.season_id}
+                className="between"
+                style={{
+                  padding: "var(--sp-2) var(--sp-3)",
+                  borderBottom: "2px dashed var(--saddle-300)",
+                  fontFamily: "var(--font-display)",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 14 }}>
+                    Week of {new Date(e.week_start).toLocaleDateString()}
+                  </div>
+                  <div className="text-mute" style={{ fontSize: 11 }}>
+                    {e.total_xp.toLocaleString()} XP
+                  </div>
+                </div>
+                <span
+                  style={{
+                    background: tierColor,
+                    color: "var(--ink-900)",
+                    border: "2px solid var(--ink-900)",
+                    padding: "2px 8px",
+                    fontSize: 12,
+                    letterSpacing: "var(--ls-loose)",
+                  }}
+                >
+                  RANK {e.rank}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Reusable bits
+// ============================================================
 function ClanCrest({ animal, size }: { animal: ClanAnimal; size: number }) {
   return (
     <div
@@ -557,8 +1102,96 @@ function ClanCrest({ animal, size }: { animal: ClanAnimal; size: number }) {
   );
 }
 
+function AnimalGrid({ value, onChange }: { value: ClanAnimal; onChange: (a: ClanAnimal) => void }) {
+  return (
+    <div className="grid grid-4" style={{ gap: 6 }}>
+      {CLAN_ANIMALS.map((a) => (
+        <button
+          key={a.key}
+          type="button"
+          onClick={() => onChange(a.key)}
+          style={{
+            background: value === a.key ? "var(--gold-300)" : "var(--parchment-50)",
+            border: value === a.key ? "3px solid var(--ink-900)" : "2px solid var(--saddle-300)",
+            padding: "var(--sp-2)",
+            cursor: "pointer",
+            fontFamily: "var(--font-display)",
+            fontSize: 11,
+            letterSpacing: "var(--ls-loose)",
+            textTransform: "uppercase",
+            boxShadow: value === a.key ? "var(--glow-gold)" : undefined,
+          }}
+        >
+          <ClanCrest animal={a.key} size={48} />
+          <div>{a.name}</div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ModalShell({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(26, 15, 8, 0.78)",
+        zIndex: 200,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "var(--sp-4)",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="panel"
+        style={{
+          width: "min(560px, 100%)",
+          maxHeight: "calc(100vh - 64px)",
+          overflowY: "auto",
+          padding: "var(--sp-5)",
+          background: "var(--parchment-100)",
+          border: "4px solid var(--ink-900)",
+        }}
+      >
+        <div className="between" style={{ marginBottom: "var(--sp-3)" }}>
+          <div className="panel-title" style={{ marginBottom: 0 }}>{title}</div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              background: "var(--saddle-300)",
+              color: "var(--parchment-50)",
+              border: "2px solid var(--ink-900)",
+              padding: "2px 10px",
+              cursor: "pointer",
+              fontFamily: "var(--font-display)",
+              fontSize: 14,
+            }}
+          >
+            ×
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ============================================================
-// Chest opening overlay
+// Chest opening overlay (unchanged from v1)
 // ============================================================
 function ChestOpeningOverlay({
   chest,
@@ -660,7 +1293,6 @@ function ChestOpeningOverlay({
           </button>
         )}
 
-        {/* Confetti */}
         {opened && rewards && <ChestConfetti tier={chest.tier} />}
       </div>
     </div>
@@ -678,7 +1310,6 @@ function ChestSprite({ tier, opened }: { tier: ClanChestTier; opened: boolean })
         animation: opened ? "chest-burst 0.6s var(--ease-snap) forwards" : "chest-shake 1.6s ease-in-out infinite",
       }}
     >
-      {/* Lid */}
       <div
         style={{
           position: "absolute",
@@ -695,7 +1326,6 @@ function ChestSprite({ tier, opened }: { tier: ClanChestTier; opened: boolean })
           zIndex: 3,
         }}
       />
-      {/* Body */}
       <div
         style={{
           position: "absolute",
@@ -709,7 +1339,6 @@ function ChestSprite({ tier, opened }: { tier: ClanChestTier; opened: boolean })
           zIndex: 2,
         }}
       />
-      {/* Lock */}
       <div
         style={{
           position: "absolute",
@@ -722,7 +1351,6 @@ function ChestSprite({ tier, opened }: { tier: ClanChestTier; opened: boolean })
           zIndex: 4,
         }}
       />
-      {/* Inner glow once opened */}
       {opened && (
         <div
           style={{
@@ -839,6 +1467,20 @@ function labelFor(code: string) {
     already_in_a_clan: "You're already in a clan.",
     clan_full: "That clan is full.",
     clan_not_found: "Clan not found.",
+    invite_only: "That clan is invite-only.",
+    not_leader: "Only the clan leader can do that.",
+    not_in_clan: "You're not in that clan.",
+    cant_kick_self: "Use 'Leave Clan' instead.",
+    cant_kick_leader: "Can't kick the leader.",
+    target_not_in_clan: "That player isn't in your clan.",
+    user_not_found: "No player with that exact username.",
+    cant_invite_self: "Can't invite yourself.",
+    user_already_in_clan: "That player is already in a clan.",
+    already_invited: "Already invited.",
+    invite_not_found: "Invite expired or already resolved.",
+    not_in_clan_msg: "You aren't in that clan.",
+    empty: "Type something first.",
+    too_long: "Too long.",
   };
   return m[code] ?? "Something went wrong.";
 }
