@@ -6,6 +6,7 @@ import { PlayingCard } from "@/components/PlayingCard";
 import type { Card, Rank, Suit } from "@/lib/games/cards";
 
 const POLL_MS = 1000;
+const LOG_MAX = 10;
 
 type Seat = {
   seatNo: number;
@@ -64,6 +65,13 @@ export function PokerClient() {
   const [buyIn, setBuyIn] = useState(5_000);
   const [raiseTo, setRaiseTo] = useState(0);
   const meRef = useRef<string | null>(null);
+
+  // Per-seat last-action tracker for the action log feed.
+  const lastActRef = useRef<Map<number, string | null>>(new Map());
+  const lastHandRef = useRef<number>(-1);
+  const logSeqRef = useRef<number>(0);
+  const [actionLog, setActionLog] = useState<{ id: number; text: string; tone: string }[]>([]);
+
   const [, force] = useState(0);
 
   useEffect(() => {
@@ -76,19 +84,66 @@ export function PokerClient() {
     try {
       const r = await fetch("/api/games/poker/state");
       if (!r.ok) return;
-      const d = await r.json();
+      const d: State = await r.json();
       setState(d);
       setServerOffset((d.serverNow ?? Date.now()) - Date.now());
-      // Default raise input to min raise the first time we see it.
-      if (d.minRaise && raiseTo === 0) setRaiseTo(d.minRaise);
+
+      // Diff per-seat last_action since last render to build the action log.
+      // Reset tracker on new hand so blinds don't pollute.
+      if (d.handNo !== lastHandRef.current) {
+        lastActRef.current.clear();
+        lastHandRef.current = d.handNo;
+      }
+      const additions: { id: number; text: string; tone: string }[] = [];
+      for (const s of d.seats) {
+        const prev = lastActRef.current.get(s.seatNo);
+        const cur = s.lastAction;
+        if (cur !== prev) {
+          if (cur && cur !== "" && cur !== "blind") {
+            additions.push({
+              id: ++logSeqRef.current,
+              text: actionLogText(s, cur),
+              tone: actionTone(cur),
+            });
+          }
+          lastActRef.current.set(s.seatNo, cur);
+        }
+      }
+      // Showdown winners log
+      if (d.status === "showdown" && d.showdown) {
+        for (const w of d.showdown.winners) {
+          const lookupSeat = d.seats.find((s) => s.seatNo === w.seatNo);
+          const name = lookupSeat?.username ?? `Seat ${w.seatNo + 1}`;
+          const key = `win:${d.handNo}:${w.seatNo}`;
+          // De-dupe via tracker
+          if (!lastActRef.current.has(-1 - w.seatNo) || lastActRef.current.get(-1 - w.seatNo) !== key) {
+            additions.push({
+              id: ++logSeqRef.current,
+              text: `${name} won ${w.amount.toLocaleString()} ¢ · ${w.categoryLabel}`,
+              tone: "win",
+            });
+            lastActRef.current.set(-1 - w.seatNo, key);
+          }
+        }
+      }
+      if (additions.length > 0) {
+        setActionLog((prev) => [...additions.reverse(), ...prev].slice(0, LOG_MAX));
+      }
     } catch { /* ignore */ }
   }
+
   useEffect(() => {
     refresh();
     const t = setInterval(refresh, POLL_MS);
     const tick = setInterval(() => force((n) => n + 1), 250);
     return () => { clearInterval(t); clearInterval(tick); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync raise input to min raise when state advances.
+  useEffect(() => {
+    if (!state) return;
+    if (raiseTo === 0 || raiseTo < state.minRaise) setRaiseTo(state.minRaise);
+  }, [state?.minRaise]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function sit() {
     setBusy(true); setError(null);
@@ -103,7 +158,6 @@ export function PokerClient() {
     refresh();
     router.refresh();
   }
-
   async function leave() {
     setBusy(true); setError(null);
     const r = await fetch("/api/games/poker/leave", { method: "POST" });
@@ -113,7 +167,6 @@ export function PokerClient() {
     refresh();
     router.refresh();
   }
-
   async function act(action: "fold" | "check" | "call" | "raise" | "all_in", amount?: number) {
     setBusy(true); setError(null);
     const r = await fetch("/api/games/poker/action", {
@@ -141,54 +194,91 @@ export function PokerClient() {
   const minRaise = state.minRaise;
   const maxRaise = mySeat ? mySeat.committedThisRound + mySeat.stack : 0;
 
-  // Action timer countdown
   let actionSecs = 0;
   if (state.actionDeadlineAt) {
     const ms = new Date(state.actionDeadlineAt).getTime() - Date.now() - serverOffset;
     actionSecs = Math.max(0, Math.ceil(ms / 1000));
   }
 
+  // Compute the current actor's name (for the "Waiting on X" header).
+  const currentActor = state.currentSeat != null
+    ? state.seats.find((s) => s.seatNo === state.currentSeat)
+    : null;
+
+  // Layout: 6 seats arranged top, sides, bottom. Mine always shown bottom-center if I'm seated.
+  const seatsByPosition = layoutSeats(state.seats, mySeat?.seatNo ?? null, state.table.maxSeats);
+
   return (
-    <div className="grid grid-2" style={{ alignItems: "start" }}>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) 320px",
+        gap: "var(--sp-5)",
+        alignItems: "start",
+      }}
+    >
       {/* === FELT === */}
-      <div className="panel" style={{ padding: "var(--sp-5)", gridColumn: "1 / span 2" }}>
-        <div className="panel-title">
-          {STATUS_LABEL[state.status]}
-          {state.handNo > 0 && <> · Hand #{state.handNo}</>}
-          {(state.status === "preflop" || state.status === "flop" || state.status === "turn" || state.status === "river") && state.currentSeat != null && (
-            <span style={{ marginLeft: 12, color: "var(--crimson-500)" }}>· {actionSecs}s</span>
-          )}
+      <div className="panel" style={{ padding: "var(--sp-4)" }}>
+        <div
+          className="between"
+          style={{ marginBottom: "var(--sp-3)", flexWrap: "wrap", gap: "var(--sp-3)" }}
+        >
+          <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h4)" }}>
+            {STATUS_LABEL[state.status]}
+            {state.handNo > 0 && <span className="text-mute" style={{ fontSize: 12, marginLeft: 8 }}>· Hand #{state.handNo}</span>}
+          </div>
+          <div className="row" style={{ gap: "var(--sp-3)" }}>
+            <span className="badge">{state.table.smallBlind}/{state.table.bigBlind}</span>
+            {currentActor && (
+              <span
+                className="badge"
+                style={{
+                  background: "var(--gold-300)",
+                  color: "var(--ink-900)",
+                  borderColor: "var(--ink-900)",
+                }}
+              >
+                {isMyTurn ? `YOUR TURN · ${actionSecs}s` : `Waiting on ${currentActor.username ?? `Seat ${currentActor.seatNo + 1}`} · ${actionSecs}s`}
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Felt area with all 6 seats around the perimeter and community center */}
+        {/* The felt itself */}
         <div
           style={{
             background: "var(--cactus-700)",
             border: "4px solid var(--ink-900)",
-            padding: "var(--sp-5)",
+            padding: "var(--sp-3)",
+            borderRadius: 0,
             position: "relative",
-            minHeight: 420,
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 1fr",
+            gridTemplateRows: "auto auto auto",
+            gap: "var(--sp-3)",
+            minHeight: 480,
           }}
         >
-          {/* Pot + community in center */}
+          {/* Top row */}
+          <SeatBox seat={seatsByPosition.topLeft}      state={state} me={me} cell={{ row: 1, col: 1 }} />
+          <SeatBox seat={seatsByPosition.topMid}       state={state} me={me} cell={{ row: 1, col: 2 }} />
+          <SeatBox seat={seatsByPosition.topRight}     state={state} me={me} cell={{ row: 1, col: 3 }} />
+
+          {/* Center: pot + community */}
           <div
             style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
+              gridRow: 2,
+              gridColumn: "1 / span 3",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 12,
-              minWidth: 320,
-              textAlign: "center",
+              gap: "var(--sp-3)",
+              padding: "var(--sp-4) 0",
+              background: "rgba(26,15,8,0.15)",
+              border: "3px solid var(--cactus-500)",
             }}
           >
-            <div className="balance" style={{ fontSize: 22 }}>
-              POT {state.pot.toLocaleString()} ¢
-            </div>
-            <div className="row" style={{ gap: 6, justifyContent: "center" }}>
+            <div className="row" style={{ gap: 6 }}>
               {Array.from({ length: 5 }).map((_, i) => {
                 const c = state.community[i];
                 if (c) return <PlayingCard key={i} rank={c.rank as Rank} suit={c.suit as Suit} size="md" />;
@@ -204,58 +294,42 @@ export function PokerClient() {
                 );
               })}
             </div>
-            {state.showdown && state.showdown.winners.length > 0 && (
-              <div
-                className="sign"
-                style={{ background: "var(--gold-300)", color: "var(--ink-900)", fontSize: 16 }}
-              >
-                {state.showdown.winners.map((w) => `${seatLabel(state.seats, w.seatNo)} +${w.amount.toLocaleString()} (${w.categoryLabel})`).join(" · ")}
-              </div>
-            )}
+            <div
+              className="balance"
+              style={{ fontSize: 22, padding: "4px 14px" }}
+            >
+              POT {state.pot.toLocaleString()} ¢
+            </div>
           </div>
 
-          {/* Seat slots — laid out 2 top, 2 sides, 2 bottom */}
-          <div
-            style={{
-              position: "relative",
-              minHeight: 420,
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
-              gridTemplateRows: "auto auto auto",
-              gap: "var(--sp-5)",
-              alignItems: "stretch",
-            }}
-          >
-            {/* Top row: seat 0, seat 1 */}
-            <SeatBox seat={state.seats.find((s) => s.seatNo === 0)} state={state} me={me} pos={{ gridColumn: 1, gridRow: 1 }} />
-            <div style={{ gridColumn: 2, gridRow: 1 }} />
-            <SeatBox seat={state.seats.find((s) => s.seatNo === 1)} state={state} me={me} pos={{ gridColumn: 3, gridRow: 1 }} />
-
-            {/* Middle row reserved for community (rendered absolute above) */}
-            <SeatBox seat={state.seats.find((s) => s.seatNo === 5)} state={state} me={me} pos={{ gridColumn: 1, gridRow: 2 }} />
-            <div style={{ gridColumn: 2, gridRow: 2 }} />
-            <SeatBox seat={state.seats.find((s) => s.seatNo === 2)} state={state} me={me} pos={{ gridColumn: 3, gridRow: 2 }} />
-
-            {/* Bottom row: seat 4, seat 3 */}
-            <SeatBox seat={state.seats.find((s) => s.seatNo === 4)} state={state} me={me} pos={{ gridColumn: 1, gridRow: 3 }} />
-            <div style={{ gridColumn: 2, gridRow: 3 }} />
-            <SeatBox seat={state.seats.find((s) => s.seatNo === 3)} state={state} me={me} pos={{ gridColumn: 3, gridRow: 3 }} />
-          </div>
+          {/* Bottom row */}
+          <SeatBox seat={seatsByPosition.bottomLeft}   state={state} me={me} cell={{ row: 3, col: 1 }} />
+          <SeatBox seat={seatsByPosition.bottomMid}    state={state} me={me} cell={{ row: 3, col: 2 }} mine={!!mySeat && seatsByPosition.bottomMid?.seatNo === mySeat.seatNo} />
+          <SeatBox seat={seatsByPosition.bottomRight}  state={state} me={me} cell={{ row: 3, col: 3 }} />
         </div>
       </div>
 
-      {/* === ACTION PANEL === */}
-      <div className="panel" style={{ padding: "var(--sp-5)" }}>
-        <div className="panel-title">{isMyTurn ? "Your Action" : isSeated ? "At The Table" : "Buy In"}</div>
+      {/* === STICKY SIDE PANEL === */}
+      <div
+        style={{
+          position: "sticky",
+          top: 16,
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--sp-4)",
+        }}
+      >
+        {/* Action card */}
+        <div className="panel" style={{ padding: "var(--sp-4)" }}>
+          <div className="panel-title" style={{ fontSize: "var(--fs-h4)" }}>
+            {!isSeated ? "Buy In" : isMyTurn ? `Your Action · ${actionSecs}s` : "At The Table"}
+          </div>
 
-        {!isSeated ? (
-          <div className="stack-lg">
-            <p className="text-mute">
-              Buy in for between {(state.table.bigBlind * 20).toLocaleString()} and{" "}
-              {(state.table.bigBlind * 250).toLocaleString()} ¢.
-            </p>
-            <div>
-              <label className="label">Buy In</label>
+          {!isSeated ? (
+            <div className="stack-lg">
+              <p className="text-mute" style={{ fontSize: 12 }}>
+                Buy in {(state.table.bigBlind * 20).toLocaleString()}–{(state.table.bigBlind * 250).toLocaleString()} ¢.
+              </p>
               <input
                 type="number"
                 value={buyIn}
@@ -264,127 +338,190 @@ export function PokerClient() {
                 step={1000}
                 onChange={(e) => setBuyIn(Math.floor(Number(e.target.value) || 0))}
               />
+              <button
+                className="btn btn-lg btn-block"
+                onClick={sit}
+                disabled={busy || (state.balance != null && state.balance < buyIn)}
+              >
+                {busy ? "..." : `Sit Down (${buyIn.toLocaleString()} ¢)`}
+              </button>
             </div>
-            <button
-              className="btn btn-lg btn-block"
-              onClick={sit}
-              disabled={busy || (state.balance != null && state.balance < buyIn)}
-            >
-              {busy ? "..." : `Sit Down (${buyIn.toLocaleString()} ¢)`}
-            </button>
-          </div>
-        ) : isMyTurn ? (
-          <div className="stack-lg">
-            <p className="text-mute">
-              Stack <b>{mySeat!.stack.toLocaleString()}</b> · Pot <b>{state.pot.toLocaleString()}</b>
-              {toCall > 0 && <> · To call <b>{toCall.toLocaleString()}</b></>}
-            </p>
-            <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
-              <button className="btn btn-ghost btn-block" onClick={() => act("fold")} disabled={busy}>Fold</button>
-              {canCheck ? (
-                <button className="btn btn-block" onClick={() => act("check")} disabled={busy}>Check</button>
-              ) : (
-                <button
-                  className="btn btn-block"
-                  onClick={() => act("call")}
-                  disabled={busy || !canCall}
-                >
-                  Call {Math.min(toCall, mySeat!.stack).toLocaleString()}
-                </button>
-              )}
-            </div>
-            {canRaise && (
-              <div>
-                <div className="row" style={{ justifyContent: "space-between" }}>
-                  <span className="label">Raise to</span>
-                  <span className="text-mute" style={{ fontSize: 12 }}>min {minRaise.toLocaleString()} · max {maxRaise.toLocaleString()}</span>
-                </div>
-                <div className="row" style={{ gap: 6 }}>
-                  <input
-                    type="range"
-                    min={minRaise}
-                    max={maxRaise}
-                    step={state.table.bigBlind}
-                    value={Math.max(minRaise, Math.min(maxRaise, raiseTo))}
-                    onChange={(e) => setRaiseTo(Number(e.target.value))}
-                    style={{ flex: 1 }}
-                  />
-                  <input
-                    type="number"
-                    min={minRaise}
-                    max={maxRaise}
-                    value={Math.max(minRaise, Math.min(maxRaise, raiseTo))}
-                    onChange={(e) => setRaiseTo(Number(e.target.value) || minRaise)}
-                    style={{ width: 110 }}
-                  />
-                </div>
-                <div className="row" style={{ marginTop: 6 }}>
-                  <button
-                    className="btn btn-danger btn-block"
-                    onClick={() => act("raise", Math.max(minRaise, Math.min(maxRaise, raiseTo)))}
-                    disabled={busy || raiseTo < minRaise || raiseTo > maxRaise}
-                  >
-                    Raise to {Math.max(minRaise, Math.min(maxRaise, raiseTo)).toLocaleString()}
-                  </button>
-                  <button
-                    className="btn btn-wood btn-block"
-                    onClick={() => act("all_in")}
-                    disabled={busy}
-                  >
-                    All-in {maxRaise.toLocaleString()}
-                  </button>
-                </div>
+          ) : isMyTurn ? (
+            <div className="stack" style={{ gap: 8 }}>
+              <div className="text-mute" style={{ fontSize: 12 }}>
+                Stack <b>{mySeat!.stack.toLocaleString()}</b>
+                {toCall > 0 && <> · To call <b>{toCall.toLocaleString()}</b></>}
               </div>
-            )}
-            {error && <p style={{ color: "var(--crimson-500)" }}>{error}</p>}
-          </div>
-        ) : (
-          <div className="stack-lg">
-            <p className="text-mute">
-              Stack <b>{mySeat!.stack.toLocaleString()} ¢</b>
-              {mySeat!.inHand && !mySeat!.folded && " · in hand"}
-              {mySeat!.folded && " · folded"}
-            </p>
-            <p className="text-mute">
-              {state.status === "waiting"
-                ? "Waiting for the next hand."
-                : state.currentSeat != null
-                ? `Waiting on seat ${state.currentSeat + 1}.`
-                : "Hand resolving..."}
-            </p>
-            <button className="btn btn-ghost btn-block" onClick={leave} disabled={busy || mySeat!.inHand}>
-              Cash Out & Leave ({mySeat!.stack.toLocaleString()} ¢)
-            </button>
-            {error && <p style={{ color: "var(--crimson-500)" }}>{error}</p>}
-          </div>
-        )}
+              <div className="row" style={{ gap: 6 }}>
+                <button className="btn btn-ghost btn-block" onClick={() => act("fold")} disabled={busy}>Fold</button>
+                {canCheck ? (
+                  <button className="btn btn-block" onClick={() => act("check")} disabled={busy}>Check</button>
+                ) : (
+                  <button
+                    className="btn btn-block"
+                    onClick={() => act("call")}
+                    disabled={busy || !canCall}
+                  >
+                    Call {Math.min(toCall, mySeat!.stack).toLocaleString()}
+                  </button>
+                )}
+              </div>
+
+              {canRaise && (
+                <>
+                  <div className="row" style={{ gap: 6 }}>
+                    <input
+                      type="range"
+                      min={minRaise}
+                      max={maxRaise}
+                      step={state.table.bigBlind}
+                      value={Math.max(minRaise, Math.min(maxRaise, raiseTo))}
+                      onChange={(e) => setRaiseTo(Number(e.target.value))}
+                      style={{ flex: 1 }}
+                    />
+                    <input
+                      type="number"
+                      min={minRaise}
+                      max={maxRaise}
+                      value={Math.max(minRaise, Math.min(maxRaise, raiseTo))}
+                      onChange={(e) => setRaiseTo(Number(e.target.value) || minRaise)}
+                      style={{ width: 90 }}
+                    />
+                  </div>
+                  <div className="row" style={{ gap: 6 }}>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setRaiseTo(Math.min(maxRaise, state.pot))}
+                    >POT</button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setRaiseTo(Math.min(maxRaise, Math.floor(state.pot / 2)))}
+                    >½ POT</button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setRaiseTo(Math.min(maxRaise, minRaise * 2))}
+                    >2× MIN</button>
+                  </div>
+                  <div className="row" style={{ gap: 6 }}>
+                    <button
+                      className="btn btn-danger btn-block"
+                      onClick={() => act("raise", Math.max(minRaise, Math.min(maxRaise, raiseTo)))}
+                      disabled={busy || raiseTo < minRaise || raiseTo > maxRaise}
+                    >
+                      Raise {Math.max(minRaise, Math.min(maxRaise, raiseTo)).toLocaleString()}
+                    </button>
+                    <button
+                      className="btn btn-wood btn-block"
+                      onClick={() => act("all_in")}
+                      disabled={busy}
+                    >
+                      All-in {maxRaise.toLocaleString()}
+                    </button>
+                  </div>
+                </>
+              )}
+              {error && <p style={{ color: "var(--crimson-500)", fontSize: 12 }}>{error}</p>}
+            </div>
+          ) : (
+            <div className="stack" style={{ gap: 8 }}>
+              <div className="text-mute" style={{ fontSize: 12 }}>
+                Stack <b>{mySeat!.stack.toLocaleString()} ¢</b>
+                {mySeat!.inHand && !mySeat!.folded && " · in hand"}
+                {mySeat!.folded && " · folded"}
+              </div>
+              <p className="text-mute" style={{ fontSize: 12 }}>
+                {state.status === "waiting"
+                  ? "Waiting for players to sit."
+                  : currentActor
+                  ? `Waiting on ${currentActor.username ?? `Seat ${currentActor.seatNo + 1}`}.`
+                  : state.status === "showdown" ? "Showdown — see results." : "Hand resolving..."}
+              </p>
+              <button
+                className="btn btn-ghost btn-block btn-sm"
+                onClick={leave}
+                disabled={busy || mySeat!.inHand}
+              >
+                Cash Out · {mySeat!.stack.toLocaleString()} ¢
+              </button>
+              {error && <p style={{ color: "var(--crimson-500)", fontSize: 12 }}>{error}</p>}
+            </div>
+          )}
+        </div>
+
+        {/* Action log */}
+        <div className="panel" style={{ padding: "var(--sp-4)" }}>
+          <div className="panel-title" style={{ fontSize: "var(--fs-h4)" }}>Action</div>
+          {actionLog.length === 0 ? (
+            <p className="text-mute" style={{ fontSize: 12 }}>No actions yet.</p>
+          ) : (
+            <div className="stack" style={{ gap: 4 }}>
+              {actionLog.map((l) => (
+                <div
+                  key={l.id}
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 12,
+                    padding: "4px 8px",
+                    background: tonyBg(l.tone),
+                    color: tonyFg(l.tone),
+                    border: "2px solid var(--ink-900)",
+                  }}
+                >
+                  {l.text}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function seatLabel(seats: Seat[], no: number) {
-  const s = seats.find((x) => x.seatNo === no);
-  return s?.username ?? `Seat ${no + 1}`;
+function layoutSeats(seats: Seat[], mySeatNo: number | null, max: number) {
+  // We always render 6 visible cells (top: 3, bottom: 3). If I'm seated, my seat goes bottom-center.
+  // Other seats cycle clockwise from there. If I'm not seated, seat 0 goes top-left in numeric order.
+  const order: number[] = [];
+  if (mySeatNo != null) {
+    order.push(mySeatNo); // bottom-mid
+    for (let i = 1; i < max; i++) order.push((mySeatNo + i) % max);
+  } else {
+    for (let i = 0; i < max; i++) order.push(i);
+  }
+  // Display order maps to: bottom-mid, bottom-right, top-right, top-mid, top-left, bottom-left
+  const slotOrder = ["bottomMid", "bottomRight", "topRight", "topMid", "topLeft", "bottomLeft"] as const;
+  const result: Record<typeof slotOrder[number], Seat | undefined> = {
+    bottomMid: undefined, bottomRight: undefined, topRight: undefined,
+    topMid: undefined, topLeft: undefined, bottomLeft: undefined,
+  };
+  for (let i = 0; i < Math.min(slotOrder.length, order.length); i++) {
+    const seatNo = order[i];
+    result[slotOrder[i]] = seats.find((s) => s.seatNo === seatNo);
+  }
+  return result;
 }
 
 function SeatBox({
   seat,
   state,
   me,
-  pos,
+  cell,
+  mine,
 }: {
   seat: Seat | undefined;
   state: State;
   me: string | null;
-  pos: { gridColumn: number; gridRow: number };
+  cell: { row: number; col: number };
+  mine?: boolean;
 }) {
   const containerStyle: React.CSSProperties = {
-    gridColumn: pos.gridColumn,
-    gridRow: pos.gridRow,
-    minHeight: 110,
+    gridRow: cell.row,
+    gridColumn: cell.col,
+    minHeight: 96,
   };
-
   if (!seat || !seat.userId) {
     return (
       <div
@@ -395,22 +532,21 @@ function SeatBox({
           padding: "var(--sp-3)",
           color: "var(--saddle-300)",
           fontFamily: "var(--font-display)",
-          fontSize: 13,
+          fontSize: 12,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          opacity: 0.6,
+          opacity: 0.5,
         }}
       >
-        Empty Seat
+        empty
       </div>
     );
   }
-  const isMe = seat.userId === me;
-  const isCurrent = state.currentSeat === seat.seatNo;
+  const isMe = seat.userId === me || mine;
+  const isCurrent = state.currentSeat === seat.seatNo && (state.status === "preflop" || state.status === "flop" || state.status === "turn" || state.status === "river");
   const isDealer = state.dealerSeat === seat.seatNo;
   const isFolded = seat.folded;
-  const isAllIn = seat.isAllIn;
   return (
     <div
       style={{
@@ -418,90 +554,180 @@ function SeatBox({
         background: isMe ? "var(--gold-100)" : "var(--parchment-100)",
         border: isCurrent ? "4px solid var(--gold-300)" : "3px solid var(--ink-900)",
         boxShadow: isCurrent ? "var(--glow-gold)" : "var(--bevel-light)",
-        padding: "var(--sp-3)",
-        opacity: isFolded ? 0.55 : 1,
+        padding: 8,
+        opacity: isFolded ? 0.45 : 1,
         position: "relative",
+        animation: isCurrent ? "seatPulse 1.4s ease-in-out infinite" : undefined,
       }}
     >
-      <div className="between">
-        <div className="row" style={{ gap: 6 }}>
-          <div
-            className="avatar avatar-sm"
-            style={{ background: seat.avatarColor ?? "var(--gold-300)", fontSize: 11, width: 28, height: 28, borderWidth: 2 }}
-          >
-            {seat.initials ?? "??"}
-          </div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 13, lineHeight: 1.1 }}>
-            <div>{seat.username ?? "Player"}{isMe && <span className="tag-new" style={{ marginLeft: 4 }}>YOU</span>}</div>
-            <div style={{ color: "var(--saddle-400)", fontSize: 11 }}>{seat.stack.toLocaleString()} ¢</div>
-          </div>
+      <style>{`@keyframes seatPulse {
+        0%, 100% { box-shadow: var(--glow-gold); }
+        50%      { box-shadow: 0 0 0 3px var(--gold-300), 0 0 24px rgba(255,216,77,0.85); }
+      }`}</style>
+
+      {isDealer && (
+        <span
+          style={{
+            position: "absolute",
+            top: -8,
+            right: -8,
+            background: "var(--ink-900)",
+            color: "var(--gold-300)",
+            border: "2px solid var(--ink-900)",
+            width: 24,
+            height: 24,
+            borderRadius: 999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: "var(--font-display)",
+            fontSize: 12,
+            zIndex: 2,
+          }}
+        >
+          D
+        </span>
+      )}
+      {isCurrent && (
+        <span
+          style={{
+            position: "absolute",
+            top: -10,
+            left: 6,
+            background: "var(--gold-300)",
+            color: "var(--ink-900)",
+            border: "2px solid var(--ink-900)",
+            padding: "1px 6px",
+            fontFamily: "var(--font-display)",
+            fontSize: 10,
+            letterSpacing: "var(--ls-loose)",
+          }}
+        >
+          TO ACT
+        </span>
+      )}
+
+      <div className="row" style={{ gap: 6 }}>
+        <div
+          className="avatar avatar-sm"
+          style={{ background: seat.avatarColor ?? "var(--gold-300)", fontSize: 10, width: 26, height: 26, borderWidth: 2 }}
+        >
+          {seat.initials ?? "??"}
         </div>
-        {isDealer && (
-          <span
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 11,
-              background: "var(--ink-900)",
-              color: "var(--gold-300)",
-              padding: "2px 6px",
-              border: "2px solid var(--ink-900)",
-            }}
-          >
-            D
-          </span>
-        )}
+        <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-display)", lineHeight: 1.1 }}>
+          <div style={{ fontSize: 12 }}>
+            {seat.username ?? "Player"}
+            {isMe && <span className="tag-new" style={{ marginLeft: 4 }}>YOU</span>}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--saddle-400)" }}>{seat.stack.toLocaleString()} ¢</div>
+        </div>
       </div>
-      <div className="row" style={{ gap: 4, marginTop: 6 }}>
+
+      <div className="row" style={{ gap: 3, marginTop: 6 }}>
         {seat.holeCards.length > 0 ? (
           seat.holeCards.map((c, i) => (
             <PlayingCard key={i} rank={c.rank as Rank} suit={c.suit as Suit} size="sm" />
           ))
-        ) : seat.holeCount > 0 ? (
+        ) : seat.holeCount > 0 && !isFolded ? (
           <>
             <PlayingCard faceDown size="sm" />
             <PlayingCard faceDown size="sm" />
           </>
         ) : null}
+
+        {seat.committedThisRound > 0 && (
+          <div
+            style={{
+              marginLeft: "auto",
+              background: "var(--saddle-600)",
+              color: "var(--gold-300)",
+              border: "2px solid var(--ink-900)",
+              padding: "2px 6px",
+              fontFamily: "var(--font-display)",
+              fontSize: 12,
+              alignSelf: "flex-end",
+            }}
+          >
+            {seat.committedThisRound.toLocaleString()}
+          </div>
+        )}
       </div>
-      {seat.committedThisRound > 0 && (
+
+      {(seat.lastAction && seat.lastAction !== "" && seat.lastAction !== "blind") || isFolded || seat.isAllIn ? (
         <div
           style={{
-            position: "absolute",
-            top: 4,
-            right: 4,
-            background: "var(--gold-300)",
-            color: "var(--ink-900)",
+            marginTop: 6,
+            display: "inline-block",
+            background: actionTagBg(isFolded ? "fold" : seat.isAllIn ? "all_in" : seat.lastAction!),
+            color: actionTagFg(isFolded ? "fold" : seat.isAllIn ? "all_in" : seat.lastAction!),
             border: "2px solid var(--ink-900)",
             padding: "2px 6px",
             fontFamily: "var(--font-display)",
             fontSize: 11,
+            letterSpacing: "var(--ls-loose)",
+            textTransform: "uppercase",
           }}
         >
-          {seat.committedThisRound.toLocaleString()}
+          {isFolded ? "FOLD" : seat.isAllIn ? "ALL-IN" : actionLabel(seat.lastAction!)}
         </div>
-      )}
-      {seat.lastAction && seat.lastAction !== "" && (
-        <div style={{ marginTop: 4, fontFamily: "var(--font-display)", fontSize: 11, color: actionColor(seat.lastAction) }}>
-          {actionLabel(seat.lastAction)}
-        </div>
-      )}
-      {isAllIn && (
-        <div className="badge badge-crimson" style={{ marginTop: 4 }}>ALL-IN</div>
-      )}
+      ) : null}
     </div>
   );
 }
 
-function actionColor(a: string) {
-  if (a === "fold") return "var(--crimson-500)";
-  if (a === "all_in") return "var(--gold-500)";
-  if (a === "raise") return "var(--crimson-500)";
-  return "var(--saddle-500)";
+function actionLogText(seat: Seat, action: string): string {
+  const name = seat.username ?? `Seat ${seat.seatNo + 1}`;
+  switch (action) {
+    case "fold":   return `${name} folded`;
+    case "check":  return `${name} checked`;
+    case "call":   return `${name} called ${seat.committedThisRound.toLocaleString()}`;
+    case "raise":  return `${name} raised to ${seat.committedThisRound.toLocaleString()}`;
+    case "all_in": return `${name} went all-in (${seat.committedTotal.toLocaleString()})`;
+    default:       return `${name} ${action}`;
+  }
+}
+function actionTone(action: string): string {
+  switch (action) {
+    case "fold":   return "fold";
+    case "raise":  return "raise";
+    case "all_in": return "all_in";
+    case "call":   return "call";
+    case "check":  return "check";
+    default:       return "neutral";
+  }
+}
+function tonyBg(tone: string): string {
+  switch (tone) {
+    case "fold":   return "var(--crimson-300)";
+    case "raise":  return "var(--crimson-500)";
+    case "all_in": return "var(--gold-500)";
+    case "call":   return "var(--cactus-300)";
+    case "check":  return "var(--saddle-200)";
+    case "win":    return "var(--gold-300)";
+    default:       return "var(--parchment-200)";
+  }
+}
+function tonyFg(tone: string): string {
+  switch (tone) {
+    case "raise":  return "var(--parchment-50)";
+    case "all_in": return "var(--ink-900)";
+    case "win":    return "var(--ink-900)";
+    case "fold":   return "var(--parchment-50)";
+    case "call":   return "var(--parchment-50)";
+    case "check":  return "var(--ink-900)";
+    default:       return "var(--ink-900)";
+  }
 }
 function actionLabel(a: string) {
   return ({
-    fold: "Folded", check: "Checked", call: "Called", raise: "Raised", all_in: "All-in", blind: "Posted blind",
+    fold: "Fold", check: "Check", call: "Call", raise: "Raise", all_in: "All-in", blind: "Blind",
   } as Record<string, string>)[a] ?? a;
+}
+function actionTagBg(a: string) {
+  return tonyBg(actionTone(a));
+}
+function actionTagFg(a: string) {
+  return tonyFg(actionTone(a));
 }
 
 function labelFor(code: string) {
