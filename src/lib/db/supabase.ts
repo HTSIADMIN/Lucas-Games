@@ -14,6 +14,8 @@ import {
   EarnCooldown,
   GameSession,
   MinesGame,
+  MonopolyOwned,
+  MonopolyState,
   PinAttempts,
   PlinkoDrop,
   User,
@@ -442,6 +444,52 @@ export async function listOpenCrashBets(roundId: string): Promise<CrashBet[]> {
     .is("cashout_at_x", null);
   if (error) throw new Error(`listOpenCrashBets: ${error.message}`);
   return (data ?? []) as CrashBet[];
+}
+
+// ============ MONOPOLY ============
+export async function getMonopolyState(userId: string): Promise<MonopolyState | null> {
+  const { data, error } = await client().from("monopoly_states").select("*").eq("user_id", userId).maybeSingle();
+  if (error) throw new Error(`getMonopolyState: ${error.message}`);
+  return (data as MonopolyState | null) ?? null;
+}
+export async function upsertMonopolyState(state: MonopolyState): Promise<MonopolyState> {
+  const { data, error } = await client()
+    .from("monopoly_states")
+    .upsert({
+      user_id: state.user_id,
+      position: state.position,
+      next_roll_at: state.next_roll_at,
+      total_rolls: state.total_rolls,
+      total_earned: state.total_earned,
+    }, { onConflict: "user_id" })
+    .select("*")
+    .single();
+  if (error) throw new Error(`upsertMonopolyState: ${error.message}`);
+  return data as MonopolyState;
+}
+export async function listMonopolyOwned(userId: string): Promise<MonopolyOwned[]> {
+  const { data, error } = await client().from("monopoly_owned").select("*").eq("user_id", userId);
+  if (error) throw new Error(`listMonopolyOwned: ${error.message}`);
+  return (data ?? []) as MonopolyOwned[];
+}
+export async function getMonopolyOwned(userId: string, propertyId: string): Promise<MonopolyOwned | null> {
+  const { data, error } = await client().from("monopoly_owned").select("*").eq("user_id", userId).eq("property_id", propertyId).maybeSingle();
+  if (error) throw new Error(`getMonopolyOwned: ${error.message}`);
+  return (data as MonopolyOwned | null) ?? null;
+}
+export async function upsertMonopolyOwned(row: MonopolyOwned): Promise<MonopolyOwned> {
+  const { data, error } = await client()
+    .from("monopoly_owned")
+    .upsert({
+      user_id: row.user_id,
+      property_id: row.property_id,
+      level: row.level,
+      card_count: row.card_count,
+    }, { onConflict: "user_id,property_id" })
+    .select("*")
+    .single();
+  if (error) throw new Error(`upsertMonopolyOwned: ${error.message}`);
+  return data as MonopolyOwned;
 }
 
 // ============ COIN FLIP DUELS ============

@@ -85,4 +85,10 @@ export const getCoinflipDuel         = impl.getCoinflipDuel;
 export const insertCoinflipDuel      = impl.insertCoinflipDuel;
 export const updateCoinflipDuel      = impl.updateCoinflipDuel;
 
+export const getMonopolyState        = impl.getMonopolyState;
+export const upsertMonopolyState     = impl.upsertMonopolyState;
+export const listMonopolyOwned       = impl.listMonopolyOwned;
+export const getMonopolyOwned        = impl.getMonopolyOwned;
+export const upsertMonopolyOwned     = impl.upsertMonopolyOwned;
+
 export * from "./types";

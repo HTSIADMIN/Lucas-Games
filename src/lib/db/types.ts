@@ -167,6 +167,22 @@ export type MinesGame = {
   ended_at: string | null;
 };
 
+export type MonopolyState = {
+  user_id: string;
+  position: number;
+  next_roll_at: string | null;
+  total_rolls: number;
+  total_earned: number;
+  created_at: string;
+};
+
+export type MonopolyOwned = {
+  user_id: string;
+  property_id: string;
+  level: number;
+  card_count: number;
+};
+
 export type CoinflipDuel = {
   id: string;
   challenger_id: string;

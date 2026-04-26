@@ -15,6 +15,8 @@ import {
   EarnCooldown,
   GameSession,
   MinesGame,
+  MonopolyOwned,
+  MonopolyState,
   PinAttempts,
   PlayerInventoryRow,
   PlinkoDrop,
@@ -40,6 +42,8 @@ type Schema = {
   blackjack_rounds: BlackjackRound[];
   blackjack_seats: BlackjackSeat[];
   coinflip_duels: CoinflipDuel[];
+  monopoly_states: MonopolyState[];
+  monopoly_owned: MonopolyOwned[];
   _walletSeq: number;
   _crashBetSeq: number;
   _chatSeq: number;
@@ -54,6 +58,7 @@ const EMPTY: Schema = {
   game_sessions: [], earn_cooldowns: [], crash_rounds: [], crash_bets: [],
   plinko_drops: [], mines_games: [], player_inventory: [], chat_messages: [],
   blackjack_rounds: [], blackjack_seats: [], coinflip_duels: [],
+  monopoly_states: [], monopoly_owned: [],
   _walletSeq: 0, _crashBetSeq: 0, _chatSeq: 0, _bjSeatSeq: 0,
 };
 
@@ -331,6 +336,31 @@ export async function updateCrashBet(
 
 export async function listOpenCrashBets(roundId: string): Promise<CrashBet[]> {
   return db().crash_bets.filter((b) => b.round_id === roundId && b.cashout_at_x === null);
+}
+
+// ============ MONOPOLY ============
+export async function getMonopolyState(userId: string): Promise<MonopolyState | null> {
+  return db().monopoly_states.find((s) => s.user_id === userId) ?? null;
+}
+export async function upsertMonopolyState(state: MonopolyState): Promise<MonopolyState> {
+  const idx = db().monopoly_states.findIndex((s) => s.user_id === state.user_id);
+  if (idx >= 0) db().monopoly_states[idx] = state;
+  else db().monopoly_states.push(state);
+  commit();
+  return state;
+}
+export async function listMonopolyOwned(userId: string): Promise<MonopolyOwned[]> {
+  return db().monopoly_owned.filter((o) => o.user_id === userId);
+}
+export async function getMonopolyOwned(userId: string, propertyId: string): Promise<MonopolyOwned | null> {
+  return db().monopoly_owned.find((o) => o.user_id === userId && o.property_id === propertyId) ?? null;
+}
+export async function upsertMonopolyOwned(row: MonopolyOwned): Promise<MonopolyOwned> {
+  const idx = db().monopoly_owned.findIndex((o) => o.user_id === row.user_id && o.property_id === row.property_id);
+  if (idx >= 0) db().monopoly_owned[idx] = row;
+  else db().monopoly_owned.push(row);
+  commit();
+  return row;
 }
 
 // ============ COIN FLIP DUELS ============
