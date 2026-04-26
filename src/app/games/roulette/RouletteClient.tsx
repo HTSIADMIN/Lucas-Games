@@ -338,7 +338,8 @@ function ReelStrip({
         boxShadow: "inset 0 0 18px rgba(0, 0, 0, 0.8)",
       }}
     >
-      {/* Center pointer (top + bottom triangles + vertical line) */}
+      {/* Center pointer — bright vertical bar with arrows. Sits on top of
+          everything via z-index so it never disappears behind a tile. */}
       <div
         aria-hidden
         style={{
@@ -346,52 +347,50 @@ function ReelStrip({
           left: "50%",
           top: 0,
           bottom: 0,
-          width: 0,
+          width: 4,
           transform: "translateX(-50%)",
-          zIndex: 5,
+          background: "var(--gold-300)",
+          boxShadow: "0 0 8px var(--gold-300), 0 0 16px var(--gold-300)",
+          zIndex: 7,
           pointerEvents: "none",
         }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            left: -1,
-            top: 4,
-            bottom: 4,
-            width: 3,
-            background: "var(--gold-300)",
-            boxShadow: "0 0 12px var(--gold-300)",
-          }}
-        />
-        {/* Top arrow */}
-        <div
-          style={{
-            position: "absolute",
-            top: -2,
-            left: -8,
-            width: 0,
-            height: 0,
-            borderLeft: "8px solid transparent",
-            borderRight: "8px solid transparent",
-            borderTop: "10px solid var(--gold-300)",
-            filter: "drop-shadow(0 0 6px var(--gold-300))",
-          }}
-        />
-        {/* Bottom arrow */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: -2,
-            left: -8,
-            width: 0,
-            height: 0,
-            borderLeft: "8px solid transparent",
-            borderRight: "8px solid transparent",
-            borderBottom: "10px solid var(--gold-300)",
-            filter: "drop-shadow(0 0 6px var(--gold-300))",
-          }}
-        />
-      </div>
+      />
+      {/* Top arrow */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          top: -1,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 0,
+          height: 0,
+          borderLeft: "10px solid transparent",
+          borderRight: "10px solid transparent",
+          borderTop: "12px solid var(--gold-300)",
+          filter: "drop-shadow(0 0 4px var(--gold-300))",
+          zIndex: 8,
+          pointerEvents: "none",
+        }}
+      />
+      {/* Bottom arrow */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          bottom: -1,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 0,
+          height: 0,
+          borderLeft: "10px solid transparent",
+          borderRight: "10px solid transparent",
+          borderBottom: "12px solid var(--gold-300)",
+          filter: "drop-shadow(0 0 4px var(--gold-300))",
+          zIndex: 8,
+          pointerEvents: "none",
+        }}
+      />
 
       {/* Edge fades — soft mask on either end so tiles fade in/out smoothly */}
       <div
@@ -440,28 +439,6 @@ function ReelStrip({
         ))}
       </div>
 
-      {/* Idle hint when nothing has happened yet */}
-      {!spinning && !result && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            pointerEvents: "none",
-            fontFamily: "var(--font-display)",
-            color: "var(--parchment-200)",
-            fontSize: 14,
-            letterSpacing: "var(--ls-loose)",
-            textTransform: "uppercase",
-            textShadow: "2px 2px 0 var(--ink-900)",
-            zIndex: 6,
-          }}
-        >
-          Place bets &amp; spin
-        </div>
-      )}
     </div>
   );
 }
