@@ -470,10 +470,11 @@ function DealCard({
     <span
       style={{
         display: "inline-block",
+        transformOrigin: "center center",
         animation: justRevealed
-          ? "bj-flip 0.55s var(--ease-snap) backwards"
-          : `bj-deal 0.45s var(--ease-snap) backwards`,
-        animationDelay: justRevealed ? "0s" : `${index * 0.12}s`,
+          ? "bj-flip 0.85s cubic-bezier(0.2, 0.9, 0.3, 1) backwards"
+          : `bj-deal 0.85s cubic-bezier(0.18, 0.85, 0.3, 1) backwards`,
+        animationDelay: justRevealed ? "0s" : `${0.18 + index * 0.32}s`,
       }}
     >
       <PlayingCard rank={rank} suit={suit} faceDown={faceDown} />
@@ -548,7 +549,8 @@ function ResultStamp({
         textTransform: "uppercase",
         boxShadow: big ? "var(--glow-gold), 8px 8px 0 var(--ink-900)" : "8px 8px 0 var(--ink-900)",
         textShadow: status === "player_blackjack" ? "2px 2px 0 var(--gold-100)" : "3px 3px 0 var(--ink-900)",
-        animation: "bj-stamp 0.6s var(--ease-snap) backwards",
+        animation: "bj-stamp 0.7s var(--ease-snap) backwards",
+        animationDelay: "1.2s",
         zIndex: 10,
         pointerEvents: "none",
         textAlign: "center",
@@ -574,13 +576,14 @@ function ResultStamp({
 // Confetti — gold coins falling from the top after a win.
 // ============================================================
 function Confetti() {
-  const pieces = Array.from({ length: 28 }, (_, i) => ({
+  // Delay the burst until just after the result stamp has slammed in.
+  const pieces = Array.from({ length: 32 }, (_, i) => ({
     id: i,
     left: Math.random() * 100,
-    delay: Math.random() * 0.4,
-    duration: 1.4 + Math.random() * 0.8,
+    delay: 1.4 + Math.random() * 0.5,
+    duration: 1.6 + Math.random() * 0.9,
     rotate: Math.random() * 360,
-    size: 12 + Math.random() * 10,
+    size: 12 + Math.random() * 12,
     color: i % 3 === 0 ? "#f5c842" : i % 3 === 1 ? "#ffd84d" : "#c8941d",
   }));
   return (
@@ -654,33 +657,54 @@ function ActionButton({
 // Keyframes (scoped via a <style> tag inside the component tree).
 // ============================================================
 const BLACKJACK_KEYFRAMES = `
+/* Card flies in from the deck position (top-right of the felt), tumbles
+   through a tilt, and slams flat onto the table with a small overshoot
+   bounce. perspective + rotateX gives the "card landing flat" feel. */
 @keyframes bj-deal {
-  0% { transform: translate(140px, -180px) rotate(35deg); opacity: 0; }
-  100% { transform: translate(0, 0) rotate(0); opacity: 1; }
+  0% {
+    transform: translate(320px, -360px) rotate(55deg) perspective(900px) rotateX(-65deg) scale(0.55);
+    opacity: 0;
+    filter: blur(3px);
+  }
+  20% { opacity: 1; filter: blur(0); }
+  70% {
+    transform: translate(-12px, 6px) rotate(-4deg) perspective(900px) rotateX(8deg) scale(1.08);
+    box-shadow: 0 18px 24px rgba(0, 0, 0, 0.45);
+  }
+  88% {
+    transform: translate(2px, -2px) rotate(2deg) perspective(900px) rotateX(-3deg) scale(0.97);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0) perspective(900px) rotateX(0) scale(1);
+    opacity: 1;
+  }
 }
+/* Hole-card flip — Y-axis rotation with a slight upward lift so the card
+   visibly leaves the felt for the flip and resettles. */
 @keyframes bj-flip {
-  0%   { transform: perspective(900px) rotateY(180deg) scale(1.05); }
-  60%  { transform: perspective(900px) rotateY(20deg)  scale(1.05); }
-  100% { transform: perspective(900px) rotateY(0deg)   scale(1); }
+  0%   { transform: perspective(900px) rotateY(180deg) translateY(-32px) scale(1.06); }
+  40%  { transform: perspective(900px) rotateY(95deg)  translateY(-16px) scale(1.10); }
+  72%  { transform: perspective(900px) rotateY(15deg)  translateY(-2px)  scale(1.05); }
+  100% { transform: perspective(900px) rotateY(0deg)   translateY(0)     scale(1); }
 }
 @keyframes bj-pulse {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.18); }
+  50% { transform: scale(1.22); }
 }
 @keyframes bj-shake {
   0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-8px); }
-  40%, 80% { transform: translateX(8px); }
+  18%, 62% { transform: translateX(-10px); }
+  38%, 82% { transform: translateX(10px); }
 }
 @keyframes bj-stamp {
-  0%   { transform: translate(-50%, -50%) rotate(-30deg) scale(2.6); opacity: 0; }
-  60%  { transform: translate(-50%, -50%) rotate(-8deg)  scale(0.92); opacity: 1; }
-  80%  { transform: translate(-50%, -50%) rotate(-15deg) scale(1.08); }
+  0%   { transform: translate(-50%, -50%) rotate(-30deg) scale(3); opacity: 0; }
+  55%  { transform: translate(-50%, -50%) rotate(-8deg)  scale(0.88); opacity: 1; }
+  80%  { transform: translate(-50%, -50%) rotate(-16deg) scale(1.1); }
   100% { transform: translate(-50%, -50%) rotate(-12deg) scale(1); opacity: 1; }
 }
 @keyframes bj-coin-fall {
   0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(440px) rotate(720deg); opacity: 0; }
+  100% { transform: translateY(520px) rotate(720deg); opacity: 0; }
 }
 `;
 
