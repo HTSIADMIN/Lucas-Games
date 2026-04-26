@@ -24,8 +24,9 @@ const WHEEL_ORDER = [
 
 const HISTORY_LEN = 12;
 const SPIN_MS = 5500;       // CSGO-style openings feel right around 5–6s
-const REEL_TILE_W = 88;     // px — each slot tile width
-const REEL_GAP = 6;
+const REEL_TILE_W = 56;     // px — each slot tile width
+const REEL_TILE_H = 70;
+const REEL_GAP = 4;
 const REEL_STEP = REEL_TILE_W + REEL_GAP;
 // How many tiles fly past before stopping (in addition to the index of the
 // winning tile from the strip start). More = longer scroll.
@@ -171,10 +172,10 @@ export function RouletteClient() {
   const canSpin = !busy && stake > 0 && (balance == null || balance >= stake);
 
   return (
-    <div className="grid grid-2" style={{ alignItems: "start", gap: "var(--sp-5)" }}>
+    <div className="grid grid-2" style={{ alignItems: "start", gap: "var(--sp-4)" }}>
       <div className="stack-lg">
         {/* Wheel */}
-        <div className="panel" style={{ padding: "var(--sp-5)" }}>
+        <div className="panel" style={{ padding: "var(--sp-4)" }}>
           <div className="panel-title">The Wheel</div>
 
           <HistoryStrip
@@ -213,7 +214,7 @@ export function RouletteClient() {
         </div>
 
         {/* Felt betting table */}
-        <div className="panel" style={{ padding: "var(--sp-4)", background: "#1f3818", borderColor: "var(--ink-900)" }}>
+        <div className="panel" style={{ padding: "var(--sp-3)", background: "#1f3818", borderColor: "var(--ink-900)" }}>
           <FeltTable
             onPick={addBet}
             onRemove={removeBet}
@@ -331,10 +332,10 @@ function ReelStrip({
       style={{
         position: "relative",
         background: "linear-gradient(180deg, #2a1810, #1a0f08)",
-        border: "4px solid var(--ink-900)",
-        padding: "var(--sp-3)",
+        border: "3px solid var(--ink-900)",
+        padding: "var(--sp-2)",
         overflow: "hidden",
-        boxShadow: "inset 0 0 24px rgba(0, 0, 0, 0.8)",
+        boxShadow: "inset 0 0 18px rgba(0, 0, 0, 0.8)",
       }}
     >
       {/* Center pointer (top + bottom triangles + vertical line) */}
@@ -473,17 +474,17 @@ function ReelTile({ n, highlight }: { n: number; highlight: boolean }) {
       style={{
         flexShrink: 0,
         width: REEL_TILE_W,
-        height: 110,
+        height: REEL_TILE_H,
         background: bg,
-        border: highlight ? "4px solid var(--gold-300)" : "3px solid var(--ink-900)",
+        border: highlight ? "3px solid var(--gold-300)" : "2px solid var(--ink-900)",
         boxShadow: highlight
           ? "var(--glow-gold), inset 0 0 0 1px rgba(255,255,255,0.2)"
-          : "inset 0 -3px 0 rgba(0,0,0,0.4), inset 0 3px 0 rgba(255,255,255,0.18)",
+          : "inset 0 -2px 0 rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.18)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontFamily: "var(--font-display)",
-        fontSize: 38,
+        fontSize: 22,
         color: "#fef6e4",
         letterSpacing: "var(--ls-tight)",
         textShadow: "2px 2px 0 rgba(0, 0, 0, 0.7)",
@@ -572,9 +573,9 @@ function HistoryStrip({
           title={`${h.n} (${h.color})`}
           style={{
             fontFamily: "var(--font-display)",
-            fontSize: 13,
-            width: 28,
-            height: 28,
+            fontSize: 11,
+            width: 22,
+            height: 22,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -628,10 +629,10 @@ function FeltTable({
     background: bg,
     color: "#fef6e4",
     fontFamily: "var(--font-display)",
-    fontSize: 16,
+    fontSize: 13,
     border: "2px solid var(--ink-900)",
     cursor: disabled ? "not-allowed" : "pointer",
-    height: 48,
+    height: 34,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -659,8 +660,8 @@ function FeltTable({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "56px repeat(12, 1fr) 56px",
-          gap: 3,
+          gridTemplateColumns: "40px repeat(12, 1fr) 40px",
+          gap: 2,
         }}
       >
         {/* Zero — spans all 3 rows */}
@@ -672,9 +673,9 @@ function FeltTable({
           style={{
             ...cellStyle("#3d6b2e"),
             gridRow: "1 / span 3",
-            height: 48 * 3 + 6,
-            fontSize: 28,
-            border: highlight === 0 ? "4px solid var(--gold-300)" : "3px solid var(--ink-900)",
+            height: 34 * 3 + 4,
+            fontSize: 20,
+            border: highlight === 0 ? "3px solid var(--gold-300)" : "2px solid var(--ink-900)",
           }}
         >
           0
@@ -709,7 +710,7 @@ function FeltTable({
               ...cellStyle("#4a2818"),
               gridColumn: 14,
               gridRow: i + 1,
-              fontSize: 12,
+              fontSize: 10,
               letterSpacing: "var(--ls-loose)",
               textTransform: "uppercase",
             }}
@@ -724,9 +725,9 @@ function FeltTable({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "56px repeat(3, 1fr) 56px",
-          gap: 3,
-          marginTop: 3,
+          gridTemplateColumns: "40px repeat(3, 1fr) 40px",
+          gap: 2,
+          marginTop: 2,
         }}
       >
         <span />
@@ -739,7 +740,7 @@ function FeltTable({
             onMouseLeave={clearPreview}
             style={{
               ...cellStyle("#4a2818"),
-              fontSize: 14,
+              fontSize: 11,
               letterSpacing: "var(--ls-loose)",
               textTransform: "uppercase",
             }}
@@ -755,9 +756,9 @@ function FeltTable({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "56px repeat(6, 1fr) 56px",
-          gap: 3,
-          marginTop: 3,
+          gridTemplateColumns: "40px repeat(6, 1fr) 40px",
+          gap: 2,
+          marginTop: 2,
         }}
       >
         <span />
@@ -771,7 +772,7 @@ function FeltTable({
             style={{
               ...cellStyle(b.bg),
               color: b.fg,
-              fontSize: 14,
+              fontSize: 11,
               letterSpacing: "var(--ls-loose)",
               textTransform: "uppercase",
             }}
@@ -866,17 +867,17 @@ function ChipSwatch({
       onClick={onClick}
       style={{
         position: "relative",
-        width: 56,
-        height: 56,
+        width: 42,
+        height: 42,
         borderRadius: 999,
         background: c.bg,
         color: c.fg,
-        border: `4px solid ${c.ring}`,
+        border: `3px solid ${c.ring}`,
         boxShadow: active
-          ? `inset 0 0 0 2px var(--gold-300), 0 0 0 3px var(--gold-300), var(--glow-gold)`
-          : "inset 0 -3px 0 rgba(0,0,0,0.25), inset 0 3px 0 rgba(255,255,255,0.25), 0 4px 0 rgba(0,0,0,0.4)",
+          ? `inset 0 0 0 2px var(--gold-300), 0 0 0 2px var(--gold-300), var(--glow-gold)`
+          : "inset 0 -2px 0 rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.25), 0 3px 0 rgba(0,0,0,0.4)",
         fontFamily: "var(--font-display)",
-        fontSize: 13,
+        fontSize: 11,
         fontWeight: "bold",
         cursor: "pointer",
         transform: active ? "translateY(-3px)" : "none",
@@ -910,17 +911,18 @@ function ChipStack({ amount, chip }: { amount: number; chip: number }) {
     >
       <span
         style={{
-          minWidth: 28,
-          padding: "1px 4px",
+          minWidth: 22,
+          padding: "0 3px",
           background: c.bg,
           color: c.fg,
           border: `2px solid ${c.ring}`,
           borderRadius: 999,
           fontFamily: "var(--font-display)",
-          fontSize: 11,
+          fontSize: 9,
           textShadow: "none",
           boxShadow: "inset 0 -2px 0 rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.3)",
           textAlign: "center",
+          lineHeight: 1.2,
         }}
       >
         {fmtChip(amount)}
