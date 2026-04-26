@@ -265,7 +265,7 @@ export function CrashClient() {
                 textTransform: "uppercase",
               }}
             >
-              💥 Crashed
+              ✕ CRASHED
             </div>
           )}
           <div style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "var(--parchment-200)" }}>

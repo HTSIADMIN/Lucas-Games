@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
+import { GameIcon } from "@/components/GameIcon";
 
 type Status = "idle" | "active" | "busted" | "cashed";
 
@@ -180,7 +181,11 @@ export function MinesClient() {
                   transform: isRevealedMine ? "scale(1.05)" : "scale(1)",
                 }}
               >
-                {isRevealedMine || isHiddenMine ? "💣" : isRevealedSafe ? "★" : ""}
+                {isRevealedMine || isHiddenMine ? (
+                  <GameIcon name="mines.bomb" size={36} />
+                ) : isRevealedSafe ? (
+                  <GameIcon name="mines.gem" size={32} />
+                ) : null}
               </button>
             );
           })}
@@ -198,7 +203,7 @@ export function MinesClient() {
           >
             {game.status === "cashed"
               ? `Cashed out · ×${game.multiplier} · +${game.payout.toLocaleString()} ¢`
-              : "Boom! 💣"}
+              : "Boom!"}
           </div>
         )}
 

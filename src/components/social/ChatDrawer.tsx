@@ -95,14 +95,15 @@ export function ChatDrawer({ currentUserId }: { currentUserId: string | null }) 
               : unread > 0
               ? "var(--sh-card-rest), var(--glow-gold)"
               : "var(--sh-card-rest)",
-            fontFamily: "var(--font-display)",
-            fontSize: 24,
             color: "var(--ink-900)",
             cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             animation: !open && unread > 0 ? "chatPulse 1.4s ease-in-out infinite" : undefined,
           }}
         >
-          {open ? "×" : "💬"}
+          <GameIcon name={open ? "ui.close" : "ui.chat"} size={32} />
         </button>
         {!open && unread > 0 && (
           <span

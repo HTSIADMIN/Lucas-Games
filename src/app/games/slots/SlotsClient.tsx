@@ -3,14 +3,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
+import { GameIcon, type IconName } from "@/components/GameIcon";
 import { SYMBOLS, PAYTABLE, type SlotSymbol } from "@/lib/games/slots/engine";
 
-const ICON: Record<SlotSymbol, string> = {
-  BOOT: "👢",
-  GUN: "🔫",
-  STAR: "⭐",
-  GOLD: "💰",
-  SHERIFF: "🤠",
+const ICON: Record<SlotSymbol, IconName> = {
+  BOOT: "slot.boot",
+  GUN: "slot.gun",
+  STAR: "slot.star",
+  GOLD: "slot.gold",
+  SHERIFF: "slot.sheriff",
 };
 
 const COLOR: Record<SlotSymbol, string> = {
@@ -104,11 +105,10 @@ export function SlotsClient() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 80,
                 boxShadow: "var(--bevel-light), var(--bevel-dark)",
               }}
             >
-              {ICON[sym]}
+              <GameIcon name={ICON[sym]} size={88} />
             </div>
           ))}
         </div>
@@ -166,7 +166,7 @@ export function SlotsClient() {
               {SYMBOLS.map((sym) => (
                 <tr key={sym} style={{ borderBottom: "2px dashed var(--saddle-300)" }}>
                   <td style={{ padding: "var(--sp-2)" }}>
-                    <span style={{ fontSize: 24, marginRight: 8 }}>{ICON[sym]}</span>
+                    <GameIcon name={ICON[sym]} size={28} style={{ marginRight: 8 }} />
                     {sym}
                   </td>
                   <td style={{ textAlign: "right", padding: "var(--sp-2)" }} className="text-money">
