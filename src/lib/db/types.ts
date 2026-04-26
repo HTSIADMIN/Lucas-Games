@@ -137,6 +137,8 @@ export type LeaderboardRow = {
   username: string;
   avatar_color: string;
   initials: string;
+  equipped_frame?: string | null;
+  equipped_hat?: string | null;
   balance: number;
   rank: number;
 };

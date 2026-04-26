@@ -221,7 +221,12 @@ export async function leaderboard() {
   const users = db().users.filter((u) => u.is_active);
   return users
     .map((u) => ({
-      id: u.id, username: u.username, avatar_color: u.avatar_color, initials: u.initials,
+      id: u.id,
+      username: u.username,
+      avatar_color: u.avatar_color,
+      initials: u.initials,
+      equipped_frame: u.equipped_frame ?? null,
+      equipped_hat: u.equipped_hat ?? null,
       balance: db().wallet_transactions.filter((t) => t.user_id === u.id).reduce((s, t) => s + t.delta, 0),
     }))
     .sort((a, b) => b.balance - a.balance)

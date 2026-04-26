@@ -37,7 +37,7 @@ export default async function LeaderboardPage() {
             </p>
           </div>
 
-          <LeaderboardClient rows={rows} currentUserId={user.id} />
+          <LeaderboardClient rows={rows} currentUserId={user.id} championId={championId} />
         </AppLive>
       </main>
     </>

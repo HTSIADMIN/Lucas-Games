@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { ProfileModal } from "@/components/social/ProfileModal";
-import { GameIcon } from "@/components/GameIcon";
+import { Avatar } from "@/components/Avatar";
 
 export type LeaderRow = {
   id: string;
   username: string;
   avatar_color: string;
   initials: string;
+  equipped_frame?: string | null;
+  equipped_hat?: string | null;
   balance: number;
   rank: number;
 };
@@ -16,9 +18,11 @@ export type LeaderRow = {
 export function LeaderboardClient({
   rows,
   currentUserId,
+  championId,
 }: {
   rows: LeaderRow[];
   currentUserId: string;
+  championId?: string | null;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -28,7 +32,7 @@ export function LeaderboardClient({
   return (
     <>
       {top3.length > 0 && (
-        <Podium top3={top3} currentUserId={currentUserId} onPick={setSelected} />
+        <Podium top3={top3} currentUserId={currentUserId} championId={championId ?? null} onPick={setSelected} />
       )}
 
       {rest.length > 0 && (
@@ -38,6 +42,7 @@ export function LeaderboardClient({
               key={r.id}
               row={r}
               isMe={r.id === currentUserId}
+              isChampion={r.id === championId}
               onPick={() => setSelected(r.id)}
             />
           ))}
@@ -60,10 +65,12 @@ export function LeaderboardClient({
 function Podium({
   top3,
   currentUserId,
+  championId,
   onPick,
 }: {
   top3: LeaderRow[];
   currentUserId: string;
+  championId: string | null;
   onPick: (id: string) => void;
 }) {
   // Render as 2nd / 1st / 3rd so 1st is in the middle and tallest.
@@ -122,33 +129,17 @@ function Podium({
               onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-3px)")}
               onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
             >
-              {isFirst && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: -22,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    fontSize: 28,
-                    filter: "drop-shadow(2px 2px 0 var(--ink-900))",
-                  }}
-                >
-                  <GameIcon name="ui.crown" size={36} />
-                </div>
-              )}
-              <div
-                className="avatar avatar-lg"
-                style={{
-                  background: r.avatar_color,
-                  fontSize: isFirst ? "var(--fs-h2)" : "var(--fs-h3)",
-                  width: isFirst ? 96 : 72,
-                  height: isFirst ? 96 : 72,
-                  borderWidth: 4,
-                  margin: "0 auto var(--sp-3)",
-                  boxShadow: tone.glow ?? "var(--bevel-light)",
-                }}
-              >
-                {r.initials}
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: "var(--sp-3)" }}>
+                <Avatar
+                  initials={r.initials}
+                  color={r.avatar_color}
+                  size={isFirst ? 96 : 72}
+                  fontSize={isFirst ? 36 : 28}
+                  frame={r.equipped_frame ?? null}
+                  hat={r.equipped_hat ?? null}
+                  champion={r.id === championId || isFirst}
+                  style={{ boxShadow: tone.glow }}
+                />
               </div>
               <div
                 style={{
@@ -225,10 +216,12 @@ function Podium({
 function LeaderRowView({
   row,
   isMe,
+  isChampion,
   onPick,
 }: {
   row: LeaderRow;
   isMe: boolean;
+  isChampion: boolean;
   onPick: () => void;
 }) {
   return (
@@ -251,12 +244,15 @@ function LeaderRowView({
     >
       <div className="rank">{row.rank}</div>
       <div className="player">
-        <div
-          className="avatar avatar-sm"
-          style={{ background: row.avatar_color, fontSize: 13 }}
-        >
-          {row.initials}
-        </div>
+        <Avatar
+          initials={row.initials}
+          color={row.avatar_color}
+          size={32}
+          fontSize={13}
+          frame={row.equipped_frame ?? null}
+          hat={row.equipped_hat ?? null}
+          champion={isChampion}
+        />
         <span>{row.username}</span>
         {isMe && <span className="tag-new">YOU</span>}
       </div>

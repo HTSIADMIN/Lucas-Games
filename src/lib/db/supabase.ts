@@ -254,6 +254,8 @@ export async function leaderboard() {
     username: r.username as string,
     avatar_color: r.avatar_color as string,
     initials: r.initials as string,
+    equipped_frame: (r.equipped_frame as string | null | undefined) ?? null,
+    equipped_hat: (r.equipped_hat as string | null | undefined) ?? null,
     balance: Number(r.balance ?? 0),
     rank: Number(r.rank ?? 0),
   }));
