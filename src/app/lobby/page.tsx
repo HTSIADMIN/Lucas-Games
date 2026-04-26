@@ -96,7 +96,7 @@ export default async function LobbyPage() {
               aria-disabled={!g.live || undefined}
             >
               <div className="tile-art">
-                <GameIcon name={g.icon} size={96} />
+                <GameIcon name={g.icon} size={140} />
               </div>
               <div className="tile-name">{g.name}</div>
               <div className="tile-meta">
@@ -125,7 +125,7 @@ export default async function LobbyPage() {
               }}
             >
               <div className="tile-art" style={{ background: "var(--gold-200)" }}>
-                <GameIcon name={g.icon} size={72} />
+                <GameIcon name={g.icon} size={140} />
               </div>
               <div className="tile-name">{g.name}</div>
               <div className="tile-meta">
