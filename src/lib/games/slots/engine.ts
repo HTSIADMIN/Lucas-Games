@@ -368,9 +368,13 @@ export function baseSpin(bet: number, meterIn: number): BaseSpinResult {
 // =============================================================
 
 // Cell stored on the bonus grid. Locked cells stay across respins.
+// A locked cell is either:
+//   - a coin (has a value, no building)
+//   - a building (no value, has a tier 1..5)
 export type BonusCell =
   | { value: null; locked: false }
-  | { value: number; locked: true };  // value is the cash multiplier
+  | { value: number; locked: true; building?: undefined }
+  | { value: null; locked: true; building: number };
 
 // Cell rolled during a bonus respin.
 export type BonusRoll =
@@ -409,29 +413,33 @@ export type BonusRespinResult = {
   board: BonusCell[];
   // New cells that were freshly locked this respin (board-index, value).
   newCoins: { idx: number; value: number }[];
-  // Building tier upgrades this respin (cap 5).
+  // New buildings that locked this respin (board-index, tier).
+  newBuildings: { idx: number; tier: number }[];
+  // Building tier (highest seen so far this bonus, capped at 5).
   newTier: number;
   // Bonus state flags.
   finished: boolean;
   filledScreen: boolean;
   respinsLeft: number;
+  // Count of locked cells (coins + buildings combined).
   coinsLocked: number;
 };
 
 /**
  * Run one respin on an in-progress bonus board. Locked cells stay; unlocked
- * cells get freshly rolled. New COINs lock; BUILDINGs upgrade tier; BLANKs
- * are visual filler (the cell is rolled again next respin).
+ * cells get freshly rolled. Both COINs and BUILDINGs lock their cells —
+ * buildings don't pay but they take up a cell + upgrade tier.
  */
 export function bonusRespin(input: {
   board: BonusCell[];          // length 20, row-major (5 reels × 4 rows)
   respinsLeft: number;
-  coinsLocked: number;
+  coinsLocked: number;          // really "lockedCells"; kept name for column compat
   buildingTier: number;
 }): BonusRespinResult & { tier: number } {
-  const { board: prev, respinsLeft, coinsLocked, buildingTier } = input;
+  const { board: prev, respinsLeft, buildingTier } = input;
   const board: BonusCell[] = prev.map((c) => ({ ...c }));
   const newCoins: { idx: number; value: number }[] = [];
+  const newBuildings: { idx: number; tier: number }[] = [];
   let newTier = buildingTier;
 
   for (let r = 0; r < 5; r++) {
@@ -443,28 +451,38 @@ export function bonusRespin(input: {
         board[idx] = { value: roll.cashValue, locked: true };
         newCoins.push({ idx, value: roll.cashValue });
       } else if (roll.kind === "BUILDING") {
-        // Buildings don't lock the cell — they upgrade tier.
+        // Buildings now also lock their cell so they stay visible across
+        // respins. They don't add to the coin pool but they do count
+        // toward the 20-cell fill-the-screen check, and the highest tier
+        // seen sets the bonus multiplier.
+        board[idx] = { value: null, locked: true, building: roll.tier };
+        newBuildings.push({ idx, tier: roll.tier });
         if (roll.tier > newTier) newTier = roll.tier;
       }
     }
   }
 
-  const newCoinsCount = newCoins.length;
-  const totalCoins = coinsLocked + newCoinsCount;
-  const filledScreen = totalCoins >= 20;
-  // 3-dud-respins counter: any new coin resets to 3, otherwise -1.
-  const nextRespinsLeft = newCoinsCount > 0 ? 3 : Math.max(0, respinsLeft - 1);
+  // Count of all locked cells (coins + buildings) — this is what drives
+  // the fill-screen check and the locked-cells counter shown to the user.
+  const totalLocked = board.filter((c) => c.locked).length;
+  const filledScreen = totalLocked >= 20;
+  // The "any new lock resets the counter" rule applies to BOTH new coins
+  // AND new buildings — landing a building during a respin is a real
+  // gameplay event worth resetting on.
+  const anyNewLocks = newCoins.length + newBuildings.length > 0;
+  const nextRespinsLeft = anyNewLocks ? 3 : Math.max(0, respinsLeft - 1);
   const finished = filledScreen || nextRespinsLeft === 0;
 
   return {
     board,
     newCoins,
+    newBuildings,
     newTier,
     tier: newTier,
     finished,
     filledScreen,
     respinsLeft: nextRespinsLeft,
-    coinsLocked: totalCoins,
+    coinsLocked: totalLocked,
   };
 }
 
@@ -491,22 +509,27 @@ export function settleBonus(input: {
 // =============================================================
 export function buildInitialBonusBoard(triggerGrid: ReelCell[][]): {
   board: BonusCell[];
-  coinsLocked: number;
+  coinsLocked: number;     // total locked cells (coins + buildings)
 } {
   const board: BonusCell[] = [];
-  let coinsLocked = 0;
+  let lockedCells = 0;
   for (let r = 0; r < 5; r++) {
     for (let row = 0; row < 4; row++) {
       const c = triggerGrid[r][row];
       if (c.kind === "COIN") {
         board.push({ value: c.cashValue, locked: true });
-        coinsLocked++;
+        lockedCells++;
+      } else if (c.kind === "BUILDING") {
+        // Lock the building cell into the bonus board so the player can
+        // still see what they triggered with on reel 5.
+        board.push({ value: null, locked: true, building: c.tier });
+        lockedCells++;
       } else {
         board.push({ value: null, locked: false });
       }
     }
   }
-  return { board, coinsLocked };
+  return { board, coinsLocked: lockedCells };
 }
 
 // =============================================================

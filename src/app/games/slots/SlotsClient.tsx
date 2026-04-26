@@ -36,8 +36,9 @@ type SpinResponse = {
 type RespinResponse = {
   ok: boolean;
   finished: boolean;
-  board: { value: number | null; locked: boolean }[];
+  board: { value: number | null; locked: boolean; building?: number }[];
   newCoins: { idx: number; value: number }[];
+  newBuildings: { idx: number; tier: number }[];
   respinsLeft: number;
   coinsLocked: number;
   tier: number;
@@ -89,7 +90,7 @@ export function SlotsClient() {
   const [winningCells, setWinningCells] = useState<Set<number>>(new Set());
   // Bonus state
   const [bonus, setBonus] = useState<null | {
-    board: { value: number | null; locked: boolean }[];
+    board: { value: number | null; locked: boolean; building?: number }[];
     respinsLeft: number;
     coinsLocked: number;
     tier: number;
@@ -708,7 +709,7 @@ function BonusOverlay({
   onClose,
 }: {
   bonus: {
-    board: { value: number | null; locked: boolean }[];
+    board: { value: number | null; locked: boolean; building?: number }[];
     respinsLeft: number;
     coinsLocked: number;
     tier: number;
@@ -772,7 +773,7 @@ function BonusOverlay({
               ROUND 'EM UP
             </div>
             <div className="text-mute" style={{ fontSize: 13 }}>
-              Coins lock. Each new coin resets the 3-respin counter.
+              Coins and buildings lock. Any new lock resets the 3-respin counter.
             </div>
           </div>
           <div
@@ -806,7 +807,7 @@ function BonusOverlay({
           }}
         >
           <BonusStat label="Respins" value={`${bonus.respinsLeft}`} tone="parchment" />
-          <BonusStat label="Coins" value={`${bonus.coinsLocked} / 20`} tone="gold" />
+          <BonusStat label="Locked" value={`${bonus.coinsLocked} / 20`} tone="gold" />
           <BonusStat
             label="Pool"
             value={`${Math.floor(
@@ -863,7 +864,7 @@ function BonusGrid({
   board,
   coinFloats,
 }: {
-  board: { value: number | null; locked: boolean }[];
+  board: { value: number | null; locked: boolean; building?: number }[];
   coinFloats: { id: number; idx: number; value: number }[];
 }) {
   return (
@@ -882,31 +883,64 @@ function BonusGrid({
           {Array.from({ length: ROWS }).map((_, row) => {
             const idx = reelIdx * ROWS + row;
             const cell = board[idx];
-            const c = cell.locked && cell.value ? COIN_TIER_COLOR(cell.value) : null;
+            const isBuilding = cell.locked && typeof cell.building === "number";
+            const isCoin = cell.locked && cell.value != null;
+            const c = isCoin ? COIN_TIER_COLOR(cell.value as number) : null;
+            const tierC = isBuilding ? TIER_COLOR[cell.building as number] ?? TIER_COLOR[1] : null;
             const floats = coinFloats.filter((f) => f.idx === idx);
+            const cellBg = isBuilding
+              ? tierC!.bg
+              : isCoin
+              ? c!.bg
+              : "rgba(255, 246, 228, 0.04)";
+            const cellBorder = isBuilding
+              ? `3px solid var(--ink-900)`
+              : isCoin
+              ? `3px solid ${c!.ring}`
+              : "2px dashed var(--saddle-300)";
+            const cellFg = isBuilding ? tierC!.fg : c?.fg ?? "var(--saddle-300)";
             return (
               <div
                 key={row}
                 style={{
                   position: "relative",
                   aspectRatio: "1 / 1",
-                  background: cell.locked
-                    ? c!.bg
-                    : "rgba(255, 246, 228, 0.04)",
-                  border: cell.locked ? `3px solid ${c!.ring}` : "2px dashed var(--saddle-300)",
+                  background: cellBg,
+                  border: cellBorder,
                   display: "flex",
+                  flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
                   fontFamily: "var(--font-display)",
                   fontSize: 20,
-                  color: c?.fg ?? "var(--saddle-300)",
-                  textShadow: cell.locked && c?.fg === "#1a0f08" ? "1px 1px 0 rgba(255,255,255,0.4)" : "1px 1px 0 rgba(0,0,0,0.5)",
-                  boxShadow: cell.locked ? "inset 0 -3px 0 rgba(0,0,0,0.25), inset 0 3px 0 rgba(255,255,255,0.35), var(--glow-gold)" : undefined,
-                  animation: cell.locked ? "lg-cell-pop 0.5s var(--ease-snap)" : undefined,
+                  color: cellFg,
+                  textShadow: (cell.locked && cellFg === "#1a0f08") || (cell.locked && cellFg === "var(--ink-900)")
+                    ? "1px 1px 0 rgba(255,255,255,0.4)"
+                    : "1px 1px 0 rgba(0,0,0,0.5)",
+                  boxShadow: cell.locked
+                    ? isBuilding
+                      ? "inset 0 -3px 0 rgba(0,0,0,0.4), inset 0 3px 0 rgba(255,255,255,0.25), 0 0 12px rgba(245, 200, 66, 0.5)"
+                      : "inset 0 -3px 0 rgba(0,0,0,0.25), inset 0 3px 0 rgba(255,255,255,0.35), var(--glow-gold)"
+                    : undefined,
+                  animation: cell.locked
+                    ? isBuilding
+                      ? "lg-cell-pop 0.5s var(--ease-snap), lg-tier-flash 1.4s ease-in-out infinite"
+                      : "lg-cell-pop 0.5s var(--ease-snap)"
+                    : undefined,
                   overflow: "hidden",
                 }}
               >
-                {cell.locked && cell.value ? formatCoin(cell.value) : ""}
+                {isBuilding && (
+                  <>
+                    <span style={{ fontSize: 11, lineHeight: 1, opacity: 0.85 }}>
+                      T{cell.building}
+                    </span>
+                    <span style={{ fontSize: 18, fontWeight: "bold", lineHeight: 1, marginTop: 2 }}>
+                      {TIER_MULTIPLIER[cell.building as number]}×
+                    </span>
+                  </>
+                )}
+                {!isBuilding && isCoin ? formatCoin(cell.value as number) : null}
                 {floats.map((f) => (
                   <span
                     key={f.id}
