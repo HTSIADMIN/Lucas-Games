@@ -1,9 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { bucketTable, type PlinkoRisk, type PlinkoRows } from "@/lib/games/plinko/engine";
+
+// Step duration for the ball bouncing through one row of pegs.
+const STEP_MS = 130;
+// Vertical pixel height per row.
+const ROW_H = 30;
+// Top padding (above first peg) and bottom padding (peg row → bucket gap).
+const TOP_PAD = 28;
+const BOT_PAD = 14;
+
+// Build a left/right decision sequence of length `rows` whose count of
+// "right" choices equals `targetBucket`. Then return cumulative ball
+// positions in normalized [0..1] x and integer y row.
+function buildBallPath(rows: number, targetBucket: number) {
+  const rights = Math.max(0, Math.min(rows, targetBucket));
+  const lefts = rows - rights;
+  const decisions: number[] = [];
+  for (let i = 0; i < rights; i++) decisions.push(1);
+  for (let i = 0; i < lefts; i++) decisions.push(0);
+  // Fisher-Yates so the path looks random
+  for (let i = decisions.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [decisions[i], decisions[j]] = [decisions[j], decisions[i]];
+  }
+  // Ball x at step s = ((rows + 1) + 2R - s) / (2 * (rows + 1))
+  // (lands at (B + 0.5) / (rows + 1) when s=rows, R=B)
+  const denom = 2 * (rows + 1);
+  const path: { x: number; y: number }[] = [];
+  let R = 0;
+  for (let s = 0; s <= rows; s++) {
+    const x = ((rows + 1) + 2 * R - s) / denom;
+    path.push({ x, y: s });
+    if (decisions[s] === 1) R++;
+  }
+  return path;
+}
+
+// Peg position in row r (0-indexed, 0..rows-1), peg index k (0..r), normalized 0..1.
+function pegX(rows: number, r: number, k: number) {
+  return ((rows - r) / 2 + k + 0.5) / (rows + 1);
+}
 
 type DropResult = {
   bucket: number;
@@ -32,18 +72,30 @@ type Ghost = {
   startedAt: number; // when we mounted it locally
 };
 
+type FlyingBall = {
+  id: string;
+  path: { x: number; y: number }[];
+  rows: number;
+  startedAtMs: number;
+  multiplier: number;
+  payout: number;
+  bet: number;
+  bucket: number;
+};
+
 export function PlinkoClient() {
   const router = useRouter();
   const [bet, setBet] = useState(1_000);
   const [rows, setRows] = useState<PlinkoRows>(12);
   const [risk, setRisk] = useState<PlinkoRisk>("med");
-  const [busy, setBusy] = useState(false);
-  const [animating, setAnimating] = useState(false);
-  const [animBucket, setAnimBucket] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [balls, setBalls] = useState<FlyingBall[]>([]);
+  const [bucketFlashes, setBucketFlashes] = useState<{ bucket: number; at: number }[]>([]);
   const [result, setResult] = useState<DropResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
-  const [ghosts, setGhosts] = useState<Ghost[]>([]);
+  const [ghosts, setGhosts] = useState<(Ghost & { path: { x: number; y: number }[]; startedAtMs: number })[]>([]);
+  const [, setTick] = useState(0);
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => setBalance(d.balance ?? null));
@@ -60,36 +112,32 @@ export function PlinkoClient() {
         const d = await r.json();
         if (cancelled || !Array.isArray(d.drops)) return;
         const now = Date.now();
-        const fresh: Ghost[] = [];
         for (const drop of d.drops as Array<{
           id: string; username: string; avatarColor: string; initials: string;
           rows: number; bucket: number; at: number;
         }>) {
           if (seen.has(drop.id)) continue;
-          // Only animate drops that arrived in the last 5s (otherwise they're old).
           if (now - drop.at > 5000) {
             seen.add(drop.id);
             continue;
           }
           seen.add(drop.id);
-          fresh.push({
+          const path = buildBallPath(drop.rows, drop.bucket);
+          setGhosts((prev) => [...prev, {
             id: drop.id,
             username: drop.username,
             avatarColor: drop.avatarColor,
             initials: drop.initials,
             rows: drop.rows as PlinkoRows,
             bucket: drop.bucket,
-            startedAt: now,
-          });
-        }
-        if (fresh.length > 0) {
-          setGhosts((prev) => [...prev, ...fresh]);
-          // Clean up after the 2.5s animation + a bit of fade.
-          for (const g of fresh) {
-            setTimeout(() => {
-              setGhosts((prev) => prev.filter((x) => x.id !== g.id));
-            }, 3000);
-          }
+            startedAt: drop.at,
+            path,
+            startedAtMs: Date.now(),
+          }]);
+          const animMs = STEP_MS * (drop.rows + 1) + 300;
+          setTimeout(() => {
+            setGhosts((prev) => prev.filter((x) => x.id !== drop.id));
+          }, animMs);
         }
       } catch { /* ignore */ }
     }
@@ -98,184 +146,230 @@ export function PlinkoClient() {
     return () => { cancelled = true; clearInterval(t); };
   }, []);
 
+  // Re-render every 50ms while balls or ghosts are in flight so their
+  // computed step (from elapsed time) advances visually.
+  useEffect(() => {
+    if (balls.length === 0 && ghosts.length === 0 && bucketFlashes.length === 0) return;
+    const t = setInterval(() => {
+      setTick((n) => n + 1);
+      // Garbage-collect expired bucket flashes (>800ms old).
+      setBucketFlashes((prev) => prev.filter((f) => Date.now() - f.at < 800));
+    }, 50);
+    return () => clearInterval(t);
+  }, [balls.length, ghosts.length, bucketFlashes.length]);
+
   const previewTable = bucketTable(rows, risk);
 
   async function go() {
-    setBusy(true);
-    setAnimating(true);
+    if (bet < 100) return;
+    if (balance != null && balance < bet) return;
     setError(null);
-    setResult(null);
-    setAnimBucket(null);
+    setSubmitting(true);
+    // Optimistic balance debit so rapid clicks reflect immediately.
+    const stake = bet;
+    const localRows = rows;
+    setBalance((b) => (b == null ? b : b - stake));
 
-    const res = await fetch("/api/games/plinko/drop", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ bet, rows, risk }),
-    });
-    const data = await res.json();
-    setBusy(false);
-    if (!res.ok) {
-      setAnimating(false);
-      setError(data.error ?? "error");
-      return;
+    try {
+      const res = await fetch("/api/games/plinko/drop", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ bet: stake, rows: localRows, risk }),
+      });
+      const data = await res.json();
+      setSubmitting(false);
+      if (!res.ok) {
+        // Roll back optimistic balance on failure.
+        setBalance((b) => (b == null ? b : b + stake));
+        setError(data.error ?? "error");
+        return;
+      }
+
+      // Spawn a new flying ball with its own path.
+      const path = buildBallPath(localRows, data.bucket);
+      const id = crypto.randomUUID();
+      const startedAtMs = Date.now();
+      const ball: FlyingBall = {
+        id, path, rows: localRows, startedAtMs,
+        multiplier: data.multiplier,
+        payout: data.payout,
+        bet: stake,
+        bucket: data.bucket,
+      };
+      setBalls((prev) => [...prev, ball]);
+
+      const animMs = path.length * STEP_MS;
+      // When the ball "lands", flash the bucket + record result + sync balance.
+      setTimeout(() => {
+        setBucketFlashes((prev) => [...prev, { bucket: data.bucket, at: Date.now() }]);
+        setResult(data);
+        // Server-truth balance — overrides optimistic if any drift.
+        setBalance(data.balance);
+        // Remove the ball after a small landing pause.
+        setTimeout(() => {
+          setBalls((prev) => prev.filter((b) => b.id !== id));
+        }, 350);
+        router.refresh();
+      }, animMs);
+    } catch (err) {
+      setSubmitting(false);
+      setBalance((b) => (b == null ? b : b + stake));
+      setError("network_error");
     }
-
-    // Brief animation then reveal
-    setTimeout(() => {
-      setAnimBucket(data.bucket);
-      setResult(data);
-      setBalance(data.balance);
-      setAnimating(false);
-      router.refresh();
-    }, 1200);
   }
 
-  const canDrop = !busy && !animating && bet >= 100 && (balance == null || balance >= bet);
+  const canDrop = bet >= 100 && (balance == null || balance >= bet);
 
   return (
     <div className="grid grid-2" style={{ alignItems: "start" }}>
       <div className="panel" style={{ padding: "var(--sp-6)" }}>
         <div className="panel-title">The Board</div>
 
-        <div
-          style={{
-            background: "var(--saddle-500)",
-            border: "4px solid var(--ink-900)",
-            padding: "var(--sp-5)",
-            position: "relative",
-            minHeight: 360,
-          }}
-        >
-          {/* Pegs (rendered as a triangle of dots) */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-            {Array.from({ length: rows }).map((_, r) => (
-              <div key={r} style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-                {Array.from({ length: r + 3 }).map((_, c) => (
-                  <span
-                    key={c}
-                    style={{
-                      width: 6,
-                      height: 6,
-                      background: "var(--gold-100)",
-                      borderRadius: 999,
-                      boxShadow: "0 0 0 1px var(--ink-900)",
-                    }}
-                  />
-                ))}
-              </div>
-            ))}
-
-            {animating && (
+        {(() => {
+          const boardHeight = TOP_PAD + ROW_H * rows + BOT_PAD;
+          return (
+            <div
+              style={{
+                background: "var(--saddle-500)",
+                border: "4px solid var(--ink-900)",
+                padding: 8,
+              }}
+            >
+              {/* Peg field */}
               <div
                 style={{
-                  position: "absolute",
-                  top: 16,
-                  left: "50%",
-                  width: 14,
-                  height: 14,
-                  background: "var(--gold-300)",
+                  position: "relative",
+                  width: "100%",
+                  height: boardHeight,
+                  background: "var(--saddle-600)",
                   border: "2px solid var(--ink-900)",
-                  borderRadius: 999,
-                  transform: "translateX(-50%)",
-                  animation: `plinkoFall 1.1s linear forwards`,
-                }}
-              />
-            )}
-
-            {/* Ghost chips — other players' recent drops drift down on your board. */}
-            {ghosts
-              .filter((g) => g.rows === rows)
-              .map((g) => {
-                // Map the friend's bucket onto our visible bucket lane (same row count).
-                const totalBuckets = g.rows + 1;
-                const leftPct = ((g.bucket + 0.5) / totalBuckets) * 100;
-                return (
-                  <div
-                    key={g.id}
-                    style={{
-                      position: "absolute",
-                      top: 16,
-                      left: `${leftPct}%`,
-                      transform: "translateX(-50%)",
-                      animation: "plinkoGhost 2.4s ease-in forwards",
-                      pointerEvents: "none",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 2,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 10,
-                        height: 10,
-                        background: g.avatarColor,
-                        border: "2px solid var(--ink-900)",
-                        borderRadius: 999,
-                        opacity: 0.7,
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontFamily: "var(--font-display)",
-                        fontSize: 9,
-                        color: "var(--parchment-50)",
-                        textShadow: "1px 1px 0 var(--ink-900)",
-                        opacity: 0.7,
-                        letterSpacing: "var(--ls-loose)",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {g.initials}
-                    </span>
-                  </div>
-                );
-              })}
-            <style>{`@keyframes plinkoGhost {
-              0%   { top: 16px; opacity: 0.85; }
-              80%  { opacity: 0.6; }
-              100% { top: calc(100% - 36px); opacity: 0; }
-            }`}</style>
-          </div>
-
-          {/* Buckets */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${previewTable.length}, 1fr)`,
-              gap: 4,
-              marginTop: "var(--sp-4)",
-            }}
-          >
-            {previewTable.map((m, i) => (
-              <div
-                key={i}
-                style={{
-                  background: animBucket === i
-                    ? "var(--gold-300)"
-                    : multiplierColor(m),
-                  color: animBucket === i ? "var(--ink-900)" : "var(--parchment-50)",
-                  border: animBucket === i ? "3px solid var(--ink-900)" : "2px solid var(--ink-900)",
-                  fontFamily: "var(--font-display)",
-                  fontSize: 11,
-                  textAlign: "center",
-                  padding: "4px 2px",
-                  textShadow: animBucket === i ? "1px 1px 0 var(--gold-100)" : "1px 1px 0 var(--ink-900)",
-                  transform: animBucket === i ? "translateY(-4px)" : "none",
-                  transition: "transform 0.2s",
+                  overflow: "hidden",
                 }}
               >
-                ×{m}
-              </div>
-            ))}
-          </div>
+                {/* Pegs */}
+                {Array.from({ length: rows }).map((_, r) =>
+                  Array.from({ length: r + 1 }).map((_, k) => {
+                    const xPct = pegX(rows, r, k) * 100;
+                    const yPx = TOP_PAD + r * ROW_H;
+                    return (
+                      <span
+                        key={`${r}-${k}`}
+                        style={{
+                          position: "absolute",
+                          left: `${xPct}%`,
+                          top: yPx,
+                          transform: "translate(-50%, -50%)",
+                          width: 12,
+                          height: 12,
+                          borderRadius: 999,
+                          background: "var(--gold-100)",
+                          boxShadow:
+                            "0 0 0 2px var(--ink-900), inset -1px -2px 0 rgba(26,15,8,0.4), inset 1px 1px 0 rgba(255,255,255,0.6)",
+                        }}
+                      />
+                    );
+                  })
+                )}
 
-          <style>{`@keyframes plinkoFall {
-            0%   { top: 16px; opacity: 1; }
-            70%  { opacity: 1; }
-            100% { top: calc(100% - 56px); opacity: 0.6; }
-          }`}</style>
-        </div>
+                {/* Player balls */}
+                {balls.filter((b) => b.rows === rows).map((b) => {
+                  const elapsed = (Date.now() - b.startedAtMs) / STEP_MS;
+                  const idx = Math.max(0, Math.min(b.path.length - 1, Math.floor(elapsed)));
+                  const frac = elapsed - idx;
+                  const cur = b.path[idx];
+                  const next = b.path[Math.min(b.path.length - 1, idx + 1)];
+                  // Smooth interpolation between path points so the ball doesn't snap.
+                  const x = (cur.x + (next.x - cur.x) * Math.min(1, frac)) * 100;
+                  const y = TOP_PAD + (cur.y + (next.y - cur.y) * Math.min(1, frac)) * ROW_H;
+                  return (
+                    <span
+                      key={b.id}
+                      style={{
+                        position: "absolute",
+                        left: `${x}%`,
+                        top: y,
+                        transform: "translate(-50%, -50%)",
+                        width: 18,
+                        height: 18,
+                        borderRadius: 999,
+                        background: "var(--gold-300)",
+                        border: "2px solid var(--ink-900)",
+                        boxShadow:
+                          "inset -2px -3px 0 rgba(26,15,8,0.35), inset 1px 2px 0 rgba(255,255,255,0.55), 0 0 8px rgba(245,200,66,0.55)",
+                      }}
+                    />
+                  );
+                })}
+
+                {/* Ghost balls — other players' drops, half opacity, no glow */}
+                {ghosts.filter((g) => g.rows === rows).map((g) => {
+                  const elapsed = (Date.now() - g.startedAtMs) / STEP_MS;
+                  const idx = Math.max(0, Math.min(g.path.length - 1, Math.floor(elapsed)));
+                  const frac = elapsed - idx;
+                  const cur = g.path[idx];
+                  const next = g.path[Math.min(g.path.length - 1, idx + 1)];
+                  const x = (cur.x + (next.x - cur.x) * Math.min(1, frac)) * 100;
+                  const y = TOP_PAD + (cur.y + (next.y - cur.y) * Math.min(1, frac)) * ROW_H;
+                  return (
+                    <span
+                      key={g.id}
+                      style={{
+                        position: "absolute",
+                        left: `${x}%`,
+                        top: y,
+                        transform: "translate(-50%, -50%)",
+                        width: 14,
+                        height: 14,
+                        borderRadius: 999,
+                        background: g.avatarColor,
+                        border: "2px solid var(--ink-900)",
+                        opacity: 0.6,
+                        pointerEvents: "none",
+                      }}
+                      title={g.username}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Buckets */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${previewTable.length}, 1fr)`,
+                  gap: 3,
+                  marginTop: 6,
+                }}
+              >
+                {previewTable.map((m, i) => {
+                  const flashing = bucketFlashes.some((f) => f.bucket === i);
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        background: flashing ? "var(--gold-300)" : multiplierColor(m),
+                        color: flashing ? "var(--ink-900)" : "var(--parchment-50)",
+                        border: flashing ? "3px solid var(--ink-900)" : "2px solid var(--ink-900)",
+                        fontFamily: "var(--font-display)",
+                        fontSize: 11,
+                        textAlign: "center",
+                        padding: "5px 2px",
+                        textShadow: flashing
+                          ? "1px 1px 0 var(--gold-100)"
+                          : "1px 1px 0 var(--ink-900)",
+                        transform: flashing ? "translateY(-4px)" : "none",
+                        transition: "transform 0.18s",
+                        boxShadow: flashing ? "var(--glow-gold)" : undefined,
+                      }}
+                    >
+                      ×{m}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {result && (
           <div
@@ -311,7 +405,7 @@ export function PlinkoClient() {
                   type="button"
                   className={`btn btn-block ${risk === o.value ? "" : "btn-ghost"}`}
                   onClick={() => setRisk(o.value)}
-                  disabled={busy || animating}
+                  disabled={false}
                 >
                   {o.label}
                 </button>
@@ -328,7 +422,7 @@ export function PlinkoClient() {
                   type="button"
                   className={`btn btn-block ${rows === r ? "" : "btn-ghost"}`}
                   onClick={() => setRows(r)}
-                  disabled={busy || animating}
+                  disabled={false}
                 >
                   {r}
                 </button>
@@ -336,10 +430,10 @@ export function PlinkoClient() {
             </div>
           </div>
 
-          <BetInput value={bet} onChange={setBet} max={Math.max(100, balance ?? 100)} disabled={busy || animating} />
+          <BetInput value={bet} onChange={setBet} max={Math.max(100, balance ?? 100)} disabled={false} />
 
           <button className="btn btn-lg btn-block" onClick={go} disabled={!canDrop}>
-            {animating ? "Falling..." : busy ? "..." : "Drop"}
+            {balls.length > 0 ? `Drop (${balls.length} in air)` : submitting ? "..." : "Drop"}
           </button>
         </div>
       </div>
