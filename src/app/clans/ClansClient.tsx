@@ -6,11 +6,14 @@ import { GameIcon } from "@/components/GameIcon";
 import { Avatar } from "@/components/Avatar";
 import { ProfileModal } from "@/components/social/ProfileModal";
 import {
+  CARD_TIER_LABEL,
+  CARD_TIER_WEIGHTS,
+  CHEST_LOOT_PREVIEW,
+  CHEST_TIER_COLOR,
+  CHEST_TIER_LABEL,
   CLAN_ANIMALS,
   CLAN_FOUNDING_FEE,
   CLAN_MAX_MEMBERS,
-  CHEST_TIER_LABEL,
-  CHEST_TIER_COLOR,
 } from "@/lib/clans/constants";
 import type {
   Clan,
@@ -302,6 +305,9 @@ export function ClansClient({ meId }: { meId: string }) {
           {error && <p style={{ color: "var(--crimson-500)", marginTop: 8 }}>{error}</p>}
         </div>
       )}
+
+      {/* Always-visible chest loot preview */}
+      <ChestLootPreview />
 
       {/* Modals */}
       {showCreate && (
@@ -1075,6 +1081,238 @@ function ClanHistory({ entries }: { entries: HistoryEntry[] }) {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================================
+// Chest loot preview — what's in each tier
+// ============================================================
+function ChestLootPreview() {
+  return (
+    <div className="panel" style={{ padding: "var(--sp-5)", marginTop: "var(--sp-4)" }}>
+      <div className="panel-title">Chest Loot</div>
+      <p className="text-mute" style={{ fontSize: 13, marginBottom: "var(--sp-4)" }}>
+        Earned at the end of every weekly season. The higher your clan's rank, the better the chest.
+      </p>
+      <div className="grid grid-3" style={{ gap: "var(--sp-3)" }}>
+        {CHEST_LOOT_PREVIEW.map((entry) => (
+          <ChestPreviewCard key={entry.tier} entry={entry} />
+        ))}
+      </div>
+      <div
+        style={{
+          marginTop: "var(--sp-4)",
+          padding: "var(--sp-3)",
+          background: "var(--parchment-200)",
+          border: "2px dashed var(--saddle-300)",
+        }}
+      >
+        <div
+          className="label"
+          style={{ marginBottom: 6 }}
+        >
+          Card drop chances
+        </div>
+        <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
+          {[1, 2, 3, 4, 5].map((tier) => {
+            const total = Object.values(CARD_TIER_WEIGHTS).reduce((a, b) => a + b, 0);
+            const pct = ((CARD_TIER_WEIGHTS[tier] ?? 0) / total) * 100;
+            const color =
+              tier === 5 ? "var(--gold-300)" :
+              tier === 4 ? "var(--crimson-300)" :
+              tier === 3 ? "var(--sky-300)" :
+              tier === 2 ? "var(--cactus-300)" :
+              "var(--saddle-300)";
+            return (
+              <span
+                key={tier}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: color,
+                  color: tier === 5 ? "var(--ink-900)" : "var(--parchment-50)",
+                  border: "2px solid var(--ink-900)",
+                  padding: "2px 8px",
+                  fontFamily: "var(--font-display)",
+                  fontSize: 12,
+                  letterSpacing: "var(--ls-loose)",
+                }}
+              >
+                {CARD_TIER_LABEL[tier]} {pct.toFixed(0)}%
+              </span>
+            );
+          })}
+        </div>
+        <p className="text-mute" style={{ fontSize: 11, marginTop: 8 }}>
+          Each card slot rolls independently. Higher property tiers are rarer but pay
+          more on the Monopoly board.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ChestPreviewCard({ entry }: { entry: typeof CHEST_LOOT_PREVIEW[number] }) {
+  const tone = CHEST_TIER_COLOR[entry.tier];
+  return (
+    <div
+      style={{
+        background: "var(--parchment-100)",
+        border: `4px solid ${tone.ring}`,
+        boxShadow: `0 0 16px ${tone.glow}`,
+        padding: "var(--sp-3)",
+        position: "relative",
+      }}
+    >
+      {/* Tier banner */}
+      <div
+        style={{
+          background: tone.bg,
+          color: tone.fg,
+          fontFamily: "var(--font-display)",
+          fontSize: 14,
+          letterSpacing: "var(--ls-loose)",
+          textTransform: "uppercase",
+          textAlign: "center",
+          padding: "4px 8px",
+          marginBottom: "var(--sp-3)",
+          border: "2px solid var(--ink-900)",
+          textShadow: entry.tier === "legendary" ? "1px 1px 0 var(--gold-100)" : "1px 1px 0 var(--ink-900)",
+        }}
+      >
+        {CHEST_TIER_LABEL[entry.tier]}
+      </div>
+
+      {/* Mini chest + rank */}
+      <div className="row" style={{ justifyContent: "center", marginBottom: "var(--sp-3)" }}>
+        <MiniChest tier={entry.tier} />
+      </div>
+
+      <div
+        style={{
+          textAlign: "center",
+          fontFamily: "var(--font-display)",
+          fontSize: 12,
+          color: "var(--saddle-400)",
+          marginBottom: "var(--sp-3)",
+          letterSpacing: "var(--ls-loose)",
+          textTransform: "uppercase",
+        }}
+      >
+        {entry.rankRange}
+      </div>
+
+      <p className="text-mute" style={{ fontSize: 12, textAlign: "center", marginBottom: "var(--sp-3)" }}>
+        {entry.blurb}
+      </p>
+
+      <div className="stack" style={{ gap: 6 }}>
+        <LootBullet
+          icon="slot.gold"
+          label="Cash"
+          value={`${entry.coinsMin.toLocaleString()}-${entry.coinsMax.toLocaleString()} ¢`}
+        />
+        <LootBullet
+          icon="lobby.monopoly"
+          label="Monopoly cards"
+          value={`${entry.cards}× random`}
+        />
+        <LootBullet
+          icon="ui.crown"
+          label="Bonus daily spin"
+          value={
+            entry.spinTokenChance === 1
+              ? "Guaranteed"
+              : entry.spinTokenChance > 0
+              ? `${Math.round(entry.spinTokenChance * 100)}% chance`
+              : "—"
+          }
+          dim={entry.spinTokenChance === 0}
+        />
+      </div>
+    </div>
+  );
+}
+
+function LootBullet({
+  icon,
+  label,
+  value,
+  dim,
+}: {
+  icon: string;
+  label: string;
+  value: string;
+  dim?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "var(--sp-2)",
+        background: dim ? "var(--parchment-200)" : "var(--parchment-50)",
+        border: "2px solid var(--saddle-300)",
+        opacity: dim ? 0.6 : 1,
+      }}
+    >
+      <GameIcon name={icon as Parameters<typeof GameIcon>[0]["name"]} size={22} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="text-mute" style={{ fontSize: 10, letterSpacing: "var(--ls-loose)", textTransform: "uppercase" }}>
+          {label}
+        </div>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 13 }}>{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function MiniChest({ tier }: { tier: ClanChestTier }) {
+  const tone = CHEST_TIER_COLOR[tier];
+  return (
+    <div style={{ position: "relative", width: 64, height: 52 }}>
+      {/* Lid */}
+      <div
+        style={{
+          position: "absolute",
+          left: 4,
+          top: 0,
+          width: 56,
+          height: 18,
+          background: tone.bg,
+          border: `3px solid ${tone.ring}`,
+          borderRadius: "10px 10px 0 0",
+          boxShadow: "inset 0 -2px 0 rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.25)",
+        }}
+      />
+      {/* Body */}
+      <div
+        style={{
+          position: "absolute",
+          left: 4,
+          top: 14,
+          width: 56,
+          height: 36,
+          background: tone.bg,
+          border: `3px solid ${tone.ring}`,
+          boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.35), inset 0 3px 0 rgba(255,255,255,0.2)",
+        }}
+      />
+      {/* Lock */}
+      <div
+        style={{
+          position: "absolute",
+          left: 28,
+          top: 14,
+          width: 9,
+          height: 9,
+          background: "var(--gold-300)",
+          border: "2px solid var(--ink-900)",
+        }}
+      />
     </div>
   );
 }
