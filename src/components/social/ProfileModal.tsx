@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Avatar } from "@/components/Avatar";
 
 type ProfileData = {
   user: {
@@ -23,6 +24,12 @@ type ProfileData = {
     net: number;
     biggestWin: number;
     gamesPlayed: { game: string; count: number; net: number }[];
+  };
+  xp?: {
+    xp: number;
+    level: number;
+    intoLevelXp: number;
+    toNextXp: number;
   };
 };
 
@@ -113,17 +120,49 @@ export function ProfileModal({
         {data && (
           <>
             <div className="row" style={{ marginBottom: "var(--sp-5)" }}>
-              <div
-                className="avatar avatar-lg"
-                style={{ background: data.user.avatarColor, fontSize: "var(--fs-h2)" }}
-              >
-                {data.user.initials}
-              </div>
-              <div>
+              <Avatar
+                initials={data.user.initials}
+                color={data.user.avatarColor}
+                size={96}
+                fontSize={32}
+                level={data.xp?.level}
+              />
+              <div style={{ flex: 1 }}>
                 <h2 style={{ margin: 0, fontSize: "var(--fs-h2)" }}>{data.user.username}</h2>
-                <p className="text-mute" style={{ fontSize: "var(--fs-small)" }}>
+                <p className="text-mute" style={{ fontSize: "var(--fs-small)", marginBottom: 6 }}>
                   Member since {data.user.memberSince ? formatDate(data.user.memberSince) : "—"}
                 </p>
+                {data.xp && (
+                  <div>
+                    <div className="row" style={{ gap: 6, alignItems: "baseline" }}>
+                      <span style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)", color: "var(--gold-500)", textShadow: "2px 2px 0 var(--gold-100)" }}>
+                        LVL {data.xp.level}
+                      </span>
+                      <span className="text-mute" style={{ fontSize: 12 }}>
+                        {data.xp.intoLevelXp.toLocaleString()} / {data.xp.toNextXp.toLocaleString()} XP
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 4,
+                        height: 8,
+                        background: "var(--parchment-50)",
+                        border: "2px solid var(--ink-900)",
+                        position: "relative",
+                        overflow: "hidden",
+                        maxWidth: 240,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${Math.min(100, (data.xp.intoLevelXp / Math.max(1, data.xp.toNextXp)) * 100)}%`,
+                          height: "100%",
+                          background: "var(--gold-300)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

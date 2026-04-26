@@ -8,7 +8,7 @@ import { credit } from "@/lib/wallet";
 
 export const runtime = "nodejs";
 
-const SIGNUP_BONUS = 500_000;
+const SIGNUP_BONUS = 25_000;
 
 const AVATAR_PALETTE = [
   "var(--gold-300)",

@@ -1,15 +1,15 @@
-import { NextResponse } from "next/server";
-import { readSession } from "@/lib/auth/session";
-import { getBalance } from "@/lib/wallet";
-import { levelFromXp, xpFromCoinsWagered } from "@/lib/xp";
+// Server-side helper: total wagered + level lookup.
+// Single SUM query against wallet_transactions for *_bet rows.
 
-export const runtime = "nodejs";
+import { levelFromXp, xpFromCoinsWagered } from "./xp";
 
-export async function GET() {
-  const s = await readSession();
-  if (!s) return NextResponse.json({ user: null }, { status: 401 });
-
-  // Compute XP from total wagered (lifetime negative deltas in *_bet rows).
+export async function getUserLevel(userId: string): Promise<{
+  totalWagered: number;
+  xp: number;
+  level: number;
+  intoLevelXp: number;
+  toNextXp: number;
+}> {
   const useSupabase = !!(
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
   );
@@ -25,7 +25,7 @@ export async function GET() {
     const { data } = await supa
       .from("wallet_transactions")
       .select("delta, reason")
-      .eq("user_id", s.user.id);
+      .eq("user_id", userId);
     if (data) {
       for (const r of data as { delta: number; reason: string }[]) {
         const d = Number(r.delta);
@@ -37,17 +37,6 @@ export async function GET() {
   }
 
   const xp = xpFromCoinsWagered(totalWagered);
-  const lvl = levelFromXp(xp);
-
-  return NextResponse.json({
-    user: { id: s.user.id, username: s.user.username },
-    balance: await getBalance(s.user.id),
-    xp,
-    level: lvl.level,
-    currentLevelXp: lvl.currentLevelXp,
-    nextLevelXp: lvl.nextLevelXp,
-    intoLevelXp: lvl.intoLevelXp,
-    toNextXp: lvl.toNextXp,
-    totalWagered,
-  });
+  const l = levelFromXp(xp);
+  return { totalWagered, xp, ...l };
 }

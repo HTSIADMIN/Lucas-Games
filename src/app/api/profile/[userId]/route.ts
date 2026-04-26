@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
 import { getUserById } from "@/lib/db";
 import { getBalance } from "@/lib/wallet";
+import { levelFromXp, xpFromCoinsWagered } from "@/lib/xp";
 
 export const runtime = "nodejs";
 
@@ -140,6 +141,13 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
       net: totalWon - totalBet,
       biggestWin,
       gamesPlayed,
+    },
+    xp: {
+      ...(() => {
+        const xp = xpFromCoinsWagered(totalBet);
+        const l = levelFromXp(xp);
+        return { xp, ...l };
+      })(),
     },
   });
 }

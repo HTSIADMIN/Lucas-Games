@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  BOARD_SIZE,
   LEVEL_MULTIPLIER,
   MAX_LEVEL,
   PACK_PRICE,
   PACK_SIZE,
+  PROPERTIES,
   UPGRADE_CARDS,
   UPGRADE_COINS,
+  gridPos,
   type Property,
   type PropertyTier,
+  type SpaceType,
 } from "@/lib/games/monopoly/board";
 
 const TIER_BG: Record<PropertyTier, string> = {
@@ -42,21 +46,24 @@ type State = {
   totalEarned: number;
   ready: boolean;
 };
-
 type Owned = Record<string, { level: number; cards: number }>;
 
 type RollResult = {
   dice: [number, number];
   fromPosition: number;
   toPosition: number;
-  property: Property;
-  level: number;
-  payout: number;
+  space: { kind: string; propertyName: string | null };
+  totalPayout: number;
+  earnedFromProperty: { name: string; level: number; payout: number } | null;
+  mystery: { card: { kind: string; label: string }; effect: string } | null;
+  freeReroll: boolean;
+  nextRollAt: string | null;
+  balance: number;
 };
 
 export function MonopolyClient() {
   const router = useRouter();
-  const [board, setBoard] = useState<Property[]>([]);
+  const [board, setBoard] = useState<SpaceType[]>([]);
   const [state, setState] = useState<State | null>(null);
   const [owned, setOwned] = useState<Owned>({});
   const [balance, setBalance] = useState<number | null>(null);
@@ -65,9 +72,9 @@ export function MonopolyClient() {
   const [error, setError] = useState<string | null>(null);
 
   const [rolling, setRolling] = useState(false);
+  const [diceShown, setDiceShown] = useState<[number, number]>([1, 1]);
   const [rollResult, setRollResult] = useState<RollResult | null>(null);
   const [animPosition, setAnimPosition] = useState<number>(0);
-  const [showPayoutFlash, setShowPayoutFlash] = useState(false);
 
   const [packOpening, setPackOpening] = useState(false);
   const [packCards, setPackCards] = useState<Property[] | null>(null);
@@ -107,29 +114,33 @@ export function MonopolyClient() {
       return;
     }
 
-    // Fake the dice tumble for ~1.2s, then walk the token tile-by-tile.
     setTimeout(async () => {
       setRolling(false);
-      // Walk one tile every 280ms.
+      setDiceShown(d.dice);
+
+      // Walk one tile every 200ms.
       const path: number[] = [];
       let p = d.fromPosition;
       for (let i = 0; i < d.move; i++) {
-        p = (p + 1) % board.length;
+        p = (p + 1) % BOARD_SIZE;
         path.push(p);
       }
       for (let i = 0; i < path.length; i++) {
-        await new Promise((res) => setTimeout(res, 280));
+        await new Promise((res) => setTimeout(res, 200));
         setAnimPosition(path[i]);
       }
+      // If mystery teleported, finish on the actual end.
+      if (d.toPosition !== path[path.length - 1]) {
+        await new Promise((res) => setTimeout(res, 400));
+        setAnimPosition(d.toPosition);
+      }
+
       setRollResult(d);
-      setShowPayoutFlash(true);
       setBalance(d.balance);
-      setTimeout(() => setShowPayoutFlash(false), 2000);
       setBusy(false);
-      // Refresh state to lock the cooldown timer.
       refresh();
       router.refresh();
-    }, 1200);
+    }, 1100);
   }
 
   async function buyPack() {
@@ -142,11 +153,9 @@ export function MonopolyClient() {
     setPackCards(d.cards as Property[]);
     setPackOpening(true);
     setRevealedCount(0);
-    // Stagger reveal of each card.
     for (let i = 0; i < (d.cards as Property[]).length; i++) {
       setTimeout(() => setRevealedCount(i + 1), 350 + i * 350);
     }
-    // Refresh inventory after the reveals finish.
     setTimeout(() => refresh(), 350 + (d.cards as Property[]).length * 350 + 200);
     router.refresh();
   }
@@ -176,7 +185,6 @@ export function MonopolyClient() {
     return <p className="text-mute">Loading the board...</p>;
   }
 
-  // Cooldown countdown
   let cooldownStr = "Ready";
   if (state.nextRollAt) {
     const ms = new Date(state.nextRollAt).getTime() - Date.now() - serverOffset;
@@ -189,160 +197,116 @@ export function MonopolyClient() {
 
   return (
     <>
-      <div className="grid grid-2" style={{ alignItems: "start" }}>
-        {/* === BOARD + DICE === */}
-        <div className="panel" style={{ padding: "var(--sp-6)" }}>
-          <div className="panel-title">The Board</div>
+      {/* === BOARD RING === */}
+      <div className="panel" style={{ padding: "var(--sp-5)", marginBottom: "var(--sp-6)" }}>
+        <div className="panel-title">The Board</div>
 
+        <div
+          style={{
+            position: "relative",
+            display: "grid",
+            gridTemplateColumns: "repeat(10, 1fr)",
+            gridTemplateRows: "repeat(10, 1fr)",
+            aspectRatio: "1 / 1",
+            background: "var(--saddle-500)",
+            border: "4px solid var(--ink-900)",
+            padding: 4,
+            gap: 3,
+            maxWidth: 760,
+            margin: "0 auto",
+          }}
+        >
+          {board.map((space, i) => {
+            const pos = gridPos(i);
+            const here = animPosition === i;
+            const o = space.kind === "property" ? owned[space.property.id] : undefined;
+            const lvl = o?.level ?? 0;
+            return (
+              <BoardCell
+                key={i}
+                space={space}
+                index={i}
+                row={pos.row}
+                col={pos.col}
+                here={here}
+                level={lvl}
+              />
+            );
+          })}
+
+          {/* Center info panel */}
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(5, 1fr)",
-              gap: 6,
+              gridRowStart: 2,
+              gridRowEnd: 10,
+              gridColumnStart: 2,
+              gridColumnEnd: 10,
               background: "var(--saddle-500)",
-              border: "4px solid var(--ink-900)",
-              padding: "var(--sp-4)",
+              border: "3px solid var(--ink-900)",
+              padding: "var(--sp-5)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "var(--sp-4)",
+              backgroundImage:
+                "repeating-linear-gradient(0deg, rgba(74,40,24,0.15) 0, rgba(74,40,24,0.15) 2px, transparent 2px, transparent 8px)",
             }}
           >
-            {board.map((p, i) => {
-              const here = animPosition === i;
-              const o = owned[p.id];
-              const lvl = o?.level ?? 0;
-              return (
-                <div
-                  key={p.id}
-                  style={{
-                    background: TIER_BG[p.tier],
-                    color: TIER_FG[p.tier],
-                    border: here ? "4px solid var(--gold-300)" : "2px solid var(--ink-900)",
-                    boxShadow: here ? "var(--glow-gold)" : "var(--bevel-light)",
-                    padding: "6px 4px",
-                    minHeight: 70,
-                    fontFamily: "var(--font-display)",
-                    position: "relative",
-                    transition: "all var(--dur-quick)",
-                  }}
-                >
-                  <div style={{ fontSize: 10, lineHeight: 1.1 }}>{p.name}</div>
-                  <div style={{ fontSize: 11, marginTop: 4, opacity: 0.8 }}>
-                    {p.basePayout >= 1000 ? `${p.basePayout / 1000}k` : p.basePayout}
-                  </div>
-                  {lvl > 0 && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: 4,
-                        right: 4,
-                        display: "flex",
-                        gap: 1,
-                      }}
-                    >
-                      {Array.from({ length: lvl }).map((_, j) => (
-                        <span
-                          key={j}
-                          style={{
-                            width: 6,
-                            height: 6,
-                            background: "var(--gold-300)",
-                            border: "1px solid var(--ink-900)",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                  {here && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: -4,
-                        left: -4,
-                        width: 14,
-                        height: 14,
-                        background: "var(--gold-300)",
-                        border: "2px solid var(--ink-900)",
-                        borderRadius: 999,
-                        boxShadow: "var(--sh-card-rest)",
-                      }}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {rollResult && showPayoutFlash && (
-            <div
-              className="sign"
-              style={{
-                marginTop: "var(--sp-4)",
-                display: "block",
-                textAlign: "center",
-                background: "var(--gold-300)",
-                color: "var(--ink-900)",
-                animation: "flashFade 2s",
-              }}
-            >
-              {rollResult.property.name} · +{rollResult.payout.toLocaleString()} ¢
+            <div className="row-lg" style={{ justifyContent: "center" }}>
+              <Die value={diceShown[0]} rolling={rolling} />
+              <Die value={diceShown[1]} rolling={rolling} />
             </div>
-          )}
-        </div>
 
-        {/* === DICE + INFO === */}
-        <div className="stack-lg">
-          <div className="panel" style={{ padding: "var(--sp-6)" }}>
-            <div className="panel-title">{state.ready ? "Ready to Roll" : "On Cooldown"}</div>
-            <div className="row-lg" style={{ justifyContent: "center", marginBottom: "var(--sp-5)" }}>
-              <Die value={rollResult?.dice[0] ?? 1} rolling={rolling} />
-              <Die value={rollResult?.dice[1] ?? 1} rolling={rolling} />
-            </div>
             <button
-              className="btn btn-lg btn-block"
+              className="btn btn-lg"
               onClick={roll}
               disabled={busy || !state.ready}
+              style={{ minWidth: 220 }}
             >
               {rolling ? "Rolling..." : state.ready ? "Roll Dice" : `Next roll in ${cooldownStr}`}
             </button>
-            <div className="grid grid-2" style={{ marginTop: "var(--sp-5)" }}>
-              <div className="panel" style={{ background: "var(--parchment-200)", padding: "var(--sp-3)" }}>
-                <div className="label">Total Rolls</div>
-                <div style={{ fontSize: "var(--fs-h3)", fontFamily: "var(--font-display)" }}>{state.totalRolls}</div>
-              </div>
-              <div className="panel" style={{ background: "var(--gold-100)", padding: "var(--sp-3)" }}>
-                <div className="label">Total Earned</div>
-                <div className="text-money" style={{ fontSize: "var(--fs-h3)", fontFamily: "var(--font-display)" }}>
-                  {state.totalEarned.toLocaleString()}
-                </div>
-              </div>
-            </div>
-            {error && <p style={{ color: "var(--crimson-500)", marginTop: "var(--sp-3)" }}>{error}</p>}
-          </div>
 
-          {/* === PACK STORE === */}
-          <div className="panel" style={{ padding: "var(--sp-6)" }}>
-            <div className="panel-title">Card Pack Store</div>
-            <p className="text-mute" style={{ marginBottom: "var(--sp-3)" }}>
-              {PACK_SIZE} property cards. Higher tiers are rarer.
-            </p>
-            <button
-              className="btn btn-lg btn-block"
-              onClick={buyPack}
-              disabled={busy || (balance != null && balance < PACK_PRICE)}
-            >
-              Buy Pack ({PACK_PRICE.toLocaleString()} ¢)
-            </button>
+            {rollResult && (
+              <ResultCard r={rollResult} />
+            )}
+
+            <div className="row" style={{ gap: "var(--sp-3)" }}>
+              <Stat label="Rolls" value={String(state.totalRolls)} />
+              <Stat label="Earned" value={`${state.totalEarned.toLocaleString()} ¢`} money />
+            </div>
+
+            {error && <p style={{ color: "var(--crimson-300)" }}>{error}</p>}
           </div>
         </div>
       </div>
 
+      {/* === PACK STORE === */}
+      <div className="panel" style={{ padding: "var(--sp-5)", marginBottom: "var(--sp-6)" }}>
+        <div className="panel-title">Card Pack Store</div>
+        <div className="row-lg" style={{ flexWrap: "wrap" }}>
+          <p className="text-mute" style={{ flex: 1, minWidth: 200 }}>
+            {PACK_SIZE} property cards per pack. Higher tiers are rarer.
+          </p>
+          <button
+            className="btn btn-lg"
+            onClick={buyPack}
+            disabled={busy || (balance != null && balance < PACK_PRICE)}
+            style={{ minWidth: 240 }}
+          >
+            Buy Pack ({PACK_PRICE.toLocaleString()} ¢)
+          </button>
+        </div>
+      </div>
+
       {/* === INVENTORY === */}
-      <section className="panel" style={{ padding: "var(--sp-5)", marginTop: "var(--sp-6)" }}>
+      <section className="panel" style={{ padding: "var(--sp-5)" }}>
         <div className="panel-title">Property Inventory</div>
         {Object.keys(owned).length === 0 ? (
           <p className="text-mute">No cards yet. Buy a pack to start collecting.</p>
         ) : (
           <div className="grid grid-3">
-            {board
-              .map((p) => ({ p, o: owned[p.id] }))
+            {PROPERTIES.map((p) => ({ p, o: owned[p.id] }))
               .filter(({ o }) => !!o)
               .sort((a, b) => b.p.tier - a.p.tier || (b.o?.level ?? 0) - (a.o?.level ?? 0))
               .map(({ p, o }) => {
@@ -361,7 +325,6 @@ export function MonopolyClient() {
                       border: `4px solid ${TIER_BG[p.tier]}`,
                       padding: "var(--sp-3)",
                       boxShadow: "var(--sh-card-rest)",
-                      position: "relative",
                     }}
                   >
                     <div className="between">
@@ -372,11 +335,7 @@ export function MonopolyClient() {
                         Cards: <b>{o!.cards}</b>
                       </span>
                     </div>
-                    <div style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: "var(--fs-h4)",
-                      marginTop: 6,
-                    }}>
+                    <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h4)", marginTop: 6 }}>
                       {p.name}
                     </div>
                     <div className="row" style={{ gap: 3, marginTop: 6 }}>
@@ -403,7 +362,7 @@ export function MonopolyClient() {
                         onClick={() => upgrade(p.id)}
                         disabled={busy || !canUp}
                       >
-                        Upgrade · {cost.cards} cards · {cost.coins.toLocaleString()} ¢
+                        Upgrade · {cost.cards}🏷 · {cost.coins.toLocaleString()} ¢
                       </button>
                     ) : (
                       <div
@@ -484,8 +443,8 @@ export function MonopolyClient() {
         @keyframes flashFade {
           0%   { transform: scale(0.85); opacity: 0; }
           15%  { transform: scale(1.05); opacity: 1; }
-          80%  { transform: scale(1); opacity: 1; }
-          100% { transform: scale(1); opacity: 0.95; }
+          80%  { opacity: 1; }
+          100% { opacity: 0.95; }
         }
         @keyframes diceTumble {
           0%   { transform: rotate(0deg) translateY(0); }
@@ -494,16 +453,230 @@ export function MonopolyClient() {
           75%  { transform: rotate(540deg) translateY(-4px); }
           100% { transform: rotate(720deg) translateY(0); }
         }
-        @keyframes packFlip {
-          0%   { transform: rotateY(180deg); }
-          100% { transform: rotateY(0deg); }
-        }
         @keyframes packShine {
           0%   { transform: translateX(-110%) skewX(-20deg); }
           100% { transform: translateX(220%) skewX(-20deg); }
         }
       `}</style>
     </>
+  );
+}
+
+function BoardCell({
+  space,
+  row,
+  col,
+  here,
+  level,
+}: {
+  space: SpaceType;
+  index: number;
+  row: number;
+  col: number;
+  here: boolean;
+  level: number;
+}) {
+  const isCorner = (row === 0 || row === 9) && (col === 0 || col === 9);
+  const baseStyle: React.CSSProperties = {
+    gridRow: row + 1,
+    gridColumn: col + 1,
+    border: here ? "3px solid var(--gold-300)" : "2px solid var(--ink-900)",
+    boxShadow: here ? "var(--glow-gold)" : "var(--bevel-light)",
+    padding: 3,
+    fontFamily: "var(--font-display)",
+    overflow: "hidden",
+    position: "relative",
+    minHeight: 0,
+  };
+
+  if (space.kind === "property") {
+    return (
+      <div
+        style={{
+          ...baseStyle,
+          background: TIER_BG[space.property.tier],
+          color: TIER_FG[space.property.tier],
+          fontSize: isCorner ? 9 : 8,
+          lineHeight: 1.05,
+        }}
+      >
+        <div>{space.property.name}</div>
+        <div style={{ marginTop: 2, opacity: 0.85, fontSize: 8 }}>
+          {space.property.basePayout >= 1000 ? `${space.property.basePayout / 1000}k` : space.property.basePayout}
+        </div>
+        {level > 0 && (
+          <div style={{ position: "absolute", bottom: 2, right: 2, display: "flex", gap: 1 }}>
+            {Array.from({ length: level }).map((_, j) => (
+              <span
+                key={j}
+                style={{
+                  width: 4, height: 4,
+                  background: "var(--gold-300)",
+                  border: "1px solid var(--ink-900)",
+                }}
+              />
+            ))}
+          </div>
+        )}
+        {here && <Token />}
+      </div>
+    );
+  }
+  if (space.kind === "go") {
+    return (
+      <div
+        style={{
+          ...baseStyle,
+          background: "var(--gold-300)",
+          color: "var(--ink-900)",
+          fontSize: 12,
+          textAlign: "center",
+          alignContent: "center",
+        }}
+      >
+        GO
+        {here && <Token />}
+      </div>
+    );
+  }
+  if (space.kind === "free_parking") {
+    return (
+      <div
+        style={{
+          ...baseStyle,
+          background: "var(--cactus-500)",
+          color: "var(--parchment-50)",
+          fontSize: 9,
+          textAlign: "center",
+          alignContent: "center",
+          lineHeight: 1.1,
+        }}
+      >
+        FREE<br/>PARK
+        {here && <Token />}
+      </div>
+    );
+  }
+  if (space.kind === "reroll") {
+    return (
+      <div
+        style={{
+          ...baseStyle,
+          background: "var(--saddle-200)",
+          color: "var(--parchment-50)",
+          fontSize: isCorner ? 9 : 9,
+          textAlign: "center",
+          alignContent: "center",
+          letterSpacing: "var(--ls-loose)",
+        }}
+      >
+        REROLL
+        {here && <Token />}
+      </div>
+    );
+  }
+  // mystery
+  return (
+    <div
+      style={{
+        ...baseStyle,
+        background: "var(--crimson-500)",
+        color: "var(--gold-300)",
+        fontSize: isCorner ? 16 : 16,
+        fontWeight: "bold",
+        textAlign: "center",
+        alignContent: "center",
+        textShadow: "1px 1px 0 var(--ink-900)",
+      }}
+    >
+      ?
+      {here && <Token />}
+    </div>
+  );
+}
+
+function Token() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: -2,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: 12,
+        height: 12,
+        background: "var(--gold-300)",
+        border: "2px solid var(--ink-900)",
+        borderRadius: 999,
+        boxShadow: "var(--glow-gold)",
+        zIndex: 5,
+      }}
+    />
+  );
+}
+
+function ResultCard({ r }: { r: RollResult }) {
+  const positive = r.totalPayout > 0;
+  const negative = r.totalPayout < 0;
+  return (
+    <div
+      style={{
+        animation: "flashFade 0.6s var(--ease-snap)",
+        background: positive ? "var(--cactus-500)" : negative ? "var(--crimson-500)" : "var(--saddle-200)",
+        border: "3px solid var(--ink-900)",
+        padding: "var(--sp-3) var(--sp-4)",
+        color: "var(--parchment-50)",
+        fontFamily: "var(--font-display)",
+        textAlign: "center",
+        minWidth: 240,
+      }}
+    >
+      {r.earnedFromProperty && (
+        <div style={{ fontSize: 14 }}>
+          {r.earnedFromProperty.name}
+          {r.earnedFromProperty.level > 0 && ` · L${r.earnedFromProperty.level}`}
+        </div>
+      )}
+      {r.mystery && (
+        <div style={{ fontSize: 13, marginTop: 4 }}>
+          ? {r.mystery.effect}
+        </div>
+      )}
+      {r.space.kind === "reroll" && !r.mystery && (
+        <div style={{ fontSize: 14 }}>Reroll! Your dice are hot.</div>
+      )}
+      {r.space.kind === "go" && (
+        <div style={{ fontSize: 14 }}>Welcome back to GO!</div>
+      )}
+      {r.space.kind === "free_parking" && (
+        <div style={{ fontSize: 14 }}>Free Parking — small bonus.</div>
+      )}
+      <div style={{ fontSize: 22, marginTop: 6, color: "var(--gold-300)", textShadow: "2px 2px 0 var(--ink-900)" }}>
+        {positive ? "+" : ""}{r.totalPayout.toLocaleString()} ¢
+      </div>
+      {r.freeReroll && (
+        <div className="badge badge-gold" style={{ marginTop: 6 }}>FREE REROLL UNLOCKED</div>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, money }: { label: string; value: string; money?: boolean }) {
+  return (
+    <div
+      style={{
+        background: "var(--saddle-600)",
+        border: "2px solid var(--ink-900)",
+        padding: "4px 10px",
+        fontFamily: "var(--font-display)",
+        color: "var(--parchment-50)",
+      }}
+    >
+      <span style={{ fontSize: 10, color: "var(--saddle-200)", marginRight: 6 }}>{label}</span>
+      <span style={{ fontSize: 14, color: money ? "var(--gold-300)" : "var(--parchment-50)" }}>
+        {value}
+      </span>
+    </div>
   );
 }
 
@@ -519,15 +692,15 @@ function Die({ value, rolling }: { value: number; rolling: boolean }) {
   return (
     <div
       style={{
-        width: 64,
-        height: 64,
+        width: 56,
+        height: 56,
         background: "var(--parchment-50)",
         border: "4px solid var(--ink-900)",
         boxShadow: "var(--sh-card-rest)",
         display: "grid",
         gridTemplateColumns: "repeat(3, 1fr)",
         gridTemplateRows: "repeat(3, 1fr)",
-        padding: 6,
+        padding: 5,
         gap: 2,
         animation: rolling ? "diceTumble 0.8s linear infinite" : undefined,
       }}
@@ -542,8 +715,6 @@ function Die({ value, rolling }: { value: number; rolling: boolean }) {
             style={{
               background: has ? "var(--ink-900)" : "transparent",
               borderRadius: 999,
-              width: "100%",
-              height: "100%",
             }}
           />
         );
@@ -554,12 +725,7 @@ function Die({ value, rolling }: { value: number; rolling: boolean }) {
 
 function PackCard({ card, revealed }: { card: Property; revealed: boolean }) {
   return (
-    <div
-      style={{
-        perspective: 800,
-        height: 160,
-      }}
-    >
+    <div style={{ perspective: 800, height: 160 }}>
       <div
         style={{
           position: "relative",
@@ -570,7 +736,6 @@ function PackCard({ card, revealed }: { card: Property; revealed: boolean }) {
           transform: revealed ? "rotateY(0deg)" : "rotateY(180deg)",
         }}
       >
-        {/* Front face — revealed property */}
         <div
           style={{
             position: "absolute",
@@ -587,13 +752,11 @@ function PackCard({ card, revealed }: { card: Property; revealed: boolean }) {
             overflow: "hidden",
           }}
         >
-          {/* Shine sweep on legendaries */}
           {card.tier === 5 && (
             <div
               style={{
                 position: "absolute",
-                top: 0,
-                left: 0,
+                top: 0, left: 0,
                 width: 60,
                 height: "100%",
                 background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)",
@@ -620,7 +783,6 @@ function PackCard({ card, revealed }: { card: Property; revealed: boolean }) {
             +{card.basePayout.toLocaleString()} ¢
           </div>
         </div>
-        {/* Back face — pack art */}
         <div
           style={{
             position: "absolute",

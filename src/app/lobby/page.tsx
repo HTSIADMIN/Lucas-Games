@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
+import { Avatar } from "@/components/Avatar";
 import { AppLive } from "@/components/social/AppLive";
 import { readSession } from "@/lib/auth/session";
 import { getBalance } from "@/lib/wallet";
 import { getUserById, recentChatMessages } from "@/lib/db";
+import { getUserLevel } from "@/lib/xpServer";
 import { SignOutButton } from "./SignOutButton";
 
 const GAMES = [
@@ -34,6 +36,7 @@ export default async function LobbyPage() {
   const user = (await getUserById(s.user.id))!;
   const balance = await getBalance(user.id);
   const initialChat = await recentChatMessages(50);
+  const xpInfo = await getUserLevel(user.id);
   const me = {
     id: user.id,
     username: user.username,
@@ -48,12 +51,15 @@ export default async function LobbyPage() {
         <AppLive me={me} initialChat={initialChat} game="lobby">
         <section className="row-lg" style={{ marginBottom: "var(--sp-7)", flexWrap: "wrap" }}>
           <div className="balance-bar">
-            <div className="avatar" style={{ background: user.avatar_color }}>
-              {user.initials}
-            </div>
+            <Avatar
+              initials={user.initials}
+              color={user.avatar_color}
+              size={48}
+              level={xpInfo.level}
+            />
             <div className="avatar-username">
               <div className="uname">{user.username}</div>
-              <div className="role">PLAYER</div>
+              <div className="role">LVL {xpInfo.level}</div>
             </div>
             <div className="balance">{balance.toLocaleString()} ¢</div>
           </div>

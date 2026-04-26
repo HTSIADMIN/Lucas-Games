@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { readSession } from "@/lib/auth/session";
 import { debit, getBalance } from "@/lib/wallet";
 import { getMonopolyOwned, upsertMonopolyOwned } from "@/lib/db";
-import { BOARD, PACK_PRICE, PACK_SIZE, TIER_WEIGHT, type PropertyTier } from "@/lib/games/monopoly/board";
+import { PROPERTIES, PACK_PRICE, PACK_SIZE, TIER_WEIGHT, findProperty, type PropertyTier } from "@/lib/games/monopoly/board";
 import { randInt } from "@/lib/games/rng";
 
 export const runtime = "nodejs";
@@ -17,7 +17,7 @@ function rollPropertyId(): string {
     r -= TIER_WEIGHT[t];
     if (r < 0) { pickedTier = t; break; }
   }
-  const inTier = BOARD.filter((p) => p.tier === pickedTier);
+  const inTier = PROPERTIES.filter((p) => p.tier === pickedTier);
   const idx = randInt(0, inTier.length - 1);
   return inTier[idx].id;
 }
@@ -55,7 +55,7 @@ export async function POST() {
     });
   }
 
-  const cards = drawn.map((id) => BOARD.find((p) => p.id === id)!);
+  const cards = drawn.map((id) => findProperty(id)!);
   return NextResponse.json({
     ok: true,
     cards,

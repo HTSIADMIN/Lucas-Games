@@ -4,10 +4,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
+import { Avatar } from "@/components/Avatar";
 import { AppLive } from "@/components/social/AppLive";
 import { readSession } from "@/lib/auth/session";
 import { getUserById, recentChatMessages } from "@/lib/db";
 import { getBalance } from "@/lib/wallet";
+import { getUserLevel } from "@/lib/xpServer";
 
 export async function GameShell({
   title,
@@ -25,6 +27,7 @@ export async function GameShell({
   const user = (await getUserById(s.user.id))!;
   const balance = await getBalance(user.id);
   const initialChat = await recentChatMessages(50);
+  const xpInfo = await getUserLevel(user.id);
 
   const me = {
     id: user.id,
@@ -41,12 +44,15 @@ export async function GameShell({
           <div className="row-lg" style={{ marginBottom: "var(--sp-6)", flexWrap: "wrap" }}>
             <Link href="/lobby" className="btn btn-ghost btn-sm">← Lobby</Link>
             <div className="balance-bar">
-              <div className="avatar" style={{ background: user.avatar_color }}>
-                {user.initials}
-              </div>
+              <Avatar
+                initials={user.initials}
+                color={user.avatar_color}
+                size={48}
+                level={xpInfo.level}
+              />
               <div className="avatar-username">
                 <div className="uname">{user.username}</div>
-                <div className="role">PLAYER</div>
+                <div className="role">LVL {xpInfo.level}</div>
               </div>
               <div className="balance" data-balance>{balance.toLocaleString()} ¢</div>
             </div>
