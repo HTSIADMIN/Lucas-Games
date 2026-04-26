@@ -169,6 +169,9 @@
    (gold money, crimson danger, cactus success) keep their hue.
    ============================================================ */
 
+/* ============================================================
+   FRONTIER — warm tan, dustier than the default saloon
+   ============================================================ */
 [data-theme="frontier"] {
   --bg:           #f4ecdc;
   --bg-deep:      #d4a574;
@@ -178,7 +181,18 @@
   --fg-muted:     #6b3f24;
   --fg-dim:       #8a8077;
 }
+[data-theme="frontier"] .panel { background: #f1d9b3; }
+[data-theme="frontier"] .panel-title { border-bottom-color: #c8b489; color: #4a2818; }
+[data-theme="frontier"] .text-mute { color: #6b3f24; }
+[data-theme="frontier"] .label { color: #6b3f24; }
+[data-theme="frontier"] .divider { color: #6b3f24; }
+[data-theme="frontier"] .divider::before,
+[data-theme="frontier"] .divider::after { border-top-color: #c8b489; }
+[data-theme="frontier"] .balance-bar { background: #6b3f24; }
 
+/* ============================================================
+   SUNSET — deep red sky bleeding into burgundy panels
+   ============================================================ */
 [data-theme="sunset"] {
   --bg:           #2a1810;
   --bg-deep:      #4a1a1a;
@@ -192,7 +206,37 @@
   --stroke:       #1a0f08;
   --stroke-soft:  #4a2818;
 }
+[data-theme="sunset"] .panel { background: #5a1a1a; color: #fef6e4; }
+[data-theme="sunset"] .panel-title {
+  color: #ffd4a0;
+  border-bottom-color: #8b3a3a;
+}
+[data-theme="sunset"] .text-mute { color: #f1d9b3; }
+[data-theme="sunset"] .label { color: #ffb888; }
+[data-theme="sunset"] .divider { color: #ffd4a0; }
+[data-theme="sunset"] .divider::before,
+[data-theme="sunset"] .divider::after { border-top-color: #8b3a3a; }
+[data-theme="sunset"] .balance-bar { background: #4a1a1a; }
+/* Inputs adapt — light text on the burgundy panels */
+[data-theme="sunset"] .input,
+[data-theme="sunset"] input[type="text"],
+[data-theme="sunset"] input[type="number"],
+[data-theme="sunset"] input[type="password"],
+[data-theme="sunset"] textarea {
+  background: #4a1a1a;
+  color: #fef6e4;
+  border-color: #1a0f08;
+}
+/* Tables and dashed separators */
+[data-theme="sunset"] .leaderboard { background: #5a1a1a; }
+[data-theme="sunset"] .leaderboard-row { border-bottom-color: #8b3a3a; }
+[data-theme="sunset"] .leaderboard-row .player { color: #fef6e4; }
+[data-theme="sunset"] .leaderboard-row .game { color: #f1d9b3; }
+[data-theme="sunset"] .leaderboard-row .rank { color: #d4a574; }
 
+/* ============================================================
+   MIDNIGHT — lights low, lanterns lit
+   ============================================================ */
 [data-theme="midnight"] {
   --bg:           #1a0f08;
   --bg-deep:      #2a1810;
@@ -206,17 +250,42 @@
   --stroke:       #1a0f08;
   --stroke-soft:  #3d2418;
 }
+[data-theme="midnight"] .panel { background: #2a1810; color: #fef6e4; }
+[data-theme="midnight"] .panel-title {
+  color: #ffd84d;
+  border-bottom-color: #4a2818;
+}
+[data-theme="midnight"] .text-mute { color: #d4a574; }
+[data-theme="midnight"] .label { color: #ffd84d; }
+[data-theme="midnight"] .divider { color: #ffd84d; }
+[data-theme="midnight"] .divider::before,
+[data-theme="midnight"] .divider::after { border-top-color: #4a2818; }
+[data-theme="midnight"] .balance-bar { background: #1a0f08; }
+[data-theme="midnight"] .input,
+[data-theme="midnight"] input[type="text"],
+[data-theme="midnight"] input[type="number"],
+[data-theme="midnight"] input[type="password"],
+[data-theme="midnight"] textarea {
+  background: #1a0f08;
+  color: #fef6e4;
+  border-color: #1a0f08;
+}
+[data-theme="midnight"] .leaderboard { background: #2a1810; }
+[data-theme="midnight"] .leaderboard-row { border-bottom-color: #4a2818; }
+[data-theme="midnight"] .leaderboard-row .player { color: #fef6e4; }
+[data-theme="midnight"] .leaderboard-row .game { color: #d4a574; }
+[data-theme="midnight"] .leaderboard-row .rank { color: #a87545; }
 
 /* Theme-tinted body backgrounds — overrides default radials. */
 [data-theme="sunset"] body {
   background-image:
-    radial-gradient(circle at 12% 18%, rgba(232, 122, 58, 0.18) 0, transparent 40%),
-    radial-gradient(circle at 88% 72%, rgba(90, 58, 120, 0.18) 0, transparent 40%);
+    radial-gradient(circle at 12% 18%, rgba(232, 122, 58, 0.22) 0, transparent 40%),
+    radial-gradient(circle at 88% 72%, rgba(90, 58, 120, 0.22) 0, transparent 40%);
 }
 [data-theme="midnight"] body {
   background-image:
-    radial-gradient(circle at 12% 18%, rgba(95, 168, 211, 0.08) 0, transparent 40%),
-    radial-gradient(circle at 88% 72%, rgba(245, 200, 66, 0.06) 0, transparent 40%);
+    radial-gradient(circle at 12% 18%, rgba(95, 168, 211, 0.10) 0, transparent 40%),
+    radial-gradient(circle at 88% 72%, rgba(245, 200, 66, 0.08) 0, transparent 40%);
 }
 
 /* Bridge tokens into Tailwind v4 */
