@@ -22,6 +22,7 @@ const GAMES = [
 const EARN_BACKS = [
   { slug: "daily-spin",  name: "Daily Spin",  tag: "ONCE / DAY", live: true },
   { slug: "crossy-road", name: "Crossy Road", tag: "FREE",       live: true },
+  { slug: "flappy",      name: "Flappy",      tag: "FREE",       live: true },
 ];
 
 export default async function LobbyPage() {

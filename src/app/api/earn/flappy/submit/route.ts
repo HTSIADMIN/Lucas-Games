@@ -7,13 +7,13 @@ import { insertGameSession } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-// Sanity bounds — server-side only.
 const MIN_PAYOUT = 1_000;
 const MAX_PAYOUT = 10_000;
-const COIN_PER_POINT = 100;       // 100 coins per row crossed
-const MAX_SCORE_PER_SEC = 6;      // can't cross more than ~6 rows per second
+const COIN_PER_PIPE = 200;
+// Each pipe takes ~1.6s to traverse, so the absolute max plausible
+// pipes-per-second cap protects against trivially-faked scores.
+const MAX_SCORE_PER_SEC = 1.0;
 
-// Track redeemed run tokens to block replay (memory only — fine for friends).
 const REDEEMED = new Set<string>();
 
 export async function POST(req: Request) {
@@ -28,22 +28,32 @@ export async function POST(req: Request) {
   if (!payload) return NextResponse.json({ error: "bad_token" }, { status: 400 });
   if (payload.sub !== s.user.id) return NextResponse.json({ error: "token_user_mismatch" }, { status: 400 });
   if (REDEEMED.has(payload.jti)) return NextResponse.json({ error: "token_redeemed" }, { status: 400 });
-  if (!payload.username.startsWith("crossy:")) return NextResponse.json({ error: "wrong_token_kind" }, { status: 400 });
+  if (!payload.username.startsWith("flappy:")) return NextResponse.json({ error: "wrong_token_kind" }, { status: 400 });
 
   const score = Math.floor(Number(body.score) || 0);
   const durationMs = Math.floor(Number(body.durationMs) || 0);
-  if (score < 0 || score > 5000) return NextResponse.json({ error: "score_invalid" }, { status: 400 });
-  if (durationMs < 1000 || durationMs > 30 * 60_000) return NextResponse.json({ error: "duration_invalid" }, { status: 400 });
+  if (score < 0 || score > 1000) return NextResponse.json({ error: "score_invalid" }, { status: 400 });
+  if (durationMs < 500 || durationMs > 30 * 60_000) return NextResponse.json({ error: "duration_invalid" }, { status: 400 });
 
-  // Sanity cap: clamp to time-feasible score.
   const seconds = Math.max(1, Math.floor(durationMs / 1000));
-  const maxFeasible = seconds * MAX_SCORE_PER_SEC;
+  const maxFeasible = Math.floor(seconds * MAX_SCORE_PER_SEC) + 2;
   const effective = Math.min(score, maxFeasible);
 
-  const raw = effective * COIN_PER_POINT;
+  const raw = effective * COIN_PER_PIPE;
   const payout = Math.max(0, Math.min(MAX_PAYOUT, raw));
+
+  REDEEMED.add(payload.jti);
+
   if (effective <= 0 || payout < MIN_PAYOUT) {
-    REDEEMED.add(payload.jti);
+    await insertGameSession({
+      id: randomUUID(),
+      user_id: s.user.id,
+      game: "flappy",
+      bet: 0,
+      payout: 0,
+      state: { score: effective, durationMs },
+      status: "settled",
+    });
     return NextResponse.json({
       ok: true,
       score: effective,
@@ -53,19 +63,17 @@ export async function POST(req: Request) {
     });
   }
 
-  REDEEMED.add(payload.jti);
   await credit({
     userId: s.user.id,
     amount: payout,
-    reason: "crossy_road",
-    refKind: "crossy_road",
+    reason: "flappy",
+    refKind: "flappy",
     refId: payload.jti,
   });
-  // Record for leaderboard + bets feed.
   await insertGameSession({
     id: randomUUID(),
     user_id: s.user.id,
-    game: "crossy_road",
+    game: "flappy",
     bet: 0,
     payout,
     state: { score: effective, durationMs },
