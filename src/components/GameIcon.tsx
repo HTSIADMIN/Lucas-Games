@@ -522,16 +522,12 @@ const LOBBY_ICONS_128: Partial<Record<IconName, Px[]>> = {
     [24, 40, 16,  4, C.goldL],
     [20, 44, 16, 12, C.goldL],
     [24, 56, 12,  4, C.goldL],
-    // $ sign — chunky and centered
-    [60, 32,  8, 64, C.ink],
-    [44, 36, 40,  8, C.ink],
-    [40, 40, 12, 12, C.ink],
-    [44, 56, 40,  8, C.ink],
-    [76, 60, 12, 12, C.ink],
-    [44, 72, 40,  8, C.ink],
-    [40, 80, 12, 12, C.ink],
-    [76, 80, 12, 12, C.ink],
-    [44, 84, 40,  8, C.ink],
+    // C letter — chunky and centered
+    [44, 32, 40,  8, C.ink],   // top horizontal
+    [44, 32,  8, 64, C.ink],   // left vertical
+    [44, 88, 40,  8, C.ink],   // bottom horizontal
+    [80, 32,  4,  4, C.inkSoft],
+    [80, 92,  4,  4, C.inkSoft],
   ],
 
   // ----- Coin Flip Duel — two overlapping coins (H + T), no sparks -----
