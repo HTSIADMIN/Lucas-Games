@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
 import { findItem } from "@/lib/shop/catalog";
-import { debit, getBalance } from "@/lib/wallet";
+import { credit, debit, getBalance } from "@/lib/wallet";
 import { grantItem, ownsItem } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "already_owned" }, { status: 409 });
   }
 
+  // Debit first.
   if (item.price > 0) {
     try {
       await debit({
@@ -35,7 +36,24 @@ export async function POST(req: Request) {
     }
   }
 
-  await grantItem(s.user.id, item.id);
+  // Grant the item. If this fails for any reason, refund the wallet so the
+  // player isn't left holding a debit with no item — that's the bug
+  // migration 0015 was created for. Defense in depth.
+  try {
+    await grantItem(s.user.id, item.id);
+  } catch (err) {
+    if (item.price > 0) {
+      await credit({
+        userId: s.user.id,
+        amount: item.price,
+        reason: "shop_purchase_refund",
+        refKind: "shop",
+        refId: `${s.user.id}:${item.id}:refund`,
+      });
+    }
+    const msg = err instanceof Error ? err.message : "grant_failed";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 
   return NextResponse.json({
     ok: true,
