@@ -9,12 +9,14 @@ export const runtime = "nodejs";
 
 // Sanity bounds — server-side only.
 const MIN_PAYOUT = 1_000;
-const MAX_PAYOUT = 10_000;
-const COIN_PER_POINT = 100;       // 100 coins per row / pickup
-// Score sent by the client is rows + ground-coins, so the per-second cap is
-// a touch higher than pure forward movement — 8 covers ~6 rows/sec plus a
-// few coin grabs along the way.
-const MAX_SCORE_PER_SEC = 8;
+const MAX_PAYOUT = 50_000;
+const COIN_PER_ROW = 50;          // 50¢ per row crossed
+const COIN_PER_PICKUP = 500;      // 500¢ per ground-coin pickup
+// Rows-per-second cap. The chicken hops once every ~120ms, so 8/s already
+// covers a perfect player.
+const MAX_ROWS_PER_SEC = 8;
+// Coin pickups are gated by spawn rate (≈6% of rows). 1.5/s is generous.
+const MAX_COINS_PER_SEC = 2;
 
 // Track redeemed run tokens to block replay (memory only — fine for friends).
 const REDEEMED = new Set<string>();
@@ -33,25 +35,27 @@ export async function POST(req: Request) {
   if (REDEEMED.has(payload.jti)) return NextResponse.json({ error: "token_redeemed" }, { status: 400 });
   if (!payload.username.startsWith("crossy:")) return NextResponse.json({ error: "wrong_token_kind" }, { status: 400 });
 
-  const score = Math.floor(Number(body.score) || 0);
+  // `score` is now interpreted as rows crossed (no longer rows+coins folded).
+  const rows = Math.floor(Number(body.score) || 0);
   const coins = Math.max(0, Math.floor(Number(body.coins) || 0));
   const durationMs = Math.floor(Number(body.durationMs) || 0);
-  if (score < 0 || score > 5000) return NextResponse.json({ error: "score_invalid" }, { status: 400 });
-  if (coins > 5000) return NextResponse.json({ error: "coins_invalid" }, { status: 400 });
+  if (rows < 0 || rows > 10_000) return NextResponse.json({ error: "score_invalid" }, { status: 400 });
+  if (coins > 5_000) return NextResponse.json({ error: "coins_invalid" }, { status: 400 });
   if (durationMs < 1000 || durationMs > 30 * 60_000) return NextResponse.json({ error: "duration_invalid" }, { status: 400 });
 
-  // Sanity cap: clamp to time-feasible score.
+  // Sanity caps: clamp rows and coins to time-feasible upper bounds.
   const seconds = Math.max(1, Math.floor(durationMs / 1000));
-  const maxFeasible = seconds * MAX_SCORE_PER_SEC;
-  const effective = Math.min(score, maxFeasible);
+  const effRows  = Math.min(rows, seconds * MAX_ROWS_PER_SEC);
+  const effCoins = Math.min(coins, seconds * MAX_COINS_PER_SEC);
 
-  const raw = effective * COIN_PER_POINT;
+  const raw = effRows * COIN_PER_ROW + effCoins * COIN_PER_PICKUP;
   const payout = Math.max(0, Math.min(MAX_PAYOUT, raw));
-  if (effective <= 0 || payout < MIN_PAYOUT) {
+  if (raw <= 0 || payout < MIN_PAYOUT) {
     REDEEMED.add(payload.jti);
     return NextResponse.json({
       ok: true,
-      score: effective,
+      score: effRows,
+      coins: effCoins,
       payout: 0,
       reason: "below_minimum",
       balance: await getBalance(s.user.id),
@@ -73,13 +77,14 @@ export async function POST(req: Request) {
     game: "crossy_road",
     bet: 0,
     payout,
-    state: { score: effective, coins, durationMs },
+    state: { rows: effRows, coins: effCoins, durationMs },
     status: "settled",
   });
 
   return NextResponse.json({
     ok: true,
-    score: effective,
+    score: effRows,
+    coins: effCoins,
     payout,
     balance: await getBalance(s.user.id),
   });

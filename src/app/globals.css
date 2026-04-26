@@ -580,6 +580,111 @@ img, svg, canvas {
 @media (max-width: 900px) {
   .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
 }
+@media (max-width: 640px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-3, .grid-4 { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   LEADERBOARD ROWS
+   The row is a single 4-column grid: rank | player | tier | balance.
+   On phones it collapses to a 2-column grid so the player block has
+   room for username + 'YOU' badge.
+   ============================================================ */
+.leaderboard {
+  background: var(--parchment-100);
+  border: 3px solid var(--ink-900);
+  box-shadow: var(--sh-card-rest);
+}
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 140px 140px;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+}
+.leaderboard-row .rank {
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
+  color: var(--saddle-400);
+  text-align: center;
+  line-height: 1;
+}
+.leaderboard-row .player {
+  display: flex; align-items: center; gap: var(--sp-3);
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  letter-spacing: var(--ls-loose);
+  color: var(--ink-900);
+  min-width: 0;
+}
+.leaderboard-row .player > span:not(.avatar):not(.tag-new) {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0;
+}
+.leaderboard-row .game {
+  font-family: var(--font-display);
+  font-size: var(--fs-small);
+  color: var(--saddle-400);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-loose);
+  text-align: right;
+}
+.leaderboard-row .winnings {
+  font-family: var(--font-display);
+  font-size: var(--fs-h4);
+  color: var(--gold-500);
+  text-shadow: 2px 2px 0 var(--gold-100);
+  text-align: right;
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .leaderboard-row {
+    grid-template-columns: 40px 1fr auto;
+    grid-template-areas:
+      "rank player winnings"
+      ".    game   game";
+    gap: var(--sp-2) var(--sp-3);
+    padding: var(--sp-3);
+  }
+  .leaderboard-row .rank     { grid-area: rank; font-size: var(--fs-h4); }
+  .leaderboard-row .player   { grid-area: player; font-size: var(--fs-small); }
+  .leaderboard-row .game     { grid-area: game; text-align: left; }
+  .leaderboard-row .winnings { grid-area: winnings; font-size: var(--fs-body-lg); }
+}
+
+/* ============================================================
+   MOBILE — global tweaks
+   ============================================================ */
+@media (max-width: 640px) {
+  :root {
+    --fs-display: 56px;
+    --fs-h1:      36px;
+    --fs-h2:      28px;
+    --fs-h3:      22px;
+    --fs-h4:      18px;
+    --fs-body-lg: 18px;
+    --fs-body:    16px;
+    --fs-small:   14px;
+  }
+  .page { padding: var(--sp-4) var(--sp-3) var(--sp-7); }
+  .site-header {
+    padding: var(--sp-2) var(--sp-3);
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+  }
+  .site-header .brand-mark { width: 32px; height: 32px; }
+  .site-header .brand-tag  { display: none; }
+  .site-nav { gap: 2px; }
+  .site-nav a { padding: var(--sp-1) var(--sp-2); font-size: var(--fs-small); }
+  .balance-bar { flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-1) var(--sp-3) var(--sp-1) var(--sp-1); }
+  .balance { font-size: var(--fs-h4); padding: var(--sp-1) var(--sp-2); }
+  .avatar-username .uname { font-size: var(--fs-body); }
+  .panel { padding: var(--sp-4) !important; }
+  .row-lg { gap: var(--sp-3); }
+  .podium-grid { gap: var(--sp-2) !important; }
+  .poker-grid { grid-template-columns: 1fr !important; }
+}
 
 .stack    { display: flex; flex-direction: column; gap: var(--sp-3); }
 .stack-lg { display: flex; flex-direction: column; gap: var(--sp-5); }

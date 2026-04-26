@@ -87,10 +87,11 @@ function makeLane(y: number, prevWasRoad: boolean): Lane {
 function makeGrassDecorations(y: number, safeZone: boolean): Map<number, "tree" | "coin"> {
   const out = new Map<number, "tree" | "coin">();
   if (safeZone) return out;
-  // Coins spawn on ~30% of non-edge tiles. Trees on ~10%. Never a coin and
-  // tree on the same tile (trees overwrite).
-  for (let x = 0; x < COLS; x++) {
-    if (Math.random() < 0.30) out.set(x, "coin");
+  // Coins are rare — only ~6% of grass rows spawn one, and at most a single
+  // coin per row.
+  if (Math.random() < 0.06) {
+    const cx = 1 + Math.floor(Math.random() * (COLS - 2));
+    out.set(cx, "coin");
   }
   // Trees only on the edges, so the player isn't boxed in.
   for (let x = 0; x < COLS; x++) {
@@ -203,7 +204,7 @@ export function CrossyRoadClient() {
           y: playerY + 0.5,
           vy: 1.5,
           life: 0.9,
-          text: "+100¢",
+          text: "+500¢",
           color: "#f5c842",
         });
       }
@@ -586,13 +587,12 @@ export function CrossyRoadClient() {
   async function submit() {
     if (!runTokenRef.current) return;
     const durationMs = Date.now() - startedAtRef.current;
-    // Coins are folded into the score so they bump the payout: each coin = 1 row.
-    // Server still caps payout at MAX_PAYOUT and at MAX_SCORE_PER_SEC * seconds.
-    const submitScore = score + coins;
+    // Server pays 50¢ per row + 500¢ per ground-coin, each capped to a
+    // per-second ceiling.
     const res = await fetch("/api/earn/crossy-road/submit", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ runToken: runTokenRef.current, score: submitScore, coins, durationMs }),
+      body: JSON.stringify({ runToken: runTokenRef.current, score, coins, durationMs }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -674,7 +674,7 @@ export function CrossyRoadClient() {
         <div className="stack-lg" style={{ marginTop: "var(--sp-5)" }}>
           {phase === "playing" && (
             <div className="text-mute">
-              Each row is +100¢. Coins on the ground are +100¢ each.
+              Each row is +50¢. Ground coins are rare and +500¢ each.
               Difficulty climbs the further you go.
             </div>
           )}
@@ -690,7 +690,7 @@ export function CrossyRoadClient() {
               >
                 {submission.payout > 0
                   ? `+${submission.payout.toLocaleString()} ¢`
-                  : "Need at least 10 rows + coins for a payout."}
+                  : "Need at least 1,000¢ worth (20 rows or 2 coins) for a payout."}
               </div>
               <button className="btn btn-block" onClick={start}>Run Again</button>
             </>
@@ -701,10 +701,10 @@ export function CrossyRoadClient() {
         <div style={{ marginTop: "var(--sp-5)" }}>
           <div className="label">How it pays</div>
           <ul className="text-mute" style={{ fontSize: "var(--fs-small)", paddingLeft: 18 }}>
-            <li>+100¢ per row crossed</li>
-            <li>+100¢ per ground coin grabbed</li>
-            <li>Minimum 1,000¢ (10 rows / coins combined)</li>
-            <li>Cap 10,000¢ per run</li>
+            <li>+50¢ per row crossed</li>
+            <li>+500¢ per ground coin grabbed</li>
+            <li>Minimum 1,000¢ to claim</li>
+            <li>Cap 50,000¢ per run</li>
           </ul>
         </div>
       </div>

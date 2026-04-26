@@ -490,18 +490,44 @@ function BoardCell({
   };
 
   if (space.kind === "property") {
+    const fg = TIER_FG[space.property.tier];
+    const onDark = fg !== "var(--ink-900)";
     return (
       <div
         style={{
           ...baseStyle,
           background: TIER_BG[space.property.tier],
-          color: TIER_FG[space.property.tier],
-          fontSize: isCorner ? 9 : 8,
+          color: fg,
+          fontSize: 11,
           lineHeight: 1.05,
+          padding: 4,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
         }}
       >
-        <div>{space.property.name}</div>
-        <div style={{ marginTop: 2, opacity: 0.85, fontSize: 8 }}>
+        <div
+          style={{
+            textShadow: onDark
+              ? "1px 1px 0 rgba(26,15,8,0.85)"
+              : "1px 1px 0 rgba(255,246,228,0.7)",
+            wordBreak: "break-word",
+          }}
+        >
+          {space.property.name}
+        </div>
+        <div
+          style={{
+            alignSelf: "flex-start",
+            marginTop: 2,
+            padding: "1px 4px",
+            background: "rgba(26,15,8,0.78)",
+            color: "var(--gold-300)",
+            fontSize: 11,
+            letterSpacing: "var(--ls-loose)",
+            border: "1px solid rgba(0,0,0,0.45)",
+          }}
+        >
           {space.property.basePayout >= 1000 ? `${space.property.basePayout / 1000}k` : space.property.basePayout}
         </div>
         {level > 0 && (
@@ -510,7 +536,7 @@ function BoardCell({
               <span
                 key={j}
                 style={{
-                  width: 4, height: 4,
+                  width: 5, height: 5,
                   background: "var(--gold-300)",
                   border: "1px solid var(--ink-900)",
                 }}
@@ -529,9 +555,11 @@ function BoardCell({
           ...baseStyle,
           background: "var(--gold-300)",
           color: "var(--ink-900)",
-          fontSize: 12,
+          fontSize: 18,
           textAlign: "center",
           alignContent: "center",
+          letterSpacing: "var(--ls-loose)",
+          textShadow: "1px 1px 0 var(--gold-100)",
         }}
       >
         GO
@@ -546,10 +574,12 @@ function BoardCell({
           ...baseStyle,
           background: "var(--cactus-500)",
           color: "var(--parchment-50)",
-          fontSize: 9,
+          fontSize: 13,
           textAlign: "center",
           alignContent: "center",
-          lineHeight: 1.1,
+          lineHeight: 1.05,
+          letterSpacing: "var(--ls-loose)",
+          textShadow: "1px 1px 0 rgba(26,15,8,0.7)",
         }}
       >
         FREE<br/>PARK
@@ -563,11 +593,12 @@ function BoardCell({
         style={{
           ...baseStyle,
           background: "var(--saddle-200)",
-          color: "var(--parchment-50)",
-          fontSize: isCorner ? 9 : 9,
+          color: "var(--ink-900)",
+          fontSize: 12,
           textAlign: "center",
           alignContent: "center",
           letterSpacing: "var(--ls-loose)",
+          textShadow: "1px 1px 0 rgba(255,246,228,0.6)",
         }}
       >
         REROLL
@@ -582,11 +613,11 @@ function BoardCell({
         ...baseStyle,
         background: "var(--crimson-500)",
         color: "var(--gold-300)",
-        fontSize: isCorner ? 16 : 16,
+        fontSize: 22,
         fontWeight: "bold",
         textAlign: "center",
         alignContent: "center",
-        textShadow: "1px 1px 0 var(--ink-900)",
+        textShadow: "2px 2px 0 var(--ink-900)",
       }}
     >
       ?

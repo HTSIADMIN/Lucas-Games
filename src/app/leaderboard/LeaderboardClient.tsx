@@ -70,6 +70,7 @@ function Podium({
   const order = [top3[1], top3[0], top3[2]].filter(Boolean);
   return (
     <div
+      className="podium-grid"
       style={{
         display: "grid",
         gridTemplateColumns: "1fr 1.15fr 1fr",

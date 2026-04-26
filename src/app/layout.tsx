@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { readSession } from "@/lib/auth/session";
@@ -8,6 +8,13 @@ import { findItem } from "@/lib/shop/catalog";
 export const metadata: Metadata = {
   title: "Lucas Games",
   description: "A pixel saloon for the wild west of mini-games.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#4a2818",
 };
 
 export default async function RootLayout({

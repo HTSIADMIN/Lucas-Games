@@ -211,6 +211,7 @@ export function PokerClient() {
 
   return (
     <div
+      className="poker-grid"
       style={{
         display: "grid",
         gridTemplateColumns: "minmax(0, 1fr) 320px",
