@@ -19,7 +19,7 @@ const GAMES = [
   { slug: "mines",     name: "Mines",     tag: "RISKY",   live: true  },
   { slug: "plinko",    name: "Plinko",    tag: "PHYSICS", live: true  },
   { slug: "crash",     name: "Crash",     tag: "LIVE",    live: true  },
-  { slug: "poker",     name: "Poker",     tag: "MULTI",   live: false },
+  { slug: "poker",     name: "Poker",     tag: "MULTI",   live: true  },
 ];
 
 const EARN_BACKS = [
