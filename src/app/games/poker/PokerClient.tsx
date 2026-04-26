@@ -210,6 +210,8 @@ export function PokerClient() {
   const seatsByPosition = layoutSeats(state.seats, mySeat?.seatNo ?? null, state.table.maxSeats);
 
   return (
+    <>
+    <style>{POKER_KEYFRAMES}</style>
     <div
       className="poker-grid"
       style={{
@@ -220,7 +222,7 @@ export function PokerClient() {
       }}
     >
       {/* === FELT === */}
-      <div className="panel" style={{ padding: "var(--sp-4)" }}>
+      <div className="panel" style={{ padding: "var(--sp-4)", position: "relative", overflow: "hidden" }}>
         <div
           className="between"
           style={{ marginBottom: "var(--sp-3)", flexWrap: "wrap", gap: "var(--sp-3)" }}
@@ -283,10 +285,21 @@ export function PokerClient() {
             <div className="row" style={{ gap: 6 }}>
               {Array.from({ length: 5 }).map((_, i) => {
                 const c = state.community[i];
-                if (c) return <PlayingCard key={i} rank={c.rank as Rank} suit={c.suit as Suit} size="md" />;
+                if (c) {
+                  return (
+                    <DealCard
+                      key={`comm-${i}-${c.rank}${c.suit}`}
+                      rank={c.rank as Rank}
+                      suit={c.suit as Suit}
+                      faceDown={false}
+                      index={i}
+                      size="md"
+                    />
+                  );
+                }
                 return (
                   <div
-                    key={i}
+                    key={`empty-${i}`}
                     style={{
                       width: 84, height: 120,
                       border: "3px dashed var(--saddle-300)",
@@ -309,6 +322,16 @@ export function PokerClient() {
           <SeatBox seat={seatsByPosition.bottomMid}    state={state} me={me} cell={{ row: 3, col: 2 }} mine={!!mySeat && seatsByPosition.bottomMid?.seatNo === mySeat.seatNo} />
           <SeatBox seat={seatsByPosition.bottomRight}  state={state} me={me} cell={{ row: 3, col: 3 }} />
         </div>
+
+        {/* Showdown winner stamp + confetti */}
+        {state.status === "showdown" && state.showdown && state.showdown.winners.length > 0 && (
+          <ShowdownStamp
+            key={`stamp-${state.handNo}`}
+            winners={state.showdown.winners}
+            seats={state.seats}
+            iWon={state.showdown.winners.some((w) => w.userId === me)}
+          />
+        )}
       </div>
 
       {/* === STICKY SIDE PANEL === */}
@@ -486,6 +509,7 @@ export function PokerClient() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -634,12 +658,34 @@ function SeatBox({
       <div className="row" style={{ gap: 3, marginTop: 6 }}>
         {seat.holeCards.length > 0 ? (
           seat.holeCards.map((c, i) => (
-            <PlayingCard key={i} rank={c.rank as Rank} suit={c.suit as Suit} size="sm" />
+            <DealCard
+              key={`hole-${seat.seatNo}-${i}-${c.rank}${c.suit}`}
+              rank={c.rank as Rank}
+              suit={c.suit as Suit}
+              faceDown={false}
+              index={i}
+              size="sm"
+              flipFromBack
+            />
           ))
         ) : seat.holeCount > 0 && !isFolded ? (
           <>
-            <PlayingCard faceDown size="sm" />
-            <PlayingCard faceDown size="sm" />
+            <DealCard
+              key={`hole-${seat.seatNo}-back-0`}
+              rank={"?"}
+              suit={"?"}
+              faceDown={true}
+              index={0}
+              size="sm"
+            />
+            <DealCard
+              key={`hole-${seat.seatNo}-back-1`}
+              rank={"?"}
+              suit={"?"}
+              faceDown={true}
+              index={1}
+              size="sm"
+            />
           </>
         ) : null}
 
@@ -762,3 +808,174 @@ function labelFor(code: string) {
   };
   return m[code] ?? "Something went wrong.";
 }
+
+// ============================================================
+// Animation: card-by-card deal + showdown stamp + confetti
+// ============================================================
+
+function DealCard({
+  rank,
+  suit,
+  faceDown,
+  index,
+  size,
+  flipFromBack,
+}: {
+  rank: Rank | "?";
+  suit: Suit | "?";
+  faceDown: boolean;
+  index: number;
+  size?: "sm" | "md" | "lg";
+  flipFromBack?: boolean;
+}) {
+  // Stagger the first 3 cards in any cluster (flop / hole). Later cards
+  // (turn = index 3, river = index 4) animate quickly.
+  const delay = flipFromBack
+    ? "0s"
+    : index < 3
+    ? `${0.15 + index * 0.32}s`
+    : "0.1s";
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        transformOrigin: "center center",
+        animation: flipFromBack
+          ? "pk-flip 0.85s cubic-bezier(0.2, 0.9, 0.3, 1) backwards"
+          : "pk-deal 0.85s cubic-bezier(0.18, 0.85, 0.3, 1) backwards",
+        animationDelay: delay,
+      }}
+    >
+      <PlayingCard rank={rank} suit={suit} faceDown={faceDown} size={size} />
+    </span>
+  );
+}
+
+function ShowdownStamp({
+  winners,
+  seats,
+  iWon,
+}: {
+  winners: { userId: string; seatNo: number; amount: number; categoryLabel: string }[];
+  seats: Seat[];
+  iWon: boolean;
+}) {
+  const top = winners[0];
+  const seat = seats.find((s) => s.seatNo === top.seatNo);
+  const name = seat?.username ?? `Seat ${top.seatNo + 1}`;
+  return (
+    <>
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%) rotate(-12deg)",
+          background: iWon ? "var(--gold-300)" : "var(--cactus-500)",
+          color: iWon ? "var(--ink-900)" : "var(--parchment-50)",
+          border: "5px solid var(--ink-900)",
+          padding: "var(--sp-4) var(--sp-6)",
+          fontFamily: "var(--font-display)",
+          fontSize: 32,
+          letterSpacing: "var(--ls-loose)",
+          textTransform: "uppercase",
+          boxShadow: iWon
+            ? "var(--glow-gold), 8px 8px 0 var(--ink-900)"
+            : "8px 8px 0 var(--ink-900)",
+          textShadow: iWon ? "2px 2px 0 var(--gold-100)" : "3px 3px 0 var(--ink-900)",
+          animation: "pk-stamp 0.7s var(--ease-snap) backwards",
+          animationDelay: "1s",
+          zIndex: 10,
+          pointerEvents: "none",
+          textAlign: "center",
+        }}
+      >
+        {iWon ? "YOU WIN" : `${name} wins`}
+        <div style={{ fontSize: 16, marginTop: 4, letterSpacing: "var(--ls-tight)" }}>
+          {top.categoryLabel} · +{top.amount.toLocaleString()} ¢
+        </div>
+      </div>
+      {iWon && <PokerConfetti />}
+    </>
+  );
+}
+
+function PokerConfetti() {
+  const pieces = Array.from({ length: 32 }, (_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    delay: 1.2 + Math.random() * 0.5,
+    duration: 1.6 + Math.random() * 0.9,
+    rotate: Math.random() * 360,
+    size: 12 + Math.random() * 12,
+    color: i % 3 === 0 ? "#f5c842" : i % 3 === 1 ? "#ffd84d" : "#c8941d",
+  }));
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "absolute",
+        inset: 0,
+        pointerEvents: "none",
+        overflow: "hidden",
+        zIndex: 9,
+      }}
+    >
+      {pieces.map((p) => (
+        <span
+          key={p.id}
+          style={{
+            position: "absolute",
+            left: `${p.left}%`,
+            top: -20,
+            width: p.size,
+            height: p.size,
+            background: p.color,
+            border: "2px solid var(--ink-900)",
+            borderRadius: 999,
+            animation: `pk-coin-fall ${p.duration}s linear ${p.delay}s 1 forwards`,
+            transform: `rotate(${p.rotate}deg)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+const POKER_KEYFRAMES = `
+@keyframes pk-deal {
+  0% {
+    transform: translate(320px, -360px) rotate(55deg) perspective(900px) rotateX(-65deg) scale(0.55);
+    opacity: 0;
+    filter: blur(3px);
+  }
+  20% { opacity: 1; filter: blur(0); }
+  70% {
+    transform: translate(-12px, 6px) rotate(-4deg) perspective(900px) rotateX(8deg) scale(1.08);
+    box-shadow: 0 18px 24px rgba(0, 0, 0, 0.45);
+  }
+  88% {
+    transform: translate(2px, -2px) rotate(2deg) perspective(900px) rotateX(-3deg) scale(0.97);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0) perspective(900px) rotateX(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes pk-flip {
+  0%   { transform: perspective(900px) rotateY(180deg) translateY(-32px) scale(1.06); }
+  40%  { transform: perspective(900px) rotateY(95deg)  translateY(-16px) scale(1.10); }
+  72%  { transform: perspective(900px) rotateY(15deg)  translateY(-2px)  scale(1.05); }
+  100% { transform: perspective(900px) rotateY(0deg)   translateY(0)     scale(1); }
+}
+@keyframes pk-stamp {
+  0%   { transform: translate(-50%, -50%) rotate(-30deg) scale(3); opacity: 0; }
+  55%  { transform: translate(-50%, -50%) rotate(-8deg)  scale(0.88); opacity: 1; }
+  80%  { transform: translate(-50%, -50%) rotate(-16deg) scale(1.1); }
+  100% { transform: translate(-50%, -50%) rotate(-12deg) scale(1); opacity: 1; }
+}
+@keyframes pk-coin-fall {
+  0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(560px) rotate(720deg); opacity: 0; }
+}
+`;

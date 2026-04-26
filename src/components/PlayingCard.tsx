@@ -28,9 +28,9 @@ export type PlayingCardProps = {
 };
 
 const SIZES = {
-  sm: { w: 56, h: 84, fs: 18, glyph: 22 },
-  md: { w: 84, h: 120, fs: 24, glyph: 32 },
-  lg: { w: 110, h: 158, fs: 30, glyph: 44 },
+  sm: { w: 56, h: 96, fs: 18, glyph: 22 },
+  md: { w: 84, h: 134, fs: 24, glyph: 32 },
+  lg: { w: 110, h: 174, fs: 30, glyph: 44 },
 };
 
 export function PlayingCard({ rank, suit, faceDown, size = "md", palette }: PlayingCardProps) {
