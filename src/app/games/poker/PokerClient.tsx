@@ -199,6 +199,7 @@ export function PokerClient() {
     const ms = new Date(state.actionDeadlineAt).getTime() - Date.now() - serverOffset;
     actionSecs = Math.max(0, Math.ceil(ms / 1000));
   }
+  const timerText = `${actionSecs} ${actionSecs === 1 ? "second" : "seconds"}`;
 
   // Compute the current actor's name (for the "Waiting on X" header).
   const currentActor = state.currentSeat != null
@@ -238,7 +239,7 @@ export function PokerClient() {
                   borderColor: "var(--ink-900)",
                 }}
               >
-                {isMyTurn ? `YOUR TURN · ${actionSecs}s` : `Waiting on ${currentActor.username ?? `Seat ${currentActor.seatNo + 1}`} · ${actionSecs}s`}
+                {isMyTurn ? `YOUR TURN · ${timerText}` : `Waiting on ${currentActor.username ?? `Seat ${currentActor.seatNo + 1}`} · ${timerText}`}
               </span>
             )}
           </div>
@@ -322,7 +323,7 @@ export function PokerClient() {
         {/* Action card */}
         <div className="panel" style={{ padding: "var(--sp-4)" }}>
           <div className="panel-title" style={{ fontSize: "var(--fs-h4)" }}>
-            {!isSeated ? "Buy In" : isMyTurn ? `Your Action · ${actionSecs}s` : "At The Table"}
+            {!isSeated ? "Buy In" : isMyTurn ? `Your Action · ${timerText}` : "At The Table"}
           </div>
 
           {!isSeated ? (
@@ -442,7 +443,13 @@ export function PokerClient() {
               <button
                 className="btn btn-ghost btn-block btn-sm"
                 onClick={leave}
-                disabled={busy || mySeat!.inHand}
+                disabled={
+                  busy ||
+                  // Only disable if there's a live betting round and you're still in it.
+                  (["preflop", "flop", "turn", "river"].includes(state.status) &&
+                    mySeat!.inHand &&
+                    !mySeat!.folded)
+                }
               >
                 Cash Out · {mySeat!.stack.toLocaleString()} ¢
               </button>

@@ -286,6 +286,17 @@ async function startNewHand(tableId: string, table: { small_blind: number; big_b
   });
 }
 
+async function clearInHandFlags(tableId: string) {
+  // After a hand ends, reset the per-hand `in_hand` flag for every seat so
+  // players can cash out / leave between hands.
+  const seats = await listSeats(tableId);
+  for (const s of seats) {
+    if (s.in_hand) {
+      await updateSeat(tableId, s.seat_no, { in_hand: false });
+    }
+  }
+}
+
 async function endHandSinglePlayer(tableId: string, state: StateRow, winnerSeat: SeatRow) {
   // Pay the entire pot to the last remaining player.
   const totalPot = state.pot;
@@ -300,6 +311,7 @@ async function endHandSinglePlayer(tableId: string, state: StateRow, winnerSeat:
     }).catch(() => { /* ignore — credit is informational here */ });
   }
   await recordHandSession(tableId, state, [winnerSeat], totalPot);
+  await clearInHandFlags(tableId);
   await updateState(tableId, {
     status: "showdown",
     pot: 0,
@@ -494,6 +506,7 @@ async function runShowdown(tableId: string, _table: unknown, state: StateRow, se
     });
   }
 
+  await clearInHandFlags(tableId);
   await updateState(tableId, {
     status: "showdown",
     pot: 0,
@@ -793,7 +806,14 @@ export async function leaveTable(tableId: string, userId: string): Promise<{ ok:
   const seats = await listSeats(tableId);
   const seat = seats.find((s) => s.user_id === userId);
   if (!seat) return { ok: false, error: "not_seated" };
-  if (seat.in_hand) return { ok: false, error: "in_hand" };
+  // Only block leaving during an active betting round AND when the player
+  // hasn't folded. After hand end (showdown/cooldown/waiting) cash-out is OK.
+  const state = await getState(tableId);
+  const inActiveBetting =
+    state && ["preflop", "flop", "turn", "river"].includes(state.status);
+  if (inActiveBetting && seat.in_hand && !seat.folded) {
+    return { ok: false, error: "in_hand" };
+  }
   const cashedOut = seat.stack;
   if (cashedOut > 0) {
     await credit({
