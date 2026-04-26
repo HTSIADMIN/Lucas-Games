@@ -14,6 +14,7 @@ export type User = {
   equipped_frame?: string | null;
   equipped_card_deck?: string;
   equipped_theme?: string;
+  equipped_hat?: string | null;
 };
 
 export type PlayerInventoryRow = {

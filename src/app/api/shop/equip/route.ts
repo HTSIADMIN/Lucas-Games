@@ -28,6 +28,9 @@ export async function POST(req: Request) {
     case "frame":
       await setEquipped(s.user.id, { equipped_frame: item.id });
       break;
+    case "hat":
+      await setEquipped(s.user.id, { equipped_hat: item.id });
+      break;
     case "card_deck":
       await setEquipped(s.user.id, { equipped_card_deck: item.id });
       break;

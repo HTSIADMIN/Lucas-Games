@@ -10,8 +10,11 @@ export const runtime = "nodejs";
 // Sanity bounds — server-side only.
 const MIN_PAYOUT = 1_000;
 const MAX_PAYOUT = 10_000;
-const COIN_PER_POINT = 100;       // 100 coins per row crossed
-const MAX_SCORE_PER_SEC = 6;      // can't cross more than ~6 rows per second
+const COIN_PER_POINT = 100;       // 100 coins per row / pickup
+// Score sent by the client is rows + ground-coins, so the per-second cap is
+// a touch higher than pure forward movement — 8 covers ~6 rows/sec plus a
+// few coin grabs along the way.
+const MAX_SCORE_PER_SEC = 8;
 
 // Track redeemed run tokens to block replay (memory only — fine for friends).
 const REDEEMED = new Set<string>();
@@ -20,7 +23,7 @@ export async function POST(req: Request) {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  let body: { runToken?: string; score?: unknown; durationMs?: unknown };
+  let body: { runToken?: string; score?: unknown; coins?: unknown; durationMs?: unknown };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "bad_json" }, { status: 400 }); }
 
   if (!body.runToken) return NextResponse.json({ error: "no_token" }, { status: 400 });
@@ -31,8 +34,10 @@ export async function POST(req: Request) {
   if (!payload.username.startsWith("crossy:")) return NextResponse.json({ error: "wrong_token_kind" }, { status: 400 });
 
   const score = Math.floor(Number(body.score) || 0);
+  const coins = Math.max(0, Math.floor(Number(body.coins) || 0));
   const durationMs = Math.floor(Number(body.durationMs) || 0);
   if (score < 0 || score > 5000) return NextResponse.json({ error: "score_invalid" }, { status: 400 });
+  if (coins > 5000) return NextResponse.json({ error: "coins_invalid" }, { status: 400 });
   if (durationMs < 1000 || durationMs > 30 * 60_000) return NextResponse.json({ error: "duration_invalid" }, { status: 400 });
 
   // Sanity cap: clamp to time-feasible score.
@@ -68,7 +73,7 @@ export async function POST(req: Request) {
     game: "crossy_road",
     bet: 0,
     payout,
-    state: { score: effective, durationMs },
+    state: { score: effective, coins, durationMs },
     status: "settled",
   });
 

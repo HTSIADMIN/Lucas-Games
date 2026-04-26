@@ -13,6 +13,10 @@ type Result = {
   balance: number;
 };
 
+type HistoryEntry = { id: number; result: Side; win: boolean };
+
+const MAX_HISTORY = 12;
+
 export function CoinFlipClient() {
   const router = useRouter();
   const [bet, setBet] = useState(1_000);
@@ -21,6 +25,7 @@ export function CoinFlipClient() {
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -45,6 +50,10 @@ export function CoinFlipClient() {
     }
     setResult(data);
     setBalance(data.balance);
+    setHistory((prev) => {
+      const next: HistoryEntry = { id: Date.now(), result: data.result, win: data.win };
+      return [next, ...prev].slice(0, MAX_HISTORY);
+    });
     router.refresh();
   }
 
@@ -84,6 +93,36 @@ export function CoinFlipClient() {
         )}
         {error && (
           <p style={{ color: "var(--crimson-500)", marginTop: "var(--sp-3)" }}>{errorLabel(error)}</p>
+        )}
+
+        {history.length > 0 && (
+          <div style={{ marginTop: "var(--sp-5)" }}>
+            <div className="label" style={{ marginBottom: "var(--sp-2)" }}>Recent flips</div>
+            <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+              {history.map((h) => (
+                <span
+                  key={h.id}
+                  title={`${h.result.toUpperCase()} · ${h.win ? "win" : "loss"}`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 32,
+                    height: 32,
+                    background: h.win ? "var(--cactus-300)" : "var(--crimson-300)",
+                    color: "var(--ink-900)",
+                    border: "2px solid var(--ink-900)",
+                    fontFamily: "var(--font-display)",
+                    fontSize: 18,
+                    boxShadow: "var(--bevel-light)",
+                    textShadow: "1px 1px 0 var(--parchment-50)",
+                  }}
+                >
+                  {h.result === "heads" ? "H" : "T"}
+                </span>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 

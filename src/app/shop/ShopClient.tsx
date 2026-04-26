@@ -3,20 +3,31 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CosmeticItem } from "@/lib/shop/catalog";
-import { rarityOf, RARITY_COLOR } from "@/lib/shop/catalog";
+import { rarityOf, RARITY_COLOR, DECK_PALETTES } from "@/lib/shop/catalog";
+import { Avatar } from "@/components/Avatar";
 
 type Equipped = {
   avatar_color: string;
   frame: string | null;
   card_deck: string;
   theme: string;
+  hat: string | null;
 };
 
 const KIND_LABEL: Record<CosmeticItem["kind"], string> = {
   avatar_color: "Avatar Colors",
   frame: "Frames",
+  hat: "Hats",
   card_deck: "Card Decks",
   theme: "Themes",
+};
+
+// Theme preview swatches (mirrors what each theme actually paints).
+const THEME_SWATCHES: Record<string, string[]> = {
+  saloon:    ["#fef6e4", "#f5c842", "#e05a3c", "#6ba84f"],
+  frontier:  ["#f4ecdc", "#d4a574", "#c93a2c", "#8a8077"],
+  sunset:    ["#5a1a1a", "#e87a3a", "#f5c842", "#5a3a78"],
+  midnight:  ["#1a0f08", "#3d2418", "#f5c842", "#5fa8d3"],
 };
 
 export function ShopClient({
@@ -76,6 +87,8 @@ export function ShopClient({
           return { ...eq, avatar_color: (item.meta as { color?: string }).color ?? eq.avatar_color };
         case "frame":
           return { ...eq, frame: item.id };
+        case "hat":
+          return { ...eq, hat: item.id };
         case "card_deck":
           return { ...eq, card_deck: item.id };
         case "theme":
@@ -91,6 +104,8 @@ export function ShopClient({
         return equipped.avatar_color === (item.meta as { color?: string }).color;
       case "frame":
         return equipped.frame === item.id;
+      case "hat":
+        return equipped.hat === item.id;
       case "card_deck":
         return equipped.card_deck === item.id;
       case "theme":
@@ -101,6 +116,7 @@ export function ShopClient({
   const groups: Record<CosmeticItem["kind"], CosmeticItem[]> = {
     avatar_color: [],
     frame: [],
+    hat: [],
     card_deck: [],
     theme: [],
   };
@@ -235,46 +251,72 @@ function rarityBg(rarity: ReturnType<typeof rarityOf>): string {
 function ItemPreview({ item }: { item: CosmeticItem }) {
   if (item.kind === "avatar_color") {
     return (
-      <div
-        className="avatar avatar-lg"
-        style={{ background: (item.meta as { color?: string }).color, fontSize: 24 }}
-      >
-        ?
-      </div>
+      <Avatar
+        initials="?"
+        color={(item.meta as { color?: string }).color ?? "var(--saddle-300)"}
+        size={64}
+        fontSize={24}
+      />
     );
   }
   if (item.kind === "frame") {
-    const m = item.meta as { width?: number; color?: string; badge?: string; glow?: boolean };
     return (
-      <div
-        className="avatar avatar-lg"
-        style={{
-          background: "var(--gold-300)",
-          border: `${m.width ?? 6}px solid ${m.color}`,
-          fontSize: 22,
-          boxShadow: m.glow ? `0 0 16px ${m.color}` : undefined,
-        }}
-      >
-        {m.badge ?? "?"}
-      </div>
+      <Avatar
+        initials="?"
+        color="var(--gold-300)"
+        size={64}
+        fontSize={24}
+        frame={item.id}
+      />
+    );
+  }
+  if (item.kind === "hat") {
+    return (
+      <Avatar
+        initials="?"
+        color="var(--saddle-300)"
+        size={64}
+        fontSize={24}
+        hat={item.id}
+      />
     );
   }
   if (item.kind === "card_deck") {
+    const palette = (item.meta as { palette?: string }).palette ?? "classic";
+    const colors = DECK_PALETTES[palette] ?? DECK_PALETTES.classic;
+    const suits: { glyph: string; color: string }[] = [
+      { glyph: "♠", color: colors.spades },
+      { glyph: "♥", color: colors.hearts },
+      { glyph: "♣", color: colors.clubs },
+      { glyph: "♦", color: colors.diamonds },
+    ];
     return (
       <div className="row" style={{ gap: 4 }}>
-        <span style={{ fontSize: 32, color: "var(--parchment-50)", textShadow: "2px 2px 0 var(--ink-900)" }}>♠</span>
-        <span style={{ fontSize: 32, color: "var(--crimson-300)", textShadow: "2px 2px 0 var(--ink-900)" }}>♥</span>
-        <span style={{ fontSize: 32, color: "var(--ink-900)", textShadow: "2px 2px 0 var(--parchment-50)" }}>♣</span>
-        <span style={{ fontSize: 32, color: "var(--sky-300)", textShadow: "2px 2px 0 var(--ink-900)" }}>♦</span>
+        {suits.map((s, i) => (
+          <span
+            key={i}
+            style={{
+              fontSize: 32,
+              color: s.color,
+              textShadow: "2px 2px 0 var(--ink-900)",
+              fontFamily: "var(--font-display)",
+              lineHeight: 1,
+            }}
+          >
+            {s.glyph}
+          </span>
+        ))}
       </div>
     );
   }
-  // theme
+  // theme — use the actual swatches for that theme.
+  const themeKey = (item.meta as { theme?: string }).theme ?? "saloon";
+  const swatches = THEME_SWATCHES[themeKey] ?? THEME_SWATCHES.saloon;
   return (
     <div className="row" style={{ gap: 6 }}>
-      {["var(--saddle-300)", "var(--gold-300)", "var(--crimson-300)", "var(--cactus-300)"].map((c) => (
+      {swatches.map((c, i) => (
         <span
-          key={c}
+          key={i}
           style={{
             display: "inline-block",
             width: 24,

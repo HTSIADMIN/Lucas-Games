@@ -1,6 +1,8 @@
 "use client";
 
+import { createContext, useContext, type ReactNode } from "react";
 import type { Rank, Suit } from "@/lib/games/cards";
+import { DECK_PALETTES } from "@/lib/shop/catalog";
 
 const SUIT_GLYPH: Record<Suit, string> = {
   spades: "♠",
@@ -9,18 +11,20 @@ const SUIT_GLYPH: Record<Suit, string> = {
   clubs: "♣",
 };
 
-const SUIT_VAR: Record<Suit, string> = {
-  spades: "var(--suit-spades)",
-  hearts: "var(--suit-hearts)",
-  diamonds: "var(--suit-diamonds)",
-  clubs: "var(--suit-clubs)",
-};
+// Card-deck palette context — set once per page, read by every PlayingCard.
+const DeckCtx = createContext<string>("classic");
+
+export function DeckProvider({ palette, children }: { palette: string; children: ReactNode }) {
+  return <DeckCtx.Provider value={palette}>{children}</DeckCtx.Provider>;
+}
 
 export type PlayingCardProps = {
   rank?: Rank | "?";
   suit?: Suit | "?";
   faceDown?: boolean;
   size?: "sm" | "md" | "lg";
+  /** Override the palette from the surrounding DeckProvider. */
+  palette?: string;
 };
 
 const SIZES = {
@@ -29,8 +33,11 @@ const SIZES = {
   lg: { w: 110, h: 158, fs: 30, glyph: 44 },
 };
 
-export function PlayingCard({ rank, suit, faceDown, size = "md" }: PlayingCardProps) {
+export function PlayingCard({ rank, suit, faceDown, size = "md", palette }: PlayingCardProps) {
   const s = SIZES[size];
+  const ctxPalette = useContext(DeckCtx);
+  const paletteKey = palette ?? ctxPalette;
+  const colors = DECK_PALETTES[paletteKey] ?? DECK_PALETTES.classic;
 
   if (faceDown || rank === "?" || suit === "?" || !rank || !suit) {
     return (
@@ -38,11 +45,11 @@ export function PlayingCard({ rank, suit, faceDown, size = "md" }: PlayingCardPr
         style={{
           width: s.w,
           height: s.h,
-          background: "var(--saddle-500)",
+          background: colors.back,
           border: "3px solid var(--ink-900)",
           boxShadow: "var(--sh-card-rest), var(--bevel-light)",
           backgroundImage:
-            "repeating-linear-gradient(45deg, var(--saddle-400) 0 6px, var(--saddle-600) 6px 12px)",
+            `repeating-linear-gradient(45deg, ${colors.back} 0 6px, var(--ink-900) 6px 12px)`,
           flexShrink: 0,
         }}
       />
@@ -50,7 +57,7 @@ export function PlayingCard({ rank, suit, faceDown, size = "md" }: PlayingCardPr
   }
 
   const glyph = SUIT_GLYPH[suit as Suit];
-  const color = SUIT_VAR[suit as Suit];
+  const color = colors[suit as Suit];
   return (
     <div
       style={{

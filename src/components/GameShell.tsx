@@ -6,10 +6,13 @@ import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Avatar } from "@/components/Avatar";
 import { AppLive } from "@/components/social/AppLive";
+import { DeckProvider } from "@/components/PlayingCard";
 import { readSession } from "@/lib/auth/session";
 import { getUserById, recentChatMessages } from "@/lib/db";
 import { getBalance } from "@/lib/wallet";
 import { getUserLevel } from "@/lib/xpServer";
+import { getChampionId } from "@/lib/champion";
+import { findItem } from "@/lib/shop/catalog";
 
 export async function GameShell({
   title,
@@ -28,6 +31,9 @@ export async function GameShell({
   const balance = await getBalance(user.id);
   const initialChat = await recentChatMessages(50);
   const xpInfo = await getUserLevel(user.id);
+  const championId = await getChampionId();
+  const deckItem = user.equipped_card_deck ? findItem(user.equipped_card_deck) : undefined;
+  const palette = (deckItem?.meta as { palette?: string } | undefined)?.palette ?? "classic";
 
   const me = {
     id: user.id,
@@ -49,6 +55,9 @@ export async function GameShell({
                 color={user.avatar_color}
                 size={48}
                 level={xpInfo.level}
+                frame={user.equipped_frame ?? null}
+                hat={user.equipped_hat ?? null}
+                champion={user.id === championId}
               />
               <div className="avatar-username">
                 <div className="uname">{user.username}</div>
@@ -63,7 +72,7 @@ export async function GameShell({
             {blurb && <p className="text-mute">{blurb}</p>}
           </div>
 
-          {children}
+          <DeckProvider palette={palette}>{children}</DeckProvider>
         </AppLive>
       </main>
     </>

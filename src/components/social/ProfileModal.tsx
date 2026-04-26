@@ -10,11 +10,13 @@ type ProfileData = {
     avatarColor: string;
     initials: string;
     memberSince: string | null;
+    isChampion?: boolean;
     equipped: {
       avatarColor: string;
       frame: string | null;
       cardDeck: string;
       theme: string;
+      hat?: string | null;
     };
   };
   stats: {
@@ -126,6 +128,9 @@ export function ProfileModal({
                 size={96}
                 fontSize={32}
                 level={data.xp?.level}
+                frame={data.user.equipped.frame}
+                hat={data.user.equipped.hat ?? null}
+                champion={!!data.user.isChampion}
               />
               <div style={{ flex: 1 }}>
                 <h2 style={{ margin: 0, fontSize: "var(--fs-h2)" }}>{data.user.username}</h2>

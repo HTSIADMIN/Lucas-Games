@@ -161,6 +161,64 @@
   --dur-flop:   320ms;
 }
 
+/* ============================================================
+   THEME VARIANTS
+   `data-theme` is applied to <html> based on the user's equipped
+   theme. Each variant overrides the semantic surface tokens; the
+   raw palette tokens above stay unchanged so component accents
+   (gold money, crimson danger, cactus success) keep their hue.
+   ============================================================ */
+
+[data-theme="frontier"] {
+  --bg:           #f4ecdc;
+  --bg-deep:      #d4a574;
+  --bg-lift:      #f1d9b3;
+  --surface:      #f1d9b3;
+  --surface-edge: #8a8077;
+  --fg-muted:     #6b3f24;
+  --fg-dim:       #8a8077;
+}
+
+[data-theme="sunset"] {
+  --bg:           #2a1810;
+  --bg-deep:      #4a1a1a;
+  --bg-lift:      #5a3a78;
+  --surface:      #5a1a1a;
+  --surface-edge: #8b3a3a;
+  --fg:           #fef6e4;
+  --fg-muted:     #f1d9b3;
+  --fg-dim:       #d4a574;
+  --fg-on-wood:   #fef6e4;
+  --stroke:       #1a0f08;
+  --stroke-soft:  #4a2818;
+}
+
+[data-theme="midnight"] {
+  --bg:           #1a0f08;
+  --bg-deep:      #2a1810;
+  --bg-lift:      #3d2418;
+  --surface:      #2a1810;
+  --surface-edge: #4a2818;
+  --fg:           #fef6e4;
+  --fg-muted:     #d4a574;
+  --fg-dim:       #a87545;
+  --fg-on-wood:   #fef6e4;
+  --stroke:       #1a0f08;
+  --stroke-soft:  #3d2418;
+}
+
+/* Theme-tinted body backgrounds — overrides default radials. */
+[data-theme="sunset"] body {
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(232, 122, 58, 0.18) 0, transparent 40%),
+    radial-gradient(circle at 88% 72%, rgba(90, 58, 120, 0.18) 0, transparent 40%);
+}
+[data-theme="midnight"] body {
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(95, 168, 211, 0.08) 0, transparent 40%),
+    radial-gradient(circle at 88% 72%, rgba(245, 200, 66, 0.06) 0, transparent 40%);
+}
+
 /* Bridge tokens into Tailwind v4 */
 @theme inline {
   --color-bg: var(--bg);

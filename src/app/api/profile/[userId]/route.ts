@@ -3,6 +3,7 @@ import { readSession } from "@/lib/auth/session";
 import { getUserById } from "@/lib/db";
 import { getBalance } from "@/lib/wallet";
 import { levelFromXp, xpFromCoinsWagered } from "@/lib/xp";
+import { getChampionId } from "@/lib/champion";
 
 export const runtime = "nodejs";
 
@@ -120,6 +121,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
     .map(([game, v]) => ({ game, ...v }))
     .sort((a, b) => b.count - a.count);
 
+  const championId = await getChampionId();
+
   return NextResponse.json({
     user: {
       id: user.id,
@@ -127,11 +130,13 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
       avatarColor: user.avatar_color,
       initials: user.initials,
       memberSince: firstSeen,
+      isChampion: user.id === championId,
       equipped: {
         avatarColor: user.avatar_color,
         frame: user.equipped_frame ?? null,
         cardDeck: user.equipped_card_deck ?? "deck_classic",
         theme: user.equipped_theme ?? "saloon",
+        hat: user.equipped_hat ?? null,
       },
     },
     stats: {

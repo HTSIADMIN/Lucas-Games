@@ -7,26 +7,38 @@ import { readSession } from "@/lib/auth/session";
 import { getBalance } from "@/lib/wallet";
 import { getUserById, recentChatMessages } from "@/lib/db";
 import { getUserLevel } from "@/lib/xpServer";
+import { getChampionId } from "@/lib/champion";
+import { GameIcon, type GameIconName } from "@/components/GameIcon";
 import { SignOutButton } from "./SignOutButton";
 
-const GAMES = [
-  { slug: "coinflip",      name: "Coin Flip",       tag: "QUICK", live: true },
-  { slug: "coinflip-duel", name: "Coin Flip Duel",  tag: "PvP",   live: true },
-  { slug: "dice",      name: "Dice",      tag: "QUICK",   live: true  },
-  { slug: "slots",     name: "Slots",     tag: "JACKPOT", live: true  },
-  { slug: "blackjack-mp", name: "Blackjack Table", tag: "MULTI", live: true  },
-  { slug: "roulette",  name: "Roulette",  tag: "CLASSIC", live: true  },
-  { slug: "mines",     name: "Mines",     tag: "RISKY",   live: true  },
-  { slug: "plinko",    name: "Plinko",    tag: "PHYSICS", live: true  },
-  { slug: "crash",     name: "Crash",     tag: "LIVE",    live: true  },
-  { slug: "poker",     name: "Poker",     tag: "MULTI",   live: true  },
+type GameTile = {
+  slug: string;
+  name: string;
+  tag: string;
+  live: boolean;
+  icon: GameIconName;
+};
+
+const GAMES: GameTile[] = [
+  { slug: "coinflip",      name: "Coin Flip",       tag: "QUICK",   live: true, icon: "lobby.coinflip" },
+  { slug: "coinflip-duel", name: "Coin Flip Duel",  tag: "PvP",     live: true, icon: "lobby.coinflip_duel" },
+  { slug: "dice",          name: "Dice",            tag: "QUICK",   live: true, icon: "lobby.dice" },
+  { slug: "slots",         name: "Slots",           tag: "JACKPOT", live: true, icon: "lobby.slots" },
+  { slug: "blackjack-mp",  name: "Blackjack Table", tag: "MULTI",   live: true, icon: "lobby.blackjack" },
+  { slug: "roulette",      name: "Roulette",        tag: "CLASSIC", live: true, icon: "lobby.roulette" },
+  { slug: "mines",         name: "Mines",           tag: "RISKY",   live: true, icon: "lobby.mines" },
+  { slug: "plinko",        name: "Plinko",          tag: "PHYSICS", live: true, icon: "lobby.plinko" },
+  { slug: "crash",         name: "Crash",           tag: "LIVE",    live: true, icon: "lobby.crash" },
+  { slug: "poker",         name: "Poker",           tag: "MULTI",   live: true, icon: "lobby.poker" },
 ];
 
-const EARN_BACKS = [
-  { slug: "daily-spin",  name: "Daily Spin",  tag: "ONCE / DAY", live: true },
-  { slug: "crossy-road", name: "Crossy Road", tag: "FREE",       live: true },
-  { slug: "flappy",      name: "Flappy",      tag: "FREE",       live: true },
-  { slug: "monopoly",    name: "Frontier Monopoly", tag: "EVERY HOUR", live: true },
+type EarnTile = { slug: string; name: string; tag: string; live: boolean; icon: GameIconName };
+
+const EARN_BACKS: EarnTile[] = [
+  { slug: "daily-spin",  name: "Daily Spin",        tag: "ONCE / DAY",  live: true, icon: "lobby.daily_spin" },
+  { slug: "crossy-road", name: "Crossy Road",       tag: "FREE",        live: true, icon: "lobby.crossy_road" },
+  { slug: "flappy",      name: "Flappy",            tag: "FREE",        live: true, icon: "lobby.flappy" },
+  { slug: "monopoly",    name: "Frontier Monopoly", tag: "EVERY HOUR",  live: true, icon: "lobby.monopoly" },
 ];
 
 export default async function LobbyPage() {
@@ -37,6 +49,7 @@ export default async function LobbyPage() {
   const balance = await getBalance(user.id);
   const initialChat = await recentChatMessages(50);
   const xpInfo = await getUserLevel(user.id);
+  const championId = await getChampionId();
   const me = {
     id: user.id,
     username: user.username,
@@ -56,6 +69,9 @@ export default async function LobbyPage() {
               color={user.avatar_color}
               size={48}
               level={xpInfo.level}
+              frame={user.equipped_frame ?? null}
+              hat={user.equipped_hat ?? null}
+              champion={user.id === championId}
             />
             <div className="avatar-username">
               <div className="uname">{user.username}</div>
@@ -80,16 +96,7 @@ export default async function LobbyPage() {
               aria-disabled={!g.live || undefined}
             >
               <div className="tile-art">
-                <span
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: "var(--fs-h1)",
-                    color: "var(--parchment-50)",
-                    textShadow: "3px 3px 0 var(--ink-900)",
-                  }}
-                >
-                  {g.name[0]}
-                </span>
+                <GameIcon name={g.icon} size={96} />
               </div>
               <div className="tile-name">{g.name}</div>
               <div className="tile-meta">
@@ -117,6 +124,9 @@ export default async function LobbyPage() {
                 ...(g.live ? {} : { opacity: 0.55, cursor: "not-allowed", pointerEvents: "none" }),
               }}
             >
+              <div className="tile-art" style={{ background: "var(--gold-200)" }}>
+                <GameIcon name={g.icon} size={72} />
+              </div>
               <div className="tile-name">{g.name}</div>
               <div className="tile-meta">
                 <span className="badge badge-gold">{g.tag}</span>
