@@ -250,6 +250,78 @@ export async function grantItem(userId: string, itemId: string): Promise<boolean
   db().player_inventory.push({ user_id: userId, item_id: itemId, acquired_at: new Date().toISOString() });
   commit(); return true;
 }
+// ============ CRASH (multiplayer rounds) ============
+export async function getActiveCrashRound(): Promise<CrashRound | null> {
+  return (
+    db().crash_rounds
+      .filter((r) => r.status === "betting" || r.status === "running")
+      .sort((a, b) => (a.round_no ?? 0) - (b.round_no ?? 0))[0] ?? null
+  );
+}
+
+export async function getCrashRound(id: string): Promise<CrashRound | null> {
+  return db().crash_rounds.find((r) => r.id === id) ?? null;
+}
+
+export async function insertCrashRound(round: CrashRound): Promise<CrashRound> {
+  // Ensure round_no auto-increments
+  const max = db().crash_rounds.reduce((m, r) => Math.max(m, r.round_no ?? 0), 0);
+  const r = { ...round, round_no: round.round_no || max + 1 };
+  db().crash_rounds.push(r);
+  commit();
+  return r;
+}
+
+export async function updateCrashRound(
+  id: string,
+  patch: Partial<CrashRound>,
+): Promise<CrashRound | null> {
+  const r = db().crash_rounds.find((x) => x.id === id);
+  if (!r) return null;
+  Object.assign(r, patch);
+  commit();
+  return r;
+}
+
+export async function listCrashBets(roundId: string): Promise<CrashBet[]> {
+  return db().crash_bets.filter((b) => b.round_id === roundId);
+}
+
+export async function getCrashBet(roundId: string, userId: string): Promise<CrashBet | null> {
+  return db().crash_bets.find((b) => b.round_id === roundId && b.user_id === userId) ?? null;
+}
+
+export async function insertCrashBet(input: Omit<CrashBet, "id" | "placed_at" | "cashed_out_at">): Promise<CrashBet> {
+  // unique on (round_id, user_id)
+  const existing = db().crash_bets.find((b) => b.round_id === input.round_id && b.user_id === input.user_id);
+  if (existing) throw new Error("bet_already_placed");
+  db()._crashBetSeq += 1;
+  const row: CrashBet = {
+    ...input,
+    id: db()._crashBetSeq,
+    placed_at: new Date().toISOString(),
+    cashed_out_at: null,
+  };
+  db().crash_bets.push(row);
+  commit();
+  return row;
+}
+
+export async function updateCrashBet(
+  id: number,
+  patch: Partial<CrashBet>,
+): Promise<CrashBet | null> {
+  const row = db().crash_bets.find((b) => b.id === id);
+  if (!row) return null;
+  Object.assign(row, patch);
+  commit();
+  return row;
+}
+
+export async function listOpenCrashBets(roundId: string): Promise<CrashBet[]> {
+  return db().crash_bets.filter((b) => b.round_id === roundId && b.cashout_at_x === null);
+}
+
 // ============ CHAT ============
 export async function insertChatMessage(
   input: Omit<ChatMessage, "id" | "created_at">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ProfileButton } from "@/components/social/ProfileButton";
 
 export function SiteHeader({ current }: { current?: string }) {
   return (
@@ -20,6 +21,7 @@ export function SiteHeader({ current }: { current?: string }) {
         <Link href="/shop" aria-current={current === "shop" ? "page" : undefined}>
           Shop
         </Link>
+        <ProfileButton />
       </nav>
     </header>
   );

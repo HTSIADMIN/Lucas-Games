@@ -6,6 +6,8 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
   ChatMessage,
   ChatMessagePublic,
+  CrashBet,
+  CrashRound,
   EarnCooldown,
   GameSession,
   MinesGame,
@@ -321,6 +323,120 @@ export async function setEquipped(
   const { data, error } = await client().from("users").update(update).eq("id", userId).select("*").maybeSingle();
   if (error) throw new Error(`setEquipped: ${error.message}`);
   return (data as User | null) ?? null;
+}
+
+// ============ CRASH (multiplayer rounds) ============
+export async function getActiveCrashRound(): Promise<CrashRound | null> {
+  const { data, error } = await client()
+    .from("crash_rounds")
+    .select("*")
+    .in("status", ["betting", "running"])
+    .order("round_no", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`getActiveCrashRound: ${error.message}`);
+  return (data as CrashRound | null) ?? null;
+}
+
+export async function getCrashRound(id: string): Promise<CrashRound | null> {
+  const { data, error } = await client().from("crash_rounds").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`getCrashRound: ${error.message}`);
+  return (data as CrashRound | null) ?? null;
+}
+
+export async function insertCrashRound(round: CrashRound): Promise<CrashRound> {
+  const { data, error } = await client()
+    .from("crash_rounds")
+    .insert({
+      id: round.id,
+      seed: round.seed,
+      crash_at_x: round.crash_at_x,
+      bet_close_at: round.bet_close_at,
+      status: round.status,
+      created_by: round.created_by,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(`insertCrashRound: ${error.message}`);
+  return data as CrashRound;
+}
+
+export async function updateCrashRound(
+  id: string,
+  patch: Partial<CrashRound>,
+): Promise<CrashRound | null> {
+  const { data, error } = await client()
+    .from("crash_rounds")
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+  if (error) throw new Error(`updateCrashRound: ${error.message}`);
+  return (data as CrashRound | null) ?? null;
+}
+
+export async function listCrashBets(roundId: string): Promise<CrashBet[]> {
+  const { data, error } = await client().from("crash_bets").select("*").eq("round_id", roundId);
+  if (error) throw new Error(`listCrashBets: ${error.message}`);
+  return (data ?? []) as CrashBet[];
+}
+
+export async function getCrashBet(roundId: string, userId: string): Promise<CrashBet | null> {
+  const { data, error } = await client()
+    .from("crash_bets")
+    .select("*")
+    .eq("round_id", roundId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(`getCrashBet: ${error.message}`);
+  return (data as CrashBet | null) ?? null;
+}
+
+export async function insertCrashBet(
+  input: Omit<CrashBet, "id" | "placed_at" | "cashed_out_at">,
+): Promise<CrashBet> {
+  const { data, error } = await client()
+    .from("crash_bets")
+    .insert({
+      round_id: input.round_id,
+      user_id: input.user_id,
+      bet: input.bet,
+      cashout_at_x: input.cashout_at_x,
+      payout: input.payout,
+    })
+    .select("*")
+    .single();
+  if (error) {
+    if ((error as { code?: string }).code === "23505" || error.message.includes("duplicate")) {
+      throw new Error("bet_already_placed");
+    }
+    throw new Error(`insertCrashBet: ${error.message}`);
+  }
+  return data as CrashBet;
+}
+
+export async function updateCrashBet(
+  id: number,
+  patch: Partial<CrashBet>,
+): Promise<CrashBet | null> {
+  const { data, error } = await client()
+    .from("crash_bets")
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+  if (error) throw new Error(`updateCrashBet: ${error.message}`);
+  return (data as CrashBet | null) ?? null;
+}
+
+export async function listOpenCrashBets(roundId: string): Promise<CrashBet[]> {
+  const { data, error } = await client()
+    .from("crash_bets")
+    .select("*")
+    .eq("round_id", roundId)
+    .is("cashout_at_x", null);
+  if (error) throw new Error(`listOpenCrashBets: ${error.message}`);
+  return (data ?? []) as CrashBet[];
 }
 
 // ============ CHAT ============

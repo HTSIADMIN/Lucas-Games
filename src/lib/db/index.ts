@@ -60,4 +60,14 @@ export const setEquipped           = impl.setEquipped;
 export const insertChatMessage     = impl.insertChatMessage;
 export const recentChatMessages    = impl.recentChatMessages;
 
+export const getActiveCrashRound   = impl.getActiveCrashRound;
+export const getCrashRound         = impl.getCrashRound;
+export const insertCrashRound      = impl.insertCrashRound;
+export const updateCrashRound      = impl.updateCrashRound;
+export const listCrashBets         = impl.listCrashBets;
+export const getCrashBet           = impl.getCrashBet;
+export const insertCrashBet        = impl.insertCrashBet;
+export const updateCrashBet        = impl.updateCrashBet;
+export const listOpenCrashBets     = impl.listOpenCrashBets;
+
 export * from "./types";

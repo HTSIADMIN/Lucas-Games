@@ -95,9 +95,12 @@ export type CrashRound = {
   id: string;
   seed: string;
   crash_at_x: number;
+  bet_close_at: string | null;
   started_at: string | null;
   ended_at: string | null;
-  status: "pending" | "running" | "crashed";
+  status: "betting" | "running" | "crashed" | "pending";
+  created_by: string | null;
+  round_no: number;
 };
 
 export type CrashBet = {

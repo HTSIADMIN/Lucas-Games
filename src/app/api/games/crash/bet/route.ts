@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
 import { readSession } from "@/lib/auth/session";
 import { validateBet } from "@/lib/games/common";
 import { debit, getBalance } from "@/lib/wallet";
-import { insertGameSession } from "@/lib/db";
-import { pickCrashPoint } from "@/lib/games/crash/engine";
+import { getCrashBet, insertCrashBet } from "@/lib/db";
+import { getCrashState } from "@/lib/games/crash/scheduler";
 
 export const runtime = "nodejs";
 
@@ -18,39 +17,45 @@ export async function POST(req: Request) {
   const v = validateBet(body.bet);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
 
-  const sessionId = randomUUID();
+  const state = await getCrashState();
+  if (!state.round) return NextResponse.json({ error: "no_active_round" }, { status: 400 });
+  if (state.round.status !== "betting") {
+    return NextResponse.json({ error: "betting_closed" }, { status: 400 });
+  }
+
+  // Already bet this round?
+  const existing = await getCrashBet(state.round.id, s.user.id);
+  if (existing) return NextResponse.json({ error: "already_bet_this_round" }, { status: 409 });
+
   try {
     await debit({
       userId: s.user.id,
       amount: v.bet,
       reason: "crash_bet",
       refKind: "crash",
-      refId: `${sessionId}:bet`,
+      refId: `${state.round.id}:${s.user.id}:bet`,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "error";
     return NextResponse.json({ error: msg }, { status: msg === "insufficient_funds" ? 400 : 500 });
   }
 
-  const crashAtX = pickCrashPoint();
-  const startedAt = Date.now();
+  try {
+    await insertCrashBet({
+      round_id: state.round.id,
+      user_id: s.user.id,
+      bet: v.bet,
+      cashout_at_x: null,
+      payout: 0,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "error";
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
 
-  await insertGameSession({
-    id: sessionId,
-    user_id: s.user.id,
-    game: "crash",
-    bet: v.bet,
-    payout: 0,
-    state: { crash_at_x: crashAtX, started_at: startedAt },
-    status: "open",
-  });
-
-  // crash_at_x is intentionally not returned.
   return NextResponse.json({
     ok: true,
-    sessionId,
-    startedAt,
-    bet: v.bet,
+    roundId: state.round.id,
     balance: await getBalance(s.user.id),
   });
 }
