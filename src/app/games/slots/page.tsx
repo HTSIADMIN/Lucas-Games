@@ -4,9 +4,9 @@ import { SlotsClient } from "./SlotsClient";
 export default function SlotsPage() {
   return (
     <GameShell
-      title="Slots"
+      title="Boomtown Slots"
       game="slots"
-      blurb="Three reels. Match three sheriffs and walk away rich."
+      blurb="5×4 reels, 20 lines. Land 6 cash coins to trigger Round 'Em Up. Buildings on reel 5 multiply the loot. Fill the screen for Boomtown."
     >
       <SlotsClient />
     </GameShell>

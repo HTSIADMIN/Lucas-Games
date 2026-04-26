@@ -92,4 +92,10 @@ export const listMonopolyOwned       = impl.listMonopolyOwned;
 export const getMonopolyOwned        = impl.getMonopolyOwned;
 export const upsertMonopolyOwned     = impl.upsertMonopolyOwned;
 
+export const getSlotsMeter           = impl.getSlotsMeter;
+export const setSlotsMeter           = impl.setSlotsMeter;
+export const getActiveSlotRun        = impl.getActiveSlotRun;
+export const insertSlotRun           = impl.insertSlotRun;
+export const updateSlotRun           = impl.updateSlotRun;
+
 export * from "./types";

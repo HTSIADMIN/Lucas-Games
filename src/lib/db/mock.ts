@@ -20,6 +20,7 @@ import {
   PinAttempts,
   PlayerInventoryRow,
   PlinkoDrop,
+  SlotRun,
   User,
   UserPublic,
   UserSession,
@@ -44,6 +45,7 @@ type Schema = {
   coinflip_duels: CoinflipDuel[];
   monopoly_states: MonopolyState[];
   monopoly_owned: MonopolyOwned[];
+  slot_runs: SlotRun[];
   _walletSeq: number;
   _crashBetSeq: number;
   _chatSeq: number;
@@ -59,6 +61,7 @@ const EMPTY: Schema = {
   plinko_drops: [], mines_games: [], player_inventory: [], chat_messages: [],
   blackjack_rounds: [], blackjack_seats: [], coinflip_duels: [],
   monopoly_states: [], monopoly_owned: [],
+  slot_runs: [],
   _walletSeq: 0, _crashBetSeq: 0, _chatSeq: 0, _bjSeatSeq: 0,
 };
 
@@ -477,4 +480,43 @@ export async function setEquipped(
   if (patch.equipped_theme !== undefined) u.equipped_theme = patch.equipped_theme;
   if (patch.equipped_hat !== undefined) u.equipped_hat = patch.equipped_hat;
   commit(); return u;
+}
+
+// ============ SLOTS v2 ============
+export async function getSlotsMeter(userId: string): Promise<number> {
+  return db().users.find((u) => u.id === userId)?.slots_meter ?? 0;
+}
+
+export async function setSlotsMeter(userId: string, value: number): Promise<void> {
+  const u = db().users.find((x) => x.id === userId);
+  if (!u) return;
+  u.slots_meter = Math.max(0, Math.floor(value));
+  commit();
+}
+
+export async function getActiveSlotRun(userId: string): Promise<SlotRun | null> {
+  return db().slot_runs.find((r) => r.user_id === userId && r.status === "active") ?? null;
+}
+
+export async function insertSlotRun(run: Omit<SlotRun, "created_at" | "ended_at"> & {
+  created_at?: string;
+  ended_at?: string | null;
+}): Promise<SlotRun> {
+  const now = new Date().toISOString();
+  const full: SlotRun = {
+    ...run,
+    created_at: run.created_at ?? now,
+    ended_at: run.ended_at ?? null,
+  };
+  db().slot_runs.push(full);
+  commit();
+  return full;
+}
+
+export async function updateSlotRun(id: string, patch: Partial<SlotRun>): Promise<SlotRun | null> {
+  const r = db().slot_runs.find((x) => x.id === id);
+  if (!r) return null;
+  Object.assign(r, patch);
+  commit();
+  return r;
 }

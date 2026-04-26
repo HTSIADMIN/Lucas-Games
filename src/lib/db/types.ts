@@ -15,6 +15,27 @@ export type User = {
   equipped_card_deck?: string;
   equipped_theme?: string;
   equipped_hat?: string | null;
+  slots_meter?: number;
+};
+
+// Hold-and-spin bonus session state. One row per active bonus.
+export type SlotRun = {
+  id: string;
+  user_id: string;
+  bet: number;
+  grid: SlotCell[];          // length-20: 5 reels × 4 rows, row-major
+  respins_left: number;
+  coins_locked: number;
+  building_tier: number;     // 1..5
+  final_payout: number | null;
+  status: "active" | "settled";
+  created_at: string;
+  ended_at: string | null;
+};
+
+export type SlotCell = {
+  value: number | null;      // null = blank, otherwise locked cash-coin value (¢)
+  locked: boolean;
 };
 
 export type PlayerInventoryRow = {

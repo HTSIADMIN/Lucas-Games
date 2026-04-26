@@ -18,6 +18,7 @@ import {
   MonopolyState,
   PinAttempts,
   PlinkoDrop,
+  SlotRun,
   User,
   UserPublic,
   UserSession,
@@ -641,3 +642,67 @@ export async function recentChatMessages(limit = 50): Promise<ChatMessagePublic[
 
 // Note: cosmetic_items table is unused by the app — catalog lives in src/lib/shop/catalog.ts.
 // If you ever want to move catalog into Postgres, seed the table from CATALOG and read here.
+
+// ============ SLOTS v2 ============
+export async function getSlotsMeter(userId: string): Promise<number> {
+  const { data, error } = await client()
+    .from("users")
+    .select("slots_meter")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw new Error(`getSlotsMeter: ${error.message}`);
+  return Number((data as { slots_meter?: number } | null)?.slots_meter ?? 0);
+}
+
+export async function setSlotsMeter(userId: string, value: number): Promise<void> {
+  const v = Math.max(0, Math.floor(value));
+  const { error } = await client().from("users").update({ slots_meter: v }).eq("id", userId);
+  if (error) throw new Error(`setSlotsMeter: ${error.message}`);
+}
+
+export async function getActiveSlotRun(userId: string): Promise<SlotRun | null> {
+  const { data, error } = await client()
+    .from("slot_runs")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`getActiveSlotRun: ${error.message}`);
+  return (data as SlotRun | null) ?? null;
+}
+
+export async function insertSlotRun(run: Omit<SlotRun, "created_at" | "ended_at"> & {
+  created_at?: string;
+  ended_at?: string | null;
+}): Promise<SlotRun> {
+  const { data, error } = await client()
+    .from("slot_runs")
+    .insert({
+      id: run.id,
+      user_id: run.user_id,
+      bet: run.bet,
+      grid: run.grid,
+      respins_left: run.respins_left,
+      coins_locked: run.coins_locked,
+      building_tier: run.building_tier,
+      final_payout: run.final_payout,
+      status: run.status,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(`insertSlotRun: ${error.message}`);
+  return data as SlotRun;
+}
+
+export async function updateSlotRun(id: string, patch: Partial<SlotRun>): Promise<SlotRun | null> {
+  const { data, error } = await client()
+    .from("slot_runs")
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+  if (error) throw new Error(`updateSlotRun: ${error.message}`);
+  return (data as SlotRun | null) ?? null;
+}
