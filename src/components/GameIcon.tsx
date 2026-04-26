@@ -13,7 +13,9 @@ export type IconName =
   | "lobby.coinflip" | "lobby.coinflip_duel" | "lobby.dice" | "lobby.slots"
   | "lobby.blackjack" | "lobby.roulette" | "lobby.mines" | "lobby.plinko"
   | "lobby.crash" | "lobby.poker" | "lobby.daily_spin" | "lobby.crossy_road"
-  | "lobby.flappy" | "lobby.monopoly";
+  | "lobby.flappy" | "lobby.monopoly"
+  | "clan.wolf" | "clan.bear" | "clan.eagle" | "clan.snake"
+  | "clan.bull" | "clan.coyote" | "clan.hawk" | "clan.stag";
 
 // Re-export under a clearer alias for callers that don't want to use "IconName".
 export type GameIconName = IconName;
@@ -1699,6 +1701,238 @@ const LOBBY_ICONS_32: Partial<Record<IconName, Px[]>> = {
     [13, 28,  2,  1, C.cactusD],
     [13, 27,  2,  1, C.cactus],
     [16, 27,  1,  1, C.cactus],
+  ],
+
+  // ============ CLAN ANIMALS (32x32, simple silhouettes) ============
+  // WOLF — howling head profile
+  "clan.wolf": [
+    // Body / shoulders
+    [10, 22, 14, 6, C.saddleD],
+    [12, 28, 10, 2, C.saddleD],
+    // Neck + head
+    [11, 14, 10, 8, C.saddleM],
+    // Snout
+    [4, 10, 8, 4, C.saddle],
+    [4, 14, 6, 2, C.saddleD],
+    // Ears (pointed back)
+    [12, 8, 3, 4, C.saddleD],
+    [17, 8, 3, 4, C.saddleD],
+    [13, 9, 1, 2, C.saddle],
+    [18, 9, 1, 2, C.saddle],
+    // Eye
+    [11, 12, 2, 2, C.gold],
+    [12, 13, 1, 1, C.ink],
+    // Nose
+    [4, 11, 2, 1, C.ink],
+    // Outline highlights
+    [10, 14, 1, 8, C.saddle],
+    [21, 14, 1, 8, C.saddleD],
+  ],
+
+  // BEAR — round body, round ears
+  "clan.bear": [
+    // Body
+    [6, 16, 20, 12, C.saddle],
+    [4, 18, 24, 8, C.saddle],
+    [6, 14, 20, 2, C.saddleD],
+    // Head
+    [10, 8, 12, 8, C.saddle],
+    [9, 10, 14, 4, C.saddle],
+    // Ears
+    [9, 6, 4, 4, C.saddleD],
+    [19, 6, 4, 4, C.saddleD],
+    [10, 7, 2, 2, C.saddleM],
+    [20, 7, 2, 2, C.saddleM],
+    // Snout
+    [13, 12, 6, 4, C.saddleL],
+    [14, 13, 4, 1, C.saddleM],
+    [15, 14, 2, 1, C.ink],
+    // Eyes
+    [12, 10, 1, 1, C.ink],
+    [19, 10, 1, 1, C.ink],
+    // Belly highlight
+    [10, 22, 12, 4, C.saddleM],
+  ],
+
+  // EAGLE — wings out, head front-facing
+  "clan.eagle": [
+    // Wings spread
+    [0, 12, 8, 6, C.saddleD],
+    [24, 12, 8, 6, C.saddleD],
+    [2, 18, 6, 2, C.saddleD],
+    [24, 18, 6, 2, C.saddleD],
+    [4, 10, 4, 2, C.ink],
+    [24, 10, 4, 2, C.ink],
+    // Body
+    [12, 12, 8, 14, C.saddle],
+    [13, 26, 6, 2, C.saddleD],
+    // Head (white)
+    [12, 6, 8, 6, C.parchL],
+    [13, 4, 6, 2, C.parchL],
+    // Beak (gold/yellow)
+    [15, 10, 2, 3, C.gold],
+    [16, 13, 1, 1, C.goldD],
+    // Eyes
+    [13, 7, 1, 2, C.ink],
+    [18, 7, 1, 2, C.ink],
+    // Talons
+    [13, 28, 2, 2, C.gold],
+    [17, 28, 2, 2, C.gold],
+  ],
+
+  // SNAKE — coiled with hood
+  "clan.snake": [
+    // Coiled body (concentric blocks)
+    [4, 14, 24, 14, C.cactusD],
+    [6, 16, 20, 10, C.cactus],
+    [8, 18, 16, 6, C.cactusD],
+    [10, 20, 12, 2, C.cactus],
+    // Head + hood
+    [11, 4, 10, 4, C.cactusD],
+    [9, 8, 14, 6, C.cactusD],
+    [13, 6, 6, 2, C.cactus],
+    // Eyes (yellow)
+    [11, 10, 2, 2, C.gold],
+    [19, 10, 2, 2, C.gold],
+    [12, 11, 1, 1, C.ink],
+    [20, 11, 1, 1, C.ink],
+    // Forked tongue
+    [14, 12, 4, 1, C.crimson],
+    [13, 13, 1, 1, C.crimson],
+    [18, 13, 1, 1, C.crimson],
+    // Pattern dots
+    [14, 18, 1, 1, C.gold],
+    [17, 18, 1, 1, C.gold],
+    [14, 22, 1, 1, C.gold],
+    [17, 22, 1, 1, C.gold],
+  ],
+
+  // BULL — head with horns, nose ring
+  "clan.bull": [
+    // Head body
+    [8, 12, 16, 14, C.ink],
+    [10, 10, 12, 2, C.ink],
+    // Horns
+    [4, 10, 6, 2, C.parchL],
+    [22, 10, 6, 2, C.parchL],
+    [3, 8, 3, 2, C.parchL],
+    [26, 8, 3, 2, C.parchL],
+    [5, 12, 2, 1, C.parchD],
+    [25, 12, 2, 1, C.parchD],
+    // Forehead tuft
+    [13, 8, 6, 2, C.saddleD],
+    [14, 6, 4, 2, C.saddleD],
+    // Snout
+    [10, 18, 12, 6, C.saddleL],
+    [12, 24, 8, 2, C.saddleM],
+    [13, 21, 1, 1, C.ink],
+    [18, 21, 1, 1, C.ink],
+    // Eyes
+    [11, 14, 2, 2, C.gold],
+    [19, 14, 2, 2, C.gold],
+    [12, 15, 1, 1, C.ink],
+    [20, 15, 1, 1, C.ink],
+    // Nose ring
+    [14, 22, 4, 1, C.gold],
+    [13, 23, 1, 1, C.gold],
+    [18, 23, 1, 1, C.gold],
+    [14, 24, 4, 1, C.gold],
+  ],
+
+  // COYOTE — alert, ears up
+  "clan.coyote": [
+    // Body
+    [8, 18, 16, 8, C.saddleM],
+    [10, 26, 12, 2, C.saddleM],
+    // Tail
+    [22, 16, 4, 6, C.saddleM],
+    [25, 14, 3, 4, C.saddleM],
+    [26, 16, 1, 4, C.parchL],
+    // Head
+    [10, 10, 12, 8, C.saddleM],
+    // Snout
+    [4, 14, 8, 4, C.saddleL],
+    [4, 17, 5, 1, C.saddleD],
+    [4, 14, 1, 1, C.ink],
+    // Pointy ears
+    [11, 4, 3, 6, C.saddleD],
+    [18, 4, 3, 6, C.saddleD],
+    [12, 6, 1, 3, C.saddleM],
+    [19, 6, 1, 3, C.saddleM],
+    // Eyes
+    [12, 12, 2, 2, C.gold],
+    [18, 12, 2, 2, C.gold],
+    [13, 13, 1, 1, C.ink],
+    [19, 13, 1, 1, C.ink],
+    // Belly highlight
+    [10, 22, 12, 4, C.parchM],
+  ],
+
+  // HAWK — diving, talons forward
+  "clan.hawk": [
+    // Wings swept back
+    [2, 10, 8, 4, C.crimsonD],
+    [22, 10, 8, 4, C.crimsonD],
+    [4, 6, 4, 4, C.crimsonD],
+    [24, 6, 4, 4, C.crimsonD],
+    // Body
+    [12, 8, 8, 14, C.saddleD],
+    [13, 22, 6, 2, C.saddleD],
+    // Head
+    [13, 4, 6, 6, C.saddle],
+    [12, 6, 8, 4, C.saddle],
+    // Beak (hooked)
+    [14, 10, 4, 2, C.gold],
+    [15, 12, 2, 1, C.goldD],
+    // Eye
+    [14, 7, 2, 2, C.gold],
+    [15, 8, 1, 1, C.ink],
+    // Tail feathers
+    [10, 22, 4, 6, C.crimsonD],
+    [18, 22, 4, 6, C.crimsonD],
+    // Talons reaching down
+    [12, 24, 2, 4, C.gold],
+    [18, 24, 2, 4, C.gold],
+    [11, 28, 4, 1, C.gold],
+    [17, 28, 4, 1, C.gold],
+  ],
+
+  // STAG — antlers up, side profile
+  "clan.stag": [
+    // Antlers — left + right with branches
+    [4, 2, 2, 8, C.saddleD],
+    [10, 2, 2, 8, C.saddleD],
+    [2, 4, 2, 2, C.saddleD],
+    [12, 4, 2, 2, C.saddleD],
+    [6, 4, 2, 2, C.saddleD],
+    [8, 4, 2, 2, C.saddleD],
+    [3, 8, 1, 2, C.saddleD],
+    [12, 8, 1, 2, C.saddleD],
+    // Right antler set
+    [20, 2, 2, 8, C.saddleD],
+    [26, 2, 2, 8, C.saddleD],
+    [18, 4, 2, 2, C.saddleD],
+    [28, 4, 2, 2, C.saddleD],
+    [22, 4, 2, 2, C.saddleD],
+    [24, 4, 2, 2, C.saddleD],
+    // Head
+    [12, 10, 8, 8, C.saddleM],
+    // Snout
+    [10, 14, 4, 4, C.saddleL],
+    [10, 16, 3, 1, C.saddleD],
+    // Eye
+    [13, 12, 2, 2, C.gold],
+    [14, 13, 1, 1, C.ink],
+    // Ears
+    [11, 8, 2, 3, C.saddleD],
+    [19, 8, 2, 3, C.saddleD],
+    // Neck/body
+    [13, 18, 12, 8, C.saddleM],
+    [14, 26, 10, 2, C.saddleD],
+    // Spots (dappled)
+    [16, 20, 1, 1, C.parchM],
+    [20, 22, 1, 1, C.parchM],
+    [18, 24, 1, 1, C.parchM],
   ],
 };
 

@@ -18,6 +18,9 @@ export function SiteHeader({ current }: { current?: string }) {
         <Link href="/leaderboard" aria-current={current === "leaderboard" ? "page" : undefined}>
           Leaderboard
         </Link>
+        <Link href="/clans" aria-current={current === "clans" ? "page" : undefined}>
+          Clans
+        </Link>
         <Link href="/shop" aria-current={current === "shop" ? "page" : undefined}>
           Shop
         </Link>

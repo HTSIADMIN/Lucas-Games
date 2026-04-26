@@ -16,6 +16,57 @@ export type User = {
   equipped_theme?: string;
   equipped_hat?: string | null;
   slots_meter?: number;
+  bonus_spin_tokens?: number;
+};
+
+// ============ CLANS ============
+export type ClanAnimal =
+  | "wolf" | "bear" | "eagle" | "snake" | "bull" | "coyote" | "hawk" | "stag";
+
+export type Clan = {
+  id: string;
+  name: string;
+  tag: string;
+  animal_icon: ClanAnimal;
+  founder_id: string;
+  member_count: number;
+  total_xp_week: number;
+  created_at: string;
+};
+
+export type ClanMember = {
+  clan_id: string;
+  user_id: string;
+  role: "leader" | "member";
+  weekly_xp: number;
+  joined_at: string;
+};
+
+export type ClanSeason = {
+  id: string;
+  week_start: string;
+  week_end: string;
+  status: "active" | "settled";
+  created_at: string;
+};
+
+export type ClanChestTier = "rare" | "epic" | "legendary";
+
+export type ClanChestRewards = {
+  coins?: number;
+  monopolyCards?: { propertyId: string; count: number }[];
+  spinTokens?: number;
+};
+
+export type ClanChest = {
+  id: string;
+  user_id: string;
+  season_id: string;
+  rank: number;
+  tier: ClanChestTier;
+  opened_at: string | null;
+  rewards: ClanChestRewards | null;
+  created_at: string;
 };
 
 // Hold-and-spin bonus session state. One row per active bonus.
