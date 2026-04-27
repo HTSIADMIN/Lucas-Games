@@ -13,25 +13,40 @@ import { GameIcon, type GameIconName } from "@/components/GameIcon";
 import { SignOutButton } from "./SignOutButton";
 import { FreeGamesButton } from "./FreeGamesButton";
 
+type GameCategory = "cards" | "coins" | "dice" | "other";
+
 type GameTile = {
   slug: string;
   name: string;
   tag: string;
   live: boolean;
   icon: GameIconName;
+  category: GameCategory;
+  multiplayer?: boolean;
 };
 
 const GAMES: GameTile[] = [
-  { slug: "coinflip",      name: "Coin Flip",       tag: "QUICK",   live: true, icon: "lobby.coinflip" },
-  { slug: "coinflip-duel", name: "Coin Flip Duel",  tag: "PvP",     live: true, icon: "lobby.coinflip_duel" },
-  { slug: "dice",          name: "Dice",            tag: "QUICK",   live: true, icon: "lobby.dice" },
-  { slug: "slots",         name: "Slots",           tag: "JACKPOT", live: true, icon: "lobby.slots" },
-  { slug: "blackjack-mp",  name: "Blackjack Table", tag: "MULTI",   live: true, icon: "lobby.blackjack" },
-  { slug: "roulette",      name: "Roulette",        tag: "CLASSIC", live: true, icon: "lobby.roulette" },
-  { slug: "mines",         name: "Mines",           tag: "RISKY",   live: true, icon: "lobby.mines" },
-  { slug: "plinko",        name: "Plinko",          tag: "PHYSICS", live: true, icon: "lobby.plinko" },
-  { slug: "crash",         name: "Crash",           tag: "LIVE",    live: true, icon: "lobby.crash" },
-  { slug: "poker",         name: "Poker",           tag: "MULTI",   live: true, icon: "lobby.poker" },
+  // Cards
+  { slug: "blackjack-mp",  name: "Blackjack Table", tag: "MULTI",   live: true, icon: "lobby.blackjack",      category: "cards", multiplayer: true },
+  { slug: "poker",         name: "Poker",           tag: "MULTI",   live: true, icon: "lobby.poker",          category: "cards", multiplayer: true },
+  // Coins
+  { slug: "coinflip",      name: "Coin Flip",       tag: "QUICK",   live: true, icon: "lobby.coinflip",       category: "coins" },
+  { slug: "coinflip-duel", name: "Coin Flip Duel",  tag: "PvP",     live: true, icon: "lobby.coinflip_duel",  category: "coins", multiplayer: true },
+  // Dice
+  { slug: "dice",          name: "Dice",            tag: "QUICK",   live: true, icon: "lobby.dice",           category: "dice" },
+  // Other
+  { slug: "slots",         name: "Slots",           tag: "JACKPOT", live: true, icon: "lobby.slots",          category: "other" },
+  { slug: "roulette",      name: "Roulette",        tag: "CLASSIC", live: true, icon: "lobby.roulette",       category: "other" },
+  { slug: "mines",         name: "Mines",           tag: "RISKY",   live: true, icon: "lobby.mines",          category: "other" },
+  { slug: "plinko",        name: "Plinko",          tag: "PHYSICS", live: true, icon: "lobby.plinko",         category: "other" },
+  { slug: "crash",         name: "Crash",           tag: "LIVE",    live: true, icon: "lobby.crash",          category: "other" },
+];
+
+const CATEGORY_ORDER: { key: GameCategory; label: string }[] = [
+  { key: "cards", label: "Cards" },
+  { key: "coins", label: "Coins" },
+  { key: "dice",  label: "Dice" },
+  { key: "other", label: "House Games" },
 ];
 
 export default async function LobbyPage() {
@@ -89,32 +104,42 @@ export default async function LobbyPage() {
           </div>
         </section>
 
-        <section style={{ marginBottom: "var(--sp-5)" }}>
-          <div className="divider">Pick a Table</div>
-        </section>
-
-        <div className="grid grid-3 lobby-tile-grid">
-          {GAMES.map((g) => (
-            <Link
-              key={g.slug}
-              href={g.live ? `/games/${g.slug}` : "#"}
-              className="tile"
-              style={!g.live ? { opacity: 0.55, cursor: "not-allowed", pointerEvents: "none" } : undefined}
-              aria-disabled={!g.live || undefined}
-            >
-              <div className="tile-art">
-                <GameIcon name={g.icon} size={140} />
+        {CATEGORY_ORDER.map(({ key, label }) => {
+          const games = GAMES.filter((g) => g.category === key);
+          if (games.length === 0) return null;
+          return (
+            <section key={key} style={{ marginBottom: "var(--sp-6)" }}>
+              <div className="divider" style={{ marginBottom: "var(--sp-4)" }}>{label}</div>
+              <div className="grid grid-3 lobby-tile-grid">
+                {games.map((g) => (
+                  <Link
+                    key={g.slug}
+                    href={g.live ? `/games/${g.slug}` : "#"}
+                    className="tile"
+                    style={!g.live ? { opacity: 0.55, cursor: "not-allowed", pointerEvents: "none" } : undefined}
+                    aria-disabled={!g.live || undefined}
+                  >
+                    <div className="tile-art">
+                      <GameIcon name={g.icon} size={140} />
+                    </div>
+                    <div className="tile-name">{g.name}</div>
+                    <div className="tile-meta">
+                      <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+                        <span className={`badge ${g.live ? "badge-cactus" : ""}`}>
+                          {g.live ? "OPEN" : g.tag}
+                        </span>
+                        {g.multiplayer && (
+                          <span className="badge badge-sky">2P+</span>
+                        )}
+                      </span>
+                      <span>{g.live ? "Play →" : "Coming soon"}</span>
+                    </div>
+                  </Link>
+                ))}
               </div>
-              <div className="tile-name">{g.name}</div>
-              <div className="tile-meta">
-                <span className={`badge ${g.live ? "badge-cactus" : ""}`}>
-                  {g.live ? "OPEN" : g.tag}
-                </span>
-                <span>{g.live ? "Play →" : "Coming soon"}</span>
-              </div>
-            </Link>
-          ))}
-        </div>
+            </section>
+          );
+        })}
 
       </main>
     </AppLive>
