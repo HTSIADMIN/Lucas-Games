@@ -73,7 +73,17 @@ export default async function LobbyPage() {
             </div>
             <div className="balance">{balance.toLocaleString()} ¢</div>
           </div>
-          <div style={{ marginLeft: "auto", display: "flex", gap: "var(--sp-3)", alignItems: "center", flexWrap: "wrap" }}>
+          <div
+            className="lobby-action-buttons"
+            style={{
+              marginLeft: "auto",
+              display: "flex",
+              gap: "var(--sp-3)",
+              alignItems: "stretch",
+              alignSelf: "stretch",
+              flexWrap: "wrap",
+            }}
+          >
             <FreeGamesButton />
             <SignOutButton />
           </div>

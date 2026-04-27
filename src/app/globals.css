@@ -552,6 +552,14 @@ img, svg, canvas {
   box-shadow: var(--sh-card-rest);
   position: relative;
 }
+
+/* Lobby right-side action buttons (Free Games, Sign Out) — match the
+   balance-bar's height so they line up with the profile pill. */
+.lobby-action-btn {
+  height: 100%;
+  font-size: var(--fs-body);
+  padding: var(--sp-2) var(--sp-5);
+}
 .balance-bar::before {
   content: ""; position: absolute; inset: 0;
   pointer-events: none;

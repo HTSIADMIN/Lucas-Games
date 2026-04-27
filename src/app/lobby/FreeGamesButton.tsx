@@ -29,7 +29,7 @@ export function FreeGamesButton() {
     <>
       <button
         type="button"
-        className="btn btn-gold btn-sm"
+        className="btn lobby-action-btn"
         onClick={() => setOpen(true)}
       >
         Free Games
