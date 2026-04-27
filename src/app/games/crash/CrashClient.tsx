@@ -471,8 +471,8 @@ export function CrashClient() {
   }
 
   return (
-    <div className="grid grid-2" style={{ alignItems: "start" }}>
-      <div className="panel" style={{ padding: "var(--sp-6)" }}>
+    <div className="grid grid-2 crash-grid" style={{ alignItems: "start" }}>
+      <div className="panel crash-stage" style={{ padding: "var(--sp-6)" }}>
         <div className="panel-title">
           {isBetting ? `Round #${round?.roundNo ?? "—"} · Betting opens` :
            isRunning ? `Round #${round?.roundNo ?? "—"} · LIVE` :
@@ -497,6 +497,7 @@ export function CrashClient() {
         >
           {/* Big multiplier readout — pulses with value */}
           <div
+            className="crash-readout"
             style={{
               fontFamily: "var(--font-display)",
               fontSize: 88,
@@ -533,6 +534,7 @@ export function CrashClient() {
           </div>
           <canvas
             ref={canvasRef}
+            className="crash-canvas"
             width={520}
             height={220}
             style={{
@@ -558,9 +560,9 @@ export function CrashClient() {
         {error && <p style={{ color: "var(--crimson-500)", marginTop: "var(--sp-3)" }}>{error}</p>}
       </div>
 
-      <div className="stack-lg">
+      <div className="stack-lg crash-side">
         {/* Bet placement / cashout panel */}
-        <div className="panel" style={{ padding: "var(--sp-6)" }}>
+        <div className="panel crash-controls" style={{ padding: "var(--sp-6)" }}>
           <div className="panel-title">
             {myBet
               ? isRunning && !myCashedOut ? "Cash Out" : "This Round"

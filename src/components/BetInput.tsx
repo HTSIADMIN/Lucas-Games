@@ -100,7 +100,7 @@ export function BetInput({
             background: "transparent",
             boxShadow: "none",
             fontFamily: "var(--font-display)",
-            fontSize: "var(--fs-h2)",
+            fontSize: "var(--fs-h3)",
             color: "var(--gold-500)",
             textShadow: "2px 2px 0 var(--gold-100)",
             textAlign: "center",

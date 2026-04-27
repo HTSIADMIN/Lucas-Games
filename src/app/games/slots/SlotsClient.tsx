@@ -293,6 +293,7 @@ export function SlotsClient() {
         <MeterBar value={meter} max={METER.full} />
 
         <div
+          className="lg-reel-container"
           style={{
             position: "relative",
             background: "linear-gradient(180deg, #2a1810, #1a0f08)",
@@ -300,7 +301,7 @@ export function SlotsClient() {
             padding: "var(--sp-4)",
             marginTop: "var(--sp-3)",
             boxShadow: "inset 0 0 20px rgba(0,0,0,0.6)",
-            maxWidth: 576,
+            maxWidth: 460,
             margin: "var(--sp-3) auto 0",
           }}
         >
@@ -333,53 +334,52 @@ export function SlotsClient() {
 
         {error && <p style={{ color: "var(--crimson-300)", marginTop: "var(--sp-3)" }}>{error}</p>}
 
-        {/* Bottom action bar — centered under the (capped-width) reels */}
+        {/* Bottom action bar — centered stack under the (capped) reels */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 1fr) auto auto",
+            maxWidth: 460,
+            margin: "var(--sp-3) auto 0",
+            display: "flex",
+            flexDirection: "column",
             gap: "var(--sp-3)",
-            alignItems: "end",
-            marginTop: "var(--sp-4)",
-            maxWidth: 576,
-            marginLeft: "auto",
-            marginRight: "auto",
+            alignItems: "stretch",
           }}
         >
-          <div style={{ minWidth: 0 }}>
-            <BetInput
-              value={bet}
-              onChange={setBet}
-              max={Math.max(100, balance ?? 100)}
-              disabled={busy || !!bonus}
-            />
-          </div>
-          <button
-            className={`btn ${autoCount > 0 ? "" : "btn-ghost"}`}
-            onClick={() => {
-              if (autoCount > 0) setAutoCount(0);
-              else setAutoCount(10);
-            }}
+          <BetInput
+            value={bet}
+            onChange={setBet}
+            max={Math.max(100, balance ?? 100)}
             disabled={busy || !!bonus}
-            title={autoCount > 0 ? "Stop autoplay" : "Auto 10 spins"}
-            style={{ height: "auto", whiteSpace: "nowrap" }}
-          >
-            {autoCount > 0 ? `Stop (${autoCount})` : "Auto 10"}
-          </button>
-          <button
-            className="btn btn-lg"
-            onClick={doSpin}
-            disabled={!canSpin}
-            style={{
-              minWidth: 140,
-              fontSize: "var(--fs-h3)",
-              background: meter >= METER.full ? "var(--crimson-300)" : undefined,
-              color: meter >= METER.full ? "var(--parchment-50)" : undefined,
-              boxShadow: meter >= METER.full ? "var(--glow-gold)" : undefined,
-            }}
-          >
-            {busy ? "..." : meter >= METER.full ? "Strike!" : "Spin"}
-          </button>
+          />
+          <div className="row" style={{ gap: "var(--sp-2)", justifyContent: "center" }}>
+            <button
+              className={`btn btn-sm ${autoCount > 0 ? "" : "btn-ghost"}`}
+              onClick={() => {
+                if (autoCount > 0) setAutoCount(0);
+                else setAutoCount(10);
+              }}
+              disabled={busy || !!bonus}
+              title={autoCount > 0 ? "Stop autoplay" : "Auto 10 spins"}
+              style={{ whiteSpace: "nowrap", flex: "0 0 auto" }}
+            >
+              {autoCount > 0 ? `Stop (${autoCount})` : "Auto 10"}
+            </button>
+            <button
+              className="btn"
+              onClick={doSpin}
+              disabled={!canSpin}
+              style={{
+                flex: 1,
+                minWidth: 120,
+                fontSize: "var(--fs-h4)",
+                background: meter >= METER.full ? "var(--crimson-300)" : undefined,
+                color: meter >= METER.full ? "var(--parchment-50)" : undefined,
+                boxShadow: meter >= METER.full ? "var(--glow-gold)" : undefined,
+              }}
+            >
+              {busy ? "..." : meter >= METER.full ? "Strike!" : "Spin"}
+            </button>
+          </div>
         </div>
       </div>
 

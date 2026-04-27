@@ -127,6 +127,7 @@ export function DiceClient() {
                 {direction === "under" ? `Roll under ${target}` : `Roll over ${target}`}
               </div>
               <div
+                className="dice-readout"
                 style={{
                   fontFamily: "var(--font-display)",
                   fontSize: 64,
@@ -174,34 +175,31 @@ export function DiceClient() {
         </div>
 
         {/* === Controls === */}
-        <div className="panel" style={{ padding: "var(--sp-5)" }}>
-          <div className="panel-title">Pick Your Odds</div>
+        <div className="panel" style={{ padding: "var(--sp-3)", maxWidth: 520, margin: "0 auto", width: "100%" }}>
+          <div className="panel-title" style={{ marginBottom: "var(--sp-2)" }}>Pick Your Odds</div>
 
-          <div className="stack-lg">
-            <div>
-              <label className="label">Direction</label>
-              <div className="row" style={{ gap: "var(--sp-3)" }}>
-                <button
-                  type="button"
-                  className={`btn btn-block ${direction === "under" ? "" : "btn-ghost"}`}
-                  onClick={() => setDirection("under")}
-                  disabled={busy || rolling}
-                >
-                  Under
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-block ${direction === "over" ? "" : "btn-ghost"}`}
-                  onClick={() => setDirection("over")}
-                  disabled={busy || rolling}
-                >
-                  Over
-                </button>
-              </div>
+          <div className="stack" style={{ gap: "var(--sp-2)" }}>
+            <div className="row" style={{ gap: "var(--sp-2)" }}>
+              <button
+                type="button"
+                className={`btn btn-sm btn-block ${direction === "under" ? "" : "btn-ghost"}`}
+                onClick={() => setDirection("under")}
+                disabled={busy || rolling}
+              >
+                Under
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm btn-block ${direction === "over" ? "" : "btn-ghost"}`}
+                onClick={() => setDirection("over")}
+                disabled={busy || rolling}
+              >
+                Over
+              </button>
             </div>
 
             <div>
-              <label className="label">Target — {target}</label>
+              <label className="label" style={{ marginBottom: 4 }}>Target — {target}</label>
               <input
                 type="range"
                 min={2}
@@ -216,10 +214,10 @@ export function DiceClient() {
             <BetInput value={bet} onChange={setBet} max={Math.max(100, balance ?? 100)} disabled={busy || rolling} />
 
             <button
-              className="btn btn-lg btn-block"
+              className="btn btn-block"
               onClick={go}
               disabled={!canRoll}
-              style={{ fontSize: "var(--fs-h2)" }}
+              style={{ fontSize: "var(--fs-h4)" }}
             >
               {rolling ? "Rolling..." : "Roll"}
             </button>

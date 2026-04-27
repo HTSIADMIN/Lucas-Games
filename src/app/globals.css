@@ -850,6 +850,26 @@ img, svg, canvas {
   .row-lg { gap: var(--sp-3); }
   .podium-grid { gap: var(--sp-2) !important; }
   .poker-grid { grid-template-columns: 1fr !important; }
+  /* Game pages get extra-dense on phones so the main action button is
+     visible without scrolling. */
+  .page-game .panel { padding: var(--sp-3) !important; }
+  .page-game .panel-title { font-size: var(--fs-body); margin-bottom: var(--sp-1); }
+  .page-game .stack-lg { gap: var(--sp-2); }
+  .page-game .game-shell-title { font-size: var(--fs-body-lg) !important; }
+
+  /* Crash: shrink the giant multiplier and canvas, and move the
+     cashout/bet panel above the visualization so the player doesn't
+     have to scroll to press the action button. */
+  .crash-readout { font-size: 56px !important; }
+  .crash-canvas { max-height: 140px; object-fit: cover; }
+  .crash-grid { display: flex !important; flex-direction: column; gap: var(--sp-2); }
+  .crash-grid > .crash-side { order: -1; }
+
+  /* Dice: shrink the result number on phones. */
+  .dice-readout { font-size: 40px !important; }
+  /* Slots reels also shrink on mobile, with bigger gap reduction. */
+  .lg-reel-container { max-width: 320px !important; }
+
   /* Pack-opening modal — keep all 5 cards on one row but shrink to fit */
   .pack-modal { padding: var(--sp-3) !important; }
   .pack-grid { gap: 4px !important; margin-bottom: var(--sp-3) !important; }
