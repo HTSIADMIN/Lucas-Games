@@ -27,6 +27,8 @@ export type LiveBet = {
   bet: number;
   payout: number;
   net: number;
+  multiplier: number;
+  bigOdds: boolean;
   at: number;
 };
 
@@ -51,6 +53,9 @@ const Ctx = createContext<LiveCtx>({
 export function useLive() { return useContext(Ctx); }
 
 const BIG_BET_THRESHOLD = 50_000;
+// Wins paying back at least this many times the wager qualify as
+// "big odds" for the feed even when the bet itself is tiny.
+const BIG_ODDS_MULTIPLIER = 50;
 const MAX_BETS = 30;
 const MAX_CHAT = 100;
 
@@ -107,7 +112,9 @@ export function LiveProvider({
           };
           if (row.status !== "settled") return;
           const net = row.payout - row.bet;
-          if (Math.abs(net) < BIG_BET_THRESHOLD) return;
+          const multiplier = row.bet > 0 ? row.payout / row.bet : 0;
+          const bigOdds = row.payout > 0 && multiplier >= BIG_ODDS_MULTIPLIER;
+          if (Math.abs(net) < BIG_BET_THRESHOLD && !bigOdds) return;
           // Look up user info for the avatar.
           const { data } = await supa.from("users_public").select("*").eq("id", row.user_id).maybeSingle();
           const u = (data ?? {}) as {
@@ -131,6 +138,8 @@ export function LiveProvider({
                 bet: row.bet,
                 payout: row.payout,
                 net,
+                multiplier,
+                bigOdds,
                 at: Date.now(),
               },
               ...prev,

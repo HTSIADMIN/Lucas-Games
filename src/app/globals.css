@@ -553,12 +553,15 @@ img, svg, canvas {
   position: relative;
 }
 
-/* Lobby right-side action buttons (Free Games, Sign Out) — match the
-   balance-bar's height so they line up with the profile pill. */
+/* Lobby right-side action buttons (Free Games, Sign Out) — small chips
+   sized to match the cash pill that lives inside the profile bar
+   (font-size .balance + padding sp-2 sp-3), so they line up with the
+   inner balance pill instead of the whole bar. */
 .lobby-action-btn {
-  height: 100%;
-  font-size: var(--fs-body);
-  padding: var(--sp-2) var(--sp-5);
+  font-size: var(--fs-h4);
+  padding: var(--sp-2) var(--sp-3);
+  border-width: 2px;
+  align-self: center;
 }
 .balance-bar::before {
   content: ""; position: absolute; inset: 0;

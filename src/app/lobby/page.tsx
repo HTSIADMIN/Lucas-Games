@@ -93,9 +93,8 @@ export default async function LobbyPage() {
             style={{
               marginLeft: "auto",
               display: "flex",
-              gap: "var(--sp-3)",
-              alignItems: "stretch",
-              alignSelf: "stretch",
+              gap: "var(--sp-2)",
+              alignItems: "center",
               flexWrap: "wrap",
             }}
           >
@@ -104,42 +103,37 @@ export default async function LobbyPage() {
           </div>
         </section>
 
-        {CATEGORY_ORDER.map(({ key, label }) => {
-          const games = GAMES.filter((g) => g.category === key);
-          if (games.length === 0) return null;
-          return (
-            <section key={key} style={{ marginBottom: "var(--sp-6)" }}>
-              <div className="divider" style={{ marginBottom: "var(--sp-4)" }}>{label}</div>
-              <div className="grid grid-3 lobby-tile-grid">
-                {games.map((g) => (
-                  <Link
-                    key={g.slug}
-                    href={g.live ? `/games/${g.slug}` : "#"}
-                    className="tile"
-                    style={!g.live ? { opacity: 0.55, cursor: "not-allowed", pointerEvents: "none" } : undefined}
-                    aria-disabled={!g.live || undefined}
-                  >
-                    <div className="tile-art">
-                      <GameIcon name={g.icon} size={140} />
-                    </div>
-                    <div className="tile-name">{g.name}</div>
-                    <div className="tile-meta">
-                      <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
-                        <span className={`badge ${g.live ? "badge-cactus" : ""}`}>
-                          {g.live ? "OPEN" : g.tag}
-                        </span>
-                        {g.multiplayer && (
-                          <span className="badge badge-sky">2P+</span>
-                        )}
-                      </span>
-                      <span>{g.live ? "Play →" : "Coming soon"}</span>
-                    </div>
-                  </Link>
-                ))}
+        <section style={{ marginBottom: "var(--sp-5)" }}>
+          <div className="divider">Pick a Table</div>
+        </section>
+
+        <div className="grid grid-4 lobby-tile-grid">
+          {CATEGORY_ORDER.flatMap(({ key }) => GAMES.filter((g) => g.category === key)).map((g) => (
+            <Link
+              key={g.slug}
+              href={g.live ? `/games/${g.slug}` : "#"}
+              className="tile"
+              style={!g.live ? { opacity: 0.55, cursor: "not-allowed", pointerEvents: "none" } : undefined}
+              aria-disabled={!g.live || undefined}
+            >
+              <div className="tile-art">
+                <GameIcon name={g.icon} size={140} />
               </div>
-            </section>
-          );
-        })}
+              <div className="tile-name">{g.name}</div>
+              <div className="tile-meta">
+                <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+                  <span className={`badge ${g.live ? "badge-cactus" : ""}`}>
+                    {g.live ? "OPEN" : g.tag}
+                  </span>
+                  {g.multiplayer && (
+                    <span className="badge badge-sky">2P+</span>
+                  )}
+                </span>
+                <span>{g.live ? "Play →" : "Coming soon"}</span>
+              </div>
+            </Link>
+          ))}
+        </div>
 
       </main>
     </AppLive>

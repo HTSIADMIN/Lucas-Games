@@ -14,6 +14,11 @@ export function ChatDrawer({ currentUserId }: { currentUserId: string | null }) 
   const [error, setError] = useState<string | null>(null);
   const [lastSeenId, setLastSeenId] = useState<number>(0);
   const messagesRef = useRef<HTMLDivElement>(null);
+  // Each new incoming message bumps this so the launcher can replay a
+  // one-shot "ping" ring + shake. Anchored to the latest chat id so
+  // initial history doesn't trigger.
+  const lastPingRef = useRef<number>(0);
+  const [pingKey, setPingKey] = useState(0);
 
   // Anchor on first mount: latest existing message becomes "seen" so
   // history doesn't show as unread.
@@ -22,6 +27,22 @@ export function ChatDrawer({ currentUserId }: { currentUserId: string | null }) 
       setLastSeenId(chat[chat.length - 1].id);
     }
   }, [chat, lastSeenId]);
+
+  // Replay the attention animation on a brand-new message from someone
+  // else, when the drawer isn't already showing the chat tab.
+  useEffect(() => {
+    if (chat.length === 0) return;
+    const latest = chat[chat.length - 1];
+    if (lastPingRef.current === 0) {
+      lastPingRef.current = latest.id;
+      return;
+    }
+    if (latest.id <= lastPingRef.current) return;
+    lastPingRef.current = latest.id;
+    if (latest.user_id === currentUserId) return;
+    if (open && tab === "chat") return;
+    setPingKey((k) => k + 1);
+  }, [chat, open, tab, currentUserId]);
 
   // Mark read when the chat tab is open.
   useEffect(() => {
@@ -81,61 +102,118 @@ export function ChatDrawer({ currentUserId }: { currentUserId: string | null }) 
     <>
       {/* Floating launcher */}
       <div style={{ position: "fixed", right: 16, bottom: 16, zIndex: 100 }}>
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-label={open ? "Close chat" : "Open chat"}
+        <div
+          key={`launcher-${pingKey}`}
           style={{
             position: "relative",
             width: 56,
             height: 56,
-            background: "var(--gold-300)",
-            border: "4px solid var(--ink-900)",
-            boxShadow: open
-              ? "var(--sh-button-press)"
-              : unread > 0
-              ? "var(--sh-card-rest), var(--glow-gold)"
-              : "var(--sh-card-rest)",
-            color: "var(--ink-900)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            animation: !open && unread > 0 ? "chatPulse 1.4s ease-in-out infinite" : undefined,
+            animation: !open && pingKey > 0 ? "chatShake 0.55s ease-out 1" : undefined,
           }}
         >
-          <GameIcon name={open ? "ui.close" : "ui.chat"} size={32} />
-        </button>
-        {!open && unread > 0 && (
-          <span
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Close chat" : "Open chat"}
             style={{
-              position: "absolute",
-              top: -8,
-              right: -8,
-              minWidth: 24,
-              height: 24,
-              padding: "0 6px",
-              background: "var(--crimson-300)",
-              color: "var(--parchment-50)",
-              border: "3px solid var(--ink-900)",
-              borderRadius: 999,
+              position: "relative",
+              width: 56,
+              height: 56,
+              background: "var(--gold-300)",
+              border: "4px solid var(--ink-900)",
+              boxShadow: open
+                ? "var(--sh-button-press)"
+                : unread > 0
+                ? "var(--sh-card-rest), var(--glow-gold)"
+                : "var(--sh-card-rest)",
+              color: "var(--ink-900)",
+              cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontFamily: "var(--font-display)",
-              fontSize: 13,
-              textShadow: "1px 1px 0 var(--crimson-700)",
-              boxShadow: "var(--sh-card-rest)",
-              pointerEvents: "none",
+              animation: !open && unread > 0 ? "chatPulse 1.4s ease-in-out infinite" : undefined,
+              zIndex: 2,
             }}
           >
-            {unread > 9 ? "9+" : unread}
-          </span>
-        )}
-        <style>{`@keyframes chatPulse {
-          0%, 100% { transform: translateY(0); }
-          50%      { transform: translateY(-3px); }
-        }`}</style>
+            <GameIcon name={open ? "ui.close" : "ui.chat"} size={32} />
+          </button>
+
+          {/* Ping rings — sonar ripple on each new message. */}
+          {!open && pingKey > 0 && (
+            <>
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  border: "4px solid var(--gold-300)",
+                  background: "transparent",
+                  pointerEvents: "none",
+                  animation: "chatPing 1s ease-out forwards",
+                  zIndex: 1,
+                }}
+              />
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  border: "4px solid var(--crimson-300)",
+                  background: "transparent",
+                  pointerEvents: "none",
+                  animation: "chatPing 1s ease-out 0.2s forwards",
+                  zIndex: 1,
+                }}
+              />
+            </>
+          )}
+
+          {!open && unread > 0 && (
+            <span
+              style={{
+                position: "absolute",
+                top: -8,
+                right: -8,
+                minWidth: 24,
+                height: 24,
+                padding: "0 6px",
+                background: "var(--crimson-300)",
+                color: "var(--parchment-50)",
+                border: "3px solid var(--ink-900)",
+                borderRadius: 999,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "var(--font-display)",
+                fontSize: 13,
+                textShadow: "1px 1px 0 var(--crimson-700)",
+                boxShadow: "var(--sh-card-rest)",
+                pointerEvents: "none",
+                zIndex: 4,
+              }}
+            >
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </div>
+        <style>{`
+          @keyframes chatPulse {
+            0%, 100% { transform: translateY(0); }
+            50%      { transform: translateY(-3px); }
+          }
+          @keyframes chatPing {
+            0%   { transform: scale(1);   opacity: 0.9; }
+            100% { transform: scale(2);   opacity: 0;   }
+          }
+          @keyframes chatShake {
+            0%, 100% { transform: translate(0, 0) rotate(0); }
+            15%      { transform: translate(-2px, 0) rotate(-4deg); }
+            30%      { transform: translate(2px, 0) rotate(3deg); }
+            45%      { transform: translate(-2px, 0) rotate(-2deg); }
+            60%      { transform: translate(2px, 0) rotate(2deg); }
+            75%      { transform: translate(-1px, 0) rotate(-1deg); }
+          }
+        `}</style>
       </div>
 
       {/* Drawer */}
@@ -169,7 +247,7 @@ export function ChatDrawer({ currentUserId }: { currentUserId: string | null }) 
               onClick={() => setTab("bets")}
               style={tabStyle(tab === "bets")}
             >
-              Big Bets
+              Big Bets &amp; Odds
             </button>
           </div>
 
@@ -307,10 +385,13 @@ function BetLine({ b, championId }: {
     bet: number;
     payout: number;
     net: number;
+    multiplier?: number;
+    bigOdds?: boolean;
   };
   championId: string | null;
 }) {
   const win = b.net > 0;
+  const showMultBadge = !!b.bigOdds && (b.multiplier ?? 0) >= 50;
   return (
     <div style={{
       display: "flex",
@@ -319,6 +400,7 @@ function BetLine({ b, championId }: {
       padding: "6px 8px",
       background: win ? "var(--cactus-100)" : "var(--crimson-100)",
       border: "2px solid var(--ink-900)",
+      boxShadow: showMultBadge ? "var(--glow-gold)" : undefined,
     }}>
       <Avatar
         initials={b.initials}
@@ -332,6 +414,15 @@ function BetLine({ b, championId }: {
       <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-display)", fontSize: 13 }}>
         <span>{b.username}</span>
         <span style={{ color: "var(--saddle-400)" }}> · {b.game}</span>
+        {showMultBadge && (
+          <span
+            className="badge badge-gold badge-glow"
+            style={{ marginLeft: 6, fontSize: 9, padding: "1px 5px", letterSpacing: "var(--ls-loose)" }}
+            title={`Won ${formatMult(b.multiplier!)}× their bet`}
+          >
+            {formatMult(b.multiplier!)}×
+          </span>
+        )}
       </div>
       <span
         style={{
@@ -344,4 +435,10 @@ function BetLine({ b, championId }: {
       </span>
     </div>
   );
+}
+
+function formatMult(m: number): string {
+  if (m >= 1000) return `${Math.round(m / 100) / 10}k`;
+  if (m >= 100) return `${Math.round(m)}`;
+  return `${Math.round(m * 10) / 10}`;
 }
