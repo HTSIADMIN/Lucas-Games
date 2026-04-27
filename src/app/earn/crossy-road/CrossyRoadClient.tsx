@@ -618,7 +618,8 @@ export function CrossyRoadClient() {
   }
 
   return (
-    <div className="grid grid-2" style={{ alignItems: "start" }}>
+    <div className="stack-lg">
+      <div className="grid grid-2" style={{ alignItems: "start" }}>
       <div className="panel" style={{ padding: "var(--sp-6)" }}>
         <div className="panel-title">Cross The Road</div>
         <div
@@ -712,15 +713,18 @@ export function CrossyRoadClient() {
           {error && <p style={{ color: "var(--crimson-500)" }}>{error}</p>}
         </div>
 
-        <div style={{ marginTop: "var(--sp-5)" }}>
-          <div className="label">How it pays</div>
-          <ul className="text-mute" style={{ fontSize: "var(--fs-small)", paddingLeft: 18 }}>
-            <li>+50¢ per row crossed</li>
-            <li>+500¢ per ground coin grabbed</li>
-            <li>Minimum 1,000¢ to claim</li>
-            <li>Cap 50,000¢ per run</li>
-          </ul>
-        </div>
+      </div>
+      </div>
+
+      {/* Help — pushed below so the canvas + claim button stay on screen */}
+      <div className="panel" style={{ padding: "var(--sp-5)" }}>
+        <div className="label">How it pays</div>
+        <ul className="text-mute" style={{ fontSize: "var(--fs-small)", paddingLeft: 18, margin: 0 }}>
+          <li>+50¢ per row crossed</li>
+          <li>+500¢ per ground coin grabbed</li>
+          <li>Minimum 1,000¢ to claim</li>
+          <li>Cap 50,000¢ per run</li>
+        </ul>
       </div>
     </div>
   );

@@ -286,7 +286,7 @@ export function SlotsClient() {
   }
 
   return (
-    <div className="grid grid-2" style={{ alignItems: "start" }}>
+    <div className="stack-lg">
       <div className="panel" style={{ padding: "var(--sp-5)" }}>
         <div className="panel-title">Boomtown Reels</div>
 
@@ -378,8 +378,8 @@ export function SlotsClient() {
         </div>
       </div>
 
-      {/* Right column: paytable + meter info */}
-      <div className="stack-lg">
+      {/* Help section — paytable + tier reference, below the reels */}
+      <div className="grid grid-3" style={{ alignItems: "start" }}>
         <BuildingTiers />
         <Paytable />
         <CoinTable />

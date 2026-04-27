@@ -753,6 +753,24 @@ img, svg, canvas {
   .row-lg { gap: var(--sp-3); }
   .podium-grid { gap: var(--sp-2) !important; }
   .poker-grid { grid-template-columns: 1fr !important; }
+  /* Pack-opening modal — keep all 5 cards on one row but shrink to fit */
+  .pack-modal { padding: var(--sp-3) !important; }
+  .pack-grid { gap: 4px !important; margin-bottom: var(--sp-3) !important; }
+  .pack-card { height: 150px !important; }
+  .pack-card-front { padding: 4px !important; }
+  .pack-card-front .badge { font-size: 8px !important; padding: 1px 3px !important; }
+  .pack-card-name { font-size: 9px !important; line-height: 1.05 !important; }
+  .pack-card-desc { display: none !important; }
+
+  /* Lobby tile grid stays 3-up on mobile so all games are visible at once */
+  .lobby-tile-grid { grid-template-columns: repeat(3, 1fr) !important; gap: var(--sp-2) !important; }
+  .lobby-tile-grid .tile { padding: var(--sp-2); gap: var(--sp-2); }
+  .lobby-tile-grid .tile-art { aspect-ratio: 1 / 1; }
+  .lobby-tile-grid .tile-art > svg { width: 90%; height: 90%; }
+  .lobby-tile-grid .tile-name { font-size: 13px; line-height: 1.05; }
+  .lobby-tile-grid .tile-meta { font-size: 10px; gap: 4px; }
+  .lobby-tile-grid .tile-meta > span:last-child { display: none; }
+  .lobby-tile-grid .badge { font-size: 9px; padding: 2px 4px; letter-spacing: 0.05em; }
 }
 
 .stack    { display: flex; flex-direction: column; gap: var(--sp-3); }

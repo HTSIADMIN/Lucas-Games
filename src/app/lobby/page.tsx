@@ -10,6 +10,7 @@ import { getUserLevel } from "@/lib/xpServer";
 import { getChampionId } from "@/lib/champion";
 import { GameIcon, type GameIconName } from "@/components/GameIcon";
 import { SignOutButton } from "./SignOutButton";
+import { FreeGamesButton } from "./FreeGamesButton";
 
 type GameTile = {
   slug: string;
@@ -30,15 +31,6 @@ const GAMES: GameTile[] = [
   { slug: "plinko",        name: "Plinko",          tag: "PHYSICS", live: true, icon: "lobby.plinko" },
   { slug: "crash",         name: "Crash",           tag: "LIVE",    live: true, icon: "lobby.crash" },
   { slug: "poker",         name: "Poker",           tag: "MULTI",   live: true, icon: "lobby.poker" },
-];
-
-type EarnTile = { slug: string; name: string; tag: string; live: boolean; icon: GameIconName };
-
-const EARN_BACKS: EarnTile[] = [
-  { slug: "daily-spin",  name: "Daily Spin",        tag: "ONCE / DAY",  live: true, icon: "lobby.daily_spin" },
-  { slug: "crossy-road", name: "Crossy Road",       tag: "FREE",        live: true, icon: "lobby.crossy_road" },
-  { slug: "flappy",      name: "Flappy",            tag: "FREE",        live: true, icon: "lobby.flappy" },
-  { slug: "monopoly",    name: "Frontier Monopoly", tag: "EVERY HOUR",  live: true, icon: "lobby.monopoly" },
 ];
 
 export default async function LobbyPage() {
@@ -81,14 +73,17 @@ export default async function LobbyPage() {
             </div>
             <div className="balance">{balance.toLocaleString()} ¢</div>
           </div>
-          <SignOutButton />
+          <div style={{ marginLeft: "auto", display: "flex", gap: "var(--sp-3)", alignItems: "center", flexWrap: "wrap" }}>
+            <FreeGamesButton />
+            <SignOutButton />
+          </div>
         </section>
 
         <section style={{ marginBottom: "var(--sp-5)" }}>
           <div className="divider">Pick a Table</div>
         </section>
 
-        <div className="grid grid-3">
+        <div className="grid grid-3 lobby-tile-grid">
           {GAMES.map((g) => (
             <Link
               key={g.slug}
@@ -111,32 +106,6 @@ export default async function LobbyPage() {
           ))}
         </div>
 
-        <section style={{ margin: "var(--sp-7) 0 var(--sp-5)" }}>
-          <div className="divider">Free Coins When You're Broke</div>
-        </section>
-
-        <div className="grid grid-2">
-          {EARN_BACKS.map((g) => (
-            <Link
-              key={g.slug}
-              href={g.live ? `/earn/${g.slug}` : "#"}
-              className="tile"
-              style={{
-                background: "var(--gold-100)",
-                ...(g.live ? {} : { opacity: 0.55, cursor: "not-allowed", pointerEvents: "none" }),
-              }}
-            >
-              <div className="tile-art" style={{ background: "var(--gold-200)" }}>
-                <GameIcon name={g.icon} size={140} />
-              </div>
-              <div className="tile-name">{g.name}</div>
-              <div className="tile-meta">
-                <span className="badge badge-gold">{g.tag}</span>
-                <span>{g.live ? "Play →" : "Coming soon"}</span>
-              </div>
-            </Link>
-          ))}
-        </div>
         </AppLive>
       </main>
     </>

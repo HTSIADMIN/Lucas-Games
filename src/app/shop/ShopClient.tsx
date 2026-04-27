@@ -353,7 +353,7 @@ function PackOpeningOverlay({
       }}
     >
       <div
-        className="panel-wood"
+        className="panel-wood pack-modal"
         onClick={(e) => e.stopPropagation()}
         style={{
           padding: "var(--sp-5)",
@@ -391,9 +391,10 @@ function PackOpeningOverlay({
         </p>
 
         <div
+          className="pack-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: `repeat(${items.length}, 1fr)`,
+            gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`,
             gap: "var(--sp-3)",
             marginBottom: "var(--sp-5)",
           }}
@@ -458,6 +459,7 @@ function PackCard({
   const tone = RARITY_COLOR[rarity];
   return (
     <div
+      className="pack-card"
       style={{
         perspective: 800,
         height: 240,
@@ -481,6 +483,7 @@ function PackCard({
       >
         {/* Front */}
         <div
+          className="pack-card-front"
           style={{
             position: "absolute",
             inset: 0,
@@ -544,6 +547,7 @@ function PackCard({
           </div>
           {/* Item name */}
           <div
+            className="pack-card-name"
             style={{
               fontFamily: "var(--font-display)",
               fontSize: 14,
@@ -554,7 +558,7 @@ function PackCard({
             {item.name}
           </div>
           <div
-            className="text-mute"
+            className="text-mute pack-card-desc"
             style={{
               fontSize: 11,
               textAlign: "center",
