@@ -112,7 +112,7 @@ export function BetInput({
 
       {/* Quick-add presets — first press replaces the default 100 stake;
           after that they stack (tap +1k three times = +3,000). */}
-      <div className="row" style={{ flexWrap: "wrap" }}>
+      <div className="row" style={{ flexWrap: "wrap", justifyContent: "center" }}>
         {PRESETS.map((p) => (
           <button
             key={p}

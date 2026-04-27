@@ -300,7 +300,7 @@ export function SlotsClient() {
             padding: "var(--sp-4)",
             marginTop: "var(--sp-3)",
             boxShadow: "inset 0 0 20px rgba(0,0,0,0.6)",
-            maxWidth: 640,
+            maxWidth: 576,
             margin: "var(--sp-3) auto 0",
           }}
         >
@@ -333,14 +333,17 @@ export function SlotsClient() {
 
         {error && <p style={{ color: "var(--crimson-300)", marginTop: "var(--sp-3)" }}>{error}</p>}
 
-        {/* Bottom action bar */}
+        {/* Bottom action bar — centered under the (capped-width) reels */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr auto auto",
+            gridTemplateColumns: "minmax(0, 1fr) auto auto",
             gap: "var(--sp-3)",
             alignItems: "end",
             marginTop: "var(--sp-4)",
+            maxWidth: 576,
+            marginLeft: "auto",
+            marginRight: "auto",
           }}
         >
           <div style={{ minWidth: 0 }}>
