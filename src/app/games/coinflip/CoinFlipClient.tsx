@@ -101,12 +101,12 @@ export function CoinFlipClient() {
           className="panel"
           key={`felt-${shakeKey}`}
           style={{
-            padding: "var(--sp-6)",
+            padding: "var(--sp-4)",
             background: "radial-gradient(circle at 50% 40%, #2d5b22, #1f3818)",
             color: "var(--parchment-50)",
             position: "relative",
             overflow: "hidden",
-            minHeight: 360,
+            minHeight: 260,
             animation: shakeKey > 0 ? "cf-shake 0.5s var(--ease-snap)" : undefined,
             display: "flex",
             flexDirection: "column",

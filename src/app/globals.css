@@ -633,7 +633,7 @@ img, svg, canvas {
   display: flex; align-items: center; gap: var(--sp-3);
   background: var(--saddle-600);
   border: 2px solid var(--ink-900);
-  padding: 4px var(--sp-2) 4px var(--sp-3);
+  padding: 10px var(--sp-2) 4px var(--sp-3);
   max-width: 100%;
 }
 .header-presence-label {
@@ -646,8 +646,23 @@ img, svg, canvas {
   white-space: nowrap;
 }
 .header-presence-list {
-  display: flex; align-items: center; gap: 4px;
-  overflow: hidden;
+  display: flex; align-items: center; gap: 6px;
+}
+.header-presence-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 8px 2px 2px;
+  background: var(--saddle-500);
+  border: 2px solid var(--ink-900);
+}
+.header-presence-pill.is-me { border-color: var(--gold-300); }
+.header-presence-pill-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  color: var(--gold-300);
+  white-space: nowrap;
+  line-height: 1;
 }
 .header-presence-more {
   font-family: var(--font-display);
@@ -697,6 +712,15 @@ img, svg, canvas {
 }
 
 .page { max-width: 1280px; margin: 0 auto; padding: var(--sp-7) var(--sp-5) var(--sp-9); }
+
+/* Game-shell pages run dense so the action area fits at 100% zoom on
+   typical 768–900px laptop viewports. */
+.page-game { padding-top: var(--sp-4); padding-bottom: var(--sp-6); }
+.page-game .panel { padding: var(--sp-4); }
+.page-game .panel-title { margin-bottom: var(--sp-2); padding-bottom: var(--sp-1); }
+.page-game .grid { gap: var(--sp-3); }
+.page-game .stack-lg { gap: var(--sp-3); }
+.page-game .game-shell-blurb { font-size: var(--fs-small); }
 
 .grid { display: grid; gap: var(--sp-5); }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }

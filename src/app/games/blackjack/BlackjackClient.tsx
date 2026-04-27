@@ -236,8 +236,8 @@ function Felt({
         position: "relative",
         background:
           "radial-gradient(circle at 50% 50%, #2d5b22, #1f3818)",
-        padding: "var(--sp-6) var(--sp-5)",
-        minHeight: 420,
+        padding: "var(--sp-4) var(--sp-4)",
+        minHeight: 320,
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
@@ -422,7 +422,7 @@ function HandRow({
           gap: "var(--sp-2)",
           justifyContent: "center",
           flexWrap: "wrap",
-          minHeight: 130,
+          minHeight: 110,
         }}
       >
         {cards

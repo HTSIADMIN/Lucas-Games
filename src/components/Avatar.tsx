@@ -33,7 +33,12 @@ export function Avatar({
   // Frame metadata (color, width, optional badge, glow flag).
   const frameItem = frame ? findItem(frame) : undefined;
   const frameMeta = (frameItem?.meta ?? {}) as { color?: string; width?: number; glow?: boolean; badge?: string };
-  const effectiveBorderWidth = frameItem ? (frameMeta.width ?? baseBorderWidth) : baseBorderWidth;
+  // Frame widths are authored for full-size 48-96px avatars. Cap them on
+  // smaller renders (presence strip, leaderboard rows) so the border
+  // doesn't swallow the inner pixel area.
+  const widthCap = size <= 28 ? 2 : size <= 36 ? 3 : 6;
+  const requestedBorderWidth = frameItem ? (frameMeta.width ?? baseBorderWidth) : baseBorderWidth;
+  const effectiveBorderWidth = Math.min(requestedBorderWidth, widthCap);
   const effectiveBorderColor = frameItem ? (frameMeta.color ?? "var(--ink-900)") : "var(--ink-900)";
   const frameGlow = frameItem && frameMeta.glow ? `0 0 12px ${frameMeta.color}` : undefined;
 

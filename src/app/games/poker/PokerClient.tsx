@@ -260,7 +260,7 @@ export function PokerClient() {
             gridTemplateColumns: "1fr 1fr 1fr",
             gridTemplateRows: "auto auto auto",
             gap: "var(--sp-3)",
-            minHeight: 480,
+            minHeight: 360,
           }}
         >
           {/* Top row */}

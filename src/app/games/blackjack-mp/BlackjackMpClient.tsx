@@ -212,8 +212,8 @@ export function BlackjackMpClient() {
             style={{
               background: "radial-gradient(circle at 50% 50%, #2d5b22, #1f3818)",
               border: "4px solid var(--ink-900)",
-              padding: "var(--sp-5)",
-              minHeight: 360,
+              padding: "var(--sp-4)",
+              minHeight: 280,
               boxShadow: "inset 0 0 60px rgba(0, 0, 0, 0.7)",
               animation: shakeKey > 0 ? "bj-shake 0.5s var(--ease-snap)" : undefined,
               position: "relative",

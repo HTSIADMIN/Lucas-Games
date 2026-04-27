@@ -35,33 +35,30 @@ export function HeaderPresence({ currentUserId }: { currentUserId: string | null
         At the Saloon ({presence.length})
       </span>
       <div className="header-presence-list">
-        {presence.slice(0, 10).map((m) => {
+        {presence.slice(0, 8).map((m) => {
           const isMe = m.userId === currentUserId;
           const label = m.game ? GAME_LABEL[m.game] ?? m.game : "...";
           return (
-            <span
+            <div
               key={m.userId}
               title={`${m.username} — ${label}`}
-              style={{
-                display: "inline-flex",
-                outline: isMe ? "2px solid var(--gold-300)" : undefined,
-                outlineOffset: 1,
-              }}
+              className={`header-presence-pill${isMe ? " is-me" : ""}`}
             >
               <Avatar
                 initials={m.initials}
                 color={m.avatarColor}
-                size={28}
-                fontSize={12}
+                size={26}
+                fontSize={11}
                 frame={m.frame ?? null}
                 hat={m.hat ?? null}
                 champion={m.userId === championId}
               />
-            </span>
+              <span className="header-presence-pill-label">{label}</span>
+            </div>
           );
         })}
-        {presence.length > 10 && (
-          <span className="header-presence-more">+{presence.length - 10}</span>
+        {presence.length > 8 && (
+          <span className="header-presence-more">+{presence.length - 8}</span>
         )}
       </div>
     </div>

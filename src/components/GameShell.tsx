@@ -64,14 +64,21 @@ export async function GameShell({
           />
         }
       />
-      <main className="page">
-        <div className="row-lg" style={{ marginBottom: "var(--sp-5)", flexWrap: "wrap" }}>
+      <main className="page page-game">
+        <div
+          className="row"
+          style={{
+            gap: "var(--sp-3)",
+            marginBottom: "var(--sp-3)",
+            flexWrap: "wrap",
+            alignItems: "baseline",
+          }}
+        >
           <Link href="/lobby" className="btn btn-ghost btn-sm">← Lobby</Link>
-        </div>
-
-        <div style={{ marginBottom: "var(--sp-5)" }}>
-          <h1 style={{ fontSize: "var(--fs-h1)", marginBottom: "var(--sp-2)" }}>{title}</h1>
-          {blurb && <p className="text-mute">{blurb}</p>}
+          <h1 className="game-shell-title" style={{ fontSize: "var(--fs-h3)", margin: 0 }}>
+            {title}
+          </h1>
+          {blurb && <span className="text-mute game-shell-blurb">{blurb}</span>}
         </div>
 
         <DeckProvider palette={palette}>{children}</DeckProvider>
