@@ -300,6 +300,8 @@ export function SlotsClient() {
             padding: "var(--sp-4)",
             marginTop: "var(--sp-3)",
             boxShadow: "inset 0 0 20px rgba(0,0,0,0.6)",
+            maxWidth: 640,
+            margin: "var(--sp-3) auto 0",
           }}
         >
           {/* Reel strip */}

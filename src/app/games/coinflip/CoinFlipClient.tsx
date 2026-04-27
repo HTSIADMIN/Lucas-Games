@@ -95,24 +95,24 @@ export function CoinFlipClient() {
   return (
     <>
       <style>{COIN_KEYFRAMES}</style>
-      <div className="stack-lg" style={{ gap: "var(--sp-4)" }}>
+      <div className="stack-lg" style={{ gap: "var(--sp-3)" }}>
         {/* === Felt centerpiece === */}
         <div
           className="panel"
           key={`felt-${shakeKey}`}
           style={{
-            padding: "var(--sp-4)",
+            padding: "var(--sp-3)",
             background: "radial-gradient(circle at 50% 40%, #2d5b22, #1f3818)",
             color: "var(--parchment-50)",
             position: "relative",
             overflow: "hidden",
-            minHeight: 260,
+            minHeight: 220,
             animation: shakeKey > 0 ? "cf-shake 0.5s var(--ease-snap)" : undefined,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: "var(--sp-5)",
+            gap: "var(--sp-3)",
           }}
         >
           {/* Pick label up top */}
@@ -132,7 +132,7 @@ export function CoinFlipClient() {
           <Coin3D
             rotationDeg={rotation}
             spinning={spinning}
-            size={240}
+            size={180}
             tossKey={tossKey}
             displayedSide={displayedSide}
           />
@@ -141,11 +141,11 @@ export function CoinFlipClient() {
           <div
             aria-hidden
             style={{
-              width: 200,
-              height: 14,
+              width: 150,
+              height: 12,
               borderRadius: "50%",
               background: "rgba(0,0,0,0.55)",
-              marginTop: -20,
+              marginTop: -16,
               animation: spinning ? "cf-shadow 2.2s ease-in-out" : undefined,
             }}
           />

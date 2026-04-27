@@ -94,13 +94,13 @@ export function DiceClient() {
   return (
     <>
       <style>{DICE_KEYFRAMES}</style>
-      <div className="stack-lg" style={{ gap: "var(--sp-4)" }}>
+      <div className="stack-lg" style={{ gap: "var(--sp-3)" }}>
         {/* === Felt centerpiece === */}
         <div
           className="panel"
           key={`felt-${shakeKey}`}
           style={{
-            padding: "var(--sp-5)",
+            padding: "var(--sp-4)",
             background: "radial-gradient(circle at 50% 40%, #2d5b22, #1f3818)",
             color: "var(--parchment-50)",
             position: "relative",
@@ -129,7 +129,7 @@ export function DiceClient() {
               <div
                 style={{
                   fontFamily: "var(--font-display)",
-                  fontSize: 96,
+                  fontSize: 64,
                   lineHeight: 1,
                   color: result
                     ? result.win
