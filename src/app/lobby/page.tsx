@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Avatar } from "@/components/Avatar";
 import { AppLive } from "@/components/social/AppLive";
+import { HeaderPresence } from "@/components/social/HeaderPresence";
 import { readSession } from "@/lib/auth/session";
 import { getBalance } from "@/lib/wallet";
 import { getUserById, recentChatMessages } from "@/lib/db";
@@ -52,10 +53,9 @@ export default async function LobbyPage() {
   };
 
   return (
-    <>
-      <SiteHeader current="lobby" />
+    <AppLive me={me} initialChat={initialChat} game="lobby" championId={championId}>
+      <SiteHeader current="lobby" centerSlot={<HeaderPresence currentUserId={user.id} />} />
       <main className="page">
-        <AppLive me={me} initialChat={initialChat} game="lobby" championId={championId}>
         <section className="row-lg" style={{ marginBottom: "var(--sp-7)", flexWrap: "wrap" }}>
           <div className="balance-bar">
             <Avatar
@@ -106,8 +106,7 @@ export default async function LobbyPage() {
           ))}
         </div>
 
-        </AppLive>
       </main>
-    </>
+    </AppLive>
   );
 }

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AppLive } from "@/components/social/AppLive";
+import { HeaderPresence } from "@/components/social/HeaderPresence";
 import { readSession } from "@/lib/auth/session";
 import { getUserById, leaderboard, recentChatMessages } from "@/lib/db";
 import { getChampionId } from "@/lib/champion";
@@ -24,22 +25,20 @@ export default async function LeaderboardPage() {
   };
 
   return (
-    <>
-      <SiteHeader current="leaderboard" />
+    <AppLive me={me} initialChat={initialChat} game="leaderboard" championId={championId}>
+      <SiteHeader current="leaderboard" centerSlot={<HeaderPresence currentUserId={user.id} />} />
       <main className="page">
-        <AppLive me={me} initialChat={initialChat} game="leaderboard" championId={championId}>
-          <div style={{ marginBottom: "var(--sp-7)" }}>
-            <h1 style={{ fontSize: "var(--fs-h1)", marginBottom: "var(--sp-2)" }}>
-              Leaderboard
-            </h1>
-            <p className="text-mute">
-              Brag rights. Click a player to see their stats.
-            </p>
-          </div>
+        <div style={{ marginBottom: "var(--sp-7)" }}>
+          <h1 style={{ fontSize: "var(--fs-h1)", marginBottom: "var(--sp-2)" }}>
+            Leaderboard
+          </h1>
+          <p className="text-mute">
+            Brag rights. Click a player to see their stats.
+          </p>
+        </div>
 
-          <LeaderboardClient rows={rows} currentUserId={user.id} championId={championId} />
-        </AppLive>
+        <LeaderboardClient rows={rows} currentUserId={user.id} championId={championId} />
       </main>
-    </>
+    </AppLive>
   );
 }

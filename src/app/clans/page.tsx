@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AppLive } from "@/components/social/AppLive";
+import { HeaderPresence } from "@/components/social/HeaderPresence";
 import { readSession } from "@/lib/auth/session";
 import { getUserById, recentChatMessages } from "@/lib/db";
 import { getChampionId } from "@/lib/champion";
@@ -22,17 +23,15 @@ export default async function ClansPage() {
   };
 
   return (
-    <>
-      <SiteHeader current="clans" />
+    <AppLive me={me} initialChat={initialChat} game="clans" championId={championId}>
+      <SiteHeader current="clans" centerSlot={<HeaderPresence currentUserId={user.id} />} />
       <main className="page">
-        <AppLive me={me} initialChat={initialChat} game="clans" championId={championId}>
-          <h1 style={{ fontSize: "var(--fs-h1)", marginBottom: "var(--sp-2)" }}>Clans</h1>
-          <p className="text-mute" style={{ marginBottom: "var(--sp-6)" }}>
-            Pick a posse. Win games together. Earn weekly chests.
-          </p>
-          <ClansClient meId={user.id} />
-        </AppLive>
+        <h1 style={{ fontSize: "var(--fs-h1)", marginBottom: "var(--sp-2)" }}>Clans</h1>
+        <p className="text-mute" style={{ marginBottom: "var(--sp-6)" }}>
+          Pick a posse. Win games together. Earn weekly chests.
+        </p>
+        <ClansClient meId={user.id} />
       </main>
-    </>
+    </AppLive>
   );
 }

@@ -622,7 +622,63 @@ img, svg, canvas {
   letter-spacing: var(--ls-loose);
   text-transform: uppercase;
 }
-.site-nav { display: flex; gap: var(--sp-1); margin-left: auto; }
+.site-header-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+.header-presence {
+  display: flex; align-items: center; gap: var(--sp-3);
+  background: var(--saddle-600);
+  border: 2px solid var(--ink-900);
+  padding: 4px var(--sp-2) 4px var(--sp-3);
+  max-width: 100%;
+}
+.header-presence-label {
+  font-family: var(--font-display);
+  font-size: var(--fs-tiny);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  color: var(--gold-300);
+  text-shadow: 1px 1px 0 var(--ink-900);
+  white-space: nowrap;
+}
+.header-presence-list {
+  display: flex; align-items: center; gap: 4px;
+  overflow: hidden;
+}
+.header-presence-more {
+  font-family: var(--font-display);
+  font-size: var(--fs-small);
+  color: var(--parchment-200);
+  margin-left: 2px;
+}
+.header-balance {
+  display: flex; align-items: center; gap: var(--sp-2);
+  background: var(--saddle-600);
+  border: 2px solid var(--ink-900);
+  padding: 4px var(--sp-3) 4px 4px;
+}
+.header-balance-text {
+  display: flex; flex-direction: column; line-height: 1;
+}
+.header-balance-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-tiny);
+  letter-spacing: var(--ls-loose);
+  color: var(--parchment-200);
+  text-transform: uppercase;
+}
+.header-balance-coins {
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  color: var(--gold-300);
+  text-shadow: 1px 1px 0 var(--gold-700);
+  margin-top: 2px;
+}
+.site-nav { display: flex; gap: var(--sp-1); }
 .site-nav a {
   font-family: var(--font-display);
   font-size: var(--fs-body);
@@ -746,6 +802,12 @@ img, svg, canvas {
   .site-header .brand-tag  { display: none; }
   .site-nav { gap: 2px; }
   .site-nav a { padding: var(--sp-1) var(--sp-2); font-size: var(--fs-small); }
+  /* Header presence is too noisy on phones — hide it. */
+  .header-presence { display: none; }
+  .site-header-center { flex: 0; }
+  /* Header balance shrinks to coins-only on phones to save room. */
+  .header-balance .header-balance-name { display: none; }
+  .header-balance { padding: 2px var(--sp-2) 2px 2px; }
   .balance-bar { flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-1) var(--sp-3) var(--sp-1) var(--sp-1); }
   .balance { font-size: var(--fs-h4); padding: var(--sp-1) var(--sp-2); }
   .avatar-username .uname { font-size: var(--fs-body); }

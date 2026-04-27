@@ -1,11 +1,13 @@
 // Server component shell every game page wraps with.
-// Renders site header + balance bar + game title and mounts AppLive for chat/presence/bets.
+// Renders site header (with profile + balance + presence) and mounts AppLive
+// for chat/presence/bets. The in-page balance-bar moved to the header.
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
-import { Avatar } from "@/components/Avatar";
 import { AppLive } from "@/components/social/AppLive";
+import { HeaderPresence } from "@/components/social/HeaderPresence";
+import { HeaderBalance } from "@/components/HeaderBalance";
 import { DeckProvider } from "@/components/PlayingCard";
 import { readSession } from "@/lib/auth/session";
 import { getUserById, recentChatMessages } from "@/lib/db";
@@ -45,38 +47,35 @@ export async function GameShell({
   };
 
   return (
-    <>
-      <SiteHeader current="lobby" />
+    <AppLive me={me} initialChat={initialChat} game={game} championId={championId}>
+      <SiteHeader
+        current="lobby"
+        centerSlot={<HeaderPresence currentUserId={user.id} />}
+        rightSlot={
+          <HeaderBalance
+            initials={user.initials}
+            avatarColor={user.avatar_color}
+            username={user.username}
+            level={xpInfo.level}
+            frame={user.equipped_frame ?? null}
+            hat={user.equipped_hat ?? null}
+            champion={user.id === championId}
+            balance={balance}
+          />
+        }
+      />
       <main className="page">
-        <AppLive me={me} initialChat={initialChat} game={game} championId={championId}>
-          <div className="row-lg" style={{ marginBottom: "var(--sp-6)", flexWrap: "wrap" }}>
-            <Link href="/lobby" className="btn btn-ghost btn-sm">← Lobby</Link>
-            <div className="balance-bar">
-              <Avatar
-                initials={user.initials}
-                color={user.avatar_color}
-                size={48}
-                level={xpInfo.level}
-                frame={user.equipped_frame ?? null}
-                hat={user.equipped_hat ?? null}
-                champion={user.id === championId}
-              />
-              <div className="avatar-username">
-                <div className="uname">{user.username}</div>
-                <div className="role">LVL {xpInfo.level}</div>
-              </div>
-              <div className="balance" data-balance>{balance.toLocaleString()} ¢</div>
-            </div>
-          </div>
+        <div className="row-lg" style={{ marginBottom: "var(--sp-5)", flexWrap: "wrap" }}>
+          <Link href="/lobby" className="btn btn-ghost btn-sm">← Lobby</Link>
+        </div>
 
-          <div style={{ marginBottom: "var(--sp-5)" }}>
-            <h1 style={{ fontSize: "var(--fs-h1)", marginBottom: "var(--sp-2)" }}>{title}</h1>
-            {blurb && <p className="text-mute">{blurb}</p>}
-          </div>
+        <div style={{ marginBottom: "var(--sp-5)" }}>
+          <h1 style={{ fontSize: "var(--fs-h1)", marginBottom: "var(--sp-2)" }}>{title}</h1>
+          {blurb && <p className="text-mute">{blurb}</p>}
+        </div>
 
-          <DeckProvider palette={palette}>{children}</DeckProvider>
-        </AppLive>
+        <DeckProvider palette={palette}>{children}</DeckProvider>
       </main>
-    </>
+    </AppLive>
   );
 }

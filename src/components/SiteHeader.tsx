@@ -1,7 +1,16 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ProfileButton } from "@/components/social/ProfileButton";
 
-export function SiteHeader({ current }: { current?: string }) {
+export function SiteHeader({
+  current,
+  centerSlot,
+  rightSlot,
+}: {
+  current?: string;
+  centerSlot?: ReactNode;
+  rightSlot?: ReactNode;
+}) {
   return (
     <header className="site-header">
       <Link href="/" className="brand">
@@ -11,6 +20,7 @@ export function SiteHeader({ current }: { current?: string }) {
           <div className="brand-tag">Pixel Saloon</div>
         </div>
       </Link>
+      <div className="site-header-center">{centerSlot}</div>
       <nav className="site-nav">
         <Link href="/lobby" aria-current={current === "lobby" ? "page" : undefined}>
           Lobby
@@ -26,6 +36,7 @@ export function SiteHeader({ current }: { current?: string }) {
         </Link>
         <ProfileButton />
       </nav>
+      {rightSlot}
     </header>
   );
 }
