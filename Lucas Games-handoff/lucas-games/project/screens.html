@@ -3,334 +3,282 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Screens — Lucas Games</title>
+<title>Lucas Games — Screens</title>
 <link rel="stylesheet" href="tokens.css" />
 <link rel="stylesheet" href="components.css" />
 <link rel="stylesheet" href="games.css" />
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <style>
-  /* Screen frame — looks like a window into the app */
-  .screen {
-    background: var(--parchment-50);
-    border: 6px solid var(--ink-900);
-    box-shadow: var(--sh-table);
-    overflow: hidden;
+  body { padding: 0; }
+  .screen-wrap { padding: var(--sp-7) var(--sp-5); max-width: 1280px; margin: 0 auto; }
+  .screen-frame {
+    border: 4px solid var(--ink-900);
+    box-shadow: var(--sh-card-rest);
     margin-bottom: var(--sp-7);
+    background: var(--bg);
+    overflow: hidden;
   }
-  .screen-chrome {
-    background: var(--saddle-500);
-    color: var(--parchment-50);
-    padding: var(--sp-3) var(--sp-4);
-    display: flex; align-items: center; gap: var(--sp-3);
-    border-bottom: 4px solid var(--ink-900);
+  .screen-label {
     font-family: var(--font-display);
+    font-size: var(--fs-tiny);
+    color: var(--saddle-400);
     letter-spacing: var(--ls-loose);
     text-transform: uppercase;
+    margin-bottom: var(--sp-2);
   }
-  .screen-chrome .dot { width: 12px; height: 12px; background: var(--gold-300); border: 2px solid var(--ink-900); }
-  .screen-body { padding: var(--sp-5); position: relative; }
-
-  /* Game tile art (placeholder pixel imagery) */
-  .art-poker { background:
-    repeating-linear-gradient(45deg, #6ba84f 0 4px, #3d6b2e 4px 8px); }
-  .art-blackjack { background: var(--cactus-500); }
-  .art-coinflip { background: var(--saddle-300); }
-  .art-craps { background: var(--crimson-500); }
-  .art-roulette { background: var(--ink-900); }
-  .art-slots { background: var(--gold-500); }
-  .art-plinko { background: var(--sky-500); }
-  .art-mines { background: var(--saddle-500); }
-  .art-crash { background: var(--saddle-600); }
-
-  .tile-glyph {
-    font-family: var(--font-display);
-    font-size: 56px;
-    color: var(--parchment-50);
-    text-shadow: 3px 3px 0 var(--ink-900);
-    line-height: 1;
-  }
-
-  /* In-game (poker) layout */
-  .table-felt {
-    background: var(--cactus-500);
-    background-image:
-      repeating-linear-gradient(45deg,
-        rgba(0,0,0,0.06) 0, rgba(0,0,0,0.06) 2px,
-        transparent 2px, transparent 6px);
-    border: 6px solid var(--ink-900);
-    border-radius: 24px;
-    padding: var(--sp-7) var(--sp-5);
-    box-shadow: var(--sh-table);
-    position: relative;
-    color: var(--parchment-50);
-  }
-  .seat {
-    background: var(--saddle-500);
-    border: 3px solid var(--ink-900);
-    padding: var(--sp-2) var(--sp-3);
-    color: var(--parchment-50);
-    display: flex; align-items: center; gap: var(--sp-2);
-    font-family: var(--font-display);
-    box-shadow: var(--sh-card-rest);
-  }
-  .seat.you { background: var(--gold-300); color: var(--ink-900); }
-  .seat .seat-name { font-size: var(--fs-body); line-height:1; }
-  .seat .seat-stack { font-size: var(--fs-small); color: var(--gold-300); }
-  .seat.you .seat-stack { color: var(--saddle-500); }
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel" src="components.jsx"></script>
-<script type="text/babel" data-presets="env,react">
 
-const GAMES = [
-  { id:"poker",     name:"Hold'em Poker", glyph:"♠",  meta:"6 tables open",  hot:true,  art:"art-poker" },
-  { id:"blackjack", name:"Blackjack",     glyph:"21", meta:"3:2 payouts",    art:"art-blackjack" },
-  { id:"coinflip",  name:"Coinflip",      glyph:"$",  meta:"Heads or tails", isNew:true, art:"art-coinflip" },
-  { id:"craps",     name:"Craps",         glyph:"⚂",  meta:"Roll to win",    art:"art-craps" },
-  { id:"roulette",  name:"Roulette",      glyph:"36", meta:"American",       art:"art-roulette" },
-  { id:"slots",     name:"Slots",         glyph:"7",  meta:"Lucky 7s",       hot:true, art:"art-slots" },
-  { id:"plinko",    name:"Plinko",        glyph:"●",  meta:"3x max bucket",  art:"art-plinko" },
-  { id:"mines",     name:"Mines",         glyph:"✸",  meta:"5×5 grid",       isNew:true, art:"art-mines" },
-  { id:"crash",     name:"Crash",         glyph:"▲",  meta:"Live multiplier", art:"art-crash" },
-];
+<div class="screen-wrap">
+  <h1>Screens</h1>
+  <p class="text-mute">Composed shots of the live app, dropped into framed previews.</p>
 
-function GameTile({ game }) {
-  return (
-    <div className="tile">
-      {game.hot   && <span className="tile-corner badge badge-crimson">★ HOT</span>}
-      {game.isNew && <span className="tile-corner tag-new">NEW</span>}
-      <div className={"tile-art " + game.art}>
-        <span className="tile-glyph">{game.glyph}</span>
-      </div>
-      <div className="tile-name">{game.name}</div>
-      <div className="tile-meta">
-        <span>{game.meta}</span>
-        <span style={{color:"var(--gold-500)"}}>PLAY →</span>
-      </div>
-    </div>
-  );
-}
-
-function HomeScreen() {
-  return (
-    <div className="screen" data-screen-label="01 Home Lobby">
-      <div className="screen-chrome">
-        <div className="dot"></div><div className="dot" style={{background:"var(--crimson-300)"}}></div><div className="dot" style={{background:"var(--cactus-300)"}}></div>
-        <span style={{marginLeft:"var(--sp-3)"}}>lucasgames.app · lobby</span>
-      </div>
-      <div className="screen-body" style={{background:"var(--parchment-50)"}}>
-        {/* Top bar */}
-        <div className="row" style={{justifyContent:"space-between", marginBottom:"var(--sp-5)", flexWrap:"wrap", gap:"var(--sp-3)"}}>
-          <div className="row" style={{gap:"var(--sp-3)"}}>
-            <img src="assets/logo-mark.svg" style={{width:48, height:48, imageRendering:"pixelated"}} alt=""/>
-            <div>
-              <div style={{fontFamily:"var(--font-display)", fontSize:"var(--fs-h3)", color:"var(--ink-900)", lineHeight:1, textTransform:"uppercase", letterSpacing:"var(--ls-loose)"}}>Lucas Games</div>
-              <div style={{fontFamily:"var(--font-display)", fontSize:"var(--fs-tiny)", color:"var(--saddle-400)", letterSpacing:"var(--ls-loose)"}}>★ PIXEL SALOON ★</div>
-            </div>
-          </div>
-          <div className="balance-bar">
-            <div className="avatar"><span style={{fontFamily:"var(--font-display)", fontSize:24}}>DH</span></div>
-            <div className="avatar-username">
-              <span className="uname">DocHolliday</span>
-              <span className="role">★ SHERIFF</span>
-            </div>
-            <div className="balance">$ 12,480</div>
-          </div>
+  <!-- ============================================================
+       LOBBY
+       ============================================================ -->
+  <div class="screen-label">Lobby</div>
+  <div class="screen-frame">
+    <header class="site-header" style="position: static;">
+      <a class="brand" href="#">
+        <div class="brand-mark" style="background: var(--gold-300); border: 2px solid var(--ink-900);"></div>
+        <div>
+          <div class="brand-name">Lucas Games</div>
+          <div class="brand-tag">Pixel Saloon</div>
         </div>
-
-        {/* Hero callout */}
-        <div className="panel panel-wood" style={{marginBottom:"var(--sp-5)", display:"flex", alignItems:"center", justifyContent:"space-between", gap:"var(--sp-5)", flexWrap:"wrap"}}>
-          <div>
-            <div className="badge badge-gold" style={{marginBottom:"var(--sp-2)"}}>WEEKLY JACKPOT</div>
-            <div style={{fontFamily:"var(--font-display)", fontSize:"56px", color:"var(--gold-300)", textShadow:"3px 3px 0 var(--saddle-600)", lineHeight:1}}>$48,200</div>
-            <div style={{color:"var(--parchment-200)", marginTop:"var(--sp-2)"}}>Pot grows till somebody draws a royal flush.</div>
-          </div>
-          <button className="btn btn-lg">Take A Seat</button>
-        </div>
-
-        {/* Tabs */}
-        <div className="row" style={{justifyContent:"space-between", marginBottom:"var(--sp-4)"}}>
-          <div className="tabs">
-            <button className="tab" aria-selected="true">All</button>
-            <button className="tab">Cards</button>
-            <button className="tab">Dice</button>
-            <button className="tab">Live</button>
-          </div>
-          <span className="badge">{GAMES.length} games</span>
-        </div>
-
-        {/* Tile grid */}
-        <div className="grid grid-3">
-          {GAMES.map(g => <GameTile key={g.id} game={g} />)}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PokerTableScreen() {
-  return (
-    <div className="screen" data-screen-label="02 Poker Table">
-      <div className="screen-chrome">
-        <div className="dot"></div><div className="dot" style={{background:"var(--crimson-300)"}}></div><div className="dot" style={{background:"var(--cactus-300)"}}></div>
-        <span style={{marginLeft:"var(--sp-3)"}}>lucasgames.app · hold'em · table 4</span>
-      </div>
-      <div className="screen-body" style={{background:"var(--saddle-50)"}}>
-        <div className="table-felt">
-          {/* Top — opponents */}
-          <div className="row" style={{justifyContent:"space-around", marginBottom:"var(--sp-5)", flexWrap:"wrap", gap:"var(--sp-3)"}}>
-            <div className="seat">
-              <div className="avatar avatar-sm" style={{background:"var(--crimson-300)"}}><span style={{fontFamily:"var(--font-display)", fontSize:14}}>BS</span></div>
-              <div><div className="seat-name">BillyTheStud</div><div className="seat-stack">$ 4,200</div></div>
+      </a>
+      <div class="site-header-center">
+        <div class="header-presence">
+          <span class="header-presence-label">★ At the Saloon (3)</span>
+          <div class="header-presence-list">
+            <div class="header-presence-pill is-me">
+              <span class="avatar" style="width: 26px; height: 26px;">LU</span>
+              <span class="header-presence-pill-label">Lobby</span>
             </div>
-            <div className="seat">
-              <div className="avatar avatar-sm" style={{background:"var(--sky-300)"}}><span style={{fontFamily:"var(--font-display)", fontSize:14}}>JS</span></div>
-              <div><div className="seat-name">JesseSnake</div><div className="seat-stack">$ 8,140</div></div>
+            <div class="header-presence-pill">
+              <span class="avatar" style="width: 26px; height: 26px; background: var(--cactus-300);">JD</span>
+              <span class="header-presence-pill-label">Slots</span>
             </div>
-            <div className="seat">
-              <div className="avatar avatar-sm" style={{background:"var(--cactus-300)"}}><span style={{fontFamily:"var(--font-display)", fontSize:14}}>WT</span></div>
-              <div><div className="seat-name">WyattTwirl</div><div className="seat-stack">$ 2,860</div></div>
-            </div>
-          </div>
-
-          {/* Center — community cards + pot */}
-          <div className="stack-lg" style={{alignItems:"center"}}>
-            <Stat label="POT" value="$ 2,450" color="money" glow />
-            <div className="row" style={{gap:"var(--sp-2)"}}>
-              <PlayingCard rank="A" suit="hearts"   size="md" />
-              <PlayingCard rank="K" suit="hearts"   size="md" />
-              <PlayingCard rank="10" suit="hearts"  size="md" />
-              <PlayingCard faceDown size="md" />
-              <PlayingCard faceDown size="md" />
-            </div>
-            <div className="row" style={{gap:"var(--sp-3)"}}>
-              <Chip color="red" size={36} stack={2} />
-              <Chip color="blue" size={36} stack={4} />
-              <Chip color="black" size={36} stack={1} />
-              <Chip color="gold" size={36} stack={2} />
-            </div>
-          </div>
-
-          {/* Player row */}
-          <div className="row" style={{justifyContent:"space-between", alignItems:"end", marginTop:"var(--sp-7)", flexWrap:"wrap", gap:"var(--sp-4)"}}>
-            <div className="seat you">
-              <div className="avatar avatar-sm" style={{background:"var(--saddle-500)", color:"var(--gold-300)"}}><span style={{fontFamily:"var(--font-display)", fontSize:14}}>DH</span></div>
-              <div><div className="seat-name">DocHolliday (you)</div><div className="seat-stack">$ 12,480</div></div>
-            </div>
-            <div className="row" style={{gap:"var(--sp-3)"}}>
-              <PlayingCard rank="Q" suit="hearts" size="md" hoverable />
-              <PlayingCard rank="J" suit="hearts" size="md" hoverable />
-            </div>
-            <div className="row" style={{gap:"var(--sp-2)"}}>
-              <button className="btn btn-danger">Fold</button>
-              <button className="btn btn-wood">Check</button>
-              <button className="btn">Raise $250</button>
+            <div class="header-presence-pill">
+              <span class="avatar" style="width: 26px; height: 26px; background: var(--sky-300);">MC</span>
+              <span class="header-presence-pill-label">Crash</span>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
+      <nav class="site-nav">
+        <a href="#" aria-current="page">Lobby</a>
+        <a href="#">Leaderboard</a>
+        <a href="#">Clans</a>
+        <a href="#">Shop</a>
+      </nav>
+    </header>
 
-function CrashScreen() {
-  return (
-    <div className="screen" data-screen-label="03 Crash">
-      <div className="screen-chrome">
-        <div className="dot"></div><div className="dot" style={{background:"var(--crimson-300)"}}></div><div className="dot" style={{background:"var(--cactus-300)"}}></div>
-        <span style={{marginLeft:"var(--sp-3)"}}>lucasgames.app · crash</span>
+    <main class="page">
+      <section class="row-lg" style="margin-bottom: var(--sp-7); flex-wrap: wrap;">
+        <div class="balance-bar">
+          <span class="avatar">LU</span>
+          <span class="avatar-username">
+            <span class="uname">Lucas</span>
+            <span class="role">LVL 48</span>
+          </span>
+          <span class="balance">9,013,310 ¢</span>
+        </div>
+        <div style="margin-left: auto; display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap;">
+          <button class="btn lobby-action-btn free-games-btn is-ready">Free Games <span class="free-games-dot"></span></button>
+          <button class="btn btn-ghost lobby-action-btn">Sign Out</button>
+        </div>
+      </section>
+
+      <section style="margin-bottom: var(--sp-5);">
+        <div class="divider">Pick a Table</div>
+      </section>
+
+      <div class="grid grid-4 lobby-tile-grid">
+        <a class="tile" href="#"><div class="tile-art" style="background: var(--saddle-300);"></div><div class="tile-name">Blackjack Table</div><div class="tile-meta"><span style="display:inline-flex;gap:4px;"><span class="badge badge-cactus">OPEN</span><span class="badge badge-sky">2P+</span></span><span>Play →</span></div></a>
+        <a class="tile" href="#"><div class="tile-art" style="background: var(--saddle-300);"></div><div class="tile-name">Poker</div><div class="tile-meta"><span style="display:inline-flex;gap:4px;"><span class="badge badge-cactus">OPEN</span><span class="badge badge-sky">2P+</span></span><span>Play →</span></div></a>
+        <a class="tile" href="#"><div class="tile-art" style="background: var(--saddle-300);"></div><div class="tile-name">Coin Flip</div><div class="tile-meta"><span class="badge badge-cactus">OPEN</span><span>Play →</span></div></a>
+        <a class="tile" href="#"><div class="tile-art" style="background: var(--saddle-300);"></div><div class="tile-name">Coin Flip Duel</div><div class="tile-meta"><span style="display:inline-flex;gap:4px;"><span class="badge badge-cactus">OPEN</span><span class="badge badge-sky">2P+</span></span><span>Play →</span></div></a>
+        <a class="tile" href="#"><div class="tile-art" style="background: var(--saddle-300);"></div><div class="tile-name">Dice</div><div class="tile-meta"><span class="badge badge-cactus">OPEN</span><span>Play →</span></div></a>
+        <a class="tile" href="#"><div class="tile-art" style="background: var(--saddle-300);"></div><div class="tile-name">Slots</div><div class="tile-meta"><span class="badge badge-cactus">OPEN</span><span>Play →</span></div></a>
+        <a class="tile" href="#"><div class="tile-art" style="background: var(--saddle-300);"></div><div class="tile-name">Roulette</div><div class="tile-meta"><span class="badge badge-cactus">OPEN</span><span>Play →</span></div></a>
+        <a class="tile" href="#"><div class="tile-art" style="background: var(--saddle-300);"></div><div class="tile-name">Mines</div><div class="tile-meta"><span class="badge badge-cactus">OPEN</span><span>Play →</span></div></a>
+        <a class="tile" href="#"><div class="tile-art" style="background: var(--saddle-300);"></div><div class="tile-name">Plinko</div><div class="tile-meta"><span class="badge badge-cactus">OPEN</span><span>Play →</span></div></a>
+        <a class="tile" href="#"><div class="tile-art" style="background: var(--saddle-300);"></div><div class="tile-name">Crash</div><div class="tile-meta"><span class="badge badge-cactus">OPEN</span><span>Play →</span></div></a>
       </div>
-      <div className="screen-body" style={{background:"var(--saddle-500)"}}>
-        <div className="grid" style={{gridTemplateColumns:"2fr 1fr", gap:"var(--sp-5)"}}>
-          <div>
-            <div className="row" style={{justifyContent:"space-between", marginBottom:"var(--sp-3)"}}>
-              <span className="badge badge-crimson">LIVE · ROUND #3,841</span>
-              <span className="badge">14 players</span>
+    </main>
+  </div>
+
+  <!-- ============================================================
+       GAME PAGE — Slots shell
+       ============================================================ -->
+  <div class="screen-label">Game shell — Slots</div>
+  <div class="screen-frame">
+    <header class="site-header" style="position: static;">
+      <a class="brand" href="#"><div class="brand-mark" style="background: var(--gold-300); border: 2px solid var(--ink-900);"></div><div><div class="brand-name">Lucas Games</div><div class="brand-tag">Pixel Saloon</div></div></a>
+      <div class="site-header-center"><div class="header-presence"><span class="header-presence-label">★ At the Saloon (3)</span><div class="header-presence-list"><div class="header-presence-pill is-me"><span class="avatar" style="width:26px;height:26px;">LU</span><span class="header-presence-pill-label">Slots</span></div></div></div></div>
+      <nav class="site-nav"><a href="#" aria-current="page">Lobby</a><a href="#">Leaderboard</a><a href="#">Clans</a><a href="#">Shop</a></nav>
+      <div class="header-balance">
+        <span class="avatar" style="width:32px;height:32px;">LU</span>
+        <div class="header-balance-text"><span class="header-balance-name">Lucas</span><span class="header-balance-coins">9,013,310 ¢</span></div>
+      </div>
+    </header>
+    <main class="page page-game">
+      <div class="row" style="gap: var(--sp-3); margin-bottom: var(--sp-3); flex-wrap: wrap; align-items: baseline;">
+        <a href="#" class="btn btn-ghost btn-sm">← Lobby</a>
+        <h1 class="game-shell-title" style="font-size: var(--fs-h3); margin: 0;">Boomtown Slots</h1>
+        <span class="text-mute game-shell-blurb">5×4 reels, 20 lines. Land 6 cash coins to trigger Round 'Em Up.</span>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Boomtown Reels</div>
+        <div class="lg-reel-container">
+          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: radial-gradient(circle at 30% 30%, #ffd84d, #c8941d); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: radial-gradient(circle at 30% 30%, #ffd84d, #c8941d); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+            <div style="aspect-ratio:1/1; background: linear-gradient(180deg,#fef6e4,#e8c089); border: 3px solid var(--ink-900);"></div>
+          </div>
+        </div>
+        <div style="max-width: 460px; margin: var(--sp-3) auto 0; display: flex; flex-direction: column; gap: var(--sp-3);">
+          <div style="background: var(--parchment-100); border: 3px solid var(--ink-900); padding: var(--sp-3); text-align: center;">
+            <div class="label">Bet (Coins)</div>
+            <div style="font-family: var(--font-display); font-size: var(--fs-h3); color: var(--gold-500); text-shadow: 2px 2px 0 var(--gold-100);">1,000</div>
+            <div class="row" style="justify-content: center; flex-wrap: wrap; margin-top: var(--sp-2);">
+              <button class="btn btn-ghost btn-sm">+100</button>
+              <button class="btn btn-ghost btn-sm">+1k</button>
+              <button class="btn btn-ghost btn-sm">+10k</button>
+              <button class="btn btn-ghost btn-sm">+100k</button>
+              <button class="btn btn-wood btn-sm">MAX</button>
             </div>
-            <div className="panel panel-dark" style={{padding:"var(--sp-7)", textAlign:"center"}}>
-              <div style={{fontFamily:"var(--font-display)", fontSize:"120px", color:"var(--neon-gold)", textShadow:"6px 6px 0 var(--ink-900), 0 0 32px rgba(255,216,77,0.5)", lineHeight:1, letterSpacing:"0.02em"}}>
-                2.34×
-              </div>
-              <div style={{fontFamily:"var(--font-display)", fontSize:"var(--fs-h4)", color:"var(--cactus-300)", marginTop:"var(--sp-3)", letterSpacing:"var(--ls-loose)"}}>↑ ↑ ↑ RISING</div>
-            </div>
-            <div className="row" style={{gap:"var(--sp-3)", marginTop:"var(--sp-4)"}}>
-              <button className="btn btn-lg btn-block btn-success" style={{flex:1}}>CASH OUT — $ 234</button>
+            <div class="row" style="justify-content: center; gap: var(--sp-2); margin-top: var(--sp-3);">
+              <button class="btn btn-ghost btn-sm" style="flex: 1;">÷2</button>
+              <button class="btn btn-ghost btn-sm" style="flex: 1;">×2</button>
             </div>
           </div>
-          <div className="stack">
-            <div className="panel">
-              <div className="panel-title">Your Bet</div>
-              <div className="stack">
-                <BetStepperLite />
-                <button className="btn btn-block">Place $100</button>
-              </div>
-            </div>
-            <div className="panel">
-              <div className="panel-title">Last 8 Rounds</div>
-              <div className="row" style={{flexWrap:"wrap", gap:"var(--sp-2)"}}>
-                <span className="badge badge-cactus">3.4×</span>
-                <span className="badge badge-crimson">1.1×</span>
-                <span className="badge badge-cactus">5.8×</span>
-                <span className="badge badge-cactus">2.0×</span>
-                <span className="badge badge-crimson">1.0×</span>
-                <span className="badge badge-gold">12.7×</span>
-                <span className="badge badge-cactus">2.6×</span>
-                <span className="badge badge-crimson">1.3×</span>
-              </div>
-            </div>
+          <div class="row" style="gap: var(--sp-2); justify-content: center;">
+            <button class="btn btn-ghost btn-sm">Auto 10</button>
+            <button class="btn" style="flex: 1; min-width: 120px;">Spin</button>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
+    </main>
+  </div>
 
-function BetStepperLite() {
-  const [val, setVal] = React.useState(100);
-  return (
-    <div className="stepper">
-      <button className="stepper-btn" onClick={() => setVal(Math.max(1, val - 25))}>−</button>
-      <div className="stepper-amount">
-        <span className="currency">Bet</span>
-        <span className="value">${val}</span>
+  <!-- ============================================================
+       FREE GAME — Daily Spin (with Free Games button on shell)
+       ============================================================ -->
+  <div class="screen-label">Free game shell — Daily Spin</div>
+  <div class="screen-frame">
+    <header class="site-header" style="position: static;">
+      <a class="brand" href="#"><div class="brand-mark" style="background: var(--gold-300); border: 2px solid var(--ink-900);"></div><div><div class="brand-name">Lucas Games</div><div class="brand-tag">Pixel Saloon</div></div></a>
+      <div class="site-header-center"><div class="header-presence"><span class="header-presence-label">★ At the Saloon (3)</span><div class="header-presence-list"><div class="header-presence-pill is-me"><span class="avatar" style="width:26px;height:26px;">LU</span><span class="header-presence-pill-label">Daily Spin</span></div></div></div></div>
+      <nav class="site-nav"><a href="#" aria-current="page">Lobby</a><a href="#">Leaderboard</a><a href="#">Clans</a><a href="#">Shop</a></nav>
+      <div class="header-balance">
+        <span class="avatar" style="width:32px;height:32px;">LU</span>
+        <div class="header-balance-text"><span class="header-balance-name">Lucas</span><span class="header-balance-coins">9,013,310 ¢</span></div>
       </div>
-      <button className="stepper-btn" onClick={() => setVal(val + 25)}>+</button>
-    </div>
-  );
-}
+    </header>
+    <main class="page page-game">
+      <div class="row" style="gap: var(--sp-3); margin-bottom: var(--sp-3); flex-wrap: wrap; align-items: baseline;">
+        <a href="#" class="btn btn-ghost btn-sm">← Lobby</a>
+        <button class="btn lobby-action-btn free-games-btn is-ready btn-sm">Free Games <span class="free-games-dot"></span></button>
+        <h1 class="game-shell-title" style="font-size: var(--fs-h3); margin: 0;">Daily Spin</h1>
+        <span class="text-mute game-shell-blurb">Once every 24 hours. Free Coins. Don't waste it.</span>
+      </div>
 
-function App() {
-  return (
-    <div data-screen-label="Screens">
-      <LG_Header current="screens.html" />
-      <main className="page">
-        <PageHero
-          eyebrow="04 — In Context"
-          title="Screens"
-          lede="The full saloon. Every component, every game piece, assembled into the actual screens players will see."
-        />
+      <div class="grid grid-2" style="gap: var(--sp-4);">
+        <div class="panel" style="background: radial-gradient(circle at 50% 40%, #4a2818, #1a0f08); color: var(--parchment-50); padding: var(--sp-5);">
+          <div class="center" style="flex-direction: column; gap: var(--sp-4);">
+            <div style="width: 240px; height: 240px; border: 4px solid var(--ink-900); border-radius: 50%; background: conic-gradient(var(--gold-300) 0 25%, var(--cactus-300) 25% 45%, var(--sky-300) 45% 60%, var(--crimson-300) 60% 80%, var(--gold-300) 80% 100%);"></div>
+          </div>
+        </div>
+        <div class="grid grid-2" style="gap: var(--sp-4);">
+          <div class="panel">
+            <div class="panel-title">Ready to Spin</div>
+            <div class="stack">
+              <p class="text-mute">Free Coins every day. Pull the lever.</p>
+              <button class="btn btn-lg btn-block action-ready" style="font-size: var(--fs-h2); background: var(--gold-300);">SPIN!</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-title">Payouts</div>
+            <p class="text-mute">A table of slice rewards.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
 
-        <Section num="A" title="Home — Lobby">
-          <HomeScreen />
-        </Section>
+  <!-- ============================================================
+       LEADERBOARD
+       ============================================================ -->
+  <div class="screen-label">Leaderboard</div>
+  <div class="screen-frame">
+    <header class="site-header" style="position: static;">
+      <a class="brand" href="#"><div class="brand-mark" style="background: var(--gold-300); border: 2px solid var(--ink-900);"></div><div><div class="brand-name">Lucas Games</div><div class="brand-tag">Pixel Saloon</div></div></a>
+      <div class="site-header-center"></div>
+      <nav class="site-nav"><a href="#">Lobby</a><a href="#" aria-current="page">Leaderboard</a><a href="#">Clans</a><a href="#">Shop</a></nav>
+    </header>
+    <main class="page">
+      <div style="margin-bottom: var(--sp-7);">
+        <h1 style="margin-bottom: var(--sp-2);">Leaderboard</h1>
+        <p class="text-mute">Brag rights. Click a player to see their stats.</p>
+      </div>
+      <div class="leaderboard">
+        <div class="leaderboard-row" style="border-bottom: 2px dashed var(--saddle-300);">
+          <div class="rank">1</div><div class="player"><span class="avatar avatar-sm">LU</span><span>Lucas</span></div><div class="game">Slots</div><div class="winnings">+12,800 ¢</div>
+        </div>
+        <div class="leaderboard-row" style="border-bottom: 2px dashed var(--saddle-300);">
+          <div class="rank">2</div><div class="player"><span class="avatar avatar-sm" style="background: var(--cactus-300);">JD</span><span>Jonny</span></div><div class="game">Crash</div><div class="winnings">+9,400 ¢</div>
+        </div>
+        <div class="leaderboard-row">
+          <div class="rank">3</div><div class="player"><span class="avatar avatar-sm" style="background: var(--sky-300);">MC</span><span>Mac</span></div><div class="game">Mines</div><div class="winnings">+5,200 ¢</div>
+        </div>
+      </div>
+    </main>
+  </div>
 
-        <Section num="B" title="In-Game — Poker Table">
-          <PokerTableScreen />
-        </Section>
+  <!-- ============================================================
+       SIGN-IN
+       ============================================================ -->
+  <div class="screen-label">Sign-in</div>
+  <div class="screen-frame">
+    <main class="page" style="max-width: 480px;">
+      <h1 style="text-align: center; margin-bottom: var(--sp-5);">Howdy</h1>
+      <div class="panel">
+        <div class="panel-title">Punch in your PIN</div>
+        <div class="pin-display">
+          <div class="pin-dot is-filled"></div>
+          <div class="pin-dot is-filled"></div>
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+        </div>
+        <div class="pinpad">
+          <button>1</button><button>2</button><button>3</button>
+          <button>4</button><button>5</button><button>6</button>
+          <button>7</button><button>8</button><button>9</button>
+          <button>↶</button><button>0</button><button>✓</button>
+        </div>
+      </div>
+    </main>
+  </div>
 
-        <Section num="C" title="In-Game — Crash">
-          <CrashScreen />
-        </Section>
-      </main>
-    </div>
-  );
-}
+</div>
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-</script>
 </body>
 </html>

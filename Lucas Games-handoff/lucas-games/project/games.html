@@ -3,433 +3,231 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Games — Lucas Games</title>
+<title>Lucas Games — Games</title>
 <link rel="stylesheet" href="tokens.css" />
 <link rel="stylesheet" href="components.css" />
 <link rel="stylesheet" href="games.css" />
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 <style>
-  .demo-frame {
-    background: var(--parchment-50);
+  body { padding: var(--sp-7) var(--sp-5); }
+  section { max-width: 1080px; margin: 0 auto var(--sp-7); }
+  .src-note { font-size: var(--fs-tiny); color: var(--saddle-400); }
+  .reel-cell {
+    aspect-ratio: 1 / 1;
+    background: linear-gradient(180deg, #fef6e4, #e8c089);
     border: 3px solid var(--ink-900);
-    padding: var(--sp-5);
-    box-shadow: var(--sh-card-rest);
-    margin-bottom: var(--sp-4);
-    background-image:
-      linear-gradient(0deg, rgba(168,117,69,0.08) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(168,117,69,0.08) 1px, transparent 1px);
-    background-size: 16px 16px;
+    box-shadow: var(--bevel-light);
   }
-  .demo-frame.felt {
-    background: var(--cactus-500);
-    background-image:
-      repeating-linear-gradient(45deg,
-        rgba(0,0,0,0.08) 0, rgba(0,0,0,0.08) 2px,
-        transparent 2px, transparent 6px);
-  }
-  .demo-label {
+  .crash-readout-demo {
     font-family: var(--font-display);
-    font-size: var(--fs-small);
-    letter-spacing: var(--ls-loose);
-    text-transform: uppercase;
-    color: var(--saddle-400);
-    margin-bottom: var(--sp-2);
+    font-size: 88px;
+    line-height: 1;
+    color: var(--gold-300);
+    text-shadow: 4px 4px 0 var(--ink-900), 0 0 24px rgba(245, 200, 66, 0.7);
   }
-  /* Slot reel */
-  .slot {
-    display: inline-flex;
-    background: var(--saddle-500);
-    border: 4px solid var(--ink-900);
-    padding: var(--sp-3);
-    box-shadow: var(--sh-card-rest);
-    gap: var(--sp-2);
-  }
-  .reel {
-    width: 88px; height: 120px;
-    background: var(--parchment-50);
-    border: 3px solid var(--ink-900);
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display);
-    font-size: 56px;
-    color: var(--crimson-500);
-    box-shadow: inset 0 4px 0 0 rgba(0,0,0,0.12);
-  }
-  /* Plinko peg */
-  .plinko {
-    background: var(--saddle-500);
-    border: 4px solid var(--ink-900);
-    padding: var(--sp-5);
-    width: 100%; max-width: 360px;
-    box-shadow: var(--sh-card-rest);
-  }
-  .plinko-row {
-    display: flex; justify-content: center; gap: 16px;
-    margin-bottom: 14px;
-  }
-  .plinko-peg {
-    width: 10px; height: 10px;
-    background: var(--gold-300);
-    border: 2px solid var(--ink-900);
-    border-radius: 999px;
-  }
-  .plinko-buckets {
-    display: flex; gap: 4px; margin-top: var(--sp-3);
-  }
-  .plinko-bucket {
-    flex: 1; height: 36px;
-    background: var(--parchment-100);
-    border: 2px solid var(--ink-900);
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display);
-    font-size: var(--fs-small);
-    color: var(--ink-900);
-  }
-  /* Mines grid */
-  .mines {
-    display: grid;
-    grid-template-columns: repeat(5, 56px);
-    gap: 6px;
-    background: var(--saddle-500);
-    border: 4px solid var(--ink-900);
-    padding: var(--sp-3);
-    box-shadow: var(--sh-card-rest);
-  }
-  .mine-cell {
-    width: 56px; height: 56px;
-    background: var(--saddle-200);
-    border: 3px solid var(--ink-900);
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display);
-    font-size: 32px;
-    color: var(--saddle-500);
-    box-shadow: var(--bevel-wood);
-    cursor: pointer;
-  }
-  .mine-cell.is-revealed {
-    background: var(--cactus-300);
-    box-shadow: none;
-    color: var(--parchment-50);
-    text-shadow: 1px 1px 0 var(--cactus-700);
-  }
-  .mine-cell.is-bomb {
-    background: var(--crimson-300);
-    box-shadow: none;
-    color: var(--parchment-50);
-  }
-  /* Roulette wheel snippet */
-  .roulette-strip {
-    display: flex;
-    border: 4px solid var(--ink-900);
-    overflow: hidden;
-    box-shadow: var(--sh-card-rest);
-  }
-  .roulette-cell {
-    flex: 1;
-    height: 56px;
-    display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display);
-    font-size: var(--fs-h4);
-    border-right: 2px solid var(--ink-900);
-    color: var(--parchment-50);
-  }
-  .roulette-cell:last-child { border-right: 0; }
-  .roulette-cell.r { background: var(--crimson-500); }
-  .roulette-cell.b { background: var(--ink-900); }
-  .roulette-cell.g { background: var(--cactus-500); }
-  .roulette-cell.is-active { box-shadow: inset 0 0 0 4px var(--gold-300); color: var(--gold-300); }
-
-  /* Crash chart */
-  .crash {
-    background: var(--saddle-500);
-    border: 4px solid var(--ink-900);
-    padding: var(--sp-4);
-    box-shadow: var(--sh-card-rest);
-    width: 100%;
-  }
-  .crash-mult {
+  .dice-readout-demo {
     font-family: var(--font-display);
     font-size: 64px;
-    color: var(--neon-gold);
-    text-shadow: 4px 4px 0 var(--saddle-600), 0 0 24px rgba(255,216,77,0.55);
     line-height: 1;
+    color: var(--gold-300);
+    text-shadow: 4px 4px 0 var(--ink-900);
   }
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel" src="components.jsx"></script>
-<script type="text/babel" data-presets="env,react">
-function CardSet() {
-  const ranks = ["A","K","Q","J","10","9","8","7","6","5","4","3","2"];
-  return (
-    <div className="stack">
-      <div className="row" style={{gap:"var(--sp-3)", flexWrap:"wrap"}}>
-        <PlayingCard rank="A" suit="spades"   size="lg" />
-        <PlayingCard rank="K" suit="hearts"   size="lg" />
-        <PlayingCard rank="Q" suit="diamonds" size="lg" />
-        <PlayingCard rank="J" suit="clubs"    size="lg" />
-        <PlayingCard faceDown size="lg" />
+
+<section>
+  <h1>Games</h1>
+  <p class="text-mute">In-game canvases, lobby grid density, mobile reorder rules. See <code class="mono">src/app/games/*</code> + <code class="mono">src/app/earn/*</code> for the live React.</p>
+</section>
+
+<!-- ============================================================
+     LOBBY GRID — 4-up desktop, 3-up phones
+     ============================================================ -->
+<section>
+  <div class="divider">Lobby tile grid (4-up)</div>
+  <div class="grid grid-4 lobby-tile-grid" style="margin-top: var(--sp-4);">
+    <a class="tile" href="#">
+      <div class="tile-art" style="background: var(--saddle-300);"></div>
+      <div class="tile-name">Blackjack Table</div>
+      <div class="tile-meta">
+        <span style="display:inline-flex; gap:4px;">
+          <span class="badge badge-cactus">OPEN</span>
+          <span class="badge badge-sky">2P+</span>
+        </span>
+        <span>Play →</span>
       </div>
-      <div className="row" style={{gap:"var(--sp-2)", flexWrap:"wrap"}}>
-        {ranks.map(r => <PlayingCard key={r} rank={r} suit="spades" size="sm" />)}
+    </a>
+    <a class="tile" href="#">
+      <div class="tile-art" style="background: var(--saddle-300);"></div>
+      <div class="tile-name">Poker</div>
+      <div class="tile-meta">
+        <span style="display:inline-flex; gap:4px;">
+          <span class="badge badge-cactus">OPEN</span>
+          <span class="badge badge-sky">2P+</span>
+        </span>
+        <span>Play →</span>
+      </div>
+    </a>
+    <a class="tile" href="#">
+      <div class="tile-art" style="background: var(--saddle-300);"></div>
+      <div class="tile-name">Coin Flip</div>
+      <div class="tile-meta">
+        <span class="badge badge-cactus">OPEN</span>
+        <span>Play →</span>
+      </div>
+    </a>
+    <a class="tile" href="#">
+      <div class="tile-art" style="background: var(--saddle-300);"></div>
+      <div class="tile-name">Slots</div>
+      <div class="tile-meta">
+        <span class="badge badge-cactus">OPEN</span>
+        <span>Play →</span>
+      </div>
+    </a>
+  </div>
+  <p class="src-note" style="margin-top: var(--sp-3);">
+    On phones <code class="mono">.lobby-tile-grid</code> overrides the .grid-3/.grid-4 single-column rule and stays 3-up so all 10 games fit at once.
+  </p>
+</section>
+
+<!-- ============================================================
+     SLOTS — Boomtown reels capped 460px
+     ============================================================ -->
+<section>
+  <div class="divider">Slots — Boomtown reels</div>
+  <div class="lg-reel-container" style="margin-top: var(--sp-4);">
+    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+      <div class="reel-cell"></div><div class="reel-cell"></div><div class="reel-cell"></div><div class="reel-cell"></div><div class="reel-cell"></div>
+      <div class="reel-cell"></div><div class="reel-cell"></div><div class="reel-cell"></div><div class="reel-cell"></div><div class="reel-cell"></div>
+      <div class="reel-cell"></div><div class="reel-cell"></div><div class="reel-cell"></div><div class="reel-cell"></div><div class="reel-cell"></div>
+      <div class="reel-cell"></div><div class="reel-cell"></div><div class="reel-cell"></div><div class="reel-cell"></div><div class="reel-cell"></div>
+    </div>
+  </div>
+  <div style="max-width: 460px; margin: var(--sp-3) auto 0; display: flex; flex-direction: column; gap: var(--sp-3);">
+    <div class="demo-card" style="background: var(--parchment-100); border: 3px solid var(--ink-900); padding: var(--sp-3); text-align: center;">
+      <div class="label">Bet (Coins)</div>
+      <div style="font-family: var(--font-display); font-size: var(--fs-h3); color: var(--gold-500); text-shadow: 2px 2px 0 var(--gold-100);">1,000</div>
+      <div class="row" style="justify-content: center; flex-wrap: wrap; margin-top: var(--sp-2);">
+        <button class="btn btn-ghost btn-sm">+100</button>
+        <button class="btn btn-ghost btn-sm">+1k</button>
+        <button class="btn btn-ghost btn-sm">+10k</button>
+        <button class="btn btn-ghost btn-sm">+100k</button>
+        <button class="btn btn-wood btn-sm">MAX</button>
+      </div>
+      <div class="row" style="justify-content: center; gap: var(--sp-2); margin-top: var(--sp-3);">
+        <button class="btn btn-ghost btn-sm" style="flex: 1;">÷2</button>
+        <button class="btn btn-ghost btn-sm" style="flex: 1;">×2</button>
       </div>
     </div>
-  );
-}
+    <div class="row" style="gap: var(--sp-2); justify-content: center;">
+      <button class="btn btn-ghost btn-sm">Auto 10</button>
+      <button class="btn" style="flex: 1; min-width: 120px;">Spin</button>
+    </div>
+  </div>
+  <p class="src-note" style="margin-top: var(--sp-3);">
+    <code class="mono">.lg-reel-container</code> caps reels at 460px (320px on phones). The bet bar mirrors the same maxWidth so it visually centres beneath the reels.
+  </p>
+</section>
 
-function ChipSet() {
-  const colors = ["white","red","blue","green","black","gold"];
-  return (
-    <div className="row-lg" style={{gap:"var(--sp-5)", flexWrap:"wrap", alignItems:"end"}}>
-      {colors.map(c => (
-        <div key={c} style={{display:"flex", flexDirection:"column", alignItems:"center", gap:"var(--sp-2)"}}>
-          <Chip color={c} size={80} />
-          <code>{c}</code>
+<!-- ============================================================
+     CRASH — readout + canvas + mobile reorder hint
+     ============================================================ -->
+<section>
+  <div class="divider">Crash — multiplier readout</div>
+  <div class="panel crash-stage" style="margin-top: var(--sp-4); text-align: center;">
+    <div class="crash-readout crash-readout-demo">2.41×</div>
+    <div class="text-mute" style="font-family: var(--font-display); margin: var(--sp-2) 0;">Cash out before bust</div>
+    <canvas class="crash-canvas" width="520" height="220" style="width: 100%; height: auto; border: 3px solid var(--ink-900); background: var(--saddle-500); display: block;"></canvas>
+  </div>
+  <p class="src-note" style="margin-top: var(--sp-3);">
+    On phones the parent <code class="mono">.crash-grid</code> flattens to a column and the <code class="mono">.crash-side</code> (cashout/bet panel) is reordered above the visualization so the action button is reachable without scrolling. <code class="mono">.crash-readout</code> shrinks to 56px and <code class="mono">.crash-canvas</code> caps at 140px tall.
+  </p>
+</section>
+
+<!-- ============================================================
+     DICE
+     ============================================================ -->
+<section>
+  <div class="divider">Dice — felt</div>
+  <div class="panel" style="margin-top: var(--sp-4); background: radial-gradient(circle at 50% 40%, #2d5b22, #1f3818); color: var(--parchment-50);">
+    <div class="row" style="justify-content: center; gap: var(--sp-6); flex-wrap: wrap;">
+      <div style="width: 140px; height: 140px; background: linear-gradient(135deg, var(--parchment-50), var(--parchment-200)); border: 5px solid var(--ink-900);"></div>
+      <div style="text-align: center;">
+        <div style="font-family: var(--font-display); font-size: 12px; letter-spacing: var(--ls-loose); text-transform: uppercase; color: var(--gold-300); margin-bottom: 4px;">Roll under 50</div>
+        <div class="dice-readout dice-readout-demo">42</div>
+      </div>
+    </div>
+  </div>
+  <p class="src-note" style="margin-top: var(--sp-3);"><code class="mono">.dice-readout</code> drops 64 → 40 on phones.</p>
+</section>
+
+<!-- ============================================================
+     SHOP — pack-opening modal
+     ============================================================ -->
+<section>
+  <div class="divider">Shop — pack opening</div>
+  <div class="panel-wood pack-modal" style="margin-top: var(--sp-4); padding: var(--sp-5); border: 4px solid var(--ink-900); text-align: center;">
+    <div style="font-family: var(--font-display); font-size: var(--fs-h2); color: var(--gold-300); text-shadow: 3px 3px 0 var(--ink-900); letter-spacing: var(--ls-loose); margin-bottom: var(--sp-2);">Pick One</div>
+    <div class="pack-grid" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-5);">
+      <div class="pack-card" style="height: 240px; background: var(--parchment-50); border: 4px solid var(--ink-900);"></div>
+      <div class="pack-card" style="height: 240px; background: var(--parchment-50); border: 4px solid var(--gold-300); box-shadow: var(--glow-gold);"></div>
+      <div class="pack-card" style="height: 240px; background: var(--parchment-50); border: 4px solid var(--ink-900);"></div>
+      <div class="pack-card" style="height: 240px; background: var(--parchment-50); border: 4px solid var(--ink-900);"></div>
+      <div class="pack-card" style="height: 240px; background: var(--parchment-50); border: 4px solid var(--ink-900);"></div>
+    </div>
+  </div>
+  <p class="src-note" style="margin-top: var(--sp-3);">On phones <code class="mono">.pack-card</code> shrinks to 150px tall and <code class="mono">.pack-card-desc</code> hides so all 5 cards still fit one row.</p>
+</section>
+
+<!-- ============================================================
+     FREE GAMES MODAL
+     ============================================================ -->
+<section>
+  <div class="divider">Free Games modal</div>
+  <div class="panel" style="margin-top: var(--sp-4); width: min(520px, 100%); margin-left: auto; margin-right: auto;">
+    <div class="between" style="margin-bottom: var(--sp-4);">
+      <div class="uppercase" style="font-family: var(--font-display); font-size: var(--fs-h3); color: var(--gold-700);">Free Games</div>
+      <button class="btn btn-sm btn-wood">×</button>
+    </div>
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: var(--sp-3);">
+      <a href="#" class="tile free-games-tile is-ready" style="background: var(--gold-100); padding: var(--sp-3); gap: var(--sp-2);">
+        <div class="tile-art" style="background: var(--gold-200);"></div>
+        <div class="tile-name" style="font-size: var(--fs-body-lg);">Daily Spin</div>
+        <div class="tile-meta">
+          <span class="badge badge-cactus">READY</span>
+          <span>Play →</span>
         </div>
-      ))}
-    </div>
-  );
-}
-
-function ChipStacks() {
-  return (
-    <div className="row-lg" style={{gap:"var(--sp-7)", alignItems:"end"}}>
-      <Chip color="red"   size={64} stack={3} />
-      <Chip color="blue"  size={64} stack={5} />
-      <Chip color="green" size={64} stack={2} />
-      <Chip color="black" size={64} stack={6} />
-      <Chip color="gold"  size={64} stack={4} />
-    </div>
-  );
-}
-
-function DiceSet() {
-  return (
-    <div className="stack">
-      <div className="row-lg" style={{flexWrap:"wrap"}}>
-        {[1,2,3,4,5,6].map(v => <Die key={v} value={v} size={72} />)}
-      </div>
-      <div className="row-lg" style={{flexWrap:"wrap"}}>
-        {[1,2,3,4,5,6].map(v => <Die key={v} value={v} size={72} color="crimson" />)}
-      </div>
-    </div>
-  );
-}
-
-function PlinkoArt() {
-  const rows = 6;
-  return (
-    <div className="plinko">
-      {Array.from({length: rows}).map((_, r) => (
-        <div key={r} className="plinko-row">
-          {Array.from({length: r + 3}).map((__, i) => <div key={i} className="plinko-peg" />)}
+      </a>
+      <a href="#" class="tile free-games-tile" style="background: var(--gold-100); padding: var(--sp-3); gap: var(--sp-2);">
+        <div class="tile-art" style="background: var(--gold-200);"></div>
+        <div class="tile-name" style="font-size: var(--fs-body-lg);">Frontier Monopoly</div>
+        <div class="tile-meta">
+          <span class="badge badge-gold">23m 04s</span>
+          <span>Play →</span>
         </div>
-      ))}
-      <div className="plinko-buckets">
-        {["3x","1.5x","1x","0.4x","1x","1.5x","3x"].map((v, i) => (
-          <div key={i} className="plinko-bucket">{v}</div>
-        ))}
-      </div>
+      </a>
+      <a href="#" class="tile free-games-tile" style="background: var(--gold-100); padding: var(--sp-3); gap: var(--sp-2);">
+        <div class="tile-art" style="background: var(--gold-200);"></div>
+        <div class="tile-name" style="font-size: var(--fs-body-lg);">Crossy Road</div>
+        <div class="tile-meta">
+          <span class="badge badge-gold">FREE</span>
+          <span>Play →</span>
+        </div>
+      </a>
+      <a href="#" class="tile free-games-tile" style="background: var(--gold-100); padding: var(--sp-3); gap: var(--sp-2);">
+        <div class="tile-art" style="background: var(--gold-200);"></div>
+        <div class="tile-name" style="font-size: var(--fs-body-lg);">Flappy</div>
+        <div class="tile-meta">
+          <span class="badge badge-gold">FREE</span>
+          <span>Play →</span>
+        </div>
+      </a>
     </div>
-  );
-}
+  </div>
+  <p class="src-note" style="margin-top: var(--sp-3);">
+    Daily Spin + Monopoly tiles flip to <code class="mono">.is-ready</code> + a <code class="mono">badge-cactus</code> READY when their cooldown is up. Otherwise they show the live countdown. Status comes from <code class="mono">/api/earn/status</code>.
+  </p>
+</section>
 
-function MinesGrid() {
-  const grid = [
-    [1,1,2,0,0],
-    [1,'b',2,0,0],
-    [1,1,1,1,1],
-    [0,0,0,1,'b'],
-    [0,0,0,1,1],
-  ];
-  return (
-    <div className="mines">
-      {grid.flat().map((v, i) => {
-        if (v === 'b') return <div key={i} className="mine-cell is-bomb">✸</div>;
-        if (v === 0)   return <div key={i} className="mine-cell"></div>;
-        return <div key={i} className="mine-cell is-revealed">{v}</div>;
-      })}
-    </div>
-  );
-}
-
-function RouletteStrip() {
-  const cells = [
-    {n: 0, c: "g"},
-    {n: 32, c: "r"}, {n: 15, c: "b"}, {n: 19, c: "r"}, {n: 4, c: "b"},
-    {n: 21, c: "r"}, {n: 2, c: "b"}, {n: 25, c: "r", active: true}, {n: 17, c: "b"},
-    {n: 34, c: "r"}, {n: 6, c: "b"}, {n: 27, c: "r"},
-  ];
-  return (
-    <div className="roulette-strip">
-      {cells.map((c, i) => (
-        <div key={i} className={"roulette-cell " + c.c + (c.active ? " is-active" : "")}>{c.n}</div>
-      ))}
-    </div>
-  );
-}
-
-function App() {
-  return (
-    <div data-screen-label="Games">
-      <LG_Header current="games.html" />
-      <main className="page">
-        <PageHero
-          eyebrow="03 — Game Pieces"
-          title="Game Primitives"
-          lede="Cards, chips, dice, the coin — and the per-game props for every table on the floor."
-        />
-
-        <Section num="A" title="Playing Cards">
-          <p style={{color:"var(--saddle-400)", maxWidth:"60ch", marginBottom:"var(--sp-4)"}}>
-            Hard-cornered, parchment-faced. Suit colors map to the four accent palettes — spades=ink, hearts=crimson, diamonds=sky, clubs=cactus. Card backs ride on a saloon-red diagonal weave.
-          </p>
-          <div className="demo-frame felt">
-            <CardSet />
-          </div>
-
-          <div className="grid grid-3">
-            <div>
-              <div className="demo-label">Sizes — sm · md · lg</div>
-              <div className="demo-frame">
-                <div className="row" style={{gap:"var(--sp-3)", alignItems:"end"}}>
-                  <PlayingCard rank="A" suit="hearts" size="sm" />
-                  <PlayingCard rank="A" suit="hearts" size="md" />
-                  <PlayingCard rank="A" suit="hearts" size="lg" />
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="demo-label">Hover — cards lift</div>
-              <div className="demo-frame">
-                <div className="row" style={{gap:"var(--sp-3)"}}>
-                  <PlayingCard rank="K" suit="spades" size="md" hoverable />
-                  <PlayingCard rank="Q" suit="diamonds" size="md" hoverable />
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="demo-label">Card back</div>
-              <div className="demo-frame">
-                <div className="row" style={{gap:"var(--sp-3)"}}>
-                  <PlayingCard faceDown size="sm" />
-                  <PlayingCard faceDown size="md" />
-                  <PlayingCard faceDown size="lg" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </Section>
-
-        <Section num="B" title="Chips">
-          <p style={{color:"var(--saddle-400)", maxWidth:"60ch", marginBottom:"var(--sp-4)"}}>
-            Six denominations from $1 (white) to $1K (gold). Notched edge ring, beveled face, hard drop shadow.
-          </p>
-          <div className="demo-frame felt">
-            <ChipSet />
-          </div>
-          <div className="demo-label" style={{marginTop:"var(--sp-5)"}}>Stacks</div>
-          <div className="demo-frame felt">
-            <ChipStacks />
-          </div>
-        </Section>
-
-        <Section num="C" title="Coin · Dice">
-          <div className="grid grid-2">
-            <div>
-              <div className="demo-label">Coin (heads / tails) — for Coinflip</div>
-              <div className="demo-frame felt">
-                <div className="row-lg" style={{gap:"var(--sp-7)"}}>
-                  <Coin side="heads" size={120} />
-                  <Coin side="tails" size={120} />
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="demo-label">Dice — for Craps</div>
-              <div className="demo-frame felt">
-                <DiceSet />
-              </div>
-            </div>
-          </div>
-        </Section>
-
-        <Section num="D" title="Per-Game Props">
-          <div className="grid grid-2">
-            <div>
-              <div className="demo-label">Slots — reel cluster</div>
-              <div className="demo-frame felt">
-                <div className="slot">
-                  <div className="reel">7</div>
-                  <div className="reel">7</div>
-                  <div className="reel">7</div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="demo-label">Crash — multiplier readout</div>
-              <div className="demo-frame felt">
-                <div className="crash">
-                  <div className="row" style={{justifyContent:"space-between", marginBottom:"var(--sp-2)"}}>
-                    <span className="badge badge-crimson">LIVE</span>
-                    <span className="badge">ROUND #3,841</span>
-                  </div>
-                  <div className="crash-mult">2.34×</div>
-                  <div style={{color:"var(--parchment-200)", fontFamily:"var(--font-display)"}}>↑ rising · cash out before the bust</div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="demo-label">Plinko — pegs & buckets</div>
-              <div className="demo-frame felt">
-                <PlinkoArt />
-              </div>
-            </div>
-            <div>
-              <div className="demo-label">Mines — 5×5 grid</div>
-              <div className="demo-frame felt">
-                <MinesGrid />
-              </div>
-            </div>
-            <div style={{gridColumn: "span 2"}}>
-              <div className="demo-label">Roulette — number strip</div>
-              <div className="demo-frame felt">
-                <RouletteStrip />
-              </div>
-            </div>
-          </div>
-        </Section>
-
-        <Section num="E" title="Suit glyphs at scale">
-          <div className="demo-frame">
-            <div className="row-lg" style={{gap:"var(--sp-7)"}}>
-              <div style={{textAlign:"center"}}>
-                <Suit kind="spades" size={96} />
-                <div className="demo-label" style={{marginTop:"var(--sp-2)"}}>Spades</div>
-              </div>
-              <div style={{textAlign:"center"}}>
-                <Suit kind="hearts" size={96} />
-                <div className="demo-label" style={{marginTop:"var(--sp-2)"}}>Hearts</div>
-              </div>
-              <div style={{textAlign:"center"}}>
-                <Suit kind="diamonds" size={96} />
-                <div className="demo-label" style={{marginTop:"var(--sp-2)"}}>Diamonds</div>
-              </div>
-              <div style={{textAlign:"center"}}>
-                <Suit kind="clubs" size={96} />
-                <div className="demo-label" style={{marginTop:"var(--sp-2)"}}>Clubs</div>
-              </div>
-            </div>
-          </div>
-        </Section>
-      </main>
-    </div>
-  );
-}
-
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-</script>
 </body>
 </html>

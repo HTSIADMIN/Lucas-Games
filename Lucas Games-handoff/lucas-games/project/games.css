@@ -1,244 +1,120 @@
 /* ============================================================
-   LUCAS GAMES — Game-piece styles
-   Playing card chrome, chip stack, coin, die.
+   LUCAS GAMES — IN-GAME CHROME  (live mirror)
+   Source of truth: src/app/globals.css
+   Depends on tokens.css + components.css.
+
+   Per-game canvases, lobby grid density, chat drawer launcher
+   animations, and the mobile crunch for the four free games.
    ============================================================ */
 
-/* ------------------ PLAYING CARD ------------------ */
-.pcard {
+/* ============================================================
+   LOBBY TILE GRID — 4-up by default; stays 3-up on phones so
+   every game is visible at once.
+   ============================================================ */
+@media (max-width: 640px) {
+  .lobby-tile-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: var(--sp-2) !important;
+  }
+  .lobby-tile-grid .tile     { padding: var(--sp-2); gap: var(--sp-2); }
+  .lobby-tile-grid .tile-art { aspect-ratio: 1 / 1; }
+  .lobby-tile-grid .tile-art > svg { width: 90%; height: 90%; }
+  .lobby-tile-grid .tile-name { font-size: 13px; line-height: 1.05; }
+  .lobby-tile-grid .tile-meta { font-size: 10px; gap: 4px; }
+  .lobby-tile-grid .tile-meta > span:last-child { display: none; }
+  .lobby-tile-grid .badge     { font-size: 9px; padding: 2px 4px; letter-spacing: 0.05em; }
+}
+
+/* ============================================================
+   SHOP — pack-opening modal
+   .pack-modal       outer backdrop+panel
+   .pack-grid        5-up card row
+   .pack-card        each card flip wrapper
+   .pack-card-front  card face
+   .pack-card-name   card name (hidden on phones)
+   .pack-card-desc   card description (hidden on phones)
+   ============================================================ */
+@media (max-width: 640px) {
+  .pack-modal { padding: var(--sp-3) !important; }
+  .pack-grid  { gap: 4px !important; margin-bottom: var(--sp-3) !important; }
+  .pack-card  { height: 150px !important; }
+  .pack-card-front { padding: 4px !important; }
+  .pack-card-front .badge { font-size: 8px !important; padding: 1px 3px !important; }
+  .pack-card-name { font-size: 9px !important; line-height: 1.05 !important; }
+  .pack-card-desc { display: none !important; }
+}
+
+/* ============================================================
+   CRASH — wrapper grid + readout + canvas
+   Desktop uses .grid .grid-2; phones flatten to a column with
+   the cashout/bet panel reordered ABOVE the visualization so
+   the action button is reachable without scrolling.
+   ============================================================ */
+@media (max-width: 640px) {
+  .crash-readout { font-size: 56px !important; }
+  .crash-canvas  { max-height: 140px; object-fit: cover; }
+  .crash-grid {
+    display: flex !important;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  .crash-grid > .crash-side { order: -1; }
+}
+
+/* ============================================================
+   DICE — big result number shrinks on phones.
+   ============================================================ */
+@media (max-width: 640px) {
+  .dice-readout { font-size: 40px !important; }
+}
+
+/* ============================================================
+   SLOTS — Boomtown reels
+   Reel container is capped 460px wide on desktop so the spin
+   button stays on screen, and 320px on phones.
+   ============================================================ */
+.lg-reel-container {
   position: relative;
-  background: var(--parchment-50);
-  border: 3px solid var(--ink-900);
-  box-shadow: var(--sh-card-rest);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 6px 8px;
-  font-family: var(--font-display);
-  user-select: none;
-  flex-shrink: 0;
+  background: linear-gradient(180deg, #2a1810, #1a0f08);
+  border: 4px solid var(--ink-900);
+  padding: var(--sp-4);
+  margin: var(--sp-3) auto 0;
+  max-width: 460px;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
 }
-.pcard.is-hoverable {
-  cursor: pointer;
-  transition: transform var(--dur-quick) var(--ease-snap),
-              box-shadow var(--dur-quick) var(--ease-snap);
-}
-.pcard.is-hoverable:hover {
-  transform: translateY(-8px) rotate(-1deg);
-  box-shadow: 0 12px 0 0 var(--ink-900);
-}
-.pcard-corner {
-  display: flex; flex-direction: column; align-items: center;
-  line-height: 1;
-}
-.pcard-corner-br { transform: rotate(180deg); }
-.pcard-rank {
-  font-family: var(--font-display);
-  line-height: 1;
-  margin-bottom: 2px;
-}
-.pcard-center {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+@media (max-width: 640px) {
+  .lg-reel-container { max-width: 320px !important; }
 }
 
-/* Back of card — diagonal pixel pattern */
-.pcard-back {
-  background: var(--crimson-500);
-  position: relative;
-  overflow: hidden;
-}
-.pcard-back-pattern {
-  position: absolute;
-  inset: 6px;
-  border: 3px solid var(--gold-300);
-  background-image:
-    repeating-linear-gradient(45deg,
-      var(--crimson-700) 0,
-      var(--crimson-700) 4px,
-      var(--crimson-500) 4px,
-      var(--crimson-500) 8px),
-    repeating-linear-gradient(-45deg,
-      transparent 0,
-      transparent 4px,
-      rgba(245,200,66,0.15) 4px,
-      rgba(245,200,66,0.15) 8px);
-}
-.pcard-back-emblem {
-  position: absolute;
-  inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display);
-  font-size: 48px;
-  color: var(--gold-300);
-  text-shadow: 3px 3px 0 var(--crimson-700);
+/* ============================================================
+   GAME-SHELL TITLE ROW — back link + Free Games button + h1
+   on a single row instead of stacked.
+   ============================================================ */
+@media (max-width: 640px) {
+  .page-game .panel        { padding: var(--sp-3) !important; }
+  .page-game .panel-title  { font-size: var(--fs-body); margin-bottom: var(--sp-1); }
+  .page-game .stack-lg     { gap: var(--sp-2); }
+  .page-game .game-shell-title { font-size: var(--fs-body-lg) !important; }
 }
 
-/* ------------------ CHIP ------------------ */
-.chip-wrap {
-  position: relative;
-  display: inline-block;
+/* ============================================================
+   CHAT DRAWER — floating launcher animations
+   pingKey-driven elements re-mount per new message and replay
+   these keyframes from the start.
+   ============================================================ */
+@keyframes chatPulse {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
 }
-.chip {
-  position: absolute;
-  left: 0;
-  border-radius: 999px;
-  border: 3px solid;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 3px 0 0 var(--ink-900);
-  overflow: hidden;
+@keyframes chatPing {
+  0%   { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(2); opacity: 0; }
 }
-.chip-stack-layer { z-index: 0; opacity: 0.95; }
-.chip-notches {
-  position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  opacity: 0.9;
+@keyframes chatShake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  15%      { transform: translate(-2px, 0) rotate(-4deg); }
+  30%      { transform: translate(2px, 0) rotate(3deg); }
+  45%      { transform: translate(-2px, 0) rotate(-2deg); }
+  60%      { transform: translate(2px, 0) rotate(2deg); }
+  75%      { transform: translate(-1px, 0) rotate(-1deg); }
 }
-.chip-inner {
-  position: relative;
-  width: 60%; height: 60%;
-  border-radius: 999px;
-  border: 3px solid;
-  display: flex; align-items: center; justify-content: center;
-}
-.chip-value {
-  font-family: var(--font-display);
-  letter-spacing: 0;
-  line-height: 1;
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.25);
-}
-
-/* ------------------ COIN ------------------ */
-.coin {
-  position: relative;
-  border-radius: 999px;
-  background: var(--gold-300);
-  border: 3px solid var(--ink-900);
-  box-shadow:
-    inset 0 4px 0 0 rgba(255,255,255,0.4),
-    inset 0 -4px 0 0 var(--gold-500),
-    0 4px 0 0 var(--ink-900);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.coin-face {
-  width: 70%; height: 70%;
-  border: 3px solid var(--gold-700);
-  border-radius: 999px;
-  background: var(--gold-300);
-  display: flex; align-items: center; justify-content: center;
-}
-.coin-glyph {
-  font-family: var(--font-display);
-  font-size: 48%;
-  color: var(--gold-700);
-  text-shadow: 2px 2px 0 var(--gold-100);
-  line-height: 1;
-}
-
-/* ------------------ DIE ------------------ */
-.die {
-  position: relative;
-  border: 3px solid var(--ink-900);
-}
-
-/* ------------------ FACE CARD FRAME ------------------ */
-.pcard-face-frame {
-  width: 62%;
-  height: 64%;
-  border: 1.5px solid;
-  background: #fafafa;
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden;
-}
-
-/* ------------------ STAT CALLOUT ------------------ */
-.stat-callout {
-  display: inline-flex;
-  flex-direction: column;
-  background: var(--saddle-500);
-  border: 3px solid var(--ink-900);
-  padding: var(--sp-3) var(--sp-4);
-  min-width: 140px;
-  box-shadow: var(--sh-card-rest);
-  position: relative;
-}
-.stat-callout::before {
-  content: "";
-  position: absolute; inset: 0;
-  pointer-events: none;
-  box-shadow: var(--bevel-wood);
-}
-.stat-label {
-  font-family: var(--font-display);
-  font-size: var(--fs-tiny);
-  letter-spacing: var(--ls-loose);
-  text-transform: uppercase;
-  color: var(--parchment-200);
-  line-height: 1;
-  margin-bottom: 4px;
-}
-.stat-value {
-  font-family: var(--font-display);
-  font-size: var(--fs-h2);
-  line-height: 1;
-}
-
-/* ------------------ TOKEN SWATCH (for tokens page) ------------------ */
-.swatch {
-  display: flex; flex-direction: column;
-  border: 3px solid var(--ink-900);
-  background: var(--parchment-50);
-  box-shadow: var(--sh-card-rest);
-  overflow: hidden;
-  font-family: var(--font-display);
-}
-.swatch-color { aspect-ratio: 4/3; }
-.swatch-label {
-  padding: var(--sp-2) var(--sp-3);
-  border-top: 3px solid var(--ink-900);
-  background: var(--parchment-100);
-  display: flex; flex-direction: column; gap: 2px;
-}
-.swatch-label .name {
-  font-size: var(--fs-small);
-  letter-spacing: var(--ls-loose);
-  text-transform: uppercase;
-  color: var(--ink-900);
-}
-.swatch-label .hex {
-  font-size: var(--fs-tiny);
-  color: var(--saddle-400);
-}
-
-/* ------------------ SPEC TABLE (tokens page) ------------------ */
-.spec-table {
-  width: 100%;
-  border-collapse: collapse;
-  border: 3px solid var(--ink-900);
-  background: var(--parchment-100);
-  box-shadow: var(--sh-card-rest);
-  font-family: var(--font-display);
-}
-.spec-table th, .spec-table td {
-  padding: var(--sp-2) var(--sp-3);
-  text-align: left;
-  border-bottom: 2px dashed var(--saddle-300);
-  font-size: var(--fs-body);
-}
-.spec-table th {
-  background: var(--saddle-500);
-  color: var(--parchment-50);
-  border-bottom: 3px solid var(--ink-900);
-  text-transform: uppercase;
-  letter-spacing: var(--ls-loose);
-  font-size: var(--fs-small);
-}
-.spec-table tr:last-child td { border-bottom: 0; }
-.spec-table .demo-cell { width: 80px; }

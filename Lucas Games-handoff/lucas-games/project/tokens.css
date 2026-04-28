@@ -1,7 +1,8 @@
 /* ============================================================
-   LUCAS GAMES — DESIGN TOKENS
+   LUCAS GAMES — DESIGN TOKENS  (live mirror)
+   Source of truth: src/app/globals.css
    Cozy pixel tavern × western × PS1-era pixel art.
-   Light mode. Bitmap type. Beveled chrome with neon outline accents.
+   Bitmap M6X11 type. Beveled chrome, hard drop shadows, no blur.
    ============================================================ */
 
 @font-face {
@@ -13,103 +14,87 @@
 }
 
 :root {
-  /* ============================================================
-     PALETTE — WESTERN TAVERN
-     Warm, sun-bleached desert + lantern-lit interior.
-     Built on the candy-tavern swatch you picked.
-     ============================================================ */
+  /* PALETTE ----------------------------------------------------- */
 
-  /* SADDLE — the wood. Backbone of every surface. */
-  --saddle-50:  #f1d9b3;   /* lightest plank, sun-faded */
-  --saddle-100: #e8c089;   /* lifted wood */
-  --saddle-200: #d4a574;   /* primary wood — chairs, signs, frames */
-  --saddle-300: #a87545;   /* shadow side of wood, panel edges */
-  --saddle-400: #6b3f24;   /* deep grain, button base */
-  --saddle-500: #4a2818;   /* deepest stain */
-  --saddle-600: #2a1810;   /* near-black wood */
+  /* SADDLE — wood. Backbone of every surface. */
+  --saddle-50:  #f1d9b3;
+  --saddle-100: #e8c089;
+  --saddle-200: #d4a574;
+  --saddle-300: #a87545;
+  --saddle-400: #6b3f24;
+  --saddle-500: #4a2818;
+  --saddle-600: #2a1810;
 
-  /* PARCHMENT — the paper. Backgrounds, card faces, tickets. */
-  --parchment-50:  #fef6e4;   /* lightest — page bg */
-  --parchment-100: #fbe9c4;   /* card faces */
-  --parchment-200: #f4dba0;   /* lifted parchment */
-  --parchment-300: #e8c468;   /* aged parchment, hatching */
+  /* PARCHMENT — paper. Page bg, card faces, tickets. */
+  --parchment-50:  #fef6e4;
+  --parchment-100: #fbe9c4;
+  --parchment-200: #f4dba0;
+  --parchment-300: #e8c468;
 
-  /* GOLD — sheriff's star, jackpots, premium */
+  /* GOLD — sheriff star, jackpots, premium */
   --gold-100: #ffe9a8;
-  --gold-300: #f5c842;     /* primary gold */
-  --gold-500: #c8941d;     /* gold shadow */
+  --gold-300: #f5c842;
+  --gold-500: #c8941d;
   --gold-700: #7a5510;
 
-  /* CRIMSON — hearts, danger, lost bets, the saloon's red */
+  /* CRIMSON — danger, lost bets, saloon awning */
   --crimson-100: #ffb8a8;
   --crimson-300: #e05a3c;
-  --crimson-500: #8b3a3a;     /* primary crimson — saloon awning */
+  --crimson-500: #8b3a3a;
   --crimson-700: #4a1a1a;
 
-  /* CACTUS — clubs, success, won bets */
+  /* CACTUS — success, won bets, OPEN tags */
   --cactus-100: #b8d99a;
   --cactus-300: #6ba84f;
   --cactus-500: #3d6b2e;
   --cactus-700: #1f3818;
 
-  /* SKY — diamonds, info, river */
+  /* SKY — info, river, multiplayer 2P+ tags */
   --sky-100: #c9e4f2;
   --sky-300: #5fa8d3;
   --sky-500: #2c6a8e;
   --sky-700: #143348;
 
-  /* INK — outlines and the pixel-perfect dark stroke around everything */
-  --ink-1000: #1a0f08;     /* deepest — outer outlines */
-  --ink-900:  #2a1810;     /* primary outline (= saddle-600) */
-  --ink-800:  #3d2418;     /* secondary outline */
+  /* INK — outlines */
+  --ink-1000: #1a0f08;
+  --ink-900:  #2a1810;
+  --ink-800:  #3d2418;
 
-  /* NEON — used SPARINGLY for glow accents only (jackpot, win flash) */
+  /* NEON — sparingly, glow accents only */
   --neon-gold:    #ffd84d;
   --neon-crimson: #ff5544;
   --neon-cactus:  #8aff5a;
   --neon-sky:     #5fdcff;
 
-  /* ============================================================
-     SUITS — Playing-card colors
-     ============================================================ */
+  /* SUITS */
   --suit-spades:   var(--ink-900);
   --suit-clubs:    var(--cactus-500);
   --suit-hearts:   var(--crimson-500);
   --suit-diamonds: var(--sky-500);
 
-  /* ============================================================
-     SEMANTIC
-     ============================================================ */
-  --bg:            var(--parchment-50);     /* page background */
-  --bg-deep:       var(--saddle-50);        /* darker surface */
-  --bg-lift:       var(--parchment-100);    /* lifted surface */
-
+  /* SEMANTIC */
+  --bg:            var(--parchment-50);
+  --bg-deep:       var(--saddle-50);
+  --bg-lift:       var(--parchment-100);
   --surface:       var(--parchment-100);
   --surface-edge:  var(--saddle-300);
-  --surface-panel: var(--saddle-200);       /* wood panel */
-
+  --surface-panel: var(--saddle-200);
   --fg:            var(--ink-900);
   --fg-muted:      var(--saddle-400);
   --fg-dim:        var(--saddle-300);
   --fg-on-wood:    var(--parchment-50);
   --fg-on-dark:    var(--parchment-50);
-
   --stroke:        var(--ink-900);
   --stroke-soft:   var(--saddle-400);
-
   --success:       var(--cactus-500);
   --warn:          var(--gold-500);
   --danger:        var(--crimson-500);
   --info:          var(--sky-500);
-
   --money:         var(--gold-300);
   --money-shadow:  var(--gold-500);
 
-  /* ============================================================
-     TYPE — All pixel, all the time
-     m6x11 is a 6×11 bitmap font. To stay crisp it MUST render at
-     integer multiples of its native em (8/16/24/32/40/48/56/64...).
-     ============================================================ */
+  /* TYPE — All pixel, all the time. M6X11 is a 6x11 bitmap font;
+     stay on integer multiples for crispness. */
   --font-display: "M6X11", "VT323", ui-monospace, monospace;
   --font-body:    "M6X11", "VT323", ui-monospace, monospace;
   --font-mono:    "M6X11", "VT323", ui-monospace, monospace;
@@ -124,50 +109,32 @@
   --fs-small:    16px;
   --fs-tiny:     12px;
 
-  --lh-tight: 1;       /* pixel fonts hate non-integer leading */
+  --lh-tight: 1;
   --lh-snug:  1.1;
   --lh-body:  1.25;
 
-  --ls-tight: 0;
-  --ls-loose: 0.04em;
+  --ls-tight:   0;
+  --ls-loose:   0.04em;
   --ls-display: 0.02em;
 
-  /* ============================================================
-     SPACING — 8px grid, snap to pixel
-     ============================================================ */
-  --sp-0:  2px;
-  --sp-1:  4px;
-  --sp-2:  8px;
-  --sp-3:  12px;
-  --sp-4:  16px;
-  --sp-5:  24px;
-  --sp-6:  32px;
-  --sp-7:  48px;
-  --sp-8:  64px;
-  --sp-9:  96px;
+  /* SPACING — 8px grid */
+  --sp-0: 2px;  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px;
+  --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+  --sp-7: 48px; --sp-8: 64px; --sp-9: 96px;
 
-  /* ============================================================
-     RADIUS — Mostly hard corners. Pixel art has no curves.
-     The few rounded radii here are integer multiples of 2px.
-     ============================================================ */
-  --r-0:    0;
-  --r-card: 0;        /* cards are HARD CORNERED */
-  --r-chip: 999px;    /* poker chip = circle (drawn from stepped pixels) */
+  /* RADIUS — Hard corners. Pixel art has no curves. */
+  --r-0:      0;
+  --r-card:   0;
+  --r-chip:   999px;   /* poker chip = circle (drawn from stepped pixels) */
   --r-button: 0;
-  --r-tile: 0;
-  --r-input: 0;
 
-  /* ============================================================
-     PIXEL CHROME
-     Borders are CHUNKY. Bevels are LIGHT-ON-TOP, DARK-ON-BOTTOM.
-     ============================================================ */
+  /* PIXEL CHROME — chunky borders, hard drop shadows */
   --bw-thin:    2px;
   --bw-card:    3px;
   --bw-button:  3px;
   --bw-panel:   4px;
   --bw-chunky:  6px;
 
-  /* Hard drop shadows — offset, no blur. Never soft. */
   --sh-card-rest:    0 4px 0 0 var(--ink-900);
   --sh-card-hover:   0 6px 0 0 var(--ink-900);
   --sh-card-press:   0 1px 0 0 var(--ink-900);
@@ -176,28 +143,18 @@
   --sh-popover:      0 8px 0 0 var(--ink-900);
   --sh-table:        0 12px 0 0 var(--ink-900);
 
-  /* Beveled-button insets (top highlight + bottom shade) */
   --bevel-light: inset 0 3px 0 0 rgba(255, 246, 220, 0.55);
   --bevel-dark:  inset 0 -3px 0 0 rgba(26, 15, 8, 0.35);
-  --bevel-wood:  inset 0 3px 0 0 rgba(255,233,168,0.5), inset 0 -3px 0 0 rgba(26,15,8,0.4);
+  --bevel-wood:  inset 0 3px 0 0 rgba(255, 233, 168, 0.5),
+                 inset 0 -3px 0 0 rgba(26, 15, 8, 0.4);
 
-  /* Neon outline glows — the second feature of the system */
-  --glow-gold:    0 0 0 2px var(--neon-gold), 0 0 16px rgba(255,216,77,0.65);
-  --glow-crimson: 0 0 0 2px var(--neon-crimson), 0 0 16px rgba(255,85,68,0.65);
-  --glow-cactus:  0 0 0 2px var(--neon-cactus), 0 0 14px rgba(138,255,90,0.55);
-  --glow-sky:     0 0 0 2px var(--neon-sky), 0 0 14px rgba(95,220,255,0.55);
+  /* Neon outline glows */
+  --glow-gold:    0 0 0 2px var(--neon-gold), 0 0 16px rgba(255, 216, 77, 0.65);
+  --glow-crimson: 0 0 0 2px var(--neon-crimson), 0 0 16px rgba(255, 85, 68, 0.65);
+  --glow-cactus:  0 0 0 2px var(--neon-cactus), 0 0 14px rgba(138, 255, 90, 0.55);
+  --glow-sky:     0 0 0 2px var(--neon-sky), 0 0 14px rgba(95, 220, 255, 0.55);
 
-  /* Dithered checkerboard pattern (used as a bg-image) */
-  --dither-saddle: linear-gradient(45deg,
-                     var(--saddle-200) 25%, transparent 25%,
-                     transparent 75%, var(--saddle-200) 75%) 0 0/8px 8px,
-                   linear-gradient(45deg,
-                     var(--saddle-200) 25%, var(--saddle-300) 25%,
-                     var(--saddle-300) 75%, var(--saddle-200) 75%) 4px 4px/8px 8px;
-
-  /* ============================================================
-     MOTION — Snappy, integer-stepped where possible.
-     ============================================================ */
+  /* MOTION — snappy, integer-stepped where possible */
   --ease-snap:  cubic-bezier(0.5, 1.6, 0.4, 1);
   --ease-out:   cubic-bezier(0.2, 0.9, 0.3, 1);
   --ease-in:    cubic-bezier(0.6, 0, 0.8, 0.4);
@@ -207,9 +164,53 @@
 }
 
 /* ============================================================
-   GLOBAL DEFAULTS
+   THEME VARIANTS — applied via [data-theme] on <html>.
+   The user's equipped cosmetic theme switches surface tokens.
+   Component accents (gold money, crimson danger, etc.) keep
+   their hue across themes.
    ============================================================ */
 
+[data-theme="frontier"] {
+  --bg:           #f4ecdc;
+  --bg-deep:      #d4a574;
+  --bg-lift:      #f1d9b3;
+  --surface:      #f1d9b3;
+  --surface-edge: #8a8077;
+  --fg-muted:     #6b3f24;
+  --fg-dim:       #8a8077;
+}
+
+[data-theme="sunset"] {
+  --bg:           #2a1810;
+  --bg-deep:      #4a1a1a;
+  --bg-lift:      #5a3a78;
+  --surface:      #5a1a1a;
+  --surface-edge: #8b3a3a;
+  --fg:           #fef6e4;
+  --fg-muted:     #f1d9b3;
+  --fg-dim:       #d4a574;
+  --fg-on-wood:   #fef6e4;
+  --stroke:       #1a0f08;
+  --stroke-soft:  #4a2818;
+}
+
+[data-theme="midnight"] {
+  --bg:           #1a0f08;
+  --bg-deep:      #2a1810;
+  --bg-lift:      #3d2418;
+  --surface:      #2a1810;
+  --surface-edge: #4a2818;
+  --fg:           #fef6e4;
+  --fg-muted:     #d4a574;
+  --fg-dim:       #a87545;
+  --fg-on-wood:   #fef6e4;
+  --stroke:       #1a0f08;
+  --stroke-soft:  #3d2418;
+}
+
+/* ============================================================
+   GLOBAL DEFAULTS
+   ============================================================ */
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body {
@@ -222,18 +223,14 @@ html, body {
   /* No font smoothing — pixel font must stay pixelated */
   -webkit-font-smoothing: none;
   -moz-osx-font-smoothing: grayscale;
-  font-smooth: never;
   text-rendering: geometricPrecision;
-  /* Subtle parchment grain on the page bg */
   background-image:
-    radial-gradient(circle at 12% 18%, rgba(168,117,69,0.05) 0, transparent 40%),
-    radial-gradient(circle at 88% 72%, rgba(168,117,69,0.05) 0, transparent 40%);
+    radial-gradient(circle at 12% 18%, rgba(168, 117, 69, 0.05) 0, transparent 40%),
+    radial-gradient(circle at 88% 72%, rgba(168, 117, 69, 0.05) 0, transparent 40%);
 }
 
-img, svg, canvas {
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-}
+img, svg, canvas { image-rendering: pixelated; }
+::selection { background: var(--gold-300); color: var(--ink-900); }
 
 h1, .h1 {
   font-family: var(--font-display);
@@ -277,20 +274,3 @@ small, .small { font-size: var(--fs-small); }
   letter-spacing: var(--ls-display);
   text-shadow: 4px 4px 0 var(--saddle-300), 8px 8px 0 var(--ink-900);
 }
-
-a {
-  color: var(--saddle-400);
-  text-decoration: none;
-  border-bottom: 2px solid var(--saddle-300);
-}
-a:hover { color: var(--ink-900); border-bottom-color: var(--ink-900); }
-
-code, .mono {
-  font-family: var(--font-mono);
-  font-size: var(--fs-small);
-  background: var(--parchment-200);
-  border: 2px solid var(--saddle-300);
-  padding: 1px 6px;
-}
-
-::selection { background: var(--gold-300); color: var(--ink-900); }
