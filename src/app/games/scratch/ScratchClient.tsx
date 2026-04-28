@@ -345,7 +345,7 @@ export function ScratchClient() {
             backgroundRepeat: "no-repeat",
             backgroundSize: "100% 100%",
             backgroundPosition: "center",
-            color: "#2b1810",
+            color: spec.textColor,
             border: `4px solid ${spec.accent}`,
             padding: "var(--sp-4)",
             position: "relative",
@@ -358,16 +358,17 @@ export function ScratchClient() {
                 fontFamily: "var(--font-display)",
                 fontSize: 14,
                 letterSpacing: "0.12em",
-                color: spec.accent,
+                color: spec.textColor,
+                opacity: 0.85,
                 marginBottom: 2,
               }}
             >
               ★ WANTED ★
             </div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 26, letterSpacing: "0.08em" }}>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 26, letterSpacing: "0.08em", color: spec.textColor }}>
               {spec.name}
             </div>
-            <div className="text-mute" style={{ fontFamily: "var(--font-display)", fontSize: 11, letterSpacing: "0.08em", marginTop: 2 }}>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 11, letterSpacing: "0.08em", marginTop: 2, color: spec.textColor, opacity: 0.7 }}>
               {spec.subtitle}
             </div>
           </div>
@@ -391,7 +392,7 @@ export function ScratchClient() {
             onPointerCancel={onPointerUp}
           >
             {/* Revealed under-layer */}
-            <UnderLayer ticket={ticket} phase={phase} accent={spec.accent} revealed={revealedCells} />
+            <UnderLayer ticket={ticket} phase={phase} accent={spec.accent} textColor={spec.textColor} revealed={revealedCells} />
             {/* Foil canvas */}
             <canvas
               ref={canvasRef}
@@ -434,7 +435,7 @@ export function ScratchClient() {
             )}
           </div>
 
-          <div className="row" style={{ justifyContent: "space-between", marginTop: "var(--sp-3)", fontFamily: "var(--font-display)", fontSize: 11, letterSpacing: "0.06em", color: spec.accent }}>
+          <div className="row" style={{ justifyContent: "space-between", marginTop: "var(--sp-3)", fontFamily: "var(--font-display)", fontSize: 11, letterSpacing: "0.06em", color: spec.textColor }}>
             <span>BOUNTY: {ticket?.daily ? "FREE" : spec.cost.toLocaleString()} ¢</span>
             <span>SCRATCHED: {Math.round(scratchedFraction * 100)}%</span>
           </div>
@@ -567,16 +568,18 @@ export function ScratchClient() {
 // =============================================================
 
 function UnderLayer({
-  ticket, phase, accent, revealed,
+  ticket, phase, accent, textColor, revealed,
 }: {
   ticket: ScratchOutcome | null;
   phase: Phase;
   accent: string;
+  /** Body-text colour for between-cell labels that sit on the SVG bg. */
+  textColor: string;
   revealed: Set<string>;
 }) {
   if (!ticket) {
     return (
-      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", color: accent, fontSize: 18, letterSpacing: "0.08em" }}>
+      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", color: textColor, fontSize: 18, letterSpacing: "0.08em" }}>
         BUY A TICKET TO PLAY
       </div>
     );
@@ -609,7 +612,7 @@ function UnderLayer({
           <ScratchSym name={ticket.luckySymbol} size={40} />
         </div>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 10, letterSpacing: "0.08em", color: accent }}>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 10, letterSpacing: "0.08em", color: textColor, opacity: 0.9 }}>
             BONUS ROW · MATCH THE LUCKY
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4, flex: 1 }}>
@@ -644,7 +647,7 @@ function UnderLayer({
 
       {/* Multiplier square */}
       <div className="row" style={{ justifyContent: "space-between", alignItems: "center", paddingTop: 4 }}>
-        <div style={{ fontFamily: "var(--font-display)", fontSize: 12, letterSpacing: "0.08em" }}>MULTIPLIER</div>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 12, letterSpacing: "0.08em", color: textColor }}>MULTIPLIER</div>
         <div style={{
           fontFamily: "var(--font-display)",
           fontSize: 26,

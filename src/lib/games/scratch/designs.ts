@@ -16,12 +16,18 @@ export type ScratchDesignSpec = {
   foilGlow: string;
   /** Body parchment colour (fallback under the SVG bg). */
   paper: string;
-  /** Header bar accent colour (the WANTED stripe). */
+  /** Header bar accent colour (the WANTED stripe + cell borders). */
   accent: string;
   /** Decorative subtitle. */
   subtitle: string;
   /** Per-design SVG poster background (full ticket card). */
   bgUrl: string;
+  /** Colour for body text rendered directly on the poster
+   *  background (header, subtitle, bottom bar, between-cell labels).
+   *  Picked per design so dark backgrounds (Outlaw's Last Stand) get
+   *  light text and vice versa. Cell-internal text (which sits on
+   *  light parchment overlays) keeps using `accent`. */
+  textColor: string;
 };
 
 export const SCRATCH_DESIGNS: Record<ScratchDesign, ScratchDesignSpec> = {
@@ -35,6 +41,7 @@ export const SCRATCH_DESIGNS: Record<ScratchDesign, ScratchDesignSpec> = {
     accent: "#9b2c2c",
     subtitle: "3-IN-A-ROW · MATCH THE LUCKY",
     bgUrl: "/textures/card-bg-golden-bounty.svg",
+    textColor: "#2b1810",
   },
   "train-robber": {
     id: "train-robber",
@@ -46,6 +53,7 @@ export const SCRATCH_DESIGNS: Record<ScratchDesign, ScratchDesignSpec> = {
     accent: "#4a2818",
     subtitle: "HIGH ROLLER · 10× THE PAYOUT",
     bgUrl: "/textures/card-bg-train-robber.svg",
+    textColor: "#fef6e4",
   },
   "outlaws-last-stand": {
     id: "outlaws-last-stand",
@@ -57,6 +65,7 @@ export const SCRATCH_DESIGNS: Record<ScratchDesign, ScratchDesignSpec> = {
     accent: "#1a0f08",
     subtitle: "WHALE TICKET · 100× MULTIPLIER POOL",
     bgUrl: "/textures/card-bg-outlaws-last-stand.svg",
+    textColor: "#fef6e4",
   },
 };
 
