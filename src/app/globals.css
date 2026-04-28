@@ -956,24 +956,31 @@ img, svg, canvas {
     --fs-small:   14px;
   }
   .page { padding: var(--sp-4) var(--sp-3) var(--sp-7); }
+  /* Compact header on phones — single row, smaller logo + nav, no
+     wrap. The full nav was eating two rows worth of vertical space. */
   .site-header {
-    padding: var(--sp-2) var(--sp-3);
-    gap: var(--sp-3);
-    flex-wrap: wrap;
+    padding: 4px var(--sp-2);
+    gap: var(--sp-2);
+    flex-wrap: nowrap;
+    min-height: 0;
   }
-  .site-header .brand-mark { width: 32px; height: 32px; }
+  .site-header .brand { gap: 6px; }
+  .site-header .brand-mark { width: 26px; height: 26px; }
+  .site-header .brand-name { font-size: var(--fs-body); }
   .site-header .brand-tag  { display: none; }
-  .site-nav { gap: 2px; }
-  .site-nav a { padding: var(--sp-1) var(--sp-2); font-size: var(--fs-small); }
+  .site-nav { gap: 0; }
+  .site-nav a { padding: 4px 6px; font-size: 11px; letter-spacing: 0.05em; }
   /* Header presence is too noisy on phones — hide it. */
   .header-presence { display: none; }
-  .site-header-center { flex: 0; }
+  .site-header-center { display: none; }
   /* Header balance shrinks to coins-only on phones to save room. */
   .header-balance .header-balance-name { display: none; }
-  .header-balance { padding: 2px var(--sp-2) 2px 2px; }
+  .header-balance { padding: 2px 6px 2px 2px; gap: 4px; }
+  .header-balance-coins { font-size: var(--fs-small); }
   /* Sound controls compress to just the mute button on phones. */
   .sfx-slider { display: none; }
-  .sfx-controls { padding: 2px 6px; }
+  .sfx-controls { padding: 2px 4px; }
+  .sfx-mute { padding: 2px; }
   .balance-bar { flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-1) var(--sp-3) var(--sp-1) var(--sp-1); }
   .balance { font-size: var(--fs-h4); padding: var(--sp-1) var(--sp-2); }
   .avatar-username .uname { font-size: var(--fs-body); }
