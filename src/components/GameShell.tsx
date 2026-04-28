@@ -54,6 +54,7 @@ export async function GameShell({
     <AppLive me={me} initialChat={initialChat} game={game} championId={championId}>
       <SiteHeader
         current="lobby"
+        compact
         centerSlot={<HeaderPresence currentUserId={user.id} />}
         rightSlot={
           <HeaderBalance

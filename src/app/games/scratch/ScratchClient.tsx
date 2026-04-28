@@ -160,6 +160,12 @@ export function ScratchClient() {
             if (root) {
               const cells = root.querySelectorAll<HTMLElement>("[data-cell-key]");
               const rect = c.getBoundingClientRect();
+              // Map CSS-px offsets → buffer-px so the alpha probe
+              // hits the right pixel even when the ticket is CSS-
+              // scaled on mobile. (The dpr factor still applies on
+              // top of the layout-scale ratio.)
+              const sxBuf = rect.width  > 0 ? c.width  / rect.width  : dpr;
+              const syBuf = rect.height > 0 ? c.height / rect.height : dpr;
               const newSet: Set<string> | null = (() => null)();
               let dirty = false;
               const next = new Set(revealedRef.current);
@@ -167,8 +173,8 @@ export function ScratchClient() {
                 const key = el.dataset.cellKey!;
                 if (next.has(key)) return;
                 const r = el.getBoundingClientRect();
-                const cx = Math.floor((r.left + r.width / 2 - rect.left) * dpr);
-                const cy = Math.floor((r.top + r.height / 2 - rect.top) * dpr);
+                const cx = Math.floor((r.left + r.width / 2 - rect.left) * sxBuf);
+                const cy = Math.floor((r.top + r.height / 2 - rect.top) * syBuf);
                 if (cx < 0 || cx >= c.width || cy < 0 || cy >= c.height) return;
                 const idx = (cy * c.width + cx) * 4 + 3;
                 if (data[idx] < 60) {
@@ -213,7 +219,14 @@ export function ScratchClient() {
     const c = canvasRef.current;
     if (!c) return null;
     const rect = c.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    // ctx is pre-scaled by devicePixelRatio (see paintFoil), so canvas
+    // drawing ops expect coords in native TICKET_W × TICKET_H space.
+    // On mobile the ticket-stage is CSS-scaled to fit the viewport,
+    // making rect smaller than TICKET_W. Convert offsets back to
+    // native space so the foil-clearing strokes track the finger.
+    const sx = rect.width  > 0 ? TICKET_W / rect.width  : 1;
+    const sy = rect.height > 0 ? TICKET_H / rect.height : 1;
+    return { x: (e.clientX - rect.left) * sx, y: (e.clientY - rect.top) * sy };
   }
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -373,18 +386,20 @@ export function ScratchClient() {
             </div>
           </div>
 
+          <div className="scratch-ticket-wrap" style={{ width: TICKET_W, height: TICKET_H, margin: "0 auto" }}>
           <div
+            className="scratch-ticket-stage"
             style={{
               position: "relative",
               width: TICKET_W,
               height: TICKET_H,
-              margin: "0 auto",
               border: `3px solid ${spec.accent}`,
               // Inner ticket area is transparent so the design SVG
               // behind the poster shows through; under-layer cells
               // get their own soft overlay so symbols stay readable.
               background: "transparent",
               touchAction: "none",
+              transformOrigin: "top left",
             }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
@@ -433,6 +448,7 @@ export function ScratchClient() {
                 <PixelCoin size={COIN_R * 2} dragging={coinDragging} />
               </div>
             )}
+          </div>
           </div>
 
           <div className="row" style={{ justifyContent: "space-between", marginTop: "var(--sp-3)", fontFamily: "var(--font-display)", fontSize: 11, letterSpacing: "0.06em", color: spec.textColor }}>

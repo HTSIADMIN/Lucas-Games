@@ -840,6 +840,96 @@ img, svg, canvas {
   text-shadow: 1px 1px 0 var(--gold-100);
 }
 
+/* Wraps the desktop sfx + nav so we can flush them right and hide
+   the whole block in one rule on mobile. */
+.site-header-desktop {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-left: auto;
+}
+
+/* Mobile hamburger — hidden on desktop, takes over from the inline
+   nav/sfx below the breakpoint. */
+.mobile-nav { display: none; position: relative; }
+.mobile-nav-trigger {
+  background: var(--saddle-600);
+  border: 2px solid var(--ink-900);
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 0;
+}
+.mobile-nav-trigger-bar {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: var(--gold-300);
+}
+.mobile-nav-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(26,15,8,0.4);
+  z-index: 40;
+}
+.mobile-nav-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  background: var(--saddle-500);
+  border: 3px solid var(--ink-900);
+  box-shadow: var(--sh-card-rest), var(--bevel-light);
+  padding: var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 200px;
+  animation: game-event-slide 0.22s var(--ease-out) both;
+}
+.mobile-nav-link {
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  color: var(--parchment-200);
+  padding: 8px 12px;
+  text-decoration: none;
+  border: 2px solid transparent;
+}
+.mobile-nav-link:hover { color: var(--gold-300); background: var(--saddle-600); border-color: var(--ink-900); }
+.mobile-nav-link[aria-current="page"] {
+  background: var(--gold-300);
+  color: var(--ink-900);
+  text-shadow: 1px 1px 0 var(--gold-100);
+  border-color: var(--ink-900);
+}
+.mobile-nav-divider {
+  height: 2px;
+  background: var(--saddle-700);
+  margin: 4px 0;
+}
+.mobile-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: 4px 6px;
+}
+.mobile-nav-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: var(--ls-loose);
+  text-transform: uppercase;
+  color: var(--parchment-200);
+  opacity: 0.75;
+}
+
 .page { max-width: 1280px; margin: 0 auto; padding: var(--sp-7) var(--sp-5) var(--sp-9); }
 
 /* Game-shell pages run dense so the action area fits at 100% zoom on
@@ -968,8 +1058,15 @@ img, svg, canvas {
   .site-header .brand-mark { width: 26px; height: 26px; }
   .site-header .brand-name { font-size: var(--fs-body); }
   .site-header .brand-tag  { display: none; }
-  .site-nav { gap: 0; }
-  .site-nav a { padding: 4px 6px; font-size: 11px; letter-spacing: 0.05em; }
+  /* On mobile the inline desktop nav + sfx are replaced by the
+     hamburger drop-down. The HeaderBalance rightSlot still shows
+     inline so the player's coins stay visible at all times. */
+  .site-header-desktop { display: none; }
+  .mobile-nav { display: inline-flex; margin-left: auto; }
+  /* When the rightSlot (e.g. HeaderBalance) is present the auto
+     margin moves onto it so the balance hugs the right edge and the
+     hamburger sits just to the left of it. */
+  .site-header > :not(.brand):not(.site-header-center) { /* keep auto-margin behaviour for clusters */ }
   /* Header presence is too noisy on phones — hide it. */
   .header-presence { display: none; }
   .site-header-center { display: none; }
@@ -977,13 +1074,27 @@ img, svg, canvas {
   .header-balance .header-balance-name { display: none; }
   .header-balance { padding: 2px 6px 2px 2px; gap: 4px; }
   .header-balance-coins { font-size: var(--fs-small); }
-  /* Sound controls compress to just the mute button on phones. */
-  .sfx-slider { display: none; }
-  .sfx-controls { padding: 2px 4px; }
-  .sfx-mute { padding: 2px; }
-  .balance-bar { flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-1) var(--sp-3) var(--sp-1) var(--sp-1); }
-  .balance { font-size: var(--fs-h4); padding: var(--sp-1) var(--sp-2); }
-  .avatar-username .uname { font-size: var(--fs-body); }
+  /* In compact (in-game) mode the rightSlot/balance is the rightmost
+     thing; push it flush right and let the hamburger sit next to it. */
+  .site-header-compact .header-balance { margin-left: auto; }
+  /* Lobby row fits on a single line on phones — balance pill +
+     action buttons all stay aligned. */
+  .balance-bar { flex-wrap: nowrap; gap: var(--sp-2); padding: 2px var(--sp-2) 2px 2px; min-width: 0; flex: 1 1 auto; }
+  .balance-bar > .avatar { width: 36px !important; height: 36px !important; }
+  .balance { font-size: var(--fs-body); padding: 2px 6px; line-height: 1; }
+  .avatar-username .uname {
+    font-size: var(--fs-small);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 80px;
+  }
+  .avatar-username .role { font-size: 10px; }
+  /* The lobby's row-lg wraps the balance + action cluster. Force it
+     onto a single line on phones with tightened gaps. */
+  main .row-lg { flex-wrap: nowrap !important; gap: var(--sp-2) !important; }
+  .lobby-action-buttons { flex-wrap: nowrap !important; gap: 4px !important; }
+  .lobby-action-btn { font-size: var(--fs-small); padding: 4px 8px; }
   .panel { padding: var(--sp-4) !important; }
   .row-lg { gap: var(--sp-3); }
   .podium-grid { gap: var(--sp-2) !important; }
@@ -994,6 +1105,24 @@ img, svg, canvas {
   .page-game .panel-title { font-size: var(--fs-body); margin-bottom: var(--sp-1); }
   .page-game .stack-lg { gap: var(--sp-2); }
   .page-game .game-shell-title { font-size: var(--fs-body-lg) !important; }
+
+  /* Scratchers: the ticket is fixed at 380×540 (matched by the
+     foil canvas drawing buffer). On phones the poster panel
+     would overflow the viewport, so we scale the inner stage with
+     CSS transform and shrink the wrapper to match. The pointer
+     and cell-sampling math in ScratchClient already converts CSS
+     coords back to native space using getBoundingClientRect, so
+     the scratch experience tracks the finger correctly at any size. */
+  .scratch-poster { padding: var(--sp-3) !important; }
+  .scratch-ticket-wrap {
+    /* Available width minus the panel + poster paddings. */
+    --s: min(1, calc((100vw - 56px) / 380));
+    width: calc(380px * var(--s)) !important;
+    height: calc(540px * var(--s)) !important;
+  }
+  .scratch-ticket-stage {
+    transform: scale(var(--s, 1));
+  }
 
   /* Crash: shrink the giant multiplier and canvas, and move the
      cashout/bet panel above the visualization so the player doesn't
