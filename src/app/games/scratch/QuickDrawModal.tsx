@@ -19,10 +19,15 @@ type Phase = "ready" | "armed" | "draw" | "settling" | "done" | "fault";
 export function QuickDrawModal({
   open,
   onClose,
+  onOpened,
   onCreditedPayout,
 }: {
   open: boolean;
   onClose: () => void;
+  /** Fired exactly once per opening — the parent uses this to
+      consume the 5-star threshold so the bonus is one-shot
+      regardless of whether the player false-starts or misses. */
+  onOpened?: () => void;
   onCreditedPayout: (delta: number, balance: number) => void;
 }) {
   const [phase, setPhase] = useState<Phase>("ready");
@@ -33,7 +38,8 @@ export function QuickDrawModal({
   const armTimerRef = useRef<number | null>(null);
   const drawAtRef = useRef<number | null>(null);
 
-  // Reset state when re-opened.
+  // Reset state when re-opened. Stars consume on entry so the bonus
+  // is genuinely one-shot.
   useEffect(() => {
     if (!open) return;
     setPhase("ready");
@@ -41,9 +47,11 @@ export function QuickDrawModal({
     setReaction(null);
     setPayout(null);
     setMultiplier(null);
+    onOpened?.();
     return () => {
       if (armTimerRef.current) window.clearTimeout(armTimerRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   function arm() {
@@ -164,11 +172,6 @@ export function QuickDrawModal({
         </div>
 
         <div className="row" style={{ justifyContent: "center", gap: "var(--sp-2)", marginTop: "var(--sp-4)" }}>
-          {(phase === "fault" || phase === "done") && (
-            <button className="btn btn-ghost btn-sm" onClick={() => { setPhase("ready"); setError(null); }}>
-              Try Again
-            </button>
-          )}
           <button className="btn btn-sm" onClick={onClose}>Close</button>
         </div>
       </div>

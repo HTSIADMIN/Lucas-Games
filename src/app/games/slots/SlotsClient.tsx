@@ -218,8 +218,8 @@ export function SlotsClient() {
           }
         }
         setWinningCells(cells);
-        if (data.linePayout > bet * 10) Sfx.play("win.big");
-        else Sfx.play("win.notify");
+        // Regular line-wins stay quiet; the win stinger is reserved
+        // for Boomtown bonus settles below so it lands harder.
       }
 
       // Bonus trigger
@@ -272,6 +272,14 @@ export function SlotsClient() {
     }
 
     if (data.finished) {
+      // Win stinger lands here, on the Boomtown settle — not on
+      // every regular line win. Filled-screen / high tier scales up
+      // to the big stinger.
+      if (data.payout > 0) {
+        if (data.filledScreen || data.tier >= 4) Sfx.play("win.big");
+        else if (data.payout > bonus.bet * 10) Sfx.play("win.levelup");
+        else Sfx.play("win.notify");
+      }
       setTimeout(() => {
         setBonusEnded({
           payout: data.payout,

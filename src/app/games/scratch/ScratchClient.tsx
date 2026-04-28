@@ -8,7 +8,7 @@ import {
   type ScratchDesign,
   type ScratchDesignSpec,
 } from "@/lib/games/scratch/designs";
-import { ScratchSym } from "./Symbols";
+import { ScratchSym, PixelCoin } from "./Symbols";
 import { BigWinOverlay } from "./BigWinOverlay";
 import { QuickDrawModal } from "./QuickDrawModal";
 import * as Sfx from "@/lib/sfx";
@@ -36,6 +36,10 @@ export function ScratchClient() {
   const [bigWinOpen, setBigWinOpen] = useState(false);
   const [stars, setStars] = useState(0);
   const [quickDrawOpen, setQuickDrawOpen] = useState(false);
+  /** True after the player has banked 5 stars and the modal has been
+      auto-popped this session — prevents re-pop on every settle while
+      they're still over the threshold. Cleared once consumed. */
+  const autoOpenedRef = useRef<boolean>(false);
   const [dailyReady, setDailyReady] = useState(false);
   const [dailyAt, setDailyAt] = useState<string | null>(null);
 
@@ -49,6 +53,9 @@ export function ScratchClient() {
   const rafRef = useRef<number | null>(null);
   const particlesRef = useRef<Particle[]>([]);
   const lastDustAtRef = useRef<number>(0);
+  const [revealedCells, setRevealedCells] = useState<Set<string>>(() => new Set());
+  const revealedRef = useRef<Set<string>>(new Set());
+  const [coinDragging, setCoinDragging] = useState(false);
 
   const spec: ScratchDesignSpec = SCRATCH_DESIGNS[design];
 
@@ -77,6 +84,8 @@ export function ScratchClient() {
     paintDustClear(dustRef.current);
     setScratchedFraction(0);
     particlesRef.current = [];
+    revealedRef.current = new Set();
+    setRevealedCells(new Set());
   }, [ticket, spec]);
 
   // RAF loop — coin position interpolates toward the pointer (DOM
@@ -121,15 +130,71 @@ export function ScratchClient() {
           lastDustAtRef.current = now;
           spawnDust(particlesRef.current, coinPosRef.current.x, coinPosRef.current.y, spec.foil[1]);
         }
-        // Sample scratched-fraction every 140ms.
+        // Sample scratched-fraction + per-cell reveal every 140ms.
         if (now - lastSampleRef.current > 140) {
           lastSampleRef.current = now;
-          const frac = computeScratchedFraction(c);
-          setScratchedFraction(frac);
-          if (frac >= REVEAL_THRESHOLD) {
-            autoReveal(c);
-            setScratchedFraction(1);
-            settle();
+          const ctx = c.getContext("2d");
+          if (ctx) {
+            const dpr = window.devicePixelRatio || 1;
+            const img = ctx.getImageData(0, 0, c.width, c.height);
+            const data = img.data;
+            // Total fraction
+            let total = 0, cleared = 0;
+            const STEP = 18;
+            for (let y = 0; y < c.height; y += STEP) {
+              for (let x = 0; x < c.width; x += STEP) {
+                const idx = (y * c.width + x) * 4 + 3;
+                total++;
+                if (data[idx] < 32) cleared++;
+              }
+            }
+            const frac = total === 0 ? 0 : cleared / total;
+            setScratchedFraction(frac);
+
+            // Per-cell reveal: any cell whose centre alpha is now
+            // mostly transparent gets added to revealedRef. New
+            // entries trigger the pop animation via React state.
+            const root = c.parentElement;
+            if (root) {
+              const cells = root.querySelectorAll<HTMLElement>("[data-cell-key]");
+              const rect = c.getBoundingClientRect();
+              const newSet: Set<string> | null = (() => null)();
+              let dirty = false;
+              const next = new Set(revealedRef.current);
+              cells.forEach((el) => {
+                const key = el.dataset.cellKey!;
+                if (next.has(key)) return;
+                const r = el.getBoundingClientRect();
+                const cx = Math.floor((r.left + r.width / 2 - rect.left) * dpr);
+                const cy = Math.floor((r.top + r.height / 2 - rect.top) * dpr);
+                if (cx < 0 || cx >= c.width || cy < 0 || cy >= c.height) return;
+                const idx = (cy * c.width + cx) * 4 + 3;
+                if (data[idx] < 60) {
+                  next.add(key);
+                  dirty = true;
+                }
+              });
+              if (dirty) {
+                revealedRef.current = next;
+                setRevealedCells(next);
+              }
+              void newSet;
+            }
+
+            if (frac >= REVEAL_THRESHOLD) {
+              autoReveal(c);
+              setScratchedFraction(1);
+              // Mark every cell revealed so the under-layer animates
+              // them all in for the auto-clear.
+              const all = new Set<string>();
+              const root2 = c.parentElement;
+              root2?.querySelectorAll<HTMLElement>("[data-cell-key]").forEach((el) => {
+                all.add(el.dataset.cellKey!);
+              });
+              revealedRef.current = all;
+              setRevealedCells(all);
+              settle();
+            }
           }
         }
       }
@@ -153,6 +218,7 @@ export function ScratchClient() {
     if (phase !== "scratching") return;
     e.currentTarget.setPointerCapture(e.pointerId);
     isDownRef.current = true;
+    setCoinDragging(true);
     const p = pointerXY(e);
     if (p) {
       pointerPosRef.current = p;
@@ -164,6 +230,7 @@ export function ScratchClient() {
   };
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     isDownRef.current = false;
+    setCoinDragging(false);
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
@@ -189,14 +256,20 @@ export function ScratchClient() {
       window.setTimeout(() => setBigWinOpen(true), 450);
     }
     // Sheriff star meta — write to localStorage and prompt the
-    // quick-draw round when the player crosses the threshold.
+    // quick-draw round once when the player first crosses the
+    // threshold. Only auto-pops on the threshold-crossing edge, not
+    // every subsequent settle while still ≥5.
     if (typeof window !== "undefined" && ticket.sheriffStars > 0) {
-      const next = stars + ticket.sheriffStars;
+      const before = stars;
+      const next = before + ticket.sheriffStars;
       setStars(next);
       window.localStorage.setItem(SHERIFF_KEY, String(next));
-      if (next >= STARS_PER_BONUS && !quickDrawOpen) {
-        // Prompt after the win sequence finishes.
-        window.setTimeout(() => setQuickDrawOpen(true), (ticket.tier === "large" || ticket.tier === "jackpot") ? 3200 : 700);
+      if (before < STARS_PER_BONUS && next >= STARS_PER_BONUS && !autoOpenedRef.current) {
+        autoOpenedRef.current = true;
+        window.setTimeout(
+          () => setQuickDrawOpen(true),
+          (ticket.tier === "large" || ticket.tier === "jackpot") ? 3200 : 700,
+        );
       }
     }
   }
@@ -240,11 +313,15 @@ export function ScratchClient() {
     }
   }, [balance, busy, spec.cost]);
 
+  /** Consume the 5-star threshold. Called the moment the player
+      enters the quick-draw modal so the bonus is one-shot — no
+      retry, regardless of whether they false-start or miss. */
   function consumeStars() {
     if (typeof window === "undefined") return;
     const next = Math.max(0, stars - STARS_PER_BONUS);
     setStars(next);
     window.localStorage.setItem(SHERIFF_KEY, String(next));
+    autoOpenedRef.current = false;
   }
 
   return (
@@ -298,17 +375,19 @@ export function ScratchClient() {
             onPointerCancel={onPointerUp}
           >
             {/* Revealed under-layer */}
-            <UnderLayer ticket={ticket} phase={phase} accent={spec.accent} />
+            <UnderLayer ticket={ticket} phase={phase} accent={spec.accent} revealed={revealedCells} />
             {/* Foil canvas */}
             <canvas
               ref={canvasRef}
               width={TICKET_W}
               height={TICKET_H}
+              className="scratch-foil"
               style={{
                 position: "absolute",
                 inset: 0,
                 cursor: phase === "scratching" ? "grabbing" : "default",
                 pointerEvents: phase === "scratching" ? "auto" : "none",
+                imageRendering: "pixelated",
               }}
             />
             {/* Particle dust layer (above foil so it reads over the silver) */}
@@ -323,20 +402,19 @@ export function ScratchClient() {
               <div
                 ref={coinElRef}
                 aria-hidden
+                className={`scratch-coin${coinDragging ? " is-dragging" : ""}`}
                 style={{
                   position: "absolute",
                   width: COIN_R * 2,
                   height: COIN_R * 2,
-                  borderRadius: "50%",
-                  background: "radial-gradient(circle at 30% 30%, #ffe9a8, #c8941d 65%, #7a5510 100%)",
-                  border: "3px solid #2b1810",
                   pointerEvents: "none",
-                  boxShadow: "0 0 14px rgba(245, 200, 66, 0.6)",
                   willChange: "transform",
-                  // Initial position, will be overwritten by rAF.
+                  filter: "drop-shadow(0 3px 0 rgba(0,0,0,0.45))",
                   transform: `translate3d(${TICKET_W / 2 - COIN_R}px, ${TICKET_H / 2 - COIN_R}px, 0)`,
                 }}
-              />
+              >
+                <PixelCoin size={COIN_R * 2} dragging={coinDragging} />
+              </div>
             )}
           </div>
 
@@ -398,21 +476,27 @@ export function ScratchClient() {
             <div className="panel-title">Sheriff Star Bounty</div>
             <div className="stack" style={{ gap: "var(--sp-2)" }}>
               <div className="row" style={{ gap: 4 }}>
-                {Array.from({ length: STARS_PER_BONUS }).map((_, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      width: 22, height: 22,
-                      display: "inline-flex",
-                      alignItems: "center", justifyContent: "center",
-                      background: i < stars % STARS_PER_BONUS ? "var(--gold-300)" : "var(--parchment-200)",
-                      border: "2px solid var(--ink-900)",
-                      color: "var(--ink-900)",
-                      fontFamily: "var(--font-display)",
-                      fontSize: 14,
-                    }}
-                  >★</span>
-                ))}
+                {Array.from({ length: STARS_PER_BONUS }).map((_, i) => {
+                  const filled = i < Math.min(STARS_PER_BONUS, stars);
+                  return (
+                    <span
+                      key={i}
+                      style={{
+                        width: 26, height: 26,
+                        display: "inline-flex",
+                        alignItems: "center", justifyContent: "center",
+                        background: filled ? "var(--gold-300)" : "var(--parchment-200)",
+                        border: "2px solid var(--ink-900)",
+                        opacity: filled ? 1 : 0.55,
+                      }}
+                    >
+                      {/* Same sheriff sprite as the ticket symbol so the
+                          collection visually matches what the player is
+                          looking for. */}
+                      <ScratchSym name="sheriff" size={20} />
+                    </span>
+                  );
+                })}
               </div>
               <p className="text-mute" style={{ fontSize: "var(--fs-small)" }}>
                 Collect 5 stars across tickets to unlock the quick-draw round.
@@ -454,11 +538,9 @@ export function ScratchClient() {
 
       <QuickDrawModal
         open={quickDrawOpen}
-        onClose={() => { setQuickDrawOpen(false); }}
-        onCreditedPayout={(_delta, bal) => {
-          setBalance(bal);
-          consumeStars();
-        }}
+        onOpened={consumeStars}
+        onClose={() => setQuickDrawOpen(false)}
+        onCreditedPayout={(_delta, bal) => setBalance(bal)}
       />
     </div>
   );
@@ -468,7 +550,14 @@ export function ScratchClient() {
 // Subcomponents
 // =============================================================
 
-function UnderLayer({ ticket, phase, accent }: { ticket: ScratchOutcome | null; phase: Phase; accent: string }) {
+function UnderLayer({
+  ticket, phase, accent, revealed,
+}: {
+  ticket: ScratchOutcome | null;
+  phase: Phase;
+  accent: string;
+  revealed: Set<string>;
+}) {
   if (!ticket) {
     return (
       <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", color: accent, fontSize: 18, letterSpacing: "0.08em" }}>
@@ -485,6 +574,8 @@ function UnderLayer({ ticket, phase, accent }: { ticket: ScratchOutcome | null; 
       {/* Lucky symbol corner + bonus row */}
       <div className="row" style={{ alignItems: "stretch", gap: 8 }}>
         <div
+          data-cell-key="lucky"
+          className={`scratch-cell scratch-cell-lucky${revealed.has("lucky") ? " is-revealed" : ""}`}
           style={{
             flex: "0 0 64px",
             display: "flex",
@@ -506,10 +597,12 @@ function UnderLayer({ ticket, phase, accent }: { ticket: ScratchOutcome | null; 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 4, flex: 1 }}>
             {ticket.bonusRow.map((s, i) => (
               <SymbolCell
-                key={i}
+                key={`b${i}`}
+                cellKey={`b${i}`}
                 symbol={s}
                 accent={accent}
                 isWinning={phase === "settled" && bonusMatchSet.has(i)}
+                isRevealed={revealed.has(`b${i}`)}
               />
             ))}
           </div>
@@ -520,11 +613,13 @@ function UnderLayer({ ticket, phase, accent }: { ticket: ScratchOutcome | null; 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, flex: 1 }}>
         {ticket.grid.map((s, i) => (
           <SymbolCell
-            key={i}
+            key={`g${i}`}
+            cellKey={`g${i}`}
             symbol={s}
             accent={accent}
             isWinning={showWin && winSet.has(i)}
             isNearMiss={!showWin && phase === "settled" && nearSet.has(i)}
+            isRevealed={revealed.has(`g${i}`)}
           />
         ))}
       </div>
@@ -548,15 +643,19 @@ function UnderLayer({ ticket, phase, accent }: { ticket: ScratchOutcome | null; 
 }
 
 function SymbolCell({
-  symbol, accent, isWinning, isNearMiss,
+  cellKey, symbol, accent, isWinning, isNearMiss, isRevealed,
 }: {
+  cellKey: string;
   symbol: ScratchSymbol;
   accent: string;
   isWinning?: boolean;
   isNearMiss?: boolean;
+  isRevealed?: boolean;
 }) {
   return (
     <div
+      data-cell-key={cellKey}
+      className={`scratch-cell${isRevealed ? " is-revealed" : ""}`}
       style={{
         background: "#fef6e4",
         border: `3px solid ${isWinning ? "var(--gold-300)" : accent}`,
@@ -678,24 +777,64 @@ function paintFoil(c: HTMLCanvasElement | null, spec: ScratchDesignSpec) {
   c.style.width = `${TICKET_W}px`;
   c.style.height = `${TICKET_H}px`;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const grad = ctx.createLinearGradient(0, 0, TICKET_W, TICKET_H);
-  grad.addColorStop(0, spec.foil[0]);
-  grad.addColorStop(0.5, spec.foil[1]);
-  grad.addColorStop(1, spec.foil[2]);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, TICKET_W, TICKET_H);
-  // "SCRATCH HERE" diagonal text.
+  ctx.imageSmoothingEnabled = false;
+
+  // Chunky 4×4 metallic pixel grid. Three foil stops alternated in a
+  // brick offset, with sparse light "sparkle" pixels and dark grain
+  // dots so it reads as a textured pixel-art metal — not a smooth
+  // gradient.
+  const BLOCK = 4;
+  const cols = Math.ceil(TICKET_W / BLOCK);
+  const rows = Math.ceil(TICKET_H / BLOCK);
+  const [a, b, cc] = spec.foil;
+  for (let y = 0; y < rows; y++) {
+    const offset = (y % 2 === 0) ? 0 : 1;
+    for (let x = 0; x < cols; x++) {
+      const t = (x + offset) % 3;
+      ctx.fillStyle = t === 0 ? a : t === 1 ? b : cc;
+      ctx.fillRect(x * BLOCK, y * BLOCK, BLOCK, BLOCK);
+    }
+  }
+  // Sparkle highlights — bright single pixels on diagonals.
+  ctx.fillStyle = lighten(spec.foil[1], 0.35);
+  for (let i = 0; i < 80; i++) {
+    const x = Math.floor(Math.random() * cols) * BLOCK;
+    const y = Math.floor(Math.random() * rows) * BLOCK;
+    ctx.fillRect(x, y, 2, 2);
+  }
+  // Grain — sparse dark pixels for contrast.
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  for (let i = 0; i < 60; i++) {
+    const x = Math.floor(Math.random() * cols) * BLOCK;
+    const y = Math.floor(Math.random() * rows) * BLOCK;
+    ctx.fillRect(x, y, 2, 2);
+  }
+
+  // "SCRATCH HERE" pixel-font heading + subline.
   ctx.save();
   ctx.translate(TICKET_W / 2, TICKET_H / 2);
   ctx.rotate(-Math.PI / 16);
-  ctx.fillStyle = "rgba(43, 24, 16, 0.45)";
-  ctx.font = "bold 32px serif";
+  ctx.fillStyle = "rgba(43, 24, 16, 0.55)";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+  ctx.font = "bold 36px M6X11, monospace";
   ctx.fillText("SCRATCH HERE", 0, 0);
-  ctx.font = "14px serif";
-  ctx.fillText("Drag the coin across the foil", 0, 28);
+  ctx.font = "16px M6X11, monospace";
+  ctx.fillText("DRAG THE COIN", 0, 26);
   ctx.restore();
+}
+
+/** Mix-toward-white (#fff8e1) by `t`. */
+function lighten(hex: string, t: number): string {
+  let h = hex.startsWith("#") ? hex.slice(1) : hex;
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const lr = Math.round(r + (255 - r) * t);
+  const lg = Math.round(g + (255 - g) * t);
+  const lb = Math.round(b + (225 - b) * t);
+  return `rgb(${lr}, ${lg}, ${lb})`;
 }
 
 function paintDustClear(c: HTMLCanvasElement | null) {

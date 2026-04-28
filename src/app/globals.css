@@ -1112,6 +1112,52 @@ img, svg, canvas {
   50%      { box-shadow: 0 0 14px rgba(155, 44, 44, 0.65); }
 }
 
+/* Foil shimmer — chunky pixel pattern is baked into the canvas
+   each ticket; we just animate brightness/contrast for a metallic
+   pulse so it feels alive without re-painting (which would conflict
+   with destination-out scratching). */
+.scratch-foil {
+  animation: scratch-foil-shimmer 3s ease-in-out infinite;
+}
+@keyframes scratch-foil-shimmer {
+  0%, 100% { filter: brightness(1.0)  contrast(1.0); }
+  50%      { filter: brightness(1.18) contrast(1.05); }
+}
+
+/* Pixel coin — idle bob + tilt; speeds up on drag. The key trick:
+   step()-eased rotation keeps the rotation choppy / pixel-art-like
+   instead of buttery smooth. */
+.pixel-coin {
+  display: block;
+  animation: pixel-coin-idle 1.4s steps(8) infinite;
+}
+.pixel-coin.is-dragging {
+  animation: pixel-coin-drag 0.36s steps(6) infinite;
+}
+@keyframes pixel-coin-idle {
+  0%, 100% { transform: translateY(0)    rotate(-3deg); }
+  50%      { transform: translateY(-2px) rotate(3deg); }
+}
+@keyframes pixel-coin-drag {
+  0%   { transform: rotate(-12deg) scale(1.04); }
+  25%  { transform: rotate(0deg)   scale(1.0); }
+  50%  { transform: rotate(12deg)  scale(1.04); }
+  75%  { transform: rotate(0deg)   scale(1.0); }
+  100% { transform: rotate(-12deg) scale(1.04); }
+}
+
+/* Cell reveal pop — fires once per cell when its centre is first
+   uncovered. steps(6) keeps the bounce pixel-art chunky. */
+.scratch-cell.is-revealed {
+  animation: scratch-cell-pop 0.42s steps(6) backwards;
+}
+@keyframes scratch-cell-pop {
+  0%   { transform: scale(0.45) rotate(-8deg); }
+  60%  { transform: scale(1.12) rotate(4deg); }
+  80%  { transform: scale(0.96) rotate(-2deg); }
+  100% { transform: scale(1)    rotate(0deg); }
+}
+
 /* Big-win takeover ----------------------------------------------- */
 @keyframes scratch-bigwin-shake {
   0%, 100% { transform: translateX(0); }

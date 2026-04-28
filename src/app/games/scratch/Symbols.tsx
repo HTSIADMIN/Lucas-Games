@@ -168,23 +168,32 @@ const SPRITES: Record<ScratchSymbol, Px[]> = {
     [12, 5, 3, 1, C.whiteY],
   ],
 
-  // Sheriff star — 5-point star, gold with red center
+  // Sheriff star — clean 5-point star, gold with crimson centre.
+  // (Same shape as the lobby tile + the progress dots so the
+  // collection meta reads as one symbol.)
   sheriff: [
-    [7, 2, 2, 2, C.gold],   // top
-    [6, 4, 4, 1, C.gold],
-    [5, 5, 6, 2, C.gold],
-    [3, 7, 10, 2, C.gold],
-    [4, 9, 8, 2, C.gold],
-    [5, 11, 2, 2, C.gold],   // bottom-left point
-    [9, 11, 2, 2, C.gold],   // bottom-right point
-    [6, 13, 1, 1, C.gold],
-    [9, 13, 1, 1, C.gold],
-    // highlights
-    [5, 7, 1, 1, C.goldL],
-    [10, 7, 1, 1, C.goldL],
+    // Top point
+    [7, 1, 2, 2, C.gold],
+    [7, 1, 2, 1, C.goldL],
+    // Body
+    [6, 3, 4, 1, C.gold],
+    [5, 4, 6, 1, C.gold],
+    // Wide horizontal arms (5..11)
+    [2, 5, 12, 1, C.goldD],
+    [2, 6, 12, 2, C.gold],
+    [3, 6, 1, 1, C.goldL], [12, 6, 1, 1, C.goldL],
+    // Lower diagonal taper toward the bottom points
+    [3, 8, 10, 1, C.goldD],
+    [4, 9, 8, 1, C.gold],
+    [4, 9, 8, 1, C.gold],
+    // Two bottom points
+    [4, 10, 3, 2, C.gold],
+    [9, 10, 3, 2, C.gold],
+    [4, 12, 2, 1, C.goldD],
+    [10, 12, 2, 1, C.goldD],
+    // Crimson centre dot
+    [7, 7, 2, 1, C.crimsonD],
     [7, 4, 1, 1, C.goldL],
-    // center mark
-    [7, 8, 2, 1, C.crimsonD],
   ],
 
   // Dynamite — wild (reserved for v3)
@@ -229,6 +238,67 @@ export function ScratchSym({ name, size = 32 }: { name: ScratchSymbol; size?: nu
       aria-hidden
     >
       {rects.map(([x, y, w, h, color], i) => (
+        <rect key={i} x={x} y={y} width={w} height={h} fill={color} />
+      ))}
+    </svg>
+  );
+}
+
+// =============================================================
+// Pixel coin (player's drag tool)
+// 16×16 disc with a sheriff-star face. Outer ring of dark gold,
+// gold body, light highlight on the upper-left, crimson centre
+// dot to read as a sheriff badge while in motion.
+// =============================================================
+
+const COIN: Px[] = [
+  // Disc outline (octagonal stair-step)
+  [5,  1, 6, 1, C.goldDD],
+  [3,  2, 10, 1, C.goldDD],
+  [2,  3, 12, 1, C.goldDD],
+  [1,  4, 14, 1, C.goldDD],
+  [1,  5, 14, 6, C.goldDD],
+  [1, 11, 14, 1, C.goldDD],
+  [2, 12, 12, 1, C.goldDD],
+  [3, 13, 10, 1, C.goldDD],
+  [5, 14, 6,  1, C.goldDD],
+  // Body
+  [4,  2, 8,  1, C.goldD],
+  [3,  3, 10, 1, C.goldD],
+  [2,  4, 12, 1, C.goldD],
+  [2,  5, 12, 6, C.gold],
+  [2, 11, 12, 1, C.goldD],
+  [3, 12, 10, 1, C.goldD],
+  [4, 13, 8,  1, C.goldD],
+  // Specular highlight (top-left arc)
+  [3,  4, 4, 1, C.goldL],
+  [2,  5, 2, 2, C.goldL],
+  [4,  4, 1, 1, C.whiteY],
+  [3,  6, 1, 1, C.whiteY],
+  // Star face — small 5-point star mid-coin
+  [7,  4, 2, 1, C.goldDD],     // top point
+  [6,  5, 4, 1, C.goldDD],
+  [5,  6, 6, 2, C.goldDD],
+  [4,  8, 8, 1, C.goldDD],
+  [5,  9, 6, 1, C.goldDD],
+  [5, 10, 2, 1, C.goldDD],
+  [9, 10, 2, 1, C.goldDD],
+  // Star centre dot (crimson, badge feel)
+  [7,  7, 2, 1, C.crimsonD],
+];
+
+export function PixelCoin({ size = 64, dragging = false }: { size?: number; dragging?: boolean }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      shapeRendering="crispEdges"
+      className={`pixel-coin${dragging ? " is-dragging" : ""}`}
+      style={{ display: "block" }}
+      aria-hidden
+    >
+      {COIN.map(([x, y, w, h, color], i) => (
         <rect key={i} x={x} y={y} width={w} height={h} fill={color} />
       ))}
     </svg>
