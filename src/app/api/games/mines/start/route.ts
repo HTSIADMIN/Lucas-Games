@@ -53,8 +53,11 @@ export async function POST(req: Request) {
 
   // Random "Lucky Pickaxe" event — granted at game start. Lets the
   // player tap a button once to reveal a guaranteed-safe tile for
-  // free (still adds to the multiplier ladder).
-  const hasPickaxe = Math.random() < PICKAXE_GRANT_CHANCE;
+  // free (still adds to the multiplier ladder). Suppressed on the
+  // 24-mine mode: the board has exactly one safe tile, so a free
+  // reveal would auto-win every round.
+  const pickaxeEligible = mineCount < 24;
+  const hasPickaxe = pickaxeEligible && Math.random() < PICKAXE_GRANT_CHANCE;
   if (hasPickaxe) grantPickaxe(id);
 
   return NextResponse.json({
