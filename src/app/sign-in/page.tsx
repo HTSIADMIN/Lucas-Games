@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import * as Sfx from "@/lib/sfx";
@@ -27,6 +27,7 @@ export default function SignInPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [newUsername, setNewUsername] = useState("");
   const [newPin, setNewPin] = useState("");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     fetch("/api/auth/players")
@@ -110,21 +111,57 @@ export default function SignInPage() {
   }
 
   // ============ AVATAR GRID ============
+  // Filter players by name/initials. Case-insensitive substring
+  // match — friends-scale list, no need for fuzzy matching.
+  const filteredPlayers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return players;
+    return players.filter(
+      (p) =>
+        p.username.toLowerCase().includes(q) ||
+        p.initials.toLowerCase().includes(q),
+    );
+  }, [players, search]);
+
   if (!selected && !creating) {
     return (
       <main className="page">
-        <div style={{ textAlign: "center", marginBottom: "var(--sp-7)" }}>
+        <div style={{ textAlign: "center", marginBottom: "var(--sp-6)" }}>
           <div className="sign" style={{ fontSize: "var(--fs-h2)" }}>Welcome to the Saloon</div>
           <p className="text-mute" style={{ marginTop: "var(--sp-4)" }}>
             Pick your seat at the table — or pull up a new chair.
           </p>
         </div>
 
+        {/* Search bar — quickly filter to a player by name. Hidden
+            until there are enough players that scrolling matters. */}
+        {!loading && players.length >= 6 && (
+          <div style={{ maxWidth: 420, margin: "0 auto var(--sp-5)" }}>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search players..."
+              aria-label="Search players"
+              style={{ width: "100%" }}
+            />
+          </div>
+        )}
+
         {loading ? (
           <p className="text-mute" style={{ textAlign: "center" }}>Loading players...</p>
         ) : (
-          <div className="grid grid-4">
-            {players.map((p) => (
+          <div
+            className="signin-grid"
+            style={{
+              display: "grid",
+              // Mobile: hard 3 columns. Wider screens (≥640px) get
+              // an auto-fit pattern so larger avatars use the space.
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "var(--sp-3)",
+            }}
+          >
+            {filteredPlayers.map((p) => (
               <button
                 key={p.id}
                 className="tile"
@@ -172,6 +209,12 @@ export default function SignInPage() {
               </div>
             </button>
           </div>
+        )}
+
+        {!loading && players.length > 0 && filteredPlayers.length === 0 && (
+          <p className="text-mute" style={{ textAlign: "center", marginTop: "var(--sp-5)" }}>
+            No one matches “{search}”.
+          </p>
         )}
 
         {players.length === 0 && !loading && (

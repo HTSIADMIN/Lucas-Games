@@ -863,6 +863,16 @@ img, svg, canvas {
   .grid-3, .grid-4 { grid-template-columns: 1fr; }
 }
 
+/* Sign-in player grid — locked to 3 cols on phones (the JS sets
+   that as the default) and widens to 4 / 5 on bigger screens so the
+   tiles don't grow absurdly large. */
+@media (min-width: 640px) {
+  .signin-grid { grid-template-columns: repeat(4, 1fr) !important; }
+}
+@media (min-width: 1024px) {
+  .signin-grid { grid-template-columns: repeat(5, 1fr) !important; }
+}
+
 /* ============================================================
    LEADERBOARD ROWS
    The row is a single 4-column grid: rank | player | tier | balance.
