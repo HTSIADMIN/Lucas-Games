@@ -98,8 +98,12 @@ export function MinesClient() {
       nextMultiplier: data.nextMultiplier,
     }));
     setBalance(data.balance);
-    if (data.status === "lost") Sfx.play("ui.notify");
-    else Sfx.play("coins.clink");
+    if (data.status === "lost") {
+      Sfx.play("ui.bomb");
+    } else {
+      // Wood thunk on each safe reveal — punchy + non-fatiguing.
+      Sfx.play("ui.wood");
+    }
     router.refresh();
   }
 

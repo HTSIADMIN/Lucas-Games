@@ -69,6 +69,7 @@ export function RouletteClient() {
 
   function addBet(type: RouletteBetType, value?: number) {
     if (spinning) return;
+    Sfx.play("chip.lay");
     setBets((prev) => {
       const idx = prev.findIndex((b) => b.type === type && b.value === value);
       if (idx >= 0) {

@@ -106,7 +106,7 @@ export function MonopolyClient() {
     if (!state || !state.ready || busy) return;
     setBusy(true); setError(null); setRollResult(null);
     setRolling(true);
-    Sfx.play("card.deal");
+    Sfx.play("dice.shake");
 
     const r = await fetch("/api/earn/monopoly/roll", { method: "POST" });
     const d = await r.json();

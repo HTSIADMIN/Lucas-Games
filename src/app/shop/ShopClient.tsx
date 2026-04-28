@@ -140,6 +140,7 @@ export function ShopClient({
     if (busy) return;
     setBusy(true);
     setError(null);
+    Sfx.play("chip.lay");
     const res = await fetch("/api/shop/equip", {
       method: "POST",
       headers: { "content-type": "application/json" },

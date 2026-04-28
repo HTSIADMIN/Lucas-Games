@@ -48,6 +48,25 @@ export const SFX_REGISTRY = {
 
   // Card-pack tear — distinct sweep used when opening shop / monopoly packs.
   "pack.open":     { src: "/sfx/pack-open.ogg",                        volume: 0.7,  throttleMs: 800, voices: 1 },
+
+  // Card-table action sounds (for poker / blackjack table flow).
+  "card.slide":    { src: "/sfx/card-slide.ogg",                       volume: 0.55, throttleMs: 60,  voices: 5 },
+  "card.fan":      { src: "/sfx/card-fan.ogg",                         volume: 0.6,  throttleMs: 200, voices: 2 },
+  "card.shove":    { src: "/sfx/card-shove.ogg",                       volume: 0.55, throttleMs: 100, voices: 3 },
+
+  // Chip-table action sounds — placing bets, handling stacks.
+  "chip.lay":      { src: "/sfx/chip-lay.ogg",                         volume: 0.6,  throttleMs: 60,  voices: 5 },
+  "chips.handle":  { src: "/sfx/chips-handle.ogg",                     volume: 0.5,  throttleMs: 200, voices: 3 },
+
+  // Dice-table sounds — pre-throw rattle + single-die land.
+  "dice.shake":    { src: "/sfx/dice-shake.ogg",                       volume: 0.65, throttleMs: 200, voices: 2 },
+  "die.land":      { src: "/sfx/die-throw.ogg",                        volume: 0.6,  throttleMs: 60,  voices: 4 },
+
+  // UI variants — drop-in alternatives to ui.click for distinct moments.
+  "ui.wood":       { src: "/sfx/ui-wood.ogg",                          volume: 0.55, throttleMs: 50,  voices: 5 },
+  "ui.confirm":    { src: "/sfx/ui-confirm.ogg",                       volume: 0.6,  throttleMs: 80,  voices: 3 },
+  "ui.soft":       { src: "/sfx/ui-soft.ogg",                          volume: 0.5,  throttleMs: 50,  voices: 5 },
+  "ui.bomb":       { src: "/sfx/ui-bomb.ogg",                          volume: 0.7,  throttleMs: 200, voices: 2 },
 } as const satisfies Record<string, SfxSpec>;
 
 export type SfxName = keyof typeof SFX_REGISTRY;

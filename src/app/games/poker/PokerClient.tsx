@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PlayingCard } from "@/components/PlayingCard";
 import type { Card, Rank, Suit } from "@/lib/games/cards";
+import * as Sfx from "@/lib/sfx";
 
 const POLL_MS = 1000;
 const LOG_MAX = 10;
@@ -85,6 +86,15 @@ export function PokerClient() {
       const r = await fetch("/api/games/poker/state");
       if (!r.ok) return;
       const d: State = await r.json();
+      // Detect stage transitions to layer in table sounds.
+      const prevStatus = state?.status;
+      if (prevStatus !== d.status) {
+        if (d.status === "preflop")       Sfx.play("card.shuffle");
+        else if (d.status === "flop")     Sfx.play("card.slide");
+        else if (d.status === "turn")     Sfx.play("card.slide");
+        else if (d.status === "river")    Sfx.play("card.slide");
+        else if (d.status === "showdown") Sfx.play("card.fan");
+      }
       setState(d);
       setServerOffset((d.serverNow ?? Date.now()) - Date.now());
 
@@ -123,6 +133,11 @@ export function PokerClient() {
               tone: "win",
             });
             lastActRef.current.set(-1 - w.seatNo, key);
+            // If me, fire the chip-stack pot-collect cue.
+            if (w.userId && w.userId === meRef.current) {
+              if (w.amount >= 50_000) Sfx.play("win.big");
+              else                    Sfx.play("chips.handle");
+            }
           }
         }
       }
@@ -169,6 +184,10 @@ export function PokerClient() {
   }
   async function act(action: "fold" | "check" | "call" | "raise" | "all_in", amount?: number) {
     setBusy(true); setError(null);
+    // Play the action SFX immediately so the tap feels responsive.
+    if (action === "fold")        Sfx.play("card.shove");
+    else if (action === "check")  Sfx.play("ui.wood");
+    else if (action === "call" || action === "raise" || action === "all_in") Sfx.play("chip.lay");
     const r = await fetch("/api/games/poker/action", {
       method: "POST",
       headers: { "content-type": "application/json" },

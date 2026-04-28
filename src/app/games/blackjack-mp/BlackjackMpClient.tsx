@@ -129,6 +129,7 @@ export function BlackjackMpClient() {
 
   async function placeBet() {
     setBusy(true); setError(null);
+    Sfx.play("chip.lay");
     const res = await fetch("/api/games/blackjack-mp/bet", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -144,6 +145,11 @@ export function BlackjackMpClient() {
 
   async function action(act: "hit" | "stand" | "double" | "split") {
     setBusy(true); setError(null);
+    // Action SFX up-front for instant feedback.
+    if (act === "hit")         Sfx.play("card.slide");
+    else if (act === "stand")  Sfx.play("ui.wood");
+    else if (act === "double") Sfx.play("chip.lay");
+    else if (act === "split")  Sfx.play("card.shove");
     const res = await fetch("/api/games/blackjack-mp/action", {
       method: "POST",
       headers: { "content-type": "application/json" },

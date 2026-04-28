@@ -131,6 +131,7 @@ export function CoinflipDuelClient() {
 
   async function create() {
     setBusy(true); setError(null);
+    Sfx.play("chip.lay");
     const r = await fetch("/api/games/coinflip-duel/create", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -146,6 +147,7 @@ export function CoinflipDuelClient() {
 
   async function accept(id: string) {
     setBusy(true); setError(null);
+    Sfx.play("chip.lay");
     const r = await fetch(`/api/games/coinflip-duel/${id}/accept`, { method: "POST" });
     const d = await r.json();
     setBusy(false);

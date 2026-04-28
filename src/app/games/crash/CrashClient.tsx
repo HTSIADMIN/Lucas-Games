@@ -431,6 +431,7 @@ export function CrashClient() {
   async function placeBet() {
     setBusy(true);
     setError(null);
+    Sfx.play("chip.lay");
     const res = await fetch("/api/games/crash/bet", {
       method: "POST",
       headers: { "content-type": "application/json" },

@@ -57,7 +57,8 @@ export function DiceClient() {
     setError(null);
     setResult(null);
     setRolling(true);
-    Sfx.play("dice.throw");
+    // Layered dice toss — rattle on press, land on settle.
+    Sfx.play("dice.shake");
     setDisplayed(1 + Math.floor(Math.random() * 100));
     const startedAt = Date.now();
 
@@ -84,11 +85,9 @@ export function DiceClient() {
       setBalance(data.balance);
       setMarkerKey((k) => k + 1);
       setStampKey((k) => k + 1);
+      Sfx.play("die.land"); // single die thud on result reveal
       if (data.win) {
         setConfettiKey((k) => k + 1);
-        // Win ladder swapped: small/medium dice wins now use the
-        // satisfying chips-stack thud instead of the casino-bell
-        // win.notify, which felt repetitive against slots/scratch.
         if (data.multiplier >= 10) Sfx.play("win.big");
         else if (data.multiplier >= 3) Sfx.play("win.levelup");
         else Sfx.play("chips.stack");

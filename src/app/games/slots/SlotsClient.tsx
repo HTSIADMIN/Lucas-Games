@@ -181,7 +181,9 @@ export function SlotsClient() {
       stops[4] += 1200;
     }
 
-    // Stop each reel at its scheduled time, then settle.
+    // Stop each reel at its scheduled time, then settle. Each reel
+    // stop fires a wood click — gives the staggered ending some
+    // percussive weight and reads as anticipation.
     const stopReel = (reelIdx: number) => {
       setReelSpin((prev) => {
         const next = prev.slice();
@@ -193,6 +195,7 @@ export function SlotsClient() {
         next[reelIdx] = grid[reelIdx];
         return next;
       });
+      Sfx.play("ui.wood");
     };
     for (let r = 0; r < REELS; r++) {
       setTimeout(() => stopReel(r), stops[r]);
