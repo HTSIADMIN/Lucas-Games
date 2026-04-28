@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lucas Games — TRAIN ROBBER scratcher card background.
+  Cool dusk valley. Trestle bridge, steam locomotive, telegraph poles.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 600"
+     preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges">
+  <defs>
+    <linearGradient id="tr-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#5fa8d3"/>
+      <stop offset="55%" stop-color="#c9e4f2"/>
+      <stop offset="80%" stop-color="#f5c842"/>
+      <stop offset="100%" stop-color="#e05a3c"/>
+    </linearGradient>
+    <linearGradient id="tr-ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#a87545"/>
+      <stop offset="100%" stop-color="#4a2818"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ===== SKY ===== -->
+  <rect width="480" height="430" fill="url(#tr-sky)"/>
+
+  <!-- Setting sun (smaller, sitting on horizon) -->
+  <g transform="translate(360 380)">
+    <g fill="#ffd84d" opacity="0.6">
+      <rect x="-3" y="-72" width="6" height="20"/>
+      <rect x="-72" y="-3" width="20" height="6"/>
+      <rect x="52"  y="-3" width="20" height="6"/>
+    </g>
+    <g fill="#ffd84d">
+      <rect x="-22" y="-44" width="44" height="6"/>
+      <rect x="-32" y="-38" width="64" height="6"/>
+      <rect x="-40" y="-32" width="80" height="64"/>
+      <rect x="-32" y="32"  width="64" height="6"/>
+      <rect x="-22" y="38"  width="44" height="6"/>
+    </g>
+  </g>
+
+  <!-- Cloud bands -->
+  <g fill="#fef6e4" opacity="0.55">
+    <rect x="40"  y="80"  width="100" height="6"/>
+    <rect x="50"  y="86"  width="80"  height="4"/>
+    <rect x="220" y="140" width="140" height="6"/>
+    <rect x="240" y="146" width="100" height="4"/>
+    <rect x="80"  y="200" width="60"  height="4"/>
+    <rect x="380" y="60"  width="80"  height="4"/>
+  </g>
+
+  <!-- Birds, distant -->
+  <g fill="#2a1810" opacity="0.6">
+    <g transform="translate(140 180)">
+      <rect x="0" y="0" width="2" height="1"/>
+      <rect x="2" y="-1" width="2" height="1"/>
+      <rect x="4" y="0" width="2" height="1"/>
+    </g>
+    <g transform="translate(180 200)">
+      <rect x="0" y="0" width="2" height="1"/>
+      <rect x="2" y="-1" width="2" height="1"/>
+      <rect x="4" y="0" width="2" height="1"/>
+    </g>
+  </g>
+
+  <!-- ===== FAR MOUNTAINS — atmospheric blue ===== -->
+  <g fill="#5fa8d3" opacity="0.7">
+    <polygon points="0,360 30,330 70,310 100,290 140,300 170,280 210,300 240,280 280,300 320,290 360,310 400,290 440,310 480,330 480,400 0,400"/>
+  </g>
+
+  <!-- ===== MID MOUNTAINS — warm purple-brown ===== -->
+  <g fill="#6b3f24">
+    <polygon points="0,400 0,370 40,340 80,360 110,335 150,350 180,330 220,350 260,340 300,360 340,335 380,350 420,340 460,355 480,365 480,420 0,420"/>
+    <!-- Snow caps -->
+    <g fill="#fef6e4" opacity="0.7">
+      <rect x="35"  y="345" width="14" height="3"/>
+      <rect x="178" y="335" width="12" height="3"/>
+      <rect x="338" y="340" width="14" height="3"/>
+    </g>
+  </g>
+
+  <!-- ===== TRESTLE BRIDGE ===== -->
+  <!-- Bridge deck -->
+  <g fill="#2a1810">
+    <rect x="40" y="395" width="400" height="6"/>
+    <rect x="40" y="401" width="400" height="3" opacity="0.6"/>
+  </g>
+  <!-- Bridge supports — trapezoid trestle pattern -->
+  <g fill="#4a2818">
+    <!-- Vertical posts -->
+    <rect x="80"  y="401" width="3" height="38"/>
+    <rect x="130" y="401" width="3" height="42"/>
+    <rect x="180" y="401" width="3" height="46"/>
+    <rect x="230" y="401" width="3" height="50"/>
+    <rect x="280" y="401" width="3" height="46"/>
+    <rect x="330" y="401" width="3" height="42"/>
+    <rect x="380" y="401" width="3" height="38"/>
+    <!-- Cross braces (X pattern) — drawn as diagonal rects via lines -->
+  </g>
+  <!-- Cross braces using line elements -->
+  <g stroke="#4a2818" stroke-width="2" shape-rendering="auto">
+    <line x1="80"  y1="401" x2="133" y2="443"/>
+    <line x1="83"  y1="439" x2="130" y2="401"/>
+    <line x1="130" y1="401" x2="183" y2="447"/>
+    <line x1="133" y1="443" x2="180" y2="401"/>
+    <line x1="180" y1="401" x2="233" y2="451"/>
+    <line x1="183" y1="447" x2="230" y2="401"/>
+    <line x1="230" y1="401" x2="283" y2="447"/>
+    <line x1="233" y1="451" x2="280" y2="401"/>
+    <line x1="280" y1="401" x2="333" y2="443"/>
+    <line x1="283" y1="447" x2="330" y2="401"/>
+    <line x1="330" y1="401" x2="383" y2="439"/>
+    <line x1="333" y1="443" x2="380" y2="401"/>
+  </g>
+  <!-- Track rails on bridge (top of deck) -->
+  <g fill="#1a0f08">
+    <rect x="40" y="392" width="400" height="2"/>
+    <rect x="40" y="396" width="400" height="2"/>
+  </g>
+
+  <!-- ===== STEAM LOCOMOTIVE (on bridge, mid-left) ===== -->
+  <g transform="translate(140 360)">
+    <!-- shadow under -->
+    <rect x="-2" y="32" width="84" height="2" fill="#1a0f08" opacity="0.5"/>
+    <!-- main boiler -->
+    <rect x="0" y="14" width="44" height="18" fill="#2a1810"/>
+    <rect x="0" y="14" width="44" height="3"  fill="#4a2818"/>
+    <!-- cab -->
+    <rect x="44" y="6"  width="22" height="26" fill="#4a2818"/>
+    <rect x="48" y="10" width="14" height="10" fill="#5fa8d3"/>
+    <rect x="48" y="10" width="14" height="2"  fill="#143348"/>
+    <!-- chimney/stack -->
+    <rect x="6"  y="6"  width="8"  height="10" fill="#2a1810"/>
+    <rect x="4"  y="4"  width="12" height="3"  fill="#1a0f08"/>
+    <!-- front cowcatcher -->
+    <rect x="-6" y="22" width="6"  height="10" fill="#1a0f08"/>
+    <rect x="-3" y="18" width="3"  height="14" fill="#1a0f08"/>
+    <!-- headlight -->
+    <rect x="-4" y="16" width="4"  height="4"  fill="#ffd84d"/>
+    <!-- wheels -->
+    <g fill="#1a0f08">
+      <rect x="2"  y="28" width="8" height="6"/>
+      <rect x="14" y="28" width="8" height="6"/>
+      <rect x="26" y="28" width="8" height="6"/>
+      <rect x="46" y="28" width="6" height="6"/>
+      <rect x="58" y="28" width="6" height="6"/>
+    </g>
+    <g fill="#c8941d" opacity="0.8">
+      <rect x="4"  y="30" width="4" height="2"/>
+      <rect x="16" y="30" width="4" height="2"/>
+      <rect x="28" y="30" width="4" height="2"/>
+    </g>
+    <!-- Coal car (tender) behind -->
+    <rect x="68" y="14" width="22" height="18" fill="#2a1810"/>
+    <rect x="70" y="12" width="18" height="3"  fill="#1a0f08"/>
+    <g fill="#1a0f08">
+      <rect x="70" y="28" width="6" height="6"/>
+      <rect x="82" y="28" width="6" height="6"/>
+    </g>
+  </g>
+
+  <!-- Steam from chimney — billowing pixel clouds -->
+  <g fill="#fef6e4">
+    <g transform="translate(150 350)">
+      <rect x="-2"  y="0"   width="6"  height="4" opacity="0.95"/>
+      <rect x="-4"  y="-4"  width="10" height="6" opacity="0.85"/>
+      <rect x="-6"  y="-12" width="14" height="8" opacity="0.75"/>
+      <rect x="-10" y="-22" width="20" height="10" opacity="0.65"/>
+      <rect x="-14" y="-34" width="26" height="12" opacity="0.55"/>
+      <rect x="-18" y="-48" width="30" height="14" opacity="0.40"/>
+      <rect x="-22" y="-62" width="32" height="14" opacity="0.28"/>
+      <rect x="-26" y="-78" width="34" height="16" opacity="0.18"/>
+    </g>
+  </g>
+
+  <!-- ===== GROUND ===== -->
+  <rect x="0" y="430" width="480" height="170" fill="url(#tr-ground)"/>
+
+  <!-- Track in foreground perspective — vanishing toward bridge -->
+  <g fill="#2a1810">
+    <!-- Rails (two converging lines) -->
+    <polygon points="180,430 200,430 240,600 220,600"/>
+    <polygon points="300,430 280,430 240,600 260,600"/>
+    <!-- Ties -->
+    <rect x="170" y="445" width="140" height="3"/>
+    <rect x="160" y="465" width="160" height="3"/>
+    <rect x="148" y="490" width="184" height="4"/>
+    <rect x="135" y="520" width="210" height="4"/>
+    <rect x="120" y="555" width="240" height="5"/>
+    <rect x="100" y="592" width="280" height="6"/>
+  </g>
+
+  <!-- ===== TELEGRAPH POLES — left side, perspective ===== -->
+  <g fill="#1a0f08">
+    <!-- Far pole -->
+    <rect x="60" y="380" width="2" height="50"/>
+    <rect x="56" y="385" width="10" height="2"/>
+    <!-- Mid pole -->
+    <rect x="40" y="430" width="3" height="80"/>
+    <rect x="34" y="438" width="15" height="3"/>
+    <rect x="34" y="450" width="15" height="3"/>
+    <!-- Near pole -->
+    <rect x="20" y="500" width="5" height="100"/>
+    <rect x="10" y="510" width="25" height="4"/>
+    <rect x="10" y="528" width="25" height="4"/>
+  </g>
+  <!-- Telegraph wires (very thin) -->
+  <g stroke="#1a0f08" stroke-width="1" shape-rendering="auto" opacity="0.7">
+    <line x1="61" y1="386" x2="42" y2="439"/>
+    <line x1="42" y1="439" x2="22" y2="511"/>
+    <line x1="61" y1="386" x2="42" y2="450"/>
+    <line x1="42" y1="450" x2="22" y2="528"/>
+  </g>
+
+  <!-- ===== FOREGROUND ROCKS (right side, near track) ===== -->
+  <g fill="#4a2818">
+    <rect x="380" y="500" width="50" height="20"/>
+    <rect x="385" y="495" width="40" height="5"/>
+    <rect x="395" y="490" width="20" height="5"/>
+  </g>
+  <g fill="#2a1810" opacity="0.7">
+    <rect x="380" y="515" width="50" height="3"/>
+  </g>
+
+  <!-- ===== STARS (early evening, top of sky) ===== -->
+  <g fill="#fef6e4" opacity="0.8">
+    <rect x="40"  y="20" width="2" height="2"/>
+    <rect x="120" y="40" width="2" height="2"/>
+    <rect x="280" y="30" width="2" height="2"/>
+    <rect x="440" y="50" width="2" height="2"/>
+  </g>
+</svg>

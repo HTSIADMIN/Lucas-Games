@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lucas Games — GOLDEN BOUNTY scratcher card background.
+  Warm gold-hour desert. Big pixel sun, layered mesas, gold dust.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 600"
+     preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges">
+  <defs>
+    <linearGradient id="gb-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#ffe9a8"/>
+      <stop offset="55%" stop-color="#f5c842"/>
+      <stop offset="100%" stop-color="#fbe9c4"/>
+    </linearGradient>
+    <linearGradient id="gb-ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#e8c089"/>
+      <stop offset="100%" stop-color="#a87545"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ===== SKY ===== -->
+  <rect width="480" height="420" fill="url(#gb-sky)"/>
+
+  <!-- ===== SUN — pixelated octagon-ish, ~120px ===== -->
+  <g transform="translate(240 200)">
+    <!-- Rays (cardinal) -->
+    <g fill="#ffd84d" opacity="0.55">
+      <rect x="-3" y="-120" width="6" height="32"/>
+      <rect x="-3"  y="88"   width="6" height="32"/>
+      <rect x="-120" y="-3" width="32" height="6"/>
+      <rect x="88"  y="-3" width="32" height="6"/>
+    </g>
+    <!-- Rays (diagonal, smaller) -->
+    <g fill="#ffd84d" opacity="0.35" transform="rotate(45)">
+      <rect x="-2" y="-110" width="4" height="22"/>
+      <rect x="-2"  y="88"   width="4" height="22"/>
+      <rect x="-110" y="-2" width="22" height="4"/>
+      <rect x="88"  y="-2" width="22" height="4"/>
+    </g>
+    <!-- Sun body — pixel octagon -->
+    <g fill="#ffd84d">
+      <rect x="-30" y="-72" width="60"  height="8"/>
+      <rect x="-50" y="-64" width="100" height="8"/>
+      <rect x="-60" y="-56" width="120" height="8"/>
+      <rect x="-66" y="-48" width="132" height="8"/>
+      <rect x="-72" y="-40" width="144" height="8"/>
+      <rect x="-72" y="-32" width="144" height="64"/>
+      <rect x="-72" y="32"  width="144" height="8"/>
+      <rect x="-66" y="40"  width="132" height="8"/>
+      <rect x="-60" y="48"  width="120" height="8"/>
+      <rect x="-50" y="56"  width="100" height="8"/>
+      <rect x="-30" y="64"  width="60"  height="8"/>
+    </g>
+    <!-- Darker bottom edge — gives the sun weight -->
+    <g fill="#c8941d" opacity="0.5">
+      <rect x="-72" y="24"  width="144" height="8"/>
+      <rect x="-66" y="32"  width="132" height="8"/>
+      <rect x="-60" y="40"  width="120" height="8"/>
+      <rect x="-50" y="48"  width="100" height="8"/>
+    </g>
+  </g>
+
+  <!-- ===== FAR MESAS — atmospheric back row ===== -->
+  <g fill="#d4a574">
+    <polygon points="0,360 60,340 80,310 130,310 150,330 220,330 240,310 290,310 310,330 380,330 400,315 440,330 480,340 480,400 0,400"/>
+  </g>
+
+  <!-- ===== MID MESAS — characteristic flat-top ===== -->
+  <g fill="#a87545">
+    <!-- Left butte -->
+    <polygon points="20,400 20,370 30,370 30,360 110,360 110,370 120,370 120,400"/>
+    <!-- Middle wide mesa (wraps behind the sun) -->
+    <polygon points="160,400 160,360 170,360 170,350 320,350 320,360 330,360 330,400"/>
+    <!-- Right pinnacle -->
+    <polygon points="380,400 380,340 390,340 390,330 410,330 410,340 420,340 420,400"/>
+    <!-- Stripe lines on mesas -->
+    <g fill="#6b3f24" opacity="0.35">
+      <rect x="30"  y="380" width="80"  height="2"/>
+      <rect x="170" y="370" width="150" height="2"/>
+      <rect x="170" y="385" width="150" height="2"/>
+      <rect x="390" y="370" width="20"  height="2"/>
+    </g>
+  </g>
+
+  <!-- ===== FRONT MESAS — darker, closer ===== -->
+  <g fill="#6b3f24">
+    <polygon points="0,460 0,430 30,430 30,420 80,420 80,430 100,430 100,460"/>
+    <polygon points="350,460 350,410 370,410 370,400 420,400 420,410 440,410 440,460"/>
+    <g fill="#4a2818" opacity="0.6">
+      <rect x="0"   y="445" width="100" height="2"/>
+      <rect x="350" y="430" width="90"  height="2"/>
+    </g>
+  </g>
+
+  <!-- ===== GROUND ===== -->
+  <rect x="0" y="420" width="480" height="180" fill="url(#gb-ground)"/>
+
+  <!-- Dune ridges -->
+  <g fill="#6b3f24" opacity="0.25">
+    <rect x="0"   y="460" width="240" height="3"/>
+    <rect x="160" y="490" width="320" height="3"/>
+    <rect x="60"  y="525" width="280" height="3"/>
+    <rect x="220" y="555" width="260" height="3"/>
+    <rect x="0"   y="580" width="200" height="3"/>
+  </g>
+
+  <!-- ===== CACTI ===== -->
+  <!-- Tall left cactus -->
+  <g fill="#3d6b2e">
+    <rect x="46"  y="425" width="8" height="50"/>
+    <rect x="38"  y="440" width="8" height="22"/>
+    <rect x="34"  y="438" width="4" height="6"/>
+    <rect x="54"  y="448" width="8" height="16"/>
+    <rect x="62"  y="446" width="4" height="4"/>
+  </g>
+  <g fill="#1f3818" opacity="0.4">
+    <rect x="46" y="425" width="2" height="50"/>
+    <rect x="38" y="440" width="2" height="22"/>
+  </g>
+
+  <!-- Mid cactus -->
+  <g fill="#3d6b2e">
+    <rect x="282" y="475" width="6" height="36"/>
+    <rect x="276" y="488" width="6" height="14"/>
+    <rect x="288" y="485" width="6" height="10"/>
+  </g>
+
+  <!-- ===== GOLD COIN PILE — bottom right ===== -->
+  <g transform="translate(420 555)">
+    <!-- shadow -->
+    <ellipse cx="0" cy="22" rx="32" ry="4" fill="#4a2818" opacity="0.4"/>
+    <!-- bottom coin -->
+    <rect x="-30" y="10" width="60" height="10" fill="#c8941d"/>
+    <rect x="-30" y="18" width="60" height="2"  fill="#7a5510"/>
+    <!-- middle coin -->
+    <rect x="-22" y="2"  width="44" height="10" fill="#f5c842"/>
+    <rect x="-22" y="10" width="44" height="2"  fill="#c8941d"/>
+    <!-- top coin -->
+    <rect x="-14" y="-6" width="28" height="10" fill="#ffd84d"/>
+    <rect x="-14" y="2"  width="28" height="2"  fill="#c8941d"/>
+    <!-- $ pixel detail on top coin -->
+    <rect x="-2"  y="-3" width="4" height="2" fill="#7a5510"/>
+    <rect x="-1"  y="-1" width="2" height="2" fill="#7a5510"/>
+  </g>
+
+  <!-- ===== GOLD DUST SPARKLES (4-pointed pixel twinkles) ===== -->
+  <g fill="#ffd84d">
+    <g transform="translate(80 90)">
+      <rect x="-1" y="-4" width="2" height="3"/>
+      <rect x="-1" y="2"  width="2" height="3"/>
+      <rect x="-4" y="-1" width="3" height="2"/>
+      <rect x="2"  y="-1" width="3" height="2"/>
+      <rect x="-1" y="-1" width="2" height="2"/>
+    </g>
+    <g transform="translate(400 130)">
+      <rect x="-1" y="-3" width="2" height="2"/>
+      <rect x="-1" y="2"  width="2" height="2"/>
+      <rect x="-3" y="-1" width="2" height="2"/>
+      <rect x="2"  y="-1" width="2" height="2"/>
+    </g>
+    <g transform="translate(140 280)">
+      <rect x="-1" y="-3" width="2" height="2"/>
+      <rect x="-1" y="2"  width="2" height="2"/>
+      <rect x="-3" y="-1" width="2" height="2"/>
+      <rect x="2"  y="-1" width="2" height="2"/>
+    </g>
+    <g transform="translate(360 60)">
+      <rect x="-1" y="-4" width="2" height="3"/>
+      <rect x="-1" y="2"  width="2" height="3"/>
+      <rect x="-4" y="-1" width="3" height="2"/>
+      <rect x="2"  y="-1" width="3" height="2"/>
+      <rect x="-1" y="-1" width="2" height="2"/>
+    </g>
+    <g transform="translate(60 350)">
+      <rect x="-1" y="-2" width="2" height="2"/>
+      <rect x="-1" y="1"  width="2" height="2"/>
+      <rect x="-2" y="-1" width="1" height="2"/>
+      <rect x="2"  y="-1" width="1" height="2"/>
+    </g>
+  </g>
+
+  <!-- ===== HORIZON HAZE (warm overlay near horizon line) ===== -->
+  <rect x="0" y="385" width="480" height="40" fill="#fef6e4" opacity="0.15"/>
+</svg>

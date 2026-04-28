@@ -332,17 +332,19 @@ export function ScratchClient() {
   return (
     <div className="stack-lg">
       <div className="grid grid-2" style={{ alignItems: "start" }}>
-        {/* === Ticket poster — paper grain + design hue.
-              Bitmap texture tiled and multiply-blended with the
-              design's paper colour, so every region of the card
-              (header strip, ticket bg, padding) shows the grain. */}
+        {/* === Ticket poster — per-design SVG background fills the
+              entire card (header + ticket area + padding). The SVG
+              already carries the design's hue + grain so the cells
+              just need a soft semi-transparent overlay to keep the
+              symbol pixel art readable. */}
         <div
           className={`panel scratch-poster${streak >= 3 ? " is-hot" : ""}`}
           style={{
             backgroundColor: spec.paper,
-            backgroundImage: "url(/textures/scratch-foil.jpg)",
-            backgroundRepeat: "repeat",
-            backgroundBlendMode: "multiply",
+            backgroundImage: `url(${spec.bgUrl})`,
+            backgroundRepeat: "no-repeat",
+            backgroundSize: "100% 100%",
+            backgroundPosition: "center",
             color: "#2b1810",
             border: `4px solid ${spec.accent}`,
             padding: "var(--sp-4)",
@@ -377,13 +379,10 @@ export function ScratchClient() {
               height: TICKET_H,
               margin: "0 auto",
               border: `3px solid ${spec.accent}`,
-              // Bitmap paper texture multiply-tinted with the design's
-              // paper colour. The texture provides the grain; the paper
-              // stop provides the hue. Foil canvas sits on top.
-              backgroundColor: spec.paper,
-              backgroundImage: "url(/textures/scratch-foil.jpg)",
-              backgroundRepeat: "repeat",
-              backgroundBlendMode: "multiply",
+              // Inner ticket area is transparent so the design SVG
+              // behind the poster shows through; under-layer cells
+              // get their own soft overlay so symbols stay readable.
+              background: "transparent",
               touchAction: "none",
             }}
             onPointerDown={onPointerDown}
@@ -599,9 +598,11 @@ function UnderLayer({
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            background: "var(--gold-100)",
+            // Translucent gold so the design SVG bleeds through.
+            background: "rgba(255, 233, 168, 0.88)",
             border: `3px solid ${accent}`,
             padding: 4,
+            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.35)",
           }}
         >
           <div style={{ fontFamily: "var(--font-display)", fontSize: 9, letterSpacing: "0.08em", color: accent }}>LUCKY</div>
@@ -674,7 +675,9 @@ function SymbolCell({
       data-cell-key={cellKey}
       className={`scratch-cell${isRevealed ? " is-revealed" : ""}`}
       style={{
-        background: "#fef6e4",
+        // Soft translucent parchment so the design SVG behind shows
+        // through faintly while keeping the symbol pixel art readable.
+        background: "rgba(254, 246, 228, 0.88)",
         border: `3px solid ${isWinning ? "var(--gold-300)" : accent}`,
         display: "flex",
         alignItems: "center",
@@ -682,7 +685,7 @@ function SymbolCell({
         boxShadow: isWinning
           ? "0 0 14px rgba(245,200,66,0.7)"
           : isNearMiss ? "0 0 10px rgba(155,44,44,0.45)"
-          : undefined,
+          : "inset 0 0 0 1px rgba(255,255,255,0.35)",
         animation: isWinning
           ? "scratch-cell-pulse 0.9s ease-in-out infinite"
           : isNearMiss ? "scratch-cell-near 1.6s ease-in-out infinite"
