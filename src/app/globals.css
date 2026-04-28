@@ -1027,3 +1027,43 @@ img, svg, canvas {
   20%, 60% { transform: translateX(-8px); }
   40%, 80% { transform: translateX(8px); }
 }
+
+/* ============================================================
+   SCRATCH-OFF — Golden Bounty
+   ============================================================ */
+.scratch-poster.is-hot {
+  position: relative;
+}
+.scratch-flame {
+  position: absolute;
+  inset: -4px;
+  pointer-events: none;
+  border: 4px solid var(--crimson-300);
+  box-shadow:
+    0 0 16px rgba(255, 85, 68, 0.6),
+    inset 0 0 16px rgba(245, 200, 66, 0.4);
+  animation: scratch-flame-flicker 1.2s ease-in-out infinite;
+}
+@keyframes scratch-flame-flicker {
+  0%, 100% { opacity: 0.85; box-shadow: 0 0 14px rgba(255, 85, 68, 0.55), inset 0 0 14px rgba(245, 200, 66, 0.35); }
+  50%      { opacity: 1;    box-shadow: 0 0 22px rgba(255, 85, 68, 0.9),  inset 0 0 22px rgba(245, 200, 66, 0.55); }
+}
+.scratch-poster.is-big-win {
+  animation: scratch-shake 0.45s ease;
+}
+@keyframes scratch-shake {
+  0%, 100% { transform: translateX(0); }
+  15%      { transform: translateX(-6px); }
+  30%      { transform: translateX(6px); }
+  45%      { transform: translateX(-4px); }
+  60%      { transform: translateX(4px); }
+  75%      { transform: translateX(-2px); }
+}
+@keyframes scratch-cell-pulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 12px rgba(245, 200, 66, 0.5); }
+  50%      { transform: scale(1.06); box-shadow: 0 0 22px rgba(245, 200, 66, 0.95); }
+}
+@keyframes scratch-cell-near {
+  0%, 100% { box-shadow: 0 0 6px  rgba(155, 44, 44, 0.30); }
+  50%      { box-shadow: 0 0 14px rgba(155, 44, 44, 0.65); }
+}

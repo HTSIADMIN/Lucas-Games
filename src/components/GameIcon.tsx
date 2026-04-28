@@ -13,7 +13,7 @@ export type IconName =
   | "lobby.coinflip" | "lobby.coinflip_duel" | "lobby.dice" | "lobby.slots"
   | "lobby.blackjack" | "lobby.roulette" | "lobby.mines" | "lobby.plinko"
   | "lobby.crash" | "lobby.poker" | "lobby.daily_spin" | "lobby.crossy_road"
-  | "lobby.flappy" | "lobby.monopoly"
+  | "lobby.flappy" | "lobby.monopoly" | "lobby.scratch"
   | "clan.wolf" | "clan.bear" | "clan.eagle" | "clan.snake"
   | "clan.bull" | "clan.coyote" | "clan.hawk" | "clan.stag";
 
@@ -1103,6 +1103,40 @@ const LOBBY_ICONS_128: Partial<Record<IconName, Px[]>> = {
 // One miniature scene per game, hand-laid.
 // =============================================================
 const LOBBY_ICONS_32: Partial<Record<IconName, Px[]>> = {
+  // ----- Scratch — wanted-poster fragment with a sheriff star -----
+  "lobby.scratch": [
+    // Parchment poster
+    [ 6,  4, 20, 24, C.parchM],
+    [ 6,  4, 20,  1, C.shadow],
+    [ 6, 27, 20,  1, C.shadow],
+    [ 6,  4,  1, 24, C.shadow],
+    [25,  4,  1, 24, C.shadow],
+    // "WANTED" header bar
+    [ 8,  6, 16,  3, C.crimson],
+    [ 8,  6, 16,  1, C.crimsonD],
+    [ 8,  9, 16,  1, C.crimsonD],
+    // Sheriff star body
+    [13, 13,  6,  6, C.gold],
+    [12, 14,  8,  4, C.gold],
+    [11, 15, 10,  2, C.gold],
+    [13, 13,  6,  1, C.goldL],
+    [13, 18,  6,  1, C.goldD],
+    // Star points
+    [15, 11,  2,  2, C.gold],
+    [15, 19,  2,  2, C.gold],
+    [10, 16,  2,  1, C.gold],
+    [20, 16,  2,  1, C.gold],
+    // Foil scratch streaks
+    [ 8, 22, 12,  1, C.saddleL],
+    [10, 24, 10,  1, C.saddleL],
+    [12, 25,  8,  1, C.saddleL],
+    // Coin in the corner
+    [22, 21,  4,  4, C.gold],
+    [22, 21,  4,  1, C.goldL],
+    [22, 24,  4,  1, C.goldD],
+    [23, 22,  2,  2, C.goldDD],
+  ],
+
   // ----- Coin Flip — single big spinning coin with $ -----
   "lobby.coinflip": [
     // Coin disc, octagonal staircase

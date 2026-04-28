@@ -35,6 +35,7 @@ const GAMES: GameTile[] = [
   // Dice
   { slug: "dice",          name: "Dice",            tag: "QUICK",   live: true, icon: "lobby.dice",           category: "dice" },
   // Other
+  { slug: "scratch",       name: "Golden Bounty",   tag: "INSTANT", live: true, icon: "lobby.scratch",        category: "other" },
   { slug: "slots",         name: "Slots",           tag: "JACKPOT", live: true, icon: "lobby.slots",          category: "other" },
   { slug: "roulette",      name: "Roulette",        tag: "CLASSIC", live: true, icon: "lobby.roulette",       category: "other" },
   { slug: "mines",         name: "Mines",           tag: "RISKY",   live: true, icon: "lobby.mines",          category: "other" },
