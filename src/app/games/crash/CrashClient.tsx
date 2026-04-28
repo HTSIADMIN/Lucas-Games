@@ -185,11 +185,12 @@ export function CrashClient() {
         const wanted = Math.max(Y_BASE_MAX, m * 1.25);
         yMax += (wanted - yMax) * Math.min(1, dt * 4);
 
-        // Auto-cashout
+        // Auto-cashout. cashout() itself flips cashedThisRoundRef so
+        // we don't pre-set it here — doing so caused cashout()'s
+        // re-entry guard to early-return without firing the request.
         if (autoRef.current.on && !cashedThisRoundRef.current) {
           const myBet = betsRef.current.find((b) => b.userId === meRef.current);
           if (myBet && myBet.cashoutX === null && m >= autoRef.current.at) {
-            cashedThisRoundRef.current = true;
             cashout();
           }
         }

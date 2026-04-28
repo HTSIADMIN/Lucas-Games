@@ -281,7 +281,7 @@ export function SlotsClient() {
       if (data.payout > 0) {
         if (data.filledScreen || data.tier >= 4) Sfx.play("win.big");
         else if (data.payout > bonus.bet * 10) Sfx.play("win.levelup");
-        else Sfx.play("win.notify");
+        else Sfx.play("chips.stack");
       }
       setTimeout(() => {
         setBonusEnded({

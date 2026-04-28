@@ -247,7 +247,7 @@ export function ScratchClient() {
     } else if (ticket.tier === "large") {
       Sfx.play("win.levelup");
     } else if (ticket.tier === "medium" || ticket.tier === "small") {
-      Sfx.play("win.notify");
+      Sfx.play("chips.stack");
     } else if (ticket.bonusPayout > 0) {
       Sfx.play("coins.clink");
     } else {
@@ -371,7 +371,13 @@ export function ScratchClient() {
               height: TICKET_H,
               margin: "0 auto",
               border: `3px solid ${spec.accent}`,
-              background: spec.paper,
+              // Bitmap paper texture multiply-tinted with the design's
+              // paper colour. The texture provides the grain; the paper
+              // stop provides the hue. Foil canvas sits on top.
+              backgroundColor: spec.paper,
+              backgroundImage: "url(/textures/scratch-foil.jpg)",
+              backgroundRepeat: "repeat",
+              backgroundBlendMode: "multiply",
               touchAction: "none",
             }}
             onPointerDown={onPointerDown}
@@ -771,30 +777,6 @@ function withAlpha(hex: string, a: number): string {
   return `rgba(${r}, ${g}, ${b}, ${a.toFixed(3)})`;
 }
 
-// Lazy-loaded foil texture. Saved at /textures/scratch-foil.jpg —
-// shared across every ticket buy. We start the load on module init
-// so the first ticket isn't waiting on the round-trip.
-const FOIL_TEXTURE_SRC = "/textures/scratch-foil.jpg";
-let _foilTextureImg: HTMLImageElement | null = null;
-let _foilTextureLoaded = false;
-
-function ensureFoilTexture(onReady?: () => void) {
-  if (typeof window === "undefined") return null;
-  if (!_foilTextureImg) {
-    _foilTextureImg = new Image();
-    _foilTextureImg.crossOrigin = "anonymous";
-    _foilTextureImg.onload = () => {
-      _foilTextureLoaded = true;
-      onReady?.();
-    };
-    _foilTextureImg.src = FOIL_TEXTURE_SRC;
-  } else if (_foilTextureLoaded) {
-    // Already loaded — caller can paint immediately.
-    onReady?.();
-  }
-  return _foilTextureImg;
-}
-
 function paintFoil(c: HTMLCanvasElement | null, spec: ScratchDesignSpec) {
   if (!c) return;
   const ctx = c.getContext("2d");
@@ -805,69 +787,65 @@ function paintFoil(c: HTMLCanvasElement | null, spec: ScratchDesignSpec) {
   c.style.width = `${TICKET_W}px`;
   c.style.height = `${TICKET_H}px`;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = false;
 
-  function paintWithTexture() {
-    // Re-fetch ctx in case caller called multiple times (it's the
-    // same context so this is just a guard).
-    const cx = c!.getContext("2d");
-    if (!cx) return;
-    cx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    cx.imageSmoothingEnabled = true;
-
-    // 1) Lay the grey foil texture down as the base. Tile it so the
-    //    grain reads at full resolution regardless of canvas aspect.
-    const tex = _foilTextureImg!;
-    const tw = tex.naturalWidth || 320;
-    const th = tex.naturalHeight || 240;
-    // Cover the canvas with whole-tile copies, no scaling, so the
-    // grain stays sharp.
-    for (let y = 0; y < TICKET_H; y += th) {
-      for (let x = 0; x < TICKET_W; x += tw) {
-        cx.drawImage(tex, x, y);
-      }
+  // Chunky 4×4 metallic pixel grid. Three foil stops alternated in a
+  // brick offset, with sparse light "sparkle" pixels and dark grain
+  // dots so it reads as a textured pixel-art metal — not a smooth
+  // gradient. The bitmap paper texture lives on the ticket div
+  // *behind* this canvas, not on the canvas itself.
+  const BLOCK = 4;
+  const cols = Math.ceil(TICKET_W / BLOCK);
+  const rows = Math.ceil(TICKET_H / BLOCK);
+  const [a, b, cc] = spec.foil;
+  for (let y = 0; y < rows; y++) {
+    const offset = (y % 2 === 0) ? 0 : 1;
+    for (let x = 0; x < cols; x++) {
+      const t = (x + offset) % 3;
+      ctx.fillStyle = t === 0 ? a : t === 1 ? b : cc;
+      ctx.fillRect(x * BLOCK, y * BLOCK, BLOCK, BLOCK);
     }
-
-    // 2) Multiply-tint with the design's mid foil colour. The
-    //    `multiply` blend keeps the texture grain visible while
-    //    pulling the entire surface toward the target hue.
-    cx.globalCompositeOperation = "multiply";
-    cx.fillStyle = spec.foil[1];
-    cx.fillRect(0, 0, TICKET_W, TICKET_H);
-
-    // 3) Edge vignette — same blend mode but using the darker stop
-    //    keeps corners feeling slightly weather-worn.
-    const vg = cx.createRadialGradient(
-      TICKET_W / 2, TICKET_H / 2, Math.min(TICKET_W, TICKET_H) * 0.35,
-      TICKET_W / 2, TICKET_H / 2, Math.max(TICKET_W, TICKET_H) * 0.7,
-    );
-    vg.addColorStop(0, "rgba(255,255,255,0)");
-    vg.addColorStop(1, spec.foil[0]);
-    cx.fillStyle = vg;
-    cx.fillRect(0, 0, TICKET_W, TICKET_H);
-
-    cx.globalCompositeOperation = "source-over";
-
-    // 4) "SCRATCH HERE" pixel-font heading + subline.
-    cx.save();
-    cx.translate(TICKET_W / 2, TICKET_H / 2);
-    cx.rotate(-Math.PI / 16);
-    cx.fillStyle = "rgba(26,15,8,0.55)";
-    cx.textAlign = "center";
-    cx.textBaseline = "middle";
-    cx.font = "bold 36px M6X11, monospace";
-    cx.fillText("SCRATCH HERE", 0, 0);
-    cx.font = "16px M6X11, monospace";
-    cx.fillText("DRAG THE COIN", 0, 26);
-    cx.restore();
+  }
+  // Sparkle highlights — bright single pixels on diagonals.
+  ctx.fillStyle = lighten(spec.foil[1], 0.35);
+  for (let i = 0; i < 80; i++) {
+    const x = Math.floor(Math.random() * cols) * BLOCK;
+    const y = Math.floor(Math.random() * rows) * BLOCK;
+    ctx.fillRect(x, y, 2, 2);
+  }
+  // Grain — sparse dark pixels for contrast.
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  for (let i = 0; i < 60; i++) {
+    const x = Math.floor(Math.random() * cols) * BLOCK;
+    const y = Math.floor(Math.random() * rows) * BLOCK;
+    ctx.fillRect(x, y, 2, 2);
   }
 
-  // Lay a quick fallback fill so the canvas isn't transparent in the
-  // tiny window between mount and image-loaded.
-  ctx.fillStyle = spec.foil[1];
-  ctx.fillRect(0, 0, TICKET_W, TICKET_H);
+  // "SCRATCH HERE" pixel-font heading + subline.
+  ctx.save();
+  ctx.translate(TICKET_W / 2, TICKET_H / 2);
+  ctx.rotate(-Math.PI / 16);
+  ctx.fillStyle = "rgba(43, 24, 16, 0.55)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "bold 36px M6X11, monospace";
+  ctx.fillText("SCRATCH HERE", 0, 0);
+  ctx.font = "16px M6X11, monospace";
+  ctx.fillText("DRAG THE COIN", 0, 26);
+  ctx.restore();
+}
 
-  ensureFoilTexture(paintWithTexture);
-  if (_foilTextureLoaded) paintWithTexture();
+/** Mix-toward-white by `t`. Used by the foil sparkle highlights. */
+function lighten(hex: string, t: number): string {
+  let h = hex.startsWith("#") ? hex.slice(1) : hex;
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const lr = Math.round(r + (255 - r) * t);
+  const lg = Math.round(g + (255 - g) * t);
+  const lb = Math.round(b + (225 - b) * t);
+  return `rgb(${lr}, ${lg}, ${lb})`;
 }
 
 function paintDustClear(c: HTMLCanvasElement | null) {

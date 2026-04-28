@@ -116,7 +116,7 @@ export function BlackjackMpClient() {
         setConfettiKey((k) => k + 1);
         if (blackjacked) Sfx.play("win.levelup");
         else if (net >= totalStake * 2) Sfx.play("win.big");
-        else Sfx.play("win.notify");
+        else Sfx.play("chips.stack");
       } else if (net < 0) {
         setShakeKey((k) => k + 1);
         Sfx.play("ui.notify");

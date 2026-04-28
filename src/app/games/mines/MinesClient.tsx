@@ -130,7 +130,7 @@ export function MinesClient() {
     // Tier-scale the cashout stinger by multiplier reached.
     if ((data.multiplier ?? 0) >= 10) Sfx.play("win.big");
     else if ((data.multiplier ?? 0) >= 3) Sfx.play("win.levelup");
-    else Sfx.play("win.notify");
+    else Sfx.play("chips.stack");
     router.refresh();
   }
 

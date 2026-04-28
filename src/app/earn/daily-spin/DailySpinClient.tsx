@@ -81,7 +81,7 @@ export function DailySpinClient() {
       const tone = data.tone as string | undefined;
       if (tone === "jackpot") Sfx.play("win.big");
       else if (tone === "high") Sfx.play("win.levelup");
-      else if (tone === "mid") Sfx.play("win.notify");
+      else if (tone === "mid") Sfx.play("chips.stack");
       else Sfx.play("coins.clink");
     }, SPIN_MS + REVEAL_DELAY);
   }

@@ -99,7 +99,7 @@ export function QuickDrawModal({
       // Tier-scaled stinger by reaction speed.
       if (d.payout >= 50_000) Sfx.play("win.big");
       else if (d.payout >= 20_000) Sfx.play("win.levelup");
-      else if (d.payout > 0) Sfx.play("win.notify");
+      else if (d.payout > 0) Sfx.play("chips.stack");
       else Sfx.play("ui.notify");
     } catch {
       setError("network");
