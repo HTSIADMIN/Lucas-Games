@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type CSSProperties, type ReactNode } from "react";
+import * as Sfx from "@/lib/sfx";
 
 // Reusable backdrop + centered card for modals. Matches the pattern
 // hand-rolled across ProfileModal, FreeGamesButton, ShopClient
@@ -51,6 +52,7 @@ export function ModalShell({
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    Sfx.play("card.place");
     return () => { document.body.style.overflow = prev; };
   }, [open]);
 

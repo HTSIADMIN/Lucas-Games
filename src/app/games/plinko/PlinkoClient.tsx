@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { bucketTable, type PlinkoRisk, type PlinkoRows } from "@/lib/games/plinko/engine";
+import * as Sfx from "@/lib/sfx";
 
 // Step duration for the ball bouncing through one row of pegs.
 const STEP_MS = 130;
@@ -185,6 +186,7 @@ export function PlinkoClient() {
         return;
       }
 
+      Sfx.play("coin.drop");
       // Spawn a new flying ball with its own path.
       const path = buildBallPath(localRows, data.bucket);
       const id = crypto.randomUUID();
@@ -205,6 +207,12 @@ export function PlinkoClient() {
         setResult(data);
         // Server-truth balance — overrides optimistic if any drift.
         setBalance(data.balance);
+        // Tier-scale the landing chime by multiplier.
+        const m = data.multiplier ?? 0;
+        if (m >= 50)      Sfx.play("win.big");
+        else if (m >= 5)  Sfx.play("win.levelup");
+        else if (m >= 1)  Sfx.play("coins.clink");
+        else              Sfx.play("ui.notify");
         // Remove the ball after a small landing pause.
         setTimeout(() => {
           setBalls((prev) => prev.filter((b) => b.id !== id));

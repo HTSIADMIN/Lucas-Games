@@ -6,6 +6,7 @@ import { BetInput } from "@/components/BetInput";
 import { PlayingCard } from "@/components/PlayingCard";
 import { useLive } from "@/components/social/LiveProvider";
 import type { Card, Rank, Suit } from "@/lib/games/cards";
+import * as Sfx from "@/lib/sfx";
 
 type SeatView = {
   userId: string;
@@ -87,7 +88,10 @@ export function BlackjackMpClient() {
     // Hole-card flip — anytime dealer reveals (player_turn -> anything else).
     if (prev === "player_turn" && cur !== "player_turn") {
       setRevealHole((k) => k + 1);
+      Sfx.play("card.place");
     }
+    if (prev === "betting" && cur === "dealing") Sfx.play("card.shuffle");
+    if (prev !== cur && cur === "dealing") Sfx.play("card.deal");
     prevRoundStatusRef.current = cur;
   }, [round]);
 
@@ -107,8 +111,18 @@ export function BlackjackMpClient() {
       const totalPayout = mine.reduce((sum, s) => sum + s.payout, 0);
       const totalStake = mine.reduce((sum, s) => sum + (s.doubled ? s.bet * 2 : s.bet), 0);
       const net = totalPayout - totalStake;
-      if (net > 0) setConfettiKey((k) => k + 1);
-      if (net < 0) setShakeKey((k) => k + 1);
+      const blackjacked = mine.some((s) => s.status === "blackjack");
+      if (net > 0) {
+        setConfettiKey((k) => k + 1);
+        if (blackjacked) Sfx.play("win.levelup");
+        else if (net >= totalStake * 2) Sfx.play("win.big");
+        else Sfx.play("win.notify");
+      } else if (net < 0) {
+        setShakeKey((k) => k + 1);
+        Sfx.play("ui.notify");
+      } else {
+        Sfx.play("coins.handle"); // push
+      }
     }
     prevSeatStatusRef.current = allDone ? "done" : (mine[0]?.status ?? null);
   }, [seats]);

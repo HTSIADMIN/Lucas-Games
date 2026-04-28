@@ -22,7 +22,14 @@ export function SfxControls() {
       <button
         type="button"
         className="sfx-mute"
-        onClick={() => Sfx.setMuted(!muted)}
+        onClick={() => {
+          const next = !muted;
+          Sfx.setMuted(next);
+          // Confirmation chime when unmuting (so the user knows audio
+          // is back on). No chime when muting — that would defeat
+          // the whole point.
+          if (!next) Sfx.play("coin.drop");
+        }}
         aria-pressed={muted}
         aria-label={muted ? "Unmute" : "Mute"}
         title={muted ? "Sound off (click to unmute)" : "Sound on (click to mute)"}

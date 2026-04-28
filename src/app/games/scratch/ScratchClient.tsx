@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ScratchOutcome, ScratchSymbol } from "@/lib/games/scratch/engine";
 import {
   SCRATCH_DESIGNS,
@@ -25,6 +26,7 @@ const STARS_PER_BONUS = 5;
 const SHERIFF_KEY = "lg.scratch.sheriffStars";
 
 export function ScratchClient() {
+  const router = useRouter();
   const [design, setDesign] = useState<ScratchDesign>("golden-bounty");
   const [balance, setBalance] = useState<number | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -303,6 +305,9 @@ export function ScratchClient() {
       setTicket(t.ticket);
       setPhase("scratching");
       setBalance(t.balance);
+      // Re-render the server components (notably <HeaderBalance>) so
+      // the header cash pill keeps up with the local balance.
+      router.refresh();
       Sfx.play("coins.handle");
       if (useDaily) {
         setDailyReady(false);
@@ -516,14 +521,14 @@ export function ScratchClient() {
             <div className="panel-title">Prize Legend</div>
             <table style={{ width: "100%", fontFamily: "var(--font-display)", fontSize: 13 }}>
               <tbody>
-                <LegendRow tier="Small win" payout="1–2× cost" odds="15.0%" />
-                <LegendRow tier="Medium win" payout="5–10× cost" odds="8.0%" />
-                <LegendRow tier="Large win" payout="50× cost" odds="1.9%" />
-                <LegendRow tier="Jackpot" payout="1,000× cost" odds="0.1%" />
+                <LegendRow tier="Small win" payout="1× cost" odds="14.0%" />
+                <LegendRow tier="Medium win" payout="3–5× cost" odds="3.0%" />
+                <LegendRow tier="Large win" payout="15× cost" odds="0.95%" />
+                <LegendRow tier="Jackpot" payout="300× cost" odds="0.05%" />
               </tbody>
             </table>
             <p className="text-mute" style={{ fontSize: "var(--fs-tiny)", marginTop: "var(--sp-2)" }}>
-              3-in-a-row on the main grid pays the prize × multiplier square. Bonus row pays per match against the Lucky Symbol.
+              3-in-a-row on the main grid pays the prize × multiplier square. Bonus row pays 0.3× cost per match (0.6× for rare lucky symbols).
             </p>
           </div>
         </div>
@@ -540,7 +545,7 @@ export function ScratchClient() {
         open={quickDrawOpen}
         onOpened={consumeStars}
         onClose={() => setQuickDrawOpen(false)}
-        onCreditedPayout={(_delta, bal) => setBalance(bal)}
+        onCreditedPayout={(_delta, bal) => { setBalance(bal); router.refresh(); }}
       />
     </div>
   );

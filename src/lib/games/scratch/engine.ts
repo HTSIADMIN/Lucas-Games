@@ -54,31 +54,44 @@ export type ScratchOutcome = {
 // Tunables
 // =============================================================
 
-/** Tier probabilities for paid tickets. */
+// Tier probabilities for paid tickets.
+//
+// Calibrated to land near a ~60% return-to-player including the
+// bonus row (real scratchers run 50–65%). The original V1 numbers
+// were >400% RTP — players felt it. Quick math (paid ticket):
+//   small     14.0% × ~1.2× = 0.168
+//   medium     3.0% × ~3.75× = 0.113
+//   large      0.95% × 15× = 0.143
+//   jackpot    0.05% × 300× = 0.150
+//   bonus row  ~0.06 (avg matches × per-match payout)
+//   ─────────────────────────────────────────────────
+//   total ≈ 0.63
 const TIER_WEIGHTS: { tier: Tier; weight: number }[] = [
-  { tier: "lose",    weight: 0.750 },
-  { tier: "small",   weight: 0.150 },
-  { tier: "medium",  weight: 0.080 },
-  { tier: "large",   weight: 0.019 },
-  { tier: "jackpot", weight: 0.001 },
+  { tier: "lose",    weight: 0.8200 },
+  { tier: "small",   weight: 0.1400 },
+  { tier: "medium",  weight: 0.0300 },
+  { tier: "large",   weight: 0.0095 },
+  { tier: "jackpot", weight: 0.0005 },
 ];
 
-/** Daily free ticket: same shape but better odds, no jackpot. */
+// Daily free ticket: it's free, so tilt the odds friendly. No
+// jackpot; no large-tier either — keeps the daily as a feel-good
+// drip, not a slot machine.
 const TIER_WEIGHTS_DAILY: { tier: Tier; weight: number }[] = [
-  { tier: "lose",    weight: 0.45 },
-  { tier: "small",   weight: 0.45 },
-  { tier: "medium",  weight: 0.09 },
-  { tier: "large",   weight: 0.01 },
+  { tier: "lose",    weight: 0.55 },
+  { tier: "small",   weight: 0.40 },
+  { tier: "medium",  weight: 0.05 },
+  { tier: "large",   weight: 0.00 },
   { tier: "jackpot", weight: 0.00 },
 ];
 
 /** Per-tier base payout multiple of cost (before the multiplier square). */
 const TIER_BASE_MULT: Record<Tier, [number, number]> = {
   lose:    [0, 0],
-  small:   [1, 2],
-  medium:  [5, 10],
-  large:   [50, 50],
-  jackpot: [1000, 1000],
+  small:   [1, 1],     // mostly 1× × multiplier
+  medium:  [3, 5],
+  large:   [15, 15],   // locked, multiplier ignored
+  jackpot: [300, 300], // locked, multiplier ignored
 };
 
 const SYMBOL_WEIGHTS: { symbol: ScratchSymbol; weight: number }[] = [
@@ -101,7 +114,9 @@ const TIER_WINNING_POOL: Record<Tier, ScratchSymbol[]> = {
   jackpot: ["sheriff"],
 };
 
-const MULTIPLIER_VALUES: (1 | 2 | 5 | 10)[] = [1, 1, 1, 2, 2, 5, 10];
+// Heavily weighted toward 1× — the multiplier square is rare-feel
+// rather than a routine 5×/10× payout boost.
+const MULTIPLIER_VALUES: (1 | 2 | 5 | 10)[] = [1, 1, 1, 1, 1, 1, 2, 2, 5];
 
 /** Daily free ticket cost — used as the "1×" base for the payout math. */
 const DAILY_BASE_COST = 5_000;
@@ -152,23 +167,26 @@ export function generateTicket(input: {
 
   // Bonus row + lucky symbol. Lucky symbol is biased toward common
   // symbols so the bonus row hitting feels possible. Independently
-  // distributed from the main grid.
+  // distributed from the main grid. Rates kept low — the bonus row
+  // is a sweetener, not a second jackpot path.
   const luckySymbol = pickLuckySymbol(grid);
   const bonusRow: ScratchSymbol[] = [];
   const bonusMatches: number[] = [];
-  // ~ 35% chance to seed at least one bonus match. Real scratchers
-  // routinely include a match in the bonus row to pull the player in.
-  const seedMatch = Math.random() < 0.35;
+  // ~20% chance to seed one bonus match (was 35%). Each remaining
+  // cell has a small independent chance to match (was 10%, now 6%).
+  const seedMatch = Math.random() < 0.20;
   for (let i = 0; i < 3; i++) {
-    const matchPick = (seedMatch && i === 0) || Math.random() < 0.10;
+    const matchPick = (seedMatch && i === 0) || Math.random() < 0.06;
     const sym = matchPick ? luckySymbol : pickSymbolExcept(luckySymbol);
     bonusRow.push(sym);
     if (sym === luckySymbol) bonusMatches.push(i);
   }
-  // Bonus payout: 1× cost per match, doubled if the lucky symbol is
-  // a "rare" tier symbol. Daily tickets get a flat 0.5× cost per match.
+  // Bonus payout: rebalanced to hold near a ~60% RTP overall. Common
+  // lucky symbols pay 0.3× cost per match; rare-tier ones pay 0.6×.
+  // Daily tickets pay 0.25× regardless (free, friendly).
   const rare = luckySymbol === "gold" || luckySymbol === "sheriff" || luckySymbol === "cactus";
-  const perMatch = daily ? Math.floor(baseCost * 0.5) : (rare ? baseCost * 2 : baseCost);
+  const perMatchFraction = daily ? 0.25 : (rare ? 0.6 : 0.3);
+  const perMatch = Math.floor(baseCost * perMatchFraction);
   const bonusPayout = bonusMatches.length * perMatch;
 
   // Count sheriff stars across the entire visible ticket. This drives

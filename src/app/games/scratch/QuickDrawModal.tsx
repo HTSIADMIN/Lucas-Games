@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ModalShell } from "@/components/ModalShell";
+import * as Sfx from "@/lib/sfx";
 
 // Sheriff's Bonus quick-draw round.
 //
@@ -56,10 +57,12 @@ export function QuickDrawModal({
 
   function arm() {
     setPhase("armed");
+    Sfx.play("card.place");
     const delay = 1200 + Math.random() * 1800;
     armTimerRef.current = window.setTimeout(() => {
       drawAtRef.current = performance.now();
       setPhase("draw");
+      Sfx.play("ui.notify"); // buzzer
     }, delay);
   }
 
@@ -69,9 +72,11 @@ export function QuickDrawModal({
       // False start — abort the timer.
       if (armTimerRef.current) window.clearTimeout(armTimerRef.current);
       setPhase("fault");
+      Sfx.play("ui.notify");
       return;
     }
     if (phase !== "draw") return;
+    Sfx.play("coin.drop");
     const t = performance.now() - (drawAtRef.current ?? performance.now());
     setReaction(t);
     setPhase("settling");
@@ -91,6 +96,11 @@ export function QuickDrawModal({
       setMultiplier(d.multiplier);
       setPhase("done");
       onCreditedPayout(d.payout, d.balance);
+      // Tier-scaled stinger by reaction speed.
+      if (d.payout >= 50_000) Sfx.play("win.big");
+      else if (d.payout >= 20_000) Sfx.play("win.levelup");
+      else if (d.payout > 0) Sfx.play("win.notify");
+      else Sfx.play("ui.notify");
     } catch {
       setError("network");
       setPhase("done");

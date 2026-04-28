@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import * as Sfx from "@/lib/sfx";
 import {
   BOARD_SIZE,
   LEVEL_MULTIPLIER,
@@ -105,6 +106,7 @@ export function MonopolyClient() {
     if (!state || !state.ready || busy) return;
     setBusy(true); setError(null); setRollResult(null);
     setRolling(true);
+    Sfx.play("card.deal");
 
     const r = await fetch("/api/earn/monopoly/roll", { method: "POST" });
     const d = await r.json();
@@ -138,6 +140,13 @@ export function MonopolyClient() {
       setRollResult(d);
       setBalance(d.balance);
       setBusy(false);
+      // Tier the landing chime by what the player got.
+      const payout = d.payout ?? 0;
+      if (payout >= 50_000) Sfx.play("win.big");
+      else if (payout >= 5_000) Sfx.play("win.levelup");
+      else if (payout > 0) Sfx.play("coins.clink");
+      else if (d.cardsAwarded && d.cardsAwarded > 0) Sfx.play("card.place");
+      else Sfx.play("ui.notify");
       refresh();
       router.refresh();
     }, 1100);
@@ -153,8 +162,12 @@ export function MonopolyClient() {
     setPackCards(d.cards as Property[]);
     setPackOpening(true);
     setRevealedCount(0);
+    Sfx.play("card.shuffle");
     for (let i = 0; i < (d.cards as Property[]).length; i++) {
-      setTimeout(() => setRevealedCount(i + 1), 350 + i * 350);
+      setTimeout(() => {
+        setRevealedCount(i + 1);
+        Sfx.play("card.deal");
+      }, 350 + i * 350);
     }
     setTimeout(() => refresh(), 350 + (d.cards as Property[]).length * 350 + 200);
     router.refresh();
@@ -171,6 +184,7 @@ export function MonopolyClient() {
     setBusy(false);
     if (!r.ok) { setError(labelFor(d.error ?? "error")); return; }
     setBalance(d.balance);
+    Sfx.play("win.levelup");
     refresh();
     router.refresh();
   }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { GameIcon } from "@/components/GameIcon";
+import * as Sfx from "@/lib/sfx";
 
 type Status = "idle" | "active" | "busted" | "cashed";
 
@@ -46,6 +47,7 @@ export function MinesClient() {
   async function start() {
     setBusy(true);
     setError(null);
+    Sfx.play("coins.handle");
     const res = await fetch("/api/games/mines/start", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -96,6 +98,8 @@ export function MinesClient() {
       nextMultiplier: data.nextMultiplier,
     }));
     setBalance(data.balance);
+    if (data.status === "lost") Sfx.play("ui.notify");
+    else Sfx.play("coins.clink");
     router.refresh();
   }
 
@@ -119,6 +123,10 @@ export function MinesClient() {
       multiplier: data.multiplier,
     }));
     setBalance(data.balance);
+    // Tier-scale the cashout stinger by multiplier reached.
+    if ((data.multiplier ?? 0) >= 10) Sfx.play("win.big");
+    else if ((data.multiplier ?? 0) >= 3) Sfx.play("win.levelup");
+    else Sfx.play("win.notify");
     router.refresh();
   }
 

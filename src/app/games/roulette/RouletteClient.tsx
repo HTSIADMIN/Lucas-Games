@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { colorOf, type RouletteBet, type RouletteBetType } from "@/lib/games/roulette/engine";
+import * as Sfx from "@/lib/sfx";
 
 type Result = {
   winning: number;
@@ -139,6 +140,7 @@ export function RouletteClient() {
     setReelTiles(strip);
     setReelTargetIdx(targetIdx);
     setSpinning(true);
+    Sfx.play("roulette.ball");
 
     // Compute the final translateX to land the target tile under the pointer.
     // Pointer sits at the horizontal center of the container. We want the
@@ -164,6 +166,12 @@ export function RouletteClient() {
       setBalance(data.balance);
       setBets([]);
       setHistory((h) => [{ n: data.winning, color: data.color }, ...h].slice(0, HISTORY_LEN));
+      // Net = payout - total stake. Tier the result chime by net.
+      const net = (data.payout ?? 0) - stake;
+      if (net >= stake * 30)      Sfx.play("win.big");
+      else if (net >= stake * 5)  Sfx.play("win.levelup");
+      else if (net > 0)           Sfx.play("coins.clink");
+      else                        Sfx.play("ui.notify");
       router.refresh();
     }, SPIN_MS + 200);
   }

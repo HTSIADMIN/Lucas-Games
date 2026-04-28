@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
+import * as Sfx from "@/lib/sfx";
 
 type Side = "heads" | "tails";
 
@@ -118,7 +119,13 @@ export function CoinflipDuelClient() {
     });
     setOverlayPhase("flipping");
     setOverlayKey((k) => k + 1);
-    setTimeout(() => setOverlayPhase("revealed"), FLIP_MS);
+    Sfx.play("coin.drop");
+    setTimeout(() => {
+      setOverlayPhase("revealed");
+      if (iWonLocal === true) Sfx.play("coins.shower");
+      else if (iWonLocal === false) Sfx.play("ui.notify");
+      else Sfx.play("coins.clink");
+    }, FLIP_MS);
     setTimeout(() => setOverlay(null), FLIP_MS + REVEAL_HOLD_MS);
   }
 

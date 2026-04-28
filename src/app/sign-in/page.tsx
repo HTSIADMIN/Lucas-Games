@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
+import * as Sfx from "@/lib/sfx";
 
 type Player = {
   id: string;
@@ -39,6 +40,7 @@ export default function SignInPage() {
 
   async function press(digit: string) {
     if (pin.length >= 4 || submitting) return;
+    Sfx.play("card.place");
     const next = pin + digit;
     setPin(next);
     if (next.length === 4 && selected) {
@@ -49,9 +51,11 @@ export default function SignInPage() {
         body: JSON.stringify({ userId: selected.id, pin: next }),
       });
       if (res.ok) {
+        Sfx.play("win.levelup");
         router.push("/lobby");
       } else {
         const data = await res.json().catch(() => ({}));
+        Sfx.play("ui.notify");
         setShaking(true);
         setTimeout(() => {
           setShaking(false);
@@ -67,8 +71,8 @@ export default function SignInPage() {
     }
   }
 
-  function backspace() { setPin((p) => p.slice(0, -1)); }
-  function clearPin() { setPin(""); }
+  function backspace() { Sfx.play("card.place"); setPin((p) => p.slice(0, -1)); }
+  function clearPin() { Sfx.play("card.place"); setPin(""); }
 
   function reset() {
     setSelected(null);
