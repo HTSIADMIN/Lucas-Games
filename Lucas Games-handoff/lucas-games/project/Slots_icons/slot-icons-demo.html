@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lucas Games — Slot Icons</title>
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="components.css" />
+<style>
+  body { padding: var(--sp-7) var(--sp-5); }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  /* ============================================================
+     ICON GALLERY — 5 large icons with name + tier
+     ============================================================ */
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--sp-3);
+    margin-top: var(--sp-4);
+  }
+  @media (max-width: 720px) { .gallery { grid-template-columns: repeat(2, 1fr); } }
+
+  .icon-card {
+    background: linear-gradient(180deg, #fef6e4, #e8c089);
+    border: 4px solid var(--ink-900);
+    box-shadow: var(--bevel-light), var(--sh-card-rest);
+    padding: var(--sp-3);
+    text-align: center;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .icon-card img {
+    width: 80%;
+    height: 80%;
+    image-rendering: pixelated;
+  }
+  .icon-card-meta {
+    margin-top: var(--sp-2);
+    text-align: center;
+  }
+  .icon-name {
+    font-family: var(--font-display);
+    font-size: var(--fs-h4);
+    letter-spacing: var(--ls-loose);
+    text-transform: uppercase;
+    color: var(--ink-900);
+    line-height: 1;
+  }
+  .icon-tier {
+    font-family: var(--font-display);
+    font-size: var(--fs-tiny);
+    letter-spacing: var(--ls-loose);
+    text-transform: uppercase;
+    color: var(--saddle-400);
+    margin-top: 4px;
+  }
+
+  /* ============================================================
+     REEL DEMO — Boomtown-style 5×3 with icons placed
+     ============================================================ */
+  .reel-demo {
+    margin-top: var(--sp-7);
+  }
+  .reel-board {
+    background: linear-gradient(180deg, #2a1810, #1a0f08);
+    border: 4px solid var(--ink-900);
+    padding: var(--sp-3);
+    max-width: 460px;
+    margin: var(--sp-4) auto 0;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6), var(--sh-card-rest);
+  }
+  .reel-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .reel-cell {
+    aspect-ratio: 1;
+    background: linear-gradient(180deg, #fef6e4, #e8c089);
+    border: 3px solid var(--ink-900);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .reel-cell img {
+    width: 80%;
+    height: 80%;
+    image-rendering: pixelated;
+  }
+  .reel-cell.is-win {
+    border-color: var(--gold-300);
+    box-shadow: 0 0 0 2px var(--gold-300), var(--glow-gold);
+    animation: winBounce 0.6s var(--ease-snap) infinite alternate;
+  }
+  @keyframes winBounce {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-2px); }
+  }
+
+  /* ============================================================
+     PAYTABLE
+     ============================================================ */
+  .paytable {
+    margin-top: var(--sp-7);
+    background: var(--parchment-100);
+    border: 4px solid var(--ink-900);
+    box-shadow: var(--sh-card-rest);
+    overflow: hidden;
+  }
+  .paytable-head {
+    background: var(--saddle-500);
+    color: var(--parchment-50);
+    font-family: var(--font-display);
+    font-size: var(--fs-h3);
+    letter-spacing: var(--ls-loose);
+    text-transform: uppercase;
+    padding: var(--sp-3) var(--sp-4);
+    text-align: center;
+    border-bottom: 4px solid var(--ink-900);
+    text-shadow: 2px 2px 0 var(--saddle-600);
+  }
+  .paytable-row {
+    display: grid;
+    grid-template-columns: 80px 1fr repeat(3, 90px);
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border-bottom: 2px dashed var(--saddle-300);
+  }
+  .paytable-row:last-child { border-bottom: none; }
+  .paytable-row .pt-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(180deg, #fef6e4, #e8c089);
+    border: 3px solid var(--ink-900);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--bevel-light);
+  }
+  .paytable-row .pt-icon img { width: 80%; height: 80%; image-rendering: pixelated; }
+  .pt-name {
+    font-family: var(--font-display);
+    font-size: var(--fs-h4);
+    letter-spacing: var(--ls-loose);
+    text-transform: uppercase;
+    color: var(--ink-900);
+  }
+  .pt-mult {
+    font-family: var(--font-display);
+    font-size: var(--fs-h4);
+    color: var(--gold-500);
+    text-shadow: 2px 2px 0 var(--gold-100);
+    text-align: center;
+    line-height: 1;
+  }
+  .pt-mult-label {
+    display: block;
+    font-size: var(--fs-tiny);
+    color: var(--saddle-400);
+    text-shadow: none;
+    margin-bottom: 2px;
+  }
+  .paytable-header {
+    display: grid;
+    grid-template-columns: 80px 1fr repeat(3, 90px);
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--parchment-200);
+    border-bottom: 3px solid var(--ink-900);
+    font-family: var(--font-display);
+    font-size: var(--fs-tiny);
+    letter-spacing: var(--ls-loose);
+    text-transform: uppercase;
+    color: var(--saddle-500);
+  }
+  .paytable-header span { text-align: center; }
+  .paytable-header span:nth-child(2) { text-align: left; }
+
+  /* ============================================================
+     RECIPE
+     ============================================================ */
+  .recipe {
+    max-width: 720px;
+    margin: var(--sp-7) auto 0;
+    padding: var(--sp-5);
+    background: var(--parchment-100);
+    border: 3px solid var(--ink-900);
+    box-shadow: var(--sh-card-rest);
+  }
+  .recipe pre {
+    background: var(--saddle-600);
+    color: var(--parchment-50);
+    padding: var(--sp-3);
+    border: 3px solid var(--ink-900);
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    margin: var(--sp-3) 0 0;
+    white-space: pre-wrap;
+  }
+  .recipe pre .c { color: var(--saddle-200); }
+  .recipe pre .v { color: var(--gold-300); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1 style="margin-bottom: var(--sp-2);">Boomtown Slot Icons</h1>
+  <p class="text-mute">Five symbols, tiered low → top. Pixel art, 32×32 viewBox, transparent background — drop them on any reel cell.</p>
+
+  <div class="divider" style="margin-top: var(--sp-5);">Gallery</div>
+
+  <div class="gallery">
+    <div>
+      <div class="icon-card"><img src="icon-boot.svg" alt="Boot"/></div>
+      <div class="icon-card-meta">
+        <div class="icon-name">Boot</div>
+        <div class="icon-tier">Low Tier</div>
+      </div>
+    </div>
+    <div>
+      <div class="icon-card"><img src="icon-gun.svg" alt="Six-shooter"/></div>
+      <div class="icon-card-meta">
+        <div class="icon-name">Gun</div>
+        <div class="icon-tier">Low-Mid</div>
+      </div>
+    </div>
+    <div>
+      <div class="icon-card"><img src="icon-star.svg" alt="Sheriff star"/></div>
+      <div class="icon-card-meta">
+        <div class="icon-name">Star</div>
+        <div class="icon-tier">Mid</div>
+      </div>
+    </div>
+    <div>
+      <div class="icon-card"><img src="icon-gold.svg" alt="Gold coins"/></div>
+      <div class="icon-card-meta">
+        <div class="icon-name">Gold</div>
+        <div class="icon-tier">High</div>
+      </div>
+    </div>
+    <div>
+      <div class="icon-card"><img src="icon-sheriff.svg" alt="Sheriff"/></div>
+      <div class="icon-card-meta">
+        <div class="icon-name">Sheriff</div>
+        <div class="icon-tier">Top · Wild?</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       REEL DEMO
+       ============================================================ -->
+  <div class="reel-demo">
+    <div class="divider">On the reels — 5×3 grid with a 5-of-a-kind STAR win</div>
+    <div class="reel-board">
+      <div class="reel-grid">
+        <!-- Row 1 -->
+        <div class="reel-cell"><img src="icon-boot.svg"/></div>
+        <div class="reel-cell"><img src="icon-gun.svg"/></div>
+        <div class="reel-cell"><img src="icon-gold.svg"/></div>
+        <div class="reel-cell"><img src="icon-boot.svg"/></div>
+        <div class="reel-cell"><img src="icon-gun.svg"/></div>
+        <!-- Row 2 — winning STAR line -->
+        <div class="reel-cell is-win"><img src="icon-star.svg"/></div>
+        <div class="reel-cell is-win"><img src="icon-star.svg"/></div>
+        <div class="reel-cell is-win"><img src="icon-star.svg"/></div>
+        <div class="reel-cell is-win"><img src="icon-star.svg"/></div>
+        <div class="reel-cell is-win"><img src="icon-star.svg"/></div>
+        <!-- Row 3 -->
+        <div class="reel-cell"><img src="icon-gun.svg"/></div>
+        <div class="reel-cell"><img src="icon-sheriff.svg"/></div>
+        <div class="reel-cell"><img src="icon-boot.svg"/></div>
+        <div class="reel-cell"><img src="icon-gold.svg"/></div>
+        <div class="reel-cell"><img src="icon-boot.svg"/></div>
+      </div>
+    </div>
+    <p class="text-mute" style="text-align:center; margin-top: var(--sp-3); font-size: var(--fs-small);">
+      Winning row uses <code class="mono">.is-win</code> — gold ring + soft bounce. Reuse for paylines + multiline games.
+    </p>
+  </div>
+
+  <!-- ============================================================
+       PAYTABLE
+       ============================================================ -->
+  <div class="paytable">
+    <div class="paytable-head">★ Paytable ★</div>
+    <div class="paytable-header">
+      <span></span>
+      <span>Symbol</span>
+      <span>3 of a Kind</span>
+      <span>4 of a Kind</span>
+      <span>5 of a Kind</span>
+    </div>
+
+    <div class="paytable-row">
+      <div class="pt-icon"><img src="icon-boot.svg"/></div>
+      <div class="pt-name">Boot</div>
+      <div class="pt-mult"><span class="pt-mult-label">3oak</span>1×</div>
+      <div class="pt-mult"><span class="pt-mult-label">4oak</span>3×</div>
+      <div class="pt-mult"><span class="pt-mult-label">5oak</span>8×</div>
+    </div>
+
+    <div class="paytable-row">
+      <div class="pt-icon"><img src="icon-gun.svg"/></div>
+      <div class="pt-name">Gun</div>
+      <div class="pt-mult"><span class="pt-mult-label">3oak</span>1×</div>
+      <div class="pt-mult"><span class="pt-mult-label">4oak</span>5×</div>
+      <div class="pt-mult"><span class="pt-mult-label">5oak</span>14×</div>
+    </div>
+
+    <div class="paytable-row">
+      <div class="pt-icon"><img src="icon-star.svg"/></div>
+      <div class="pt-name">Star</div>
+      <div class="pt-mult"><span class="pt-mult-label">3oak</span>2×</div>
+      <div class="pt-mult"><span class="pt-mult-label">4oak</span>8×</div>
+      <div class="pt-mult"><span class="pt-mult-label">5oak</span>25×</div>
+    </div>
+
+    <div class="paytable-row">
+      <div class="pt-icon"><img src="icon-gold.svg"/></div>
+      <div class="pt-name">Gold</div>
+      <div class="pt-mult"><span class="pt-mult-label">3oak</span>4×</div>
+      <div class="pt-mult"><span class="pt-mult-label">4oak</span>15×</div>
+      <div class="pt-mult"><span class="pt-mult-label">5oak</span>60×</div>
+    </div>
+
+    <div class="paytable-row" style="background: var(--gold-100);">
+      <div class="pt-icon" style="background: linear-gradient(180deg, #ffe9a8, #f5c842);"><img src="icon-sheriff.svg"/></div>
+      <div class="pt-name">Sheriff</div>
+      <div class="pt-mult"><span class="pt-mult-label">3oak</span>8×</div>
+      <div class="pt-mult"><span class="pt-mult-label">4oak</span>30×</div>
+      <div class="pt-mult"><span class="pt-mult-label">5oak</span>150×</div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       RECIPE
+       ============================================================ -->
+  <div class="recipe">
+    <h3 style="margin: 0 0 var(--sp-2);">Drop-in usage</h3>
+    <p style="margin: 0 0 var(--sp-2); color: var(--saddle-400); font-size: var(--fs-small);">
+      Each icon is a standalone SVG with a transparent background and a <code class="mono">32×32</code> viewBox.
+      Drop them in <code class="mono">/public/slots/</code> (or wherever) and reference by symbol key.
+      <code class="mono">image-rendering: pixelated</code> on the wrapper keeps them crisp at any reel cell size.
+    </p>
+<pre>
+<span class="c">// symbol → asset map</span>
+const SYMBOL = {
+  boot:    <span class="v">"/slots/icon-boot.svg"</span>,
+  gun:     <span class="v">"/slots/icon-gun.svg"</span>,
+  star:    <span class="v">"/slots/icon-star.svg"</span>,
+  gold:    <span class="v">"/slots/icon-gold.svg"</span>,
+  sheriff: <span class="v">"/slots/icon-sheriff.svg"</span>,
+};
+
+<span class="c">// payouts (3oak, 4oak, 5oak) — multipliers of bet per line</span>
+const PAYOUT = {
+  boot:    [1,  3,   8],
+  gun:     [1,  5,  14],
+  star:    [2,  8,  25],
+  gold:    [4, 15,  60],
+  sheriff: [8, 30, 150],
+};
+
+<span class="c">// in JSX</span>
+&lt;div className=<span class="v">"reel-cell"</span>&gt;
+  &lt;img src={SYMBOL[symbol]} alt={symbol} /&gt;
+&lt;/div&gt;
+</pre>
+    <p style="margin: var(--sp-3) 0 0; color: var(--saddle-400); font-size: var(--fs-small);">
+      Add <code class="mono">.is-win</code> to a cell for the gold-ring bounce (handy for line wins or "Round 'Em Up" highlight).
+      If you want a SCATTER or WILD distinct from the symbol set, the Sheriff is the strongest candidate — bump it visually with the gold tile background like the paytable's last row.
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

@@ -17,6 +17,7 @@ import {
   cellToWire,
   type ReelCell,
 } from "@/lib/games/slots/engine";
+import { addBetToPool, consumeJackpot, getJackpotPool, rollJackpotTrigger } from "@/lib/games/slots/jackpot";
 
 export const runtime = "nodejs";
 
@@ -70,6 +71,27 @@ export async function POST(req: Request) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "error";
     return NextResponse.json({ error: msg }, { status: 400 });
+  }
+
+  // The bet just landed in the wallet ledger. Accrue it into the
+  // progressive jackpot pool, then roll the 1-in-5000 jackpot
+  // trigger. Pool + trigger are independent of the base reel result,
+  // so a player who hits the trigger still keeps any normal line
+  // wins from this spin.
+  addBetToPool(bet);
+  const jackpotHit = rollJackpotTrigger();
+  let jackpotPayout = 0;
+  if (jackpotHit) {
+    jackpotPayout = consumeJackpot();
+    if (jackpotPayout > 0) {
+      await credit({
+        userId: s.user.id,
+        amount: jackpotPayout,
+        reason: "slots_jackpot",
+        refKind: "slots",
+        refId: `${sessionId}:jackpot`,
+      });
+    }
   }
 
   // Roll. We already read the meter above for the bet-cap check; reuse it.
@@ -139,6 +161,13 @@ export async function POST(req: Request) {
     bonusTier: result.bonusStartTier,
     meter: { value: result.meterAfter, gain: result.meterGain, forced: result.meterForcedThisSpin },
     balance: await getBalance(s.user.id),
+    /** Progressive jackpot pool snapshot AFTER this spin's bet
+     *  accrual + any payout this spin. */
+    jackpot: {
+      pool: getJackpotPool(),
+      hit: jackpotHit,
+      payout: jackpotPayout,
+    },
     /** True if the route clamped the bet down because the player's
      *  requested stake exceeded their recent rolling average while
      *  the meter was filling. effectiveBet is what was actually

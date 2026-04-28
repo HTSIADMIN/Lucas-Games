@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lucas Games — SLOT ICON: STAR  (mid)  3oak 2× · 4oak 8× · 5oak 25×
+  Classic 5-point sheriff star. Polygon-based for clean geometry,
+  crispEdges keeps the diagonals pixel-stepped.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <defs>
+    <clipPath id="star-clip">
+      <polygon points="16,3 19,11 28,12 22,18 24,27 16,22 8,27 10,18 4,12 13,11"/>
+    </clipPath>
+  </defs>
+
+  <!-- ground shadow -->
+  <ellipse cx="16" cy="29" rx="10" ry="1.2" fill="#1a0f08" opacity="0.25"/>
+
+  <!-- ===== OUTLINE — slightly larger star ===== -->
+  <polygon
+    points="16,1 20,10 30,11 23,18 26,29 16,23 6,29 9,18 2,11 12,10"
+    fill="#1a0f08"/>
+
+  <!-- ===== MAIN FILL ===== -->
+  <polygon
+    points="16,3 19,11 28,12 22,18 24,27 16,22 8,27 10,18 4,12 13,11"
+    fill="#f5c842"/>
+
+  <!-- ===== HIGHLIGHT + SHADOW via clip ===== -->
+  <g clip-path="url(#star-clip)">
+    <!-- top half lighter gold -->
+    <rect x="0" y="0"  width="32" height="14" fill="#ffd84d" opacity="0.55"/>
+    <!-- bottom half deeper gold -->
+    <rect x="0" y="18" width="32" height="14" fill="#c8941d" opacity="0.45"/>
+    <!-- diagonal sheen, top-left -->
+    <polygon points="4,12 13,11 9,17 4,15" fill="#ffe9a8" opacity="0.55"/>
+  </g>
+
+  <!-- ===== CENTER PIVOT GLINT ===== -->
+  <rect x="15" y="13" width="2" height="1" fill="#fef6e4"/>
+  <rect x="14" y="14" width="1" height="1" fill="#fef6e4" opacity="0.7"/>
+</svg>

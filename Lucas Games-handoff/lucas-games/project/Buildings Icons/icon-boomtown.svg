@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lucas Games — BUILDING T5: BOOMTOWN  (25×)
+  Full skyline. Bank, church, water tower, bunkhouse, train, smoke.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- ground shadow -->
+  <ellipse cx="16" cy="29" rx="15" ry="1.6" fill="#1a0f08" opacity="0.30"/>
+
+  <!-- ===== SMOKE TRAILS (top, atmospheric) ===== -->
+  <g fill="#fef6e4" opacity="0.7">
+    <rect x="6"  y="2" width="2" height="2"/>
+    <rect x="5"  y="4" width="3" height="2"/>
+    <rect x="4"  y="6" width="3" height="1"/>
+  </g>
+  <g fill="#fef6e4" opacity="0.5">
+    <rect x="20" y="2" width="2" height="2"/>
+    <rect x="19" y="4" width="3" height="1"/>
+  </g>
+
+  <!-- ===== CHURCH (left, tallest with cross) ===== -->
+  <rect x="6"  y="3" width="1" height="3" fill="#1a0f08"/>
+  <rect x="5"  y="4" width="3" height="1" fill="#1a0f08"/>
+  <!-- steeple -->
+  <polygon points="6.5,5 4,9 9,9" fill="#8b3a3a"/>
+  <polygon points="6.5,5 6.5,9 9,9" fill="#4a1a1a"/>
+  <!-- bell housing -->
+  <rect x="4"  y="9"  width="6" height="1" fill="#1a0f08"/>
+  <rect x="4"  y="10" width="1" height="3" fill="#1a0f08"/>
+  <rect x="9"  y="10" width="1" height="3" fill="#1a0f08"/>
+  <rect x="5"  y="10" width="4" height="3" fill="#fbe9c4"/>
+  <rect x="6"  y="11" width="2" height="2" fill="#1a0f08"/>
+  <rect x="6"  y="11" width="2" height="1" fill="#c8941d"/>
+  <!-- nave -->
+  <rect x="3"  y="13" width="8" height="1"  fill="#1a0f08"/>
+  <rect x="3"  y="13" width="1" height="14" fill="#1a0f08"/>
+  <rect x="10" y="13" width="1" height="14" fill="#1a0f08"/>
+  <rect x="3"  y="27" width="8" height="1"  fill="#1a0f08"/>
+  <rect x="4"  y="14" width="6" height="13" fill="#fbe9c4"/>
+  <!-- arched window -->
+  <rect x="6"  y="16" width="2" height="3" fill="#5fa8d3"/>
+  <rect x="6"  y="16" width="2" height="1" fill="#143348"/>
+  <!-- door -->
+  <rect x="6"  y="22" width="2" height="5" fill="#6b3f24"/>
+  <rect x="6"  y="22" width="2" height="1" fill="#1a0f08"/>
+  <rect x="6"  y="22" width="1" height="5" fill="#1a0f08"/>
+
+  <!-- ===== BANK / TWO-STORY (center, ornate) ===== -->
+  <!-- top cornice -->
+  <rect x="11" y="9"  width="11" height="1" fill="#1a0f08"/>
+  <rect x="11" y="10" width="11" height="1" fill="#c8941d"/>
+  <!-- second floor -->
+  <rect x="12" y="11" width="9" height="1" fill="#1a0f08"/>
+  <rect x="12" y="11" width="1" height="6" fill="#1a0f08"/>
+  <rect x="20" y="11" width="2" height="6" fill="#1a0f08"/>
+  <rect x="13" y="12" width="7" height="5" fill="#d4a574"/>
+  <!-- 2nd floor windows -->
+  <rect x="14" y="13" width="2" height="2" fill="#1a0f08"/>
+  <rect x="14" y="13" width="2" height="1" fill="#ffd84d"/>
+  <rect x="17" y="13" width="2" height="2" fill="#1a0f08"/>
+  <rect x="17" y="13" width="2" height="1" fill="#ffd84d"/>
+  <!-- balcony rail -->
+  <rect x="11" y="17" width="11" height="1" fill="#1a0f08"/>
+  <!-- first floor -->
+  <rect x="11" y="18" width="11" height="1" fill="#1a0f08"/>
+  <rect x="11" y="18" width="1"  height="9" fill="#1a0f08"/>
+  <rect x="21" y="18" width="1"  height="9" fill="#1a0f08"/>
+  <rect x="11" y="27" width="11" height="1" fill="#1a0f08"/>
+  <rect x="12" y="19" width="9"  height="8" fill="#a87545"/>
+  <!-- BANK sign -->
+  <rect x="13" y="19" width="7" height="2" fill="#fbe9c4"/>
+  <g fill="#1a0f08">
+    <!-- B -->
+    <rect x="14" y="20" width="1" height="1"/>
+    <!-- A -->
+    <rect x="16" y="20" width="1" height="1"/>
+    <!-- N -->
+    <rect x="18" y="20" width="1" height="1"/>
+    <!-- K -->
+    <rect x="20" y="20" width="1" height="1"/>  <!-- spills 1px -->
+  </g>
+  <!-- columns flanking door -->
+  <rect x="13" y="22" width="1" height="5" fill="#fbe9c4"/>
+  <rect x="19" y="22" width="1" height="5" fill="#fbe9c4"/>
+  <!-- vault door -->
+  <rect x="14" y="22" width="5" height="5" fill="#1a0f08"/>
+  <rect x="15" y="23" width="3" height="3" fill="#3d2418"/>
+  <rect x="16" y="24" width="1" height="1" fill="#c8941d"/>
+
+  <!-- ===== WATER TOWER (right) ===== -->
+  <!-- legs -->
+  <rect x="24" y="20" width="1" height="7" fill="#1a0f08"/>
+  <rect x="29" y="20" width="1" height="7" fill="#1a0f08"/>
+  <rect x="26" y="20" width="1" height="7" fill="#1a0f08" opacity="0.5"/>
+  <!-- cross-brace -->
+  <rect x="25" y="23" width="4" height="1" fill="#1a0f08" opacity="0.6"/>
+  <!-- tank -->
+  <rect x="23" y="11" width="8" height="1"  fill="#1a0f08"/>
+  <rect x="22" y="12" width="10" height="1" fill="#1a0f08"/>
+  <rect x="22" y="13" width="1"  height="6" fill="#1a0f08"/>
+  <rect x="31" y="13" width="1"  height="6" fill="#1a0f08"/>
+  <rect x="22" y="19" width="10" height="1" fill="#1a0f08"/>
+  <rect x="23" y="13" width="8"  height="6" fill="#6b3f24"/>
+  <!-- tank planks -->
+  <g fill="#3d2418">
+    <rect x="25" y="13" width="1" height="6"/>
+    <rect x="28" y="13" width="1" height="6"/>
+  </g>
+  <!-- tank highlight -->
+  <rect x="23" y="13" width="1" height="6" fill="#a87545"/>
+  <!-- conical roof -->
+  <polygon points="23,11 31,11 27,7" fill="#3d2418"/>
+  <polygon points="27,7 31,11 27,11" fill="#1a0f08"/>
+  <!-- spout -->
+  <rect x="22" y="17" width="2" height="1" fill="#1a0f08"/>
+
+  <!-- ===== BUNKHOUSE / SMALL BUILDING (far right back) ===== -->
+  <polygon points="23,22 26,18 23,18" fill="#8b3a3a"/>
+  <polygon points="23,22 23,18 23,22" fill="none"/>
+  <rect x="23" y="22" width="3" height="1" fill="#1a0f08"/>
+  <rect x="23" y="22" width="3" height="5" fill="#a87545"/>
+  <rect x="24" y="24" width="1" height="1" fill="#ffd84d"/>
+
+  <!-- ===== STREET / TRAIN AT GROUND ===== -->
+  <rect x="0" y="27" width="32" height="3" fill="#6b3f24"/>
+  <!-- track ties -->
+  <g fill="#1a0f08">
+    <rect x="0" y="28" width="32" height="1"/>
+  </g>
+  <g fill="#3d2418">
+    <rect x="2"  y="29" width="2" height="1"/>
+    <rect x="7"  y="29" width="2" height="1"/>
+    <rect x="12" y="29" width="2" height="1"/>
+    <rect x="17" y="29" width="2" height="1"/>
+    <rect x="22" y="29" width="2" height="1"/>
+    <rect x="27" y="29" width="2" height="1"/>
+  </g>
+
+  <!-- ===== TRAIN CABOOSE (bottom edge, partial) ===== -->
+  <!-- caboose body -->
+  <rect x="0" y="24" width="6" height="3" fill="#e05a3c"/>
+  <rect x="0" y="24" width="6" height="1" fill="#8b3a3a"/>
+  <rect x="0" y="26" width="6" height="1" fill="#1a0f08"/>
+  <rect x="0" y="24" width="1" height="3" fill="#1a0f08"/>
+  <rect x="5" y="24" width="1" height="3" fill="#1a0f08"/>
+  <!-- caboose window -->
+  <rect x="2" y="25" width="2" height="1" fill="#ffd84d"/>
+  <!-- caboose roof cupola -->
+  <rect x="1" y="22" width="4" height="2" fill="#8b3a3a"/>
+  <rect x="1" y="22" width="4" height="1" fill="#1a0f08"/>
+  <rect x="2" y="23" width="2" height="1" fill="#ffd84d"/>
+  <!-- wheels -->
+  <rect x="1" y="27" width="1" height="1" fill="#1a0f08"/>
+  <rect x="4" y="27" width="1" height="1" fill="#1a0f08"/>
+</svg>

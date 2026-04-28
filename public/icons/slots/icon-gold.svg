@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lucas Games — SLOT ICON: GOLD  (high)  3oak 4× · 4oak 15× · 5oak 60×
+  Stack of three gold coins with $ stamp.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- ground shadow -->
+  <ellipse cx="16" cy="28" rx="13" ry="1.6" fill="#1a0f08" opacity="0.30"/>
+
+  <!-- ===== BOTTOM COIN ===== -->
+  <!-- outline -->
+  <rect x="3"  y="22" width="26" height="1" fill="#1a0f08"/>
+  <rect x="3"  y="26" width="26" height="1" fill="#1a0f08"/>
+  <rect x="2"  y="23" width="1"  height="3" fill="#1a0f08"/>
+  <rect x="29" y="23" width="1"  height="3" fill="#1a0f08"/>
+  <!-- body -->
+  <rect x="3"  y="23" width="26" height="3" fill="#c8941d"/>
+  <!-- top edge highlight -->
+  <rect x="3"  y="23" width="26" height="1" fill="#f5c842"/>
+  <!-- bottom shadow strip -->
+  <rect x="3"  y="25" width="26" height="1" fill="#7a5510"/>
+
+  <!-- ===== MIDDLE COIN (offset slightly left) ===== -->
+  <!-- outline -->
+  <rect x="2"  y="16" width="22" height="1" fill="#1a0f08"/>
+  <rect x="2"  y="21" width="22" height="1" fill="#1a0f08"/>
+  <rect x="1"  y="17" width="1"  height="4" fill="#1a0f08"/>
+  <rect x="24" y="17" width="1"  height="4" fill="#1a0f08"/>
+  <!-- body -->
+  <rect x="2"  y="17" width="22" height="4" fill="#f5c842"/>
+  <!-- top highlight -->
+  <rect x="2"  y="17" width="22" height="1" fill="#ffd84d"/>
+  <!-- bottom shadow -->
+  <rect x="2"  y="20" width="22" height="1" fill="#c8941d"/>
+  <!-- "stamp" lines -->
+  <g fill="#7a5510">
+    <rect x="6"  y="19" width="2" height="1"/>
+    <rect x="10" y="19" width="2" height="1"/>
+    <rect x="14" y="19" width="2" height="1"/>
+    <rect x="18" y="19" width="2" height="1"/>
+  </g>
+
+  <!-- ===== TOP COIN (centered, with $ stamp) ===== -->
+  <!-- outline -->
+  <rect x="6"  y="9"  width="20" height="1" fill="#1a0f08"/>
+  <rect x="6"  y="15" width="20" height="1" fill="#1a0f08"/>
+  <rect x="5"  y="10" width="1"  height="5" fill="#1a0f08"/>
+  <rect x="26" y="10" width="1"  height="5" fill="#1a0f08"/>
+  <!-- body -->
+  <rect x="6"  y="10" width="20" height="5" fill="#ffd84d"/>
+  <!-- inner ring of dots -->
+  <g fill="#c8941d">
+    <rect x="7"  y="10" width="1" height="1"/>
+    <rect x="24" y="10" width="1" height="1"/>
+    <rect x="7"  y="14" width="1" height="1"/>
+    <rect x="24" y="14" width="1" height="1"/>
+  </g>
+  <!-- top highlight -->
+  <rect x="6"  y="10" width="20" height="1" fill="#ffe9a8"/>
+  <!-- bottom shadow -->
+  <rect x="6"  y="14" width="20" height="1" fill="#c8941d"/>
+
+  <!-- ===== $ STAMP ON TOP COIN ===== -->
+  <g fill="#7a5510">
+    <!-- vertical bar -->
+    <rect x="15" y="10" width="2" height="6"/>
+    <!-- top curve of S -->
+    <rect x="13" y="11" width="6" height="1"/>
+    <rect x="12" y="11" width="1" height="2"/>
+    <!-- middle of S -->
+    <rect x="13" y="12" width="2" height="1"/>
+    <rect x="17" y="13" width="2" height="1"/>
+    <!-- bottom curve of S -->
+    <rect x="13" y="14" width="6" height="1"/>
+    <rect x="19" y="13" width="1" height="2"/>
+  </g>
+  <!-- $ highlight -->
+  <rect x="15" y="10" width="1" height="6" fill="#1a0f08"/>
+
+  <!-- ===== SPARKLE (top-right) ===== -->
+  <g fill="#fef6e4">
+    <rect x="27" y="3" width="1" height="1"/>
+    <rect x="27" y="7" width="1" height="1"/>
+    <rect x="25" y="5" width="1" height="1"/>
+    <rect x="29" y="5" width="1" height="1"/>
+    <rect x="27" y="5" width="1" height="1"/>
+  </g>
+  <g fill="#ffd84d">
+    <rect x="27" y="4" width="1" height="3"/>
+    <rect x="26" y="5" width="3" height="1"/>
+  </g>
+
+  <!-- ===== SECONDARY SPARKLE (bottom-left) ===== -->
+  <g fill="#fef6e4">
+    <rect x="3" y="6" width="1" height="1"/>
+    <rect x="2" y="7" width="1" height="1"/>
+    <rect x="4" y="7" width="1" height="1"/>
+    <rect x="3" y="8" width="1" height="1"/>
+  </g>
+</svg>

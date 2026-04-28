@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lucas Games — SLOT ICON: WILD
+  Substitutes for any standard symbol.
+  Big gold star with crimson WILD banner across the middle.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <defs>
+    <clipPath id="wild-star-clip">
+      <polygon points="16,2 20,11 30,12 22,18 25,29 16,23 7,29 10,18 2,12 12,11"/>
+    </clipPath>
+  </defs>
+
+  <!-- ground shadow -->
+  <ellipse cx="16" cy="29" rx="11" ry="1.4" fill="#1a0f08" opacity="0.3"/>
+
+  <!-- ===== STAR OUTLINE ===== -->
+  <polygon points="16,1 20,10 31,11 23,18 26,30 16,23 6,30 9,18 1,11 12,10"
+           fill="#1a0f08"/>
+
+  <!-- ===== STAR FILL ===== -->
+  <polygon points="16,2 20,11 30,12 22,18 25,29 16,23 7,29 10,18 2,12 12,11"
+           fill="#f5c842"/>
+
+  <!-- top half lighter / bottom half deeper, via clip -->
+  <g clip-path="url(#wild-star-clip)">
+    <rect x="0" y="0"  width="32" height="13" fill="#ffd84d" opacity="0.55"/>
+    <rect x="0" y="20" width="32" height="12" fill="#c8941d" opacity="0.5"/>
+  </g>
+
+  <!-- ===== CRIMSON BANNER (across the middle) ===== -->
+  <!-- shadow -->
+  <rect x="0" y="20" width="32" height="1" fill="#1a0f08" opacity="0.4"/>
+  <!-- banner outline -->
+  <rect x="0" y="13" width="32" height="1" fill="#1a0f08"/>
+  <rect x="0" y="20" width="32" height="1" fill="#1a0f08"/>
+  <!-- banner body -->
+  <rect x="0" y="14" width="32" height="6" fill="#e05a3c"/>
+  <!-- banner top highlight -->
+  <rect x="0" y="14" width="32" height="1" fill="#ffb8a8"/>
+  <!-- banner bottom shadow -->
+  <rect x="0" y="19" width="32" height="1" fill="#8b3a3a"/>
+
+  <!-- forked pennant ends (notch into banner edges) -->
+  <polygon points="0,14 0,20 4,17" fill="#1a0f08"/>
+  <polygon points="1,15 1,19 4,17" fill="#f5c842"/>
+  <polygon points="32,14 32,20 28,17" fill="#1a0f08"/>
+  <polygon points="31,15 31,19 28,17" fill="#f5c842"/>
+
+  <!-- ===== "WILD" LETTERS (parchment) ===== -->
+  <g fill="#fef6e4">
+    <!-- W -->
+    <rect x="6"  y="15" width="1" height="4"/>
+    <rect x="10" y="15" width="1" height="4"/>
+    <rect x="8"  y="17" width="1" height="2"/>
+    <rect x="7"  y="18" width="1" height="1"/>
+    <rect x="9"  y="18" width="1" height="1"/>
+
+    <!-- I -->
+    <rect x="12" y="15" width="3" height="1"/>
+    <rect x="13" y="15" width="1" height="4"/>
+    <rect x="12" y="18" width="3" height="1"/>
+
+    <!-- L -->
+    <rect x="16" y="15" width="1" height="4"/>
+    <rect x="16" y="18" width="3" height="1"/>
+
+    <!-- D -->
+    <rect x="20" y="15" width="3" height="1"/>
+    <rect x="20" y="15" width="1" height="4"/>
+    <rect x="23" y="16" width="1" height="2"/>
+    <rect x="20" y="18" width="3" height="1"/>
+  </g>
+
+  <!-- letter shadow -->
+  <g fill="#4a1a1a">
+    <rect x="6"  y="19" width="5" height="1" opacity="0.5"/>
+    <rect x="12" y="19" width="3" height="1" opacity="0.5"/>
+    <rect x="16" y="19" width="3" height="1" opacity="0.5"/>
+    <rect x="20" y="19" width="3" height="1" opacity="0.5"/>
+  </g>
+
+  <!-- ===== CORNER GLINT SPARKLES ===== -->
+  <g fill="#fef6e4">
+    <rect x="3"  y="4" width="1" height="1"/>
+    <rect x="2"  y="5" width="1" height="1"/>
+    <rect x="4"  y="5" width="1" height="1"/>
+    <rect x="3"  y="6" width="1" height="1"/>
+    <rect x="28" y="6" width="1" height="1"/>
+    <rect x="27" y="7" width="1" height="1"/>
+    <rect x="29" y="7" width="1" height="1"/>
+    <rect x="28" y="8" width="1" height="1"/>
+  </g>
+</svg>

@@ -1112,6 +1112,24 @@ img, svg, canvas {
   50%      { box-shadow: 0 0 14px rgba(155, 44, 44, 0.65); }
 }
 
+/* Slots — animated winning payline trace. The polyline starts hidden
+   via stroke-dashoffset = dashlen and reveals over ~0.55s, then
+   pulses softly so the line stays alive on the reels. */
+@keyframes lg-payline-trace {
+  0%   { stroke-dashoffset: 200; }
+  100% { stroke-dashoffset: 0; }
+}
+@keyframes lg-payline-pulse {
+  0%, 100% { opacity: 1;   }
+  50%      { opacity: 0.55; }
+}
+
+/* Jackpot marquee — gentle gold pulse so the pool feels alive. */
+@keyframes lg-jackpot-glow {
+  0%, 100% { box-shadow: 0 0 14px rgba(245, 200, 66, 0.45), inset 0 0 12px rgba(245, 200, 66, 0.25); }
+  50%      { box-shadow: 0 0 22px rgba(245, 200, 66, 0.85), inset 0 0 22px rgba(245, 200, 66, 0.45); }
+}
+
 /* Foil shimmer — chunky pixel pattern is baked into the canvas
    each ticket; we just animate brightness/contrast for a metallic
    pulse so it feels alive without re-painting (which would conflict

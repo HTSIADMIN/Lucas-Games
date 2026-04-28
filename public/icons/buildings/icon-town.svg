@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lucas Games — BUILDING T3: TOWN  (6×)
+  Saloon + church standing side by side.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- ground shadow -->
+  <ellipse cx="16" cy="29" rx="14" ry="1.5" fill="#1a0f08" opacity="0.30"/>
+
+  <!-- ===== CHURCH (right side, taller) ===== -->
+  <!-- cross on top -->
+  <rect x="22" y="2" width="1" height="4" fill="#1a0f08"/>
+  <rect x="21" y="3" width="3" height="1" fill="#1a0f08"/>
+  <!-- steeple -->
+  <polygon points="22.5,5 18,11 27,11" fill="#8b3a3a"/>
+  <polygon points="22.5,4 17,12 28,12"
+           fill="none" stroke="#1a0f08" stroke-width="1"/>
+  <!-- steeple shadow side -->
+  <polygon points="22.5,5 22.5,11 27,11" fill="#4a1a1a"/>
+  <!-- bell tower base -->
+  <rect x="18" y="11" width="10" height="1" fill="#1a0f08"/>
+  <rect x="19" y="12" width="8"  height="4" fill="#fbe9c4"/>
+  <rect x="18" y="12" width="1"  height="4" fill="#1a0f08"/>
+  <rect x="27" y="12" width="1"  height="4" fill="#1a0f08"/>
+  <!-- bell window arch -->
+  <rect x="21" y="13" width="4" height="3" fill="#1a0f08"/>
+  <rect x="22" y="14" width="2" height="2" fill="#3d2418"/>
+  <!-- bell -->
+  <rect x="22" y="14" width="2" height="1" fill="#c8941d"/>
+  <!-- church body -->
+  <rect x="17" y="16" width="12" height="1"  fill="#1a0f08"/>
+  <rect x="17" y="16" width="1"  height="11" fill="#1a0f08"/>
+  <rect x="28" y="16" width="1"  height="11" fill="#1a0f08"/>
+  <rect x="17" y="27" width="12" height="1"  fill="#1a0f08"/>
+  <rect x="18" y="17" width="10" height="10" fill="#fbe9c4"/>
+  <!-- church wall planks -->
+  <g fill="#e8c089">
+    <rect x="20" y="17" width="1" height="10"/>
+    <rect x="24" y="17" width="1" height="10"/>
+  </g>
+  <!-- church door -->
+  <rect x="22" y="22" width="3" height="5" fill="#6b3f24"/>
+  <rect x="22" y="22" width="3" height="1" fill="#1a0f08"/>
+  <rect x="22" y="22" width="1" height="5" fill="#1a0f08"/>
+  <rect x="24" y="22" width="1" height="5" fill="#1a0f08"/>
+  <!-- door knob -->
+  <rect x="23" y="24" width="1" height="1" fill="#c8941d"/>
+  <!-- church windows -->
+  <rect x="19" y="19" width="2" height="2" fill="#1a0f08"/>
+  <rect x="19" y="19" width="2" height="1" fill="#5fa8d3"/>
+  <rect x="19" y="20" width="2" height="1" fill="#2c6a8e"/>
+  <rect x="25" y="19" width="2" height="2" fill="#1a0f08"/>
+  <rect x="25" y="19" width="2" height="1" fill="#5fa8d3"/>
+  <rect x="25" y="20" width="2" height="1" fill="#2c6a8e"/>
+
+  <!-- ===== SALOON (left side, shorter, wider feel) ===== -->
+  <!-- false-front top -->
+  <rect x="2"  y="9"  width="14" height="1" fill="#1a0f08"/>
+  <rect x="2"  y="10" width="1"  height="5" fill="#1a0f08"/>
+  <rect x="15" y="10" width="1"  height="5" fill="#1a0f08"/>
+  <rect x="3"  y="10" width="12" height="5" fill="#a87545"/>
+  <!-- sign band -->
+  <rect x="4"  y="11" width="10" height="2" fill="#fbe9c4"/>
+  <g fill="#1a0f08">
+    <rect x="5"  y="12" width="1" height="1"/>
+    <rect x="7"  y="12" width="1" height="1"/>
+    <rect x="9"  y="12" width="1" height="1"/>
+    <rect x="11" y="12" width="1" height="1"/>
+  </g>
+  <!-- awning -->
+  <rect x="1" y="15" width="16" height="1" fill="#1a0f08"/>
+  <rect x="1" y="16" width="16" height="1" fill="#6b3f24"/>
+  <!-- awning posts -->
+  <rect x="2"  y="17" width="1" height="10" fill="#1a0f08"/>
+  <rect x="15" y="17" width="1" height="10" fill="#1a0f08"/>
+  <!-- saloon body -->
+  <rect x="3"  y="17" width="12" height="1"  fill="#1a0f08"/>
+  <rect x="3"  y="17" width="1"  height="10" fill="#1a0f08"/>
+  <rect x="14" y="17" width="1"  height="10" fill="#1a0f08"/>
+  <rect x="3"  y="27" width="12" height="1"  fill="#1a0f08"/>
+  <rect x="4"  y="17" width="10" height="10" fill="#d4a574"/>
+  <!-- planks -->
+  <g fill="#a87545">
+    <rect x="7"  y="17" width="1" height="10"/>
+    <rect x="11" y="17" width="1" height="10"/>
+  </g>
+  <!-- saloon window -->
+  <rect x="5"  y="19" width="3" height="3" fill="#1a0f08"/>
+  <rect x="6"  y="20" width="2" height="2" fill="#ffd84d"/>
+  <rect x="7"  y="20" width="1" height="2" fill="#c8941d"/>
+  <!-- saloon door -->
+  <rect x="10" y="21" width="4" height="6" fill="#1a0f08"/>
+  <rect x="11" y="22" width="2" height="5" fill="#3d2418"/>
+  <rect x="11" y="22" width="2" height="1" fill="#6b3f24"/>
+  <rect x="11" y="24" width="2" height="1" fill="#6b3f24"/>
+
+  <!-- ===== STREET / GROUND ===== -->
+  <rect x="0" y="27" width="32" height="2" fill="#a87545"/>
+  <rect x="0" y="28" width="32" height="1" fill="#6b3f24"/>
+  <!-- track tie hints -->
+  <g fill="#1a0f08" opacity="0.5">
+    <rect x="2"  y="28" width="2" height="1"/>
+    <rect x="8"  y="28" width="2" height="1"/>
+    <rect x="14" y="28" width="2" height="1"/>
+    <rect x="20" y="28" width="2" height="1"/>
+    <rect x="26" y="28" width="2" height="1"/>
+  </g>
+</svg>

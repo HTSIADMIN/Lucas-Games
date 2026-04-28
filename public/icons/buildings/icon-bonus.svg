@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lucas Games — SLOT ICON: BONUS / SCATTER
+  Bundle of dynamite with a lit fuse — triggers the building bonus.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- ground shadow -->
+  <ellipse cx="16" cy="28" rx="12" ry="1.4" fill="#1a0f08" opacity="0.3"/>
+
+  <!-- ===== SPARK / FLAME at top of fuse ===== -->
+  <!-- big spark outer -->
+  <g fill="#ffd84d">
+    <rect x="14" y="1" width="1" height="1"/>
+    <rect x="17" y="1" width="1" height="1"/>
+    <rect x="13" y="2" width="2" height="1"/>
+    <rect x="17" y="2" width="2" height="1"/>
+    <rect x="12" y="3" width="2" height="1"/>
+    <rect x="18" y="3" width="2" height="1"/>
+    <rect x="14" y="4" width="4" height="1"/>
+  </g>
+  <!-- bright flame core -->
+  <g fill="#ffe9a8">
+    <rect x="15" y="2" width="2" height="1"/>
+    <rect x="14" y="3" width="4" height="1"/>
+    <rect x="15" y="4" width="2" height="1"/>
+  </g>
+  <!-- white-hot center -->
+  <rect x="15" y="3" width="2" height="1" fill="#fef6e4"/>
+  <!-- spark dots radiating -->
+  <g fill="#ffd84d">
+    <rect x="11" y="5" width="1" height="1"/>
+    <rect x="20" y="5" width="1" height="1"/>
+    <rect x="10" y="3" width="1" height="1"/>
+    <rect x="21" y="3" width="1" height="1"/>
+    <rect x="13" y="0" width="1" height="1"/>
+    <rect x="18" y="0" width="1" height="1"/>
+  </g>
+
+  <!-- ===== FUSE (curling down to dynamite) ===== -->
+  <!-- fuse path: curves from spark down to top of dynamite -->
+  <g fill="#1a0f08">
+    <rect x="15" y="5" width="2" height="1"/>
+    <rect x="15" y="6" width="1" height="1"/>
+    <rect x="14" y="7" width="1" height="1"/>
+    <rect x="14" y="8" width="1" height="1"/>
+    <rect x="15" y="9" width="1" height="1"/>
+    <rect x="16" y="10" width="1" height="1"/>
+    <rect x="16" y="11" width="1" height="1"/>
+  </g>
+
+  <!-- ===== DYNAMITE BUNDLE ===== -->
+  <!-- back stick (smaller, peeking) -->
+  <rect x="18" y="13" width="5"  height="1"  fill="#1a0f08"/>
+  <rect x="18" y="14" width="1"  height="13" fill="#1a0f08"/>
+  <rect x="22" y="14" width="1"  height="13" fill="#1a0f08"/>
+  <rect x="18" y="27" width="5"  height="1"  fill="#1a0f08"/>
+  <rect x="19" y="14" width="3"  height="13" fill="#8b3a3a"/>
+  <!-- back stick highlight -->
+  <rect x="19" y="14" width="1"  height="13" fill="#e05a3c"/>
+  <!-- back stick label -->
+  <rect x="19" y="18" width="3"  height="3"  fill="#fef6e4"/>
+  <rect x="19" y="18" width="3"  height="1"  fill="#e8c089"/>
+
+  <!-- middle (front) stick — biggest -->
+  <rect x="11" y="11" width="7"  height="1"  fill="#1a0f08"/>
+  <rect x="11" y="12" width="1"  height="16" fill="#1a0f08"/>
+  <rect x="17" y="12" width="1"  height="16" fill="#1a0f08"/>
+  <rect x="11" y="27" width="7"  height="1"  fill="#1a0f08"/>
+  <rect x="12" y="12" width="5"  height="15" fill="#e05a3c"/>
+  <!-- highlight stripe -->
+  <rect x="12" y="12" width="1"  height="15" fill="#ffb8a8"/>
+  <!-- shadow stripe -->
+  <rect x="16" y="12" width="1"  height="15" fill="#8b3a3a"/>
+  <!-- TNT label panel -->
+  <rect x="12" y="17" width="5"  height="5"  fill="#fef6e4"/>
+  <rect x="12" y="17" width="5"  height="1"  fill="#e8c089"/>
+  <rect x="12" y="21" width="5"  height="1"  fill="#e8c089"/>
+  <!-- TNT letters (very compact, 3 tall) -->
+  <g fill="#1a0f08">
+    <!-- T -->
+    <rect x="13" y="18" width="1" height="3"/>
+    <rect x="13" y="18" width="1" height="1"/>
+    <!-- (sharing with N) -->
+    <rect x="14" y="18" width="1" height="3"/>
+    <!-- T (right) -->
+    <rect x="15" y="18" width="1" height="3"/>
+    <rect x="14" y="18" width="2" height="1"/>
+  </g>
+  <!-- top fuse stub on middle stick -->
+  <rect x="14" y="10" width="1"  height="2" fill="#7a5510"/>
+  <rect x="14" y="9"  width="1"  height="1" fill="#7a5510"/>
+
+  <!-- left stick (peeking) -->
+  <rect x="6"  y="14" width="5"  height="1"  fill="#1a0f08"/>
+  <rect x="6"  y="15" width="1"  height="12" fill="#1a0f08"/>
+  <rect x="10" y="15" width="1"  height="12" fill="#1a0f08"/>
+  <rect x="6"  y="27" width="5"  height="1"  fill="#1a0f08"/>
+  <rect x="7"  y="15" width="3"  height="12" fill="#8b3a3a"/>
+  <!-- left stick highlight -->
+  <rect x="7"  y="15" width="1"  height="12" fill="#e05a3c"/>
+  <!-- left stick label -->
+  <rect x="7"  y="19" width="3"  height="3"  fill="#fef6e4"/>
+  <rect x="7"  y="19" width="3"  height="1"  fill="#e8c089"/>
+
+  <!-- ===== ROPE BINDING (across all three sticks) ===== -->
+  <g fill="#1a0f08">
+    <rect x="5" y="22" width="19" height="1"/>
+    <rect x="5" y="25" width="19" height="1"/>
+  </g>
+  <g fill="#a87545">
+    <rect x="5" y="23" width="19" height="2"/>
+  </g>
+  <g fill="#6b3f24">
+    <!-- rope twist marks -->
+    <rect x="6"  y="23" width="1" height="2"/>
+    <rect x="10" y="23" width="1" height="2"/>
+    <rect x="14" y="23" width="1" height="2"/>
+    <rect x="18" y="23" width="1" height="2"/>
+    <rect x="22" y="23" width="1" height="2"/>
+  </g>
+  <!-- rope highlight -->
+  <rect x="5" y="23" width="19" height="1" fill="#d4a574"/>
+
+  <!-- ===== "BONUS" mini stamp on bottom (optional flair) ===== -->
+  <!-- subtle gold star sparkle in corner -->
+  <g fill="#ffd84d">
+    <rect x="27" y="17" width="1" height="1"/>
+    <rect x="26" y="18" width="3" height="1"/>
+    <rect x="27" y="19" width="1" height="1"/>
+    <rect x="3"  y="11" width="1" height="1"/>
+    <rect x="2"  y="12" width="3" height="1"/>
+    <rect x="3"  y="13" width="1" height="1"/>
+  </g>
+</svg>

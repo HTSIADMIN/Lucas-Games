@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lucas Games — BUILDING T2: SALOON  (3×)
+  Classic frontier saloon. Awning sign, swinging doors, glowing window.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- ground shadow -->
+  <ellipse cx="16" cy="29" rx="13" ry="1.4" fill="#1a0f08" opacity="0.30"/>
+
+  <!-- ===== FALSE FRONT (top facade extends above roof) ===== -->
+  <!-- false front outline -->
+  <rect x="4"  y="4"  width="24" height="1" fill="#1a0f08"/>
+  <rect x="3"  y="5"  width="1"  height="6" fill="#1a0f08"/>
+  <rect x="28" y="5"  width="1"  height="6" fill="#1a0f08"/>
+  <!-- false front body -->
+  <rect x="4"  y="5"  width="24" height="6" fill="#a87545"/>
+  <!-- top trim band -->
+  <rect x="4"  y="5"  width="24" height="1" fill="#6b3f24"/>
+  <rect x="4"  y="9"  width="24" height="1" fill="#6b3f24"/>
+  <!-- vertical wood planks -->
+  <g fill="#6b3f24" opacity="0.5">
+    <rect x="9"  y="6" width="1" height="3"/>
+    <rect x="14" y="6" width="1" height="3"/>
+    <rect x="22" y="6" width="1" height="3"/>
+  </g>
+
+  <!-- "SALOON" sign panel -->
+  <rect x="6"  y="6" width="20" height="3" fill="#fbe9c4"/>
+  <rect x="6"  y="6" width="20" height="1" fill="#e8c089"/>
+  <!-- SALOON pixel letters (very compact, 1px tall) -->
+  <g fill="#1a0f08">
+    <!-- S -->
+    <rect x="8"  y="7" width="2" height="1"/>
+    <!-- A -->
+    <rect x="11" y="7" width="2" height="1"/>
+    <!-- L -->
+    <rect x="14" y="7" width="2" height="1"/>
+    <!-- O -->
+    <rect x="17" y="7" width="2" height="1"/>
+    <!-- O -->
+    <rect x="20" y="7" width="2" height="1"/>
+    <!-- N -->
+    <rect x="23" y="7" width="2" height="1"/>
+  </g>
+
+  <!-- ===== ROOF / AWNING (extends past building) ===== -->
+  <rect x="2" y="11" width="28" height="1" fill="#1a0f08"/>
+  <rect x="2" y="12" width="28" height="2" fill="#6b3f24"/>
+  <!-- awning shadow stripe -->
+  <rect x="2" y="13" width="28" height="1" fill="#3d2418"/>
+  <!-- awning posts -->
+  <rect x="3"  y="14" width="1" height="13" fill="#1a0f08"/>
+  <rect x="28" y="14" width="1" height="13" fill="#1a0f08"/>
+
+  <!-- ===== BUILDING BODY ===== -->
+  <!-- outline -->
+  <rect x="4"  y="14" width="24" height="1" fill="#1a0f08"/>
+  <rect x="4"  y="14" width="1"  height="13" fill="#1a0f08"/>
+  <rect x="27" y="14" width="1"  height="13" fill="#1a0f08"/>
+  <rect x="4"  y="27" width="24" height="1" fill="#1a0f08"/>
+  <!-- body fill -->
+  <rect x="5"  y="14" width="22" height="13" fill="#d4a574"/>
+  <!-- vertical planks -->
+  <g fill="#a87545">
+    <rect x="8"  y="14" width="1" height="13"/>
+    <rect x="14" y="14" width="1" height="13"/>
+    <rect x="20" y="14" width="1" height="13"/>
+    <rect x="24" y="14" width="1" height="13"/>
+  </g>
+
+  <!-- ===== WINDOW (left) ===== -->
+  <rect x="6"  y="16" width="6" height="6" fill="#1a0f08"/>
+  <rect x="7"  y="17" width="4" height="4" fill="#ffd84d"/>
+  <!-- window cross frame -->
+  <rect x="9"  y="17" width="1" height="4" fill="#1a0f08"/>
+  <rect x="7"  y="18" width="4" height="1" fill="#1a0f08"/>
+
+  <!-- ===== SWINGING DOORS (center-right) ===== -->
+  <rect x="16" y="18" width="8" height="9" fill="#1a0f08"/>
+  <!-- door interior (dark) -->
+  <rect x="17" y="19" width="6" height="8" fill="#3d2418"/>
+  <!-- left batwing door -->
+  <rect x="17" y="20" width="3" height="6" fill="#6b3f24"/>
+  <rect x="17" y="20" width="3" height="1" fill="#a87545"/>
+  <rect x="17" y="22" width="3" height="1" fill="#a87545"/>
+  <rect x="17" y="24" width="3" height="1" fill="#a87545"/>
+  <!-- right batwing door -->
+  <rect x="20" y="20" width="3" height="6" fill="#6b3f24"/>
+  <rect x="20" y="20" width="3" height="1" fill="#a87545"/>
+  <rect x="20" y="22" width="3" height="1" fill="#a87545"/>
+  <rect x="20" y="24" width="3" height="1" fill="#a87545"/>
+  <!-- center gap between doors -->
+  <rect x="19" y="20" width="2" height="6" fill="#1a0f08"/>
+
+  <!-- ===== HITCHING POST + TROUGH (decorative ground) ===== -->
+  <rect x="6"  y="25" width="1" height="2" fill="#1a0f08"/>
+  <rect x="14" y="25" width="1" height="2" fill="#1a0f08"/>
+  <rect x="6"  y="24" width="9" height="1" fill="#1a0f08"/>
+</svg>

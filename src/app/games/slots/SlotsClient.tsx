@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as Sfx from "@/lib/sfx";
 import { GameIcon, type IconName } from "@/components/GameIcon";
+import { SlotSym, BuildingSym, type SlotSymKey } from "./SlotSvg";
 import { BetInput } from "@/components/BetInput";
 import {
   METER,
@@ -32,6 +33,7 @@ type SpinResponse = {
   bonusTier: number | null;
   meter: { value: number; gain: number; forced: boolean };
   balance: number;
+  jackpot: { pool: number; hit: boolean; payout: number };
   /** Server-side clamp: if the player's requested bet exceeded their
    *  recent rolling average while the meter was filling, the route
    *  silently clamped down to the average. effectiveBet is what was
@@ -96,6 +98,9 @@ export function SlotsClient() {
   // Per-reel spin state for stagger animation: 0 = idle, ts = animating since ts.
   const [reelSpin, setReelSpin] = useState<number[]>([0, 0, 0, 0, 0]);
   const [winningCells, setWinningCells] = useState<Set<number>>(new Set());
+  // Winning paylines geometry — drawn as animated SVG polylines on
+  // top of the reel grid so the player sees the connection trace.
+  const [winningLines, setWinningLines] = useState<{ lineIndex: number; count: number }[]>([]);
   // Bonus state
   const [bonus, setBonus] = useState<null | {
     board: { value: number | null; locked: boolean; building?: number }[];
@@ -117,6 +122,28 @@ export function SlotsClient() {
   const [autoCount, setAutoCount] = useState(0);
   const autoRef = useRef(0);
   useEffect(() => { autoRef.current = autoCount; }, [autoCount]);
+  // 2x spin speed (halves all reel-stop / settle delays)
+  const [turbo, setTurbo] = useState(false);
+  // Progressive jackpot marquee
+  const [jackpotPool, setJackpotPool] = useState<number | null>(null);
+  const [jackpotWin, setJackpotWin] = useState<{ amount: number } | null>(null);
+
+  // Poll the jackpot pool every 5s while not spinning so the marquee
+  // stays roughly current with other players' bets.
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      try {
+        const r = await fetch("/api/games/slots/jackpot");
+        if (!r.ok) return;
+        const d = await r.json();
+        if (!cancelled && typeof d.pool === "number") setJackpotPool(d.pool);
+      } catch { /* ignore */ }
+    }
+    poll();
+    const t = setInterval(poll, 5_000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
 
   // Initial state load (resumes any active bonus on refresh)
   useEffect(() => {
@@ -155,6 +182,7 @@ export function SlotsClient() {
     setLastResult(null);
     setCoinPayout(null);
     setWinningCells(new Set());
+    setWinningLines([]);
     setBonusEnded(null);
     setBusy(true);
     Sfx.play("card.shuffle");
@@ -178,14 +206,17 @@ export function SlotsClient() {
     }
 
     // Anticipation: stop reels with a 220ms stagger; when 4+ coins are
-    // showing in the first 4 reels, slow reel 5 down for drama.
+    // showing in the first 4 reels, slow reel 5 down for drama. Turbo
+    // halves every duration so the whole spin lands in roughly half
+    // the time.
     const grid = data.grid;
     const coinsInFirst4 = grid.slice(0, 4).reduce((acc, col) => acc + col.filter((c) => c.kind === "COIN").length, 0);
-    const stagger = 220;
-    const stops = [800, 800 + stagger, 800 + stagger * 2, 800 + stagger * 3, 800 + stagger * 4];
+    const speed = turbo ? 0.5 : 1;
+    const stagger = 220 * speed;
+    const baseStop = 800 * speed;
+    const stops = [baseStop, baseStop + stagger, baseStop + stagger * 2, baseStop + stagger * 3, baseStop + stagger * 4];
     if (coinsInFirst4 >= 4) {
-      // Anticipation: extra suspense on reel 5
-      stops[4] += 1200;
+      stops[4] += 1200 * speed;
     }
 
     // Stop each reel at its scheduled time, then settle. Each reel
@@ -214,12 +245,23 @@ export function SlotsClient() {
       setMeter(data.meter.value);
       setBalance(data.balance);
       setLastResult(data);
+      // Update the marquee with the post-spin pool snapshot, and if
+      // the 1-in-5000 trigger fired, queue the jackpot overlay.
+      if (data.jackpot) {
+        setJackpotPool(data.jackpot.pool);
+        if (data.jackpot.hit && data.jackpot.payout > 0) {
+          setJackpotWin({ amount: data.jackpot.payout });
+          Sfx.play("win.big");
+          window.setTimeout(() => Sfx.play("coins.shower"), 600);
+          window.setTimeout(() => setJackpotWin(null), 4500);
+        }
+      }
 
-      // Highlight winning cells
+      // Highlight winning cells + record line geometry for the
+      // animated trace overlay.
       if (data.lineWins.length > 0) {
         const cells = new Set<number>();
         for (const w of data.lineWins) {
-          // Use payline geometry from engine (mirrored here)
           const line = PAYLINES[w.lineIndex];
           for (let i = 0; i < w.count; i++) {
             const reel = i;
@@ -228,6 +270,7 @@ export function SlotsClient() {
           }
         }
         setWinningCells(cells);
+        setWinningLines(data.lineWins.map((w) => ({ lineIndex: w.lineIndex, count: w.count })));
         // Regular line-wins stay quiet; the win stinger is reserved
         // for Boomtown bonus settles below so it lands harder.
       }
@@ -313,6 +356,11 @@ export function SlotsClient() {
       <div className="panel" style={{ padding: "var(--sp-5)" }}>
         <div className="panel-title">Boomtown Reels</div>
 
+        {/* Progressive jackpot marquee — every coin spent on slots
+            anywhere on the platform goes into this pool. 1 in 5,000
+            spins randomly hits the jackpot and clears the pool. */}
+        <JackpotMarquee pool={jackpotPool} />
+
         <MeterBar value={meter} max={METER.full} />
 
         <div
@@ -347,6 +395,9 @@ export function SlotsClient() {
                 rowsPerReel={ROWS}
               />
             ))}
+            {winningLines.length > 0 && !reelSpin.some((s) => s !== 0) && (
+              <PaylineTrace lines={winningLines} reels={REELS} rows={ROWS} />
+            )}
           </div>
 
           {/* Result sign (anchored bottom of reels) */}
@@ -375,6 +426,14 @@ export function SlotsClient() {
             disabled={busy || !!bonus}
           />
           <div className="row" style={{ gap: "var(--sp-2)", justifyContent: "center" }}>
+            <button
+              className={`btn btn-sm ${turbo ? "" : "btn-ghost"}`}
+              onClick={() => setTurbo((v) => !v)}
+              title={turbo ? "Normal speed" : "2× spin speed"}
+              style={{ whiteSpace: "nowrap", flex: "0 0 auto" }}
+            >
+              {turbo ? "2× On" : "2×"}
+            </button>
             <button
               className={`btn btn-sm ${autoCount > 0 ? "" : "btn-ghost"}`}
               onClick={() => {
@@ -424,6 +483,95 @@ export function SlotsClient() {
           onClose={closeBonus}
         />
       )}
+
+      {/* 1-in-5,000 progressive jackpot win overlay */}
+      {jackpotWin && <JackpotOverlay amount={jackpotWin.amount} />}
+    </div>
+  );
+}
+
+// =============================================================
+// Jackpot marquee — sticky pool size above the reels.
+// =============================================================
+function JackpotMarquee({ pool }: { pool: number | null }) {
+  return (
+    <div
+      style={{
+        background: "linear-gradient(180deg, #1a0f08 0%, #2a1810 50%, #1a0f08 100%)",
+        border: "3px solid var(--gold-300)",
+        boxShadow: "0 0 14px rgba(245, 200, 66, 0.45), inset 0 0 12px rgba(245, 200, 66, 0.25)",
+        padding: "var(--sp-2) var(--sp-4)",
+        marginBottom: "var(--sp-3)",
+        textAlign: "center",
+        fontFamily: "var(--font-display)",
+        animation: "lg-jackpot-glow 1.6s ease-in-out infinite",
+      }}
+    >
+      <div style={{ fontSize: 11, letterSpacing: "var(--ls-loose)", textTransform: "uppercase", color: "var(--gold-300)", textShadow: "1px 1px 0 var(--ink-900)" }}>
+        ★ Boomtown Jackpot ★
+      </div>
+      <div
+        style={{
+          fontSize: 32,
+          color: "var(--gold-300)",
+          textShadow: "2px 2px 0 var(--ink-900), 0 0 12px rgba(245, 200, 66, 0.65)",
+          letterSpacing: "0.02em",
+          lineHeight: 1.05,
+        }}
+      >
+        {pool == null ? "—" : pool.toLocaleString()} ¢
+      </div>
+      <div style={{ fontSize: 10, letterSpacing: "var(--ls-loose)", textTransform: "uppercase", color: "var(--parchment-200)", opacity: 0.75 }}>
+        1 in 5,000 spins · Pool grows with every coin spent
+      </div>
+    </div>
+  );
+}
+
+// =============================================================
+// Full-screen jackpot win takeover.
+// =============================================================
+function JackpotOverlay({ amount }: { amount: number }) {
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 250,
+        background: "rgba(26,15,8,0.85)",
+        backdropFilter: "blur(3px)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        animation: "scratch-bigwin-shake 0.5s ease",
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: 56,
+          color: "var(--gold-300)",
+          textShadow: "4px 4px 0 var(--ink-900), 0 0 24px rgba(245, 200, 66, 0.85)",
+          letterSpacing: "0.06em",
+          marginBottom: "var(--sp-4)",
+          animation: "scratch-poster-slam 0.6s cubic-bezier(.4,1.8,.4,1) both",
+        }}
+      >
+        ★ JACKPOT ★
+      </div>
+      <div
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: 96,
+          color: "var(--neon-gold)",
+          textShadow: "5px 5px 0 var(--ink-900), 0 0 36px rgba(255, 216, 77, 0.8)",
+          letterSpacing: "0.04em",
+        }}
+      >
+        +{amount.toLocaleString()} ¢
+      </div>
     </div>
   );
 }
@@ -591,39 +739,83 @@ function CellContents({ cell }: { cell: Cell }) {
           textAlign: "center",
           fontFamily: "var(--font-display)",
           color: c.fg,
-          padding: 4,
+          padding: 2,
           letterSpacing: "var(--ls-loose)",
           textTransform: "uppercase",
+          animation: "lg-tier-flash 0.9s ease-in-out infinite",
         }}
       >
-        <div
-          style={{
-            background: c.bg,
-            padding: "2px 8px",
-            border: "2px solid var(--ink-900)",
-            fontSize: 12,
-            display: "inline-block",
-            marginBottom: 4,
-            animation: "lg-tier-flash 0.9s ease-in-out infinite",
-          }}
-        >
-          T{cell.tier}
-        </div>
-        <div style={{ fontSize: 11, color: "var(--parchment-200)" }}>
-          {cell.tierLabel}
-        </div>
-        <div style={{ fontSize: 16, color: c.bg, marginTop: 2, textShadow: "1px 1px 0 var(--ink-900)" }}>
+        <BuildingSym tier={cell.tier} size={48} />
+        <div style={{ fontSize: 13, color: c.bg, marginTop: 2, textShadow: "1px 1px 0 var(--ink-900)" }}>
           {TIER_MULTIPLIER[cell.tier]}×
         </div>
       </div>
     );
   }
-  return <GameIcon name={SYM_ICON[cell.kind]} size={56} />;
+  return <SlotSym name={cell.kind as SlotSymKey} size={56} />;
 }
 
 // =============================================================
 // Meter bar (Whiskey Barrel)
 // =============================================================
+// =============================================================
+// Animated payline trace — draws an SVG polyline across each
+// winning row/zigzag/V/etc., tracing left-to-right via stroke-
+// dashoffset so the line "draws itself" like a real cabinet.
+// Cells are normalised to a 0..100 viewBox; CSS sizes the SVG to
+// the reel grid.
+// =============================================================
+function PaylineTrace({ lines, reels, rows }: { lines: { lineIndex: number; count: number }[]; reels: number; rows: number }) {
+  // Each cell is a (1/reels × 1/rows) rectangle; centre is at
+  // (reel + 0.5, row + 0.5) scaled to the 0..100 viewBox.
+  const cellW = 100 / reels;
+  const cellH = 100 / rows;
+  const COLORS = ["#ffd84d", "#ff5544", "#5fdcff", "#8aff5a", "#ff2bd6", "#fef6e4"];
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+        zIndex: 5,
+      }}
+    >
+      {lines.map((ln, i) => {
+        const line = PAYLINES[ln.lineIndex];
+        const points: string[] = [];
+        for (let r = 0; r < ln.count; r++) {
+          const cx = (r + 0.5) * cellW;
+          const cy = (line[r] + 0.5) * cellH;
+          points.push(`${cx.toFixed(2)},${cy.toFixed(2)}`);
+        }
+        const colour = COLORS[i % COLORS.length];
+        return (
+          <polyline
+            key={`${ln.lineIndex}-${i}`}
+            points={points.join(" ")}
+            fill="none"
+            stroke={colour}
+            strokeWidth={1.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+            style={{
+              filter: `drop-shadow(0 0 4px ${colour}) drop-shadow(0 0 1px rgba(0,0,0,0.7))`,
+              strokeDasharray: 200,
+              strokeDashoffset: 200,
+              animation: `lg-payline-trace 0.55s ease-out ${i * 120}ms forwards, lg-payline-pulse 1.4s ease-in-out ${600 + i * 120}ms infinite`,
+            }}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
 function MeterBar({ value, max }: { value: number; max: number }) {
   const pct = Math.min(100, (value / max) * 100);
   const ready = value >= max;
@@ -959,14 +1151,12 @@ function BonusGrid({
                 }}
               >
                 {isBuilding && (
-                  <>
-                    <span style={{ fontSize: 11, lineHeight: 1, opacity: 0.85 }}>
-                      T{cell.building}
-                    </span>
-                    <span style={{ fontSize: 18, fontWeight: "bold", lineHeight: 1, marginTop: 2 }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                    <BuildingSym tier={cell.building as number} size={36} />
+                    <span style={{ fontSize: 14, fontWeight: "bold", lineHeight: 1, color: "var(--gold-300)", textShadow: "1px 1px 0 var(--ink-900)" }}>
                       {TIER_MULTIPLIER[cell.building as number]}×
                     </span>
-                  </>
+                  </div>
                 )}
                 {!isBuilding && isCoin ? formatCoin(cell.value as number) : null}
                 {floats.map((f) => (
@@ -1047,7 +1237,8 @@ function BuildingTiers() {
                 border: "2px solid var(--ink-900)",
               }}
             >
-              <span style={{ fontFamily: "var(--font-display)", letterSpacing: "var(--ls-loose)", textTransform: "uppercase" }}>
+              <span style={{ fontFamily: "var(--font-display)", letterSpacing: "var(--ls-loose)", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 8 }}>
+                <BuildingSym tier={t} size={28} />
                 T{t} · {TIER_LABEL[t]}
               </span>
               <span style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>
@@ -1089,7 +1280,7 @@ function Paytable() {
           {SYMS.map((sym) => (
             <tr key={sym} style={{ borderBottom: "2px dashed var(--saddle-300)" }}>
               <td style={{ padding: "var(--sp-2)", display: "flex", alignItems: "center", gap: 8 }}>
-                <GameIcon name={SYM_ICON[sym]} size={24} />
+                <SlotSym name={sym as SlotSymKey} size={24} />
                 {sym}
               </td>
               <td style={{ textAlign: "right", padding: "var(--sp-2)" }}>{PAYS[sym][3]}×</td>

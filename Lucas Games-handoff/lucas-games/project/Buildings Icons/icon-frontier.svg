@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Lucas Games — BUILDING T4: FRONTIER  (12×)
+  Established settlement: watchtower, church, saloon, store.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <!-- ground shadow -->
+  <ellipse cx="16" cy="29" rx="15" ry="1.6" fill="#1a0f08" opacity="0.30"/>
+
+  <!-- ===== WATCHTOWER (far left, tall) ===== -->
+  <!-- flag pole -->
+  <rect x="3" y="2" width="1" height="6" fill="#1a0f08"/>
+  <!-- flag -->
+  <rect x="4" y="2" width="3" height="2" fill="#e05a3c"/>
+  <rect x="4" y="2" width="3" height="1" fill="#8b3a3a"/>
+  <!-- tower roof (peaked) -->
+  <polygon points="3,6 7,10 3,10" fill="#8b3a3a"/>
+  <polygon points="3,6 -1,10 3,10" fill="#4a1a1a"/>
+  <!-- tower observation deck -->
+  <rect x="0" y="10" width="7" height="1"  fill="#1a0f08"/>
+  <rect x="0" y="11" width="7" height="3"  fill="#6b3f24"/>
+  <rect x="1" y="12" width="2" height="1"  fill="#1a0f08"/>
+  <rect x="4" y="12" width="2" height="1"  fill="#1a0f08"/>
+  <!-- tower stem -->
+  <rect x="2" y="14" width="1" height="13" fill="#1a0f08"/>
+  <rect x="5" y="14" width="1" height="13" fill="#1a0f08"/>
+  <rect x="3" y="14" width="2" height="13" fill="#a87545"/>
+  <rect x="3" y="17" width="2" height="1"  fill="#6b3f24"/>
+  <rect x="3" y="22" width="2" height="1"  fill="#6b3f24"/>
+
+  <!-- ===== CHURCH (left-of-center, second tallest) ===== -->
+  <!-- cross -->
+  <rect x="10" y="4" width="1" height="3" fill="#1a0f08"/>
+  <rect x="9"  y="5" width="3" height="1" fill="#1a0f08"/>
+  <!-- steeple -->
+  <polygon points="10.5,6 8,11 13,11" fill="#8b3a3a"/>
+  <polygon points="10.5,6 10.5,11 13,11" fill="#4a1a1a"/>
+  <!-- tower -->
+  <rect x="8"  y="11" width="6" height="1" fill="#1a0f08"/>
+  <rect x="8"  y="12" width="1" height="4" fill="#1a0f08"/>
+  <rect x="13" y="12" width="1" height="4" fill="#1a0f08"/>
+  <rect x="9"  y="12" width="4" height="4" fill="#fbe9c4"/>
+  <!-- bell window -->
+  <rect x="10" y="13" width="2" height="2" fill="#1a0f08"/>
+  <rect x="10" y="14" width="2" height="1" fill="#c8941d"/>
+  <!-- church body -->
+  <rect x="7"  y="16" width="8" height="1"  fill="#1a0f08"/>
+  <rect x="7"  y="16" width="1" height="11" fill="#1a0f08"/>
+  <rect x="14" y="16" width="1" height="11" fill="#1a0f08"/>
+  <rect x="7"  y="27" width="8" height="1"  fill="#1a0f08"/>
+  <rect x="8"  y="17" width="6" height="10" fill="#fbe9c4"/>
+  <!-- church door -->
+  <rect x="10" y="22" width="2" height="5" fill="#6b3f24"/>
+  <rect x="10" y="22" width="2" height="1" fill="#1a0f08"/>
+  <rect x="10" y="22" width="1" height="5" fill="#1a0f08"/>
+  <!-- church window -->
+  <rect x="9"  y="19" width="1" height="2" fill="#5fa8d3"/>
+  <rect x="12" y="19" width="1" height="2" fill="#5fa8d3"/>
+
+  <!-- ===== SALOON (center-right) ===== -->
+  <!-- false front -->
+  <rect x="15" y="11" width="9" height="1" fill="#1a0f08"/>
+  <rect x="15" y="12" width="1" height="5" fill="#1a0f08"/>
+  <rect x="23" y="12" width="1" height="5" fill="#1a0f08"/>
+  <rect x="16" y="12" width="7" height="5" fill="#a87545"/>
+  <!-- sign -->
+  <rect x="16" y="13" width="7" height="2" fill="#fbe9c4"/>
+  <g fill="#1a0f08">
+    <rect x="17" y="14" width="1" height="1"/>
+    <rect x="19" y="14" width="1" height="1"/>
+    <rect x="21" y="14" width="1" height="1"/>
+  </g>
+  <!-- awning -->
+  <rect x="14" y="17" width="11" height="1" fill="#1a0f08"/>
+  <rect x="14" y="18" width="11" height="1" fill="#6b3f24"/>
+  <rect x="15" y="19" width="1"  height="8" fill="#1a0f08"/>
+  <rect x="23" y="19" width="1"  height="8" fill="#1a0f08"/>
+  <!-- body -->
+  <rect x="16" y="19" width="7" height="1" fill="#1a0f08"/>
+  <rect x="16" y="19" width="1" height="8" fill="#1a0f08"/>
+  <rect x="22" y="19" width="1" height="8" fill="#1a0f08"/>
+  <rect x="16" y="27" width="7" height="1" fill="#1a0f08"/>
+  <rect x="17" y="19" width="5" height="8" fill="#d4a574"/>
+  <!-- saloon window -->
+  <rect x="18" y="20" width="2" height="2" fill="#ffd84d"/>
+  <rect x="18" y="20" width="2" height="1" fill="#c8941d"/>
+  <!-- swinging doors -->
+  <rect x="20" y="22" width="2" height="5" fill="#3d2418"/>
+  <rect x="20" y="22" width="1" height="5" fill="#1a0f08"/>
+
+  <!-- ===== GENERAL STORE (right, with porch) ===== -->
+  <!-- roof (sloped) -->
+  <polygon points="24,15 31,15 31,18" fill="#8b3a3a"/>
+  <polygon points="24,15 31,15 24,18" fill="#e05a3c"/>
+  <rect x="24" y="18" width="8" height="1" fill="#1a0f08"/>
+  <!-- body -->
+  <rect x="24" y="18" width="1" height="9" fill="#1a0f08"/>
+  <rect x="31" y="18" width="1" height="9" fill="#1a0f08"/>
+  <rect x="24" y="27" width="8" height="1" fill="#1a0f08"/>
+  <rect x="25" y="19" width="6" height="8" fill="#e8c089"/>
+  <!-- store door -->
+  <rect x="28" y="22" width="2" height="5" fill="#6b3f24"/>
+  <rect x="28" y="22" width="2" height="1" fill="#1a0f08"/>
+  <rect x="28" y="22" width="1" height="5" fill="#1a0f08"/>
+  <!-- store window -->
+  <rect x="25" y="20" width="2" height="3" fill="#1a0f08"/>
+  <rect x="25" y="20" width="2" height="1" fill="#5fa8d3"/>
+  <rect x="25" y="21" width="2" height="2" fill="#fef6e4"/>
+  <!-- store products in window -->
+  <rect x="25" y="22" width="1" height="1" fill="#c8941d"/>
+  <rect x="26" y="22" width="1" height="1" fill="#e05a3c"/>
+
+  <!-- ===== STREET / GROUND ===== -->
+  <rect x="0" y="28" width="32" height="2" fill="#a87545"/>
+  <rect x="0" y="29" width="32" height="1" fill="#6b3f24"/>
+  <!-- footprints / pebbles -->
+  <g fill="#1a0f08" opacity="0.4">
+    <rect x="3"  y="29" width="1" height="1"/>
+    <rect x="11" y="29" width="1" height="1"/>
+    <rect x="19" y="29" width="1" height="1"/>
+    <rect x="27" y="29" width="1" height="1"/>
+  </g>
+</svg>

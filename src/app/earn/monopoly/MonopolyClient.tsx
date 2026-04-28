@@ -18,6 +18,15 @@ import {
   type SpaceType,
 } from "@/lib/games/monopoly/board";
 
+/** Building icon per upgrade level (1..5). Mirrors slots tier mapping. */
+const BUILDING_FILE: Record<number, string> = {
+  1: "icon-tent.svg",
+  2: "icon-saloon.svg",
+  3: "icon-town.svg",
+  4: "icon-frontier.svg",
+  5: "icon-boomtown.svg",
+};
+
 const TIER_BG: Record<PropertyTier, string> = {
   1: "var(--saddle-300)",
   2: "var(--cactus-300)",
@@ -352,18 +361,37 @@ export function MonopolyClient() {
                     <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h4)", marginTop: 6 }}>
                       {p.name}
                     </div>
-                    <div className="row" style={{ gap: 3, marginTop: 6 }}>
-                      {Array.from({ length: MAX_LEVEL }).map((_, i) => (
-                        <span
-                          key={i}
-                          style={{
-                            width: 14,
-                            height: 14,
-                            background: i < lvl ? "var(--gold-300)" : "var(--parchment-50)",
-                            border: "2px solid var(--ink-900)",
-                          }}
-                        />
-                      ))}
+                    <div className="row" style={{ gap: 4, marginTop: 6 }}>
+                      {Array.from({ length: MAX_LEVEL }).map((_, i) => {
+                        const tier = i + 1;
+                        const reached = tier <= lvl;
+                        return (
+                          <span
+                            key={i}
+                            title={`Level ${tier}`}
+                            style={{
+                              width: 22,
+                              height: 22,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "2px solid var(--ink-900)",
+                              background: reached ? "var(--gold-300)" : "var(--parchment-50)",
+                              opacity: reached ? 1 : 0.5,
+                              filter: reached ? undefined : "grayscale(0.85)",
+                            }}
+                          >
+                            <img
+                              src={`/icons/buildings/${BUILDING_FILE[tier]}`}
+                              width={18}
+                              height={18}
+                              alt=""
+                              draggable={false}
+                              style={{ display: "block", imageRendering: "pixelated" }}
+                            />
+                          </span>
+                        );
+                      })}
                     </div>
                     <div className="text-mute" style={{ fontSize: 11, marginTop: 6 }}>
                       Now: <b className="text-money">×{currentMult}</b> ({(p.basePayout * currentMult).toLocaleString()} ¢)
