@@ -187,7 +187,7 @@ export const TIER_LABEL: Record<number, string> = {
   5: "Boomtown",
 };
 
-const METER_FULL = 1000;
+const METER_FULL = 500;
 const METER_GAIN_MIN = 1;
 const METER_GAIN_MAX = 3;
 

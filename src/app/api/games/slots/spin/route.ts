@@ -7,6 +7,7 @@ import {
   getSlotsMeter,
   insertGameSession,
   insertSlotRun,
+  recentSlotsBetAvg,
   setSlotsMeter,
 } from "@/lib/db";
 import { validateBet } from "@/lib/games/common";
@@ -34,7 +35,26 @@ export async function POST(req: Request) {
 
   const v = validateBet(body.bet);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
-  const bet = v.bet;
+  let bet = v.bet;
+
+  // Bet cap while the meter is filling. The Whiskey Barrel meter
+  // guarantees a Boomtown trigger when full, so a player who spammed
+  // tiny bets to fill it cheaply could then jump to a max bet on the
+  // guaranteed-trigger spin and exploit the system. Cap each spin to
+  // the player's recent rolling average (last 10 base spins). The
+  // first spin of a session has no history, so the cap is a no-op.
+  // Once the meter resets (post-trigger), the next spin establishes
+  // a fresh average.
+  const meterIn0 = await getSlotsMeter(s.user.id);
+  if (meterIn0 > 0) {
+    const avg = await recentSlotsBetAvg(s.user.id, 10);
+    if (avg !== null && bet > avg) {
+      // Clamp silently rather than reject — the player's UI shows
+      // their requested bet, but they're charged + paid out at the
+      // capped amount. Surfaced via the spin response.
+      bet = avg;
+    }
+  }
 
   // Debit the bet immediately. If subsequent steps throw, the wallet history
   // is the source of truth — the bet was real money committed to the spin.
@@ -52,8 +72,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  // Roll
-  const meterIn = await getSlotsMeter(s.user.id);
+  // Roll. We already read the meter above for the bet-cap check; reuse it.
+  const meterIn = meterIn0;
   const result = baseSpin(bet, meterIn);
 
   // Credit line wins
@@ -119,5 +139,12 @@ export async function POST(req: Request) {
     bonusTier: result.bonusStartTier,
     meter: { value: result.meterAfter, gain: result.meterGain, forced: result.meterForcedThisSpin },
     balance: await getBalance(s.user.id),
+    /** True if the route clamped the bet down because the player's
+     *  requested stake exceeded their recent rolling average while
+     *  the meter was filling. effectiveBet is what was actually
+     *  charged. */
+    betClamped: bet !== v.bet,
+    requestedBet: v.bet,
+    effectiveBet: bet,
   });
 }

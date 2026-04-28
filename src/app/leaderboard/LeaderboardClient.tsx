@@ -263,9 +263,14 @@ function LeaderRowView({
 }
 
 function tierLabel(rank: number) {
-  if (rank === 1) return "Sheriff";
-  if (rank <= 3) return "Outlaw";
-  if (rank <= 10) return "Gunslinger";
-  if (rank <= 25) return "Drifter";
-  return "Tenderfoot";
+  if (rank === 1)   return "Sheriff";
+  if (rank <= 3)   return "Outlaw";
+  if (rank <= 10)  return "Gunslinger";
+  if (rank <= 20)  return "Bounty Hunter";
+  if (rank <= 35)  return "Drifter";
+  if (rank <= 50)  return "Prospector";
+  if (rank <= 75)  return "Tenderfoot";
+  if (rank <= 100) return "Greenhorn";
+  if (rank <= 150) return "Saddle Tramp";
+  return "Peasant";
 }

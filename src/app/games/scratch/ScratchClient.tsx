@@ -332,11 +332,17 @@ export function ScratchClient() {
   return (
     <div className="stack-lg">
       <div className="grid grid-2" style={{ alignItems: "start" }}>
-        {/* === Ticket poster === */}
+        {/* === Ticket poster — paper grain + design hue.
+              Bitmap texture tiled and multiply-blended with the
+              design's paper colour, so every region of the card
+              (header strip, ticket bg, padding) shows the grain. */}
         <div
           className={`panel scratch-poster${streak >= 3 ? " is-hot" : ""}`}
           style={{
-            background: spec.paper,
+            backgroundColor: spec.paper,
+            backgroundImage: "url(/textures/scratch-foil.jpg)",
+            backgroundRepeat: "repeat",
+            backgroundBlendMode: "multiply",
             color: "#2b1810",
             border: `4px solid ${spec.accent}`,
             padding: "var(--sp-4)",
@@ -398,6 +404,7 @@ export function ScratchClient() {
                 inset: 0,
                 cursor: phase === "scratching" ? "grabbing" : "default",
                 pointerEvents: phase === "scratching" ? "auto" : "none",
+                imageRendering: "pixelated",
               }}
             />
             {/* Particle dust layer (above foil so it reads over the silver) */}

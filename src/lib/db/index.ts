@@ -94,6 +94,7 @@ export const upsertMonopolyOwned     = impl.upsertMonopolyOwned;
 
 export const getSlotsMeter           = impl.getSlotsMeter;
 export const setSlotsMeter           = impl.setSlotsMeter;
+export const recentSlotsBetAvg       = impl.recentSlotsBetAvg;
 export const getActiveSlotRun        = impl.getActiveSlotRun;
 export const insertSlotRun           = impl.insertSlotRun;
 export const updateSlotRun           = impl.updateSlotRun;

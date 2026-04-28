@@ -656,6 +656,31 @@ export async function getSlotsMeter(userId: string): Promise<number> {
   return Number((data as { slots_meter?: number } | null)?.slots_meter ?? 0);
 }
 
+/** Average bet amount across the player's last N slots base spins
+ *  (settled sessions only). Used to cap a build-the-meter exploit
+ *  where a player spams cheap spins then jumps to a max bet on the
+ *  guaranteed-trigger spin. Returns null if there's no history yet. */
+export async function recentSlotsBetAvg(userId: string, limit = 10): Promise<number | null> {
+  const { data, error } = await client()
+    .from("game_sessions")
+    .select("bet,state")
+    .eq("user_id", userId)
+    .eq("game", "slots")
+    .eq("status", "settled")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`recentSlotsBetAvg: ${error.message}`);
+  const rows = (data ?? []) as { bet: number | string; state: { kind?: string } | null }[];
+  // Skip bonus-settle rows (state.kind === "bonus_settle") — those carry
+  // bet: 0 and would skew the average. Same for any other zero-bet rows.
+  const bets = rows
+    .filter((r) => (r.state?.kind ?? null) !== "bonus_settle")
+    .map((r) => Number(r.bet))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  if (bets.length === 0) return null;
+  return Math.floor(bets.reduce((s, n) => s + n, 0) / bets.length);
+}
+
 export async function setSlotsMeter(userId: string, value: number): Promise<void> {
   const v = Math.max(0, Math.floor(value));
   const { error } = await client().from("users").update({ slots_meter: v }).eq("id", userId);

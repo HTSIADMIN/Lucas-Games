@@ -502,6 +502,18 @@ export async function getSlotsMeter(userId: string): Promise<number> {
   return db().users.find((u) => u.id === userId)?.slots_meter ?? 0;
 }
 
+export async function recentSlotsBetAvg(userId: string, limit = 10): Promise<number | null> {
+  const rows = db().game_sessions
+    .filter((g) => g.user_id === userId && g.game === "slots" && g.status === "settled")
+    .filter((g) => (g.state as { kind?: string } | null)?.kind !== "bonus_settle")
+    .slice()
+    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+    .slice(0, limit);
+  const bets = rows.map((r) => Number(r.bet)).filter((n) => Number.isFinite(n) && n > 0);
+  if (bets.length === 0) return null;
+  return Math.floor(bets.reduce((s, n) => s + n, 0) / bets.length);
+}
+
 export async function setSlotsMeter(userId: string, value: number): Promise<void> {
   const u = db().users.find((x) => x.id === userId);
   if (!u) return;
