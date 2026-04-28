@@ -5,6 +5,7 @@ import { validateBet } from "@/lib/games/common";
 import { debit, getBalance } from "@/lib/wallet";
 import { insertMinesGame } from "@/lib/db";
 import { GRID, makeLayout, multiplierFor } from "@/lib/games/mines/engine";
+import { grantPickaxe, PICKAXE_GRANT_CHANCE } from "@/lib/games/mines/pickaxe";
 
 export const runtime = "nodejs";
 
@@ -50,6 +51,12 @@ export async function POST(req: Request) {
     payout: 0,
   });
 
+  // Random "Lucky Pickaxe" event — granted at game start. Lets the
+  // player tap a button once to reveal a guaranteed-safe tile for
+  // free (still adds to the multiplier ladder).
+  const hasPickaxe = Math.random() < PICKAXE_GRANT_CHANCE;
+  if (hasPickaxe) grantPickaxe(id);
+
   return NextResponse.json({
     ok: true,
     gameId: id,
@@ -61,6 +68,7 @@ export async function POST(req: Request) {
     status: "active",
     bet: v.bet,
     payout: 0,
+    pickaxe: hasPickaxe,
     balance: await getBalance(s.user.id),
   });
 }

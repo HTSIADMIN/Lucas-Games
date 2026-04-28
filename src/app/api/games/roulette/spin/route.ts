@@ -4,6 +4,7 @@ import { readSession } from "@/lib/auth/session";
 import { credit, debit, getBalance } from "@/lib/wallet";
 import { insertGameSession, settleGameSession } from "@/lib/db";
 import { spin, validateBet, type RouletteBet } from "@/lib/games/roulette/engine";
+import { getHotNumber, HOT_PAYOUT, STRAIGHT_PAYOUT } from "@/lib/games/roulette/hot";
 
 export const runtime = "nodejs";
 
@@ -60,7 +61,31 @@ export async function POST(req: Request) {
       refId: `${sessionId}:settle`,
     });
   }
-  await settleGameSession(sessionId, result.totalPayout, { bets, ...result });
+
+  // Hot-number bonus — if the winning number matches the currently
+  // hot one and the player had a straight bet on it, top up the
+  // payout from 35× (already credited above) to 50×. The bonus delta
+  // is HOT_PAYOUT - STRAIGHT_PAYOUT = 15× the straight stake.
+  const hot = getHotNumber();
+  let hotBonus = 0;
+  if (result.winning === hot.value) {
+    for (const b of bets) {
+      if (b.type === "straight" && b.value === hot.value) {
+        hotBonus += b.amount * (HOT_PAYOUT - STRAIGHT_PAYOUT);
+      }
+    }
+  }
+  if (hotBonus > 0) {
+    await credit({
+      userId: s.user.id,
+      amount: hotBonus,
+      reason: "roulette_hot_bonus",
+      refKind: "roulette",
+      refId: `${sessionId}:hot`,
+    });
+  }
+
+  await settleGameSession(sessionId, result.totalPayout + hotBonus, { bets, ...result, hot: hot.value, hotBonus });
 
   return NextResponse.json({
     ok: true,
@@ -69,7 +94,9 @@ export async function POST(req: Request) {
     color: result.color,
     rows: result.rows,
     totalBet: result.totalBet,
-    totalPayout: result.totalPayout,
+    totalPayout: result.totalPayout + hotBonus,
+    hotNumber: hot.value,
+    hotBonus,
     balance: await getBalance(s.user.id),
   });
 }

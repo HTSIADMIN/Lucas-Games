@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { GameIcon } from "@/components/GameIcon";
+import { GameEvent } from "@/components/GameEvent";
 import * as Sfx from "@/lib/sfx";
 
 type Status = "idle" | "active" | "busted" | "cashed";
@@ -39,6 +40,9 @@ export function MinesClient() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
+  // Random "Lucky Pickaxe" event — granted at game start; lets the
+  // player tap once to reveal a guaranteed-safe tile for free.
+  const [pickaxe, setPickaxe] = useState<"none" | "available" | "used">("none");
 
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((d) => setBalance(d.balance ?? null));
@@ -70,6 +74,29 @@ export function MinesClient() {
       payout: 0,
     });
     setBalance(data.balance);
+    setPickaxe(data.pickaxe ? "available" : "none");
+    router.refresh();
+  }
+
+  async function usePickaxe() {
+    if (!game.gameId || pickaxe !== "available" || busy) return;
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/games/mines/${game.gameId}/pickaxe`, { method: "POST" });
+    const data = await res.json();
+    setBusy(false);
+    if (!res.ok) {
+      setError(data.error ?? "error");
+      return;
+    }
+    Sfx.play("ui.wood");
+    setGame((g) => ({
+      ...g,
+      revealed: data.revealed,
+      multiplier: data.multiplier,
+      nextMultiplier: data.nextMultiplier,
+    }));
+    setPickaxe("used");
     router.refresh();
   }
 
@@ -147,6 +174,23 @@ export function MinesClient() {
   return (
     <div className="grid grid-2" style={{ alignItems: "start" }}>
       <div className="panel" style={{ padding: "var(--sp-6)" }}>
+        <GameEvent
+          active={pickaxe === "available"}
+          icon="⛏"
+          title="Lucky Pickaxe"
+          body="Tap to reveal one safe tile for free. The multiplier still climbs."
+          tone="cactus"
+          trailing={
+            <button
+              type="button"
+              className="btn btn-sm action-ready"
+              onClick={usePickaxe}
+              disabled={busy}
+            >
+              Use Pickaxe
+            </button>
+          }
+        />
         <div className="panel-title">5 × 5</div>
 
         <div

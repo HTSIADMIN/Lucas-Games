@@ -1130,6 +1130,21 @@ img, svg, canvas {
   50%      { box-shadow: 0 0 22px rgba(245, 200, 66, 0.85), inset 0 0 22px rgba(245, 200, 66, 0.45); }
 }
 
+/* Random gamewide event banners. Slide in from above, pulse, icon
+   bobs separately. Used by <GameEvent>. */
+@keyframes game-event-slide {
+  0%   { transform: translateY(-12px); opacity: 0; }
+  100% { transform: translateY(0);     opacity: 1; }
+}
+@keyframes game-event-pulse {
+  0%, 100% { filter: brightness(1.0); }
+  50%      { filter: brightness(1.12); }
+}
+@keyframes game-event-icon {
+  0%, 100% { transform: translateY(0)    rotate(-3deg); }
+  50%      { transform: translateY(-2px) rotate(3deg); }
+}
+
 /* Foil shimmer — chunky pixel pattern is baked into the canvas
    each ticket; we just animate brightness/contrast for a metallic
    pulse so it feels alive without re-painting (which would conflict

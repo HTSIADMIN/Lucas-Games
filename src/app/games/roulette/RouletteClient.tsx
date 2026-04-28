@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { colorOf, type RouletteBet, type RouletteBetType } from "@/lib/games/roulette/engine";
+import { GameEvent } from "@/components/GameEvent";
 import * as Sfx from "@/lib/sfx";
 
 type Result = {
@@ -55,6 +56,24 @@ export function RouletteClient() {
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [history, setHistory] = useState<{ n: number; color: "red" | "black" | "green" }[]>([]);
+  // Roulette "Hot Number" event — module-state on the server, polled
+  // here every 5s. The matching cell glows; a straight bet on it
+  // pays 50× instead of 35× when it hits.
+  const [hotNumber, setHotNumber] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      try {
+        const r = await fetch("/api/games/roulette/hot");
+        if (!r.ok) return;
+        const d = await r.json();
+        if (!cancelled && typeof d.value === "number") setHotNumber(d.value);
+      } catch { /* ignore */ }
+    }
+    poll();
+    const t = setInterval(poll, 5_000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
   const [spinning, setSpinning] = useState(false);
   const [hoverPreview, setHoverPreview] = useState<{ label: string; payout: number } | null>(null);
   // Tile strip for the current spin. Regenerated per spin so each open is
@@ -182,6 +201,13 @@ export function RouletteClient() {
 
   return (
     <div className="stack-lg" style={{ gap: "var(--sp-4)" }}>
+      <GameEvent
+        active={hotNumber !== null}
+        icon="★"
+        title={`Hot Number${hotNumber !== null ? ` · ${hotNumber}` : ""}`}
+        body="Glowing on the bet grid. Straight bet on it pays 50× instead of 35× when it hits."
+        tone="gold"
+      />
       {/* Wheel */}
       <div className="panel" style={{ padding: "var(--sp-4)" }}>
         <div className="panel-title">The Wheel</div>
@@ -240,6 +266,7 @@ export function RouletteClient() {
             disabled={spinning}
             chip={chip}
             setHover={setHoverPreview}
+            hotNumber={hotNumber}
           />
         </div>
         {error && <p style={{ color: "var(--crimson-300)", marginTop: "var(--sp-3)" }}>{labelFor(error)}</p>}
@@ -605,6 +632,7 @@ function FeltTable({
   disabled,
   chip,
   setHover,
+  hotNumber,
 }: {
   onPick: (type: RouletteBetType, value?: number) => void;
   onRemove: (type: RouletteBetType, value?: number) => void;
@@ -613,6 +641,7 @@ function FeltTable({
   disabled: boolean;
   chip: number;
   setHover: (h: { label: string; payout: number } | null) => void;
+  hotNumber: number | null;
 }) {
   // Numbers laid out in 3 rows × 12 cols. Top row = highest of each column (3, 6, ..., 36).
   // Column index 0..11 maps to dozens of 1..12.
@@ -693,6 +722,7 @@ function FeltTable({
             cellStyle={cellStyle}
             chip={chip}
             numberAt={numberAt}
+            hotNumber={hotNumber}
           />
         ))}
 
@@ -804,6 +834,7 @@ function ColumnRowCells({
   cellStyle,
   chip,
   numberAt,
+  hotNumber,
 }: {
   row: number;
   findStake: (type: RouletteBetType, value?: number) => number;
@@ -814,6 +845,7 @@ function ColumnRowCells({
   cellStyle: (bg: string) => React.CSSProperties;
   chip: number;
   numberAt: (row: number, col: number) => number;
+  hotNumber: number | null;
 }) {
   return (
     <>
@@ -821,19 +853,25 @@ function ColumnRowCells({
         const n = numberAt(row, col);
         const c = colorOf(n);
         const isWinner = highlight === n;
+        const isHot = hotNumber === n;
         return (
           <button
             key={n}
             type="button"
             onClick={(e) => handle("straight", n, e)}
-            onMouseEnter={() => preview("straight", n, `# ${n}`)}
+            onMouseEnter={() => preview("straight", n, `# ${n}${isHot ? " · HOT 50×" : ""}`)}
             onMouseLeave={clearPreview}
             style={{
               ...cellStyle(c === "red" ? "#c93a2c" : "#1a0f08"),
               gridColumn: col + 2,
               gridRow: row + 1,
-              border: isWinner ? "4px solid var(--gold-300)" : "2px solid var(--ink-900)",
-              boxShadow: isWinner ? "var(--glow-gold)" : undefined,
+              border: isWinner ? "4px solid var(--gold-300)"
+                : isHot     ? "3px solid var(--neon-gold)"
+                : "2px solid var(--ink-900)",
+              boxShadow: isWinner ? "var(--glow-gold)"
+                : isHot     ? "var(--glow-gold)"
+                : undefined,
+              animation: isHot ? "lg-jackpot-glow 1.4s ease-in-out infinite" : undefined,
             }}
           >
             {n}

@@ -118,10 +118,12 @@ export function SlotsClient() {
   }>(null);
   // Floating "+X" text overlays for newly locked coins.
   const [coinFloats, setCoinFloats] = useState<{ id: number; idx: number; value: number }[]>([]);
-  // Autoplay
-  const [autoCount, setAutoCount] = useState(0);
-  const autoRef = useRef(0);
-  useEffect(() => { autoRef.current = autoCount; }, [autoCount]);
+  // Autoplay — flag instead of a counter. Player toggles on; spins
+  // continue indefinitely until they tap Stop or hit a bonus that
+  // pauses the loop. (Was capped at 10 spins originally.)
+  const [autoOn, setAutoOn] = useState(false);
+  const autoRef = useRef(false);
+  useEffect(() => { autoRef.current = autoOn; }, [autoOn]);
   // 2x spin speed (halves all reel-stop / settle delays)
   const [turbo, setTurbo] = useState(false);
   // Progressive jackpot marquee
@@ -166,15 +168,15 @@ export function SlotsClient() {
   const canSpin = !busy && bet >= 100 && (balance == null || balance >= bet) && !bonus;
   const meterPct = Math.min(100, (meter / METER.full) * 100);
 
-  // Autoplay tick — kicked off after each completed spin if autoCount > 0
+  // Autoplay tick — kicked off after each completed spin if auto is on.
   useEffect(() => {
-    if (autoCount <= 0 || busy || bonus) return;
+    if (!autoOn || busy || bonus) return;
     const t = setTimeout(() => {
-      if (autoRef.current > 0 && !busy && !bonus) doSpin();
+      if (autoRef.current && !busy && !bonus) doSpin();
     }, 600);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoCount, busy, bonus]);
+  }, [autoOn, busy, bonus]);
 
   async function doSpin() {
     if (!canSpin) return;
@@ -201,7 +203,7 @@ export function SlotsClient() {
       setBusy(false);
       setReelSpin([0, 0, 0, 0, 0]);
       setError(labelFor(data.error ?? "error"));
-      setAutoCount(0);
+      setAutoOn(false);
       return;
     }
 
@@ -285,9 +287,10 @@ export function SlotsClient() {
           tier: data.bonusTier ?? 1,
           bet,
         });
-      } else if (autoRef.current > 0) {
-        setAutoCount((n) => Math.max(0, n - 1));
       }
+      // Unlimited autoplay — no decrement here. Player taps Stop or
+      // a bonus pauses the loop. Bonus path (above) leaves autoOn
+      // alone too, so it resumes automatically once the bonus settles.
       router.refresh();
     }, totalSettle);
   }
@@ -348,7 +351,6 @@ export function SlotsClient() {
     setBonus(null);
     setBonusEnded(null);
     router.refresh();
-    if (autoRef.current > 0) setAutoCount((n) => Math.max(0, n - 1));
   }
 
   return (
@@ -435,16 +437,13 @@ export function SlotsClient() {
               {turbo ? "2× On" : "2×"}
             </button>
             <button
-              className={`btn btn-sm ${autoCount > 0 ? "" : "btn-ghost"}`}
-              onClick={() => {
-                if (autoCount > 0) setAutoCount(0);
-                else setAutoCount(10);
-              }}
+              className={`btn btn-sm ${autoOn ? "" : "btn-ghost"}`}
+              onClick={() => setAutoOn((v) => !v)}
               disabled={busy || !!bonus}
-              title={autoCount > 0 ? "Stop autoplay" : "Auto 10 spins"}
+              title={autoOn ? "Stop autoplay" : "Auto-spin until stopped"}
               style={{ whiteSpace: "nowrap", flex: "0 0 auto" }}
             >
-              {autoCount > 0 ? `Stop (${autoCount})` : "Auto 10"}
+              {autoOn ? "Stop" : "Auto"}
             </button>
             <button
               className="btn"

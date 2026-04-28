@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import * as Sfx from "@/lib/sfx";
+import { GameEvent } from "@/components/GameEvent";
 import { useLive } from "@/components/social/LiveProvider";
 import { multiplierAt } from "@/lib/games/crash/engine";
 import { getBrowserClient } from "@/lib/supabase/browser";
@@ -56,6 +57,12 @@ export function CrashClient() {
   const [history, setHistory] = useState<HistoryRound[]>([]);
   const [serverOffsetMs, setServerOffsetMs] = useState(0);
   const [liveX, setLiveX] = useState(1.0);
+  // Random "engine sputter" event — purely visual: when active, the
+  // displayed multiplier freezes for 1.5s mid-flight. EV unchanged
+  // (the bust point was committed when the round opened) — it just
+  // adds a spike of tension. Rolled per round.
+  const [sputterUntil, setSputterUntil] = useState<number | null>(null);
+  const sputterFrozenRef = useRef<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
@@ -172,13 +179,32 @@ export function CrashClient() {
         yMax = Y_BASE_MAX;
         crashHandled = false;
         shake = 0;
+        // Roll engine-sputter for this round. ~8% chance, fires once
+        // somewhere between t=2s and t=8s (skip the very start; skip
+        // post-bust). Cleared on next round.
+        if (r?.status === "betting" || r?.status === "running") {
+          if (Math.random() < 0.08) {
+            const fireAt = Date.now() + 2000 + Math.random() * 6000;
+            window.setTimeout(() => {
+              sputterFrozenRef.current = liveX;
+              setSputterUntil(Date.now() + 1500);
+              window.setTimeout(() => {
+                sputterFrozenRef.current = null;
+                setSputterUntil(null);
+              }, 1500);
+            }, Math.max(0, fireAt - Date.now()));
+          }
+        }
       }
 
       if (r?.status === "running" && r.startedAt) {
         const startMs = new Date(r.startedAt).getTime();
         const elapsed = (Date.now() + offsetRef.current - startMs) / 1000;
         const m = multiplierAt(elapsed);
-        setLiveX(m);
+        // Sputter freezes the *displayed* multiplier; the underlying
+        // m keeps climbing so auto-cashout + curve geometry stay
+        // truthful. EV unchanged.
+        if (sputterFrozenRef.current === null) setLiveX(m);
         points.push({ t: elapsed, x: m });
         if (points.length > 1200) points.shift();
         // Grow yMax smoothly so the curve has headroom.
@@ -500,6 +526,13 @@ export function CrashClient() {
   return (
     <div className="grid grid-2 crash-grid" style={{ alignItems: "start" }}>
       <div className="panel crash-stage" style={{ padding: "var(--sp-6)" }}>
+        <GameEvent
+          active={sputterUntil !== null}
+          icon="⚙"
+          title="Engine Sputter"
+          body="The multiplier froze for a second. The bust point hasn't moved."
+          tone="crimson"
+        />
         <div className="panel-title">
           {isBetting ? `Round #${round?.roundNo ?? "—"} · Betting opens` :
            isRunning ? `Round #${round?.roundNo ?? "—"} · LIVE` :
