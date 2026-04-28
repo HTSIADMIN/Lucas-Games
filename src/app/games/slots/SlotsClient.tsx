@@ -32,6 +32,13 @@ type SpinResponse = {
   bonusTier: number | null;
   meter: { value: number; gain: number; forced: boolean };
   balance: number;
+  /** Server-side clamp: if the player's requested bet exceeded their
+   *  recent rolling average while the meter was filling, the route
+   *  silently clamped down to the average. effectiveBet is what was
+   *  actually charged. */
+  betClamped?: boolean;
+  requestedBet?: number;
+  effectiveBet?: number;
 };
 
 type RespinResponse = {

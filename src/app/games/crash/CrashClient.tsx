@@ -522,14 +522,13 @@ export function CrashClient() {
             overflow: "hidden",
           }}
         >
-          {/* Big multiplier readout — pulses with value. Once the
-              player has cashed out (server-confirmed myCashedOut OR
-              optimistic pendingCashoutAt), the readout freezes at
-              the locked-in value. */}
+          {/* Big multiplier readout — keeps ticking up live until
+              bust, even after the player has cashed out, so they can
+              see whether they left money on the table. The cashout
+              point is shown separately as a smaller sub-line below. */}
           {(() => {
             const lockedAt = myBet?.cashoutX ?? pendingCashoutAt ?? null;
-            const showLocked = lockedAt !== null;
-            const displayedX = showLocked ? lockedAt : liveX;
+            const cashed = lockedAt !== null;
             return (
               <div
                 className="crash-readout"
@@ -537,18 +536,34 @@ export function CrashClient() {
                   fontFamily: "var(--font-display)",
                   fontSize: 88,
                   lineHeight: 1,
-                  color: isCrashed ? "var(--crimson-300)" : (showLocked ? "var(--cactus-300)" : tierColor(liveX)),
+                  color: isCrashed ? "var(--crimson-300)" : (cashed ? "var(--cactus-300)" : tierColor(liveX)),
                   textShadow: isCrashed
                     ? "4px 4px 0 var(--ink-900), 0 0 24px rgba(255, 85, 68, 0.8)"
-                    : `4px 4px 0 var(--ink-900), 0 0 ${Math.min(40, 8 + displayedX * 2)}px ${tierGlow(displayedX)}`,
-                  transform: isRunning && !showLocked ? `scale(${1 + Math.min(0.04, liveX * 0.005)})` : "none",
+                    : `4px 4px 0 var(--ink-900), 0 0 ${Math.min(40, 8 + liveX * 2)}px ${tierGlow(liveX)}`,
+                  transform: isRunning ? `scale(${1 + Math.min(0.04, liveX * 0.005)})` : "none",
                   transition: "transform 120ms var(--ease-snap), color 200ms var(--ease-out)",
                 }}
               >
-                {isBetting ? `${secondsLeft}s` : `${displayedX.toFixed(2)}×`}
+                {isBetting ? `${secondsLeft}s` : `${liveX.toFixed(2)}×`}
               </div>
             );
           })()}
+          {/* Cashout indicator — separate sub-line so the live
+              multiplier above stays uninterrupted. */}
+          {!isBetting && (myBet?.cashoutX !== null && myBet?.cashoutX !== undefined || pendingCashoutAt !== null) && (
+            <div
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 22,
+                color: "var(--cactus-300)",
+                textShadow: "2px 2px 0 var(--ink-900)",
+                letterSpacing: "var(--ls-loose)",
+                textTransform: "uppercase",
+              }}
+            >
+              ✓ Cashed at {(myBet?.cashoutX ?? pendingCashoutAt ?? 0).toFixed(2)}×
+            </div>
+          )}
           {isCrashed && (
             <div
               style={{

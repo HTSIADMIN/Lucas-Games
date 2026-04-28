@@ -24,8 +24,12 @@
 //   - At end: payout = sum(visible coin values) × tier multiplier.
 //
 // Persistent meter: every base spin adds 1..3 ticks to the user's slots_meter.
-//                   At 1000 the next spin is guaranteed to trigger the bonus
-//                   (we force ≥6 coins to drop). Meter resets to 0 after.
+//                   At METER_FULL (500) the next spin is guaranteed to trigger
+//                   the bonus (we force ≥6 coins to drop). Meter resets to 0
+//                   after. The /api/games/slots/spin route also clamps each
+//                   spin's bet to the player's recent rolling average while
+//                   meter > 0 so the guaranteed-trigger spin can't be juiced
+//                   with a sudden max bet after spamming cheap fills.
 //
 // Reference bet: payouts are denominated against the player's bet. Coin
 // values, line wins, and jackpots all scale linearly.
