@@ -1,23 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { GameIcon, type GameIconName } from "@/components/GameIcon";
-
-type FreeGame = {
-  slug: string;
-  name: string;
-  tag: string;
-  icon: GameIconName;
-  hasTimer: boolean; // daily-spin + monopoly only
-};
-
-const FREE_GAMES: FreeGame[] = [
-  { slug: "daily-spin",  name: "Daily Spin",        tag: "ONCE / DAY", icon: "lobby.daily_spin",  hasTimer: true  },
-  { slug: "monopoly",    name: "Frontier Monopoly", tag: "EVERY HOUR", icon: "lobby.monopoly",    hasTimer: true  },
-  { slug: "crossy-road", name: "Crossy Road",       tag: "FREE",       icon: "lobby.crossy_road", hasTimer: false },
-  { slug: "flappy",      name: "Flappy",            tag: "FREE",       icon: "lobby.flappy",      hasTimer: false },
-];
+import { GameIcon } from "@/components/GameIcon";
+import { FREE_GAMES } from "@/lib/games/freeGames";
+import { ModalShell, ModalCloseButton } from "@/components/ModalShell";
 
 type EarnStatus = {
   serverNow: number;
@@ -29,15 +16,6 @@ export function FreeGamesButton({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<EarnStatus | null>(null);
   const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
 
   // Poll status every 30s; refresh immediately when modal opens.
   useEffect(() => {
@@ -76,77 +54,34 @@ export function FreeGamesButton({ compact = false }: { compact?: boolean }) {
         Free Games
         {anyReady && <span aria-hidden className="free-games-dot" />}
       </button>
-      {open && (
+      <ModalShell open={open} onClose={() => setOpen(false)} width={520}>
         <div
-          onClick={() => setOpen(false)}
           style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(26, 15, 8, 0.7)",
-            backdropFilter: "blur(3px)",
-            zIndex: 200,
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            padding: "var(--sp-4)",
+            justifyContent: "space-between",
+            marginBottom: "var(--sp-4)",
           }}
         >
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="panel panel-wood"
+            className="uppercase"
             style={{
-              width: "min(520px, 100%)",
-              padding: "var(--sp-5)",
-              background: "var(--parchment-100)",
-              color: "var(--ink-900)",
-              backgroundImage: "none",
-              position: "relative",
+              fontFamily: "var(--font-display)",
+              fontSize: "var(--fs-h3)",
+              color: "var(--gold-700)",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: "var(--sp-4)",
-              }}
-            >
-              <div
-                className="uppercase"
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: "var(--fs-h3)",
-                  color: "var(--gold-700)",
-                }}
-              >
-                Free Games
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                aria-label="close"
-                style={{
-                  background: "var(--saddle-200)",
-                  color: "var(--parchment-50)",
-                  border: "3px solid var(--ink-900)",
-                  width: 32,
-                  height: 32,
-                  fontFamily: "var(--font-display)",
-                  fontSize: 18,
-                  cursor: "pointer",
-                  lineHeight: 1,
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "var(--sp-3)",
-              }}
-            >
+            Free Games
+          </div>
+          <ModalCloseButton onClose={() => setOpen(false)} />
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "var(--sp-3)",
+          }}
+        >
               {FREE_GAMES.map((g) => {
                 const tileStatus = tileStatusFor(g.slug, status, tick);
                 return (
@@ -177,10 +112,8 @@ export function FreeGamesButton({ compact = false }: { compact?: boolean }) {
                   </Link>
                 );
               })}
-            </div>
-          </div>
         </div>
-      )}
+      </ModalShell>
     </>
   );
 }

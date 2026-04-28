@@ -91,6 +91,12 @@ All defined in [`src/app/globals.css`](src/app/globals.css). Mirrored in `Lucas 
 
 `<html data-theme="frontier" | "sunset" | "midnight">` swaps the surface tokens (`--bg`, `--surface`, `--fg`, etc.). Component accents (gold money, crimson danger, cactus success, sky info) keep their hue across themes by referencing the palette tokens directly. Theme is set from the user's equipped cosmetic theme.
 
+## Shared helpers — reach for these first
+
+- [`src/lib/games/freeGames.ts`](src/lib/games/freeGames.ts) — `FREE_GAMES` list, `FreeGameSlug` type, `isFreeGame(slug)` predicate. Used by `GameShell` (decide whether to render the cross-game switcher) and `FreeGamesButton` (modal grid). Add new free games here only.
+- [`src/lib/feed/thresholds.ts`](src/lib/feed/thresholds.ts) — `BIG_BET_THRESHOLD`, `BIG_ODDS_MULTIPLIER`, `FEED_WINDOW_MS`, `MAX_FEED_ROWS`, plus `qualifyBet({ bet, payout })`. Used by both the realtime channel filter (`LiveProvider`) and the polling endpoint (`/api/feed/big-bets`); they always agree.
+- [`src/components/ModalShell.tsx`](src/components/ModalShell.tsx) — `<ModalShell open onClose width={...}>` covers the backdrop + centered card + Esc-to-close + click-outside + body-scroll-lock pattern that was previously hand-rolled in five places. `<ModalCloseButton onClose={...} />` is the matching saddle × button. Reach for these instead of writing another `position: "fixed", inset: 0, ...` div.
+
 ## Earn / readiness API
 
 `GET /api/earn/status` is the lightweight readiness probe used by `<FreeGamesButton>` and the modal:

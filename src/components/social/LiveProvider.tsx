@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { getBrowserClient } from "@/lib/supabase/browser";
 import type { ChatMessagePublic } from "@/lib/db";
+import { qualifyBet, MAX_FEED_ROWS } from "@/lib/feed/thresholds";
 
 export type PresenceMember = {
   userId: string;
@@ -52,11 +53,7 @@ const Ctx = createContext<LiveCtx>({
 
 export function useLive() { return useContext(Ctx); }
 
-const BIG_BET_THRESHOLD = 50_000;
-// Wins paying back at least this many times the wager qualify as
-// "big odds" for the feed even when the bet itself is tiny.
-const BIG_ODDS_MULTIPLIER = 50;
-const MAX_BETS = 30;
+const MAX_BETS = MAX_FEED_ROWS;
 const MAX_CHAT = 100;
 
 export function LiveProvider({
@@ -111,10 +108,9 @@ export function LiveProvider({
             status: string;
           };
           if (row.status !== "settled") return;
+          const { multiplier, bigOdds, qualifies } = qualifyBet({ bet: row.bet, payout: row.payout });
+          if (!qualifies) return;
           const net = row.payout - row.bet;
-          const multiplier = row.bet > 0 ? row.payout / row.bet : 0;
-          const bigOdds = row.payout > 0 && multiplier >= BIG_ODDS_MULTIPLIER;
-          if (Math.abs(net) < BIG_BET_THRESHOLD && !bigOdds) return;
           // Look up user info for the avatar.
           const { data } = await supa.from("users_public").select("*").eq("id", row.user_id).maybeSingle();
           const u = (data ?? {}) as {
