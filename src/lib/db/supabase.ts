@@ -681,6 +681,23 @@ export async function recentSlotsBetAvg(userId: string, limit = 10): Promise<num
   return Math.floor(bets.reduce((s, n) => s + n, 0) / bets.length);
 }
 
+/** Sums the wallet-ledger deltas for the two reasons that move the
+ *  Boomtown jackpot pool. A bet is a negative delta; a payout is a
+ *  positive one. The pool grows by `-sum(bet deltas)` and shrinks by
+ *  `+sum(payout deltas)`, so the live pool value equals
+ *  `STARTING_POOL - (sum of both reasons' deltas)`. We do this on
+ *  read instead of holding a counter because module-level state is
+ *  reset on every cold start in serverless. */
+export async function slotsJackpotLedgerSum(): Promise<number> {
+  const { data, error } = await client()
+    .from("wallet_transactions")
+    .select("delta")
+    .in("reason", ["slots_bet", "slots_jackpot"]);
+  if (error) throw new Error(`slotsJackpotLedgerSum: ${error.message}`);
+  const rows = (data ?? []) as { delta: number | string }[];
+  return rows.reduce((s, r) => s + Number(r.delta), 0);
+}
+
 export async function setSlotsMeter(userId: string, value: number): Promise<void> {
   const v = Math.max(0, Math.floor(value));
   const { error } = await client().from("users").update({ slots_meter: v }).eq("id", userId);

@@ -514,6 +514,12 @@ export async function recentSlotsBetAvg(userId: string, limit = 10): Promise<num
   return Math.floor(bets.reduce((s, n) => s + n, 0) / bets.length);
 }
 
+export async function slotsJackpotLedgerSum(): Promise<number> {
+  return db().wallet_transactions
+    .filter((t) => t.reason === "slots_bet" || t.reason === "slots_jackpot")
+    .reduce((s, t) => s + Number(t.delta), 0);
+}
+
 export async function setSlotsMeter(userId: string, value: number): Promise<void> {
   const u = db().users.find((x) => x.id === userId);
   if (!u) return;

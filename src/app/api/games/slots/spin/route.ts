@@ -17,7 +17,7 @@ import {
   cellToWire,
   type ReelCell,
 } from "@/lib/games/slots/engine";
-import { addBetToPool, consumeJackpot, getJackpotPool, rollJackpotTrigger } from "@/lib/games/slots/jackpot";
+import { getJackpotPool, rollJackpotTrigger, STARTING_POOL } from "@/lib/games/slots/jackpot";
 
 export const runtime = "nodejs";
 
@@ -73,16 +73,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  // The bet just landed in the wallet ledger. Accrue it into the
-  // progressive jackpot pool, then roll the 1-in-5000 jackpot
-  // trigger. Pool + trigger are independent of the base reel result,
-  // so a player who hits the trigger still keeps any normal line
-  // wins from this spin.
-  addBetToPool(bet);
+  // The bet just landed in the wallet ledger; that debit is what
+  // grows the progressive pool. Roll the 1-in-5000 trigger; if it
+  // hits, read the live pool (which already reflects this spin's
+  // bet), credit the player, and the credit itself drains the pool
+  // back to STARTING_POOL. Pool + trigger are independent of the
+  // base reel result, so a hit doesn't replace the normal line wins.
   const jackpotHit = rollJackpotTrigger();
   let jackpotPayout = 0;
   if (jackpotHit) {
-    jackpotPayout = consumeJackpot();
+    const poolNow = await getJackpotPool();
+    jackpotPayout = poolNow - STARTING_POOL;
     if (jackpotPayout > 0) {
       await credit({
         userId: s.user.id,
@@ -164,7 +165,7 @@ export async function POST(req: Request) {
     /** Progressive jackpot pool snapshot AFTER this spin's bet
      *  accrual + any payout this spin. */
     jackpot: {
-      pool: getJackpotPool(),
+      pool: await getJackpotPool(),
       hit: jackpotHit,
       payout: jackpotPayout,
     },

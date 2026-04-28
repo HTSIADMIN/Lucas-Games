@@ -10,5 +10,5 @@ export const runtime = "nodejs";
 export async function GET() {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  return NextResponse.json({ pool: getJackpotPool() });
+  return NextResponse.json({ pool: await getJackpotPool() });
 }
