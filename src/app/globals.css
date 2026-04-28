@@ -563,6 +563,83 @@ img, svg, canvas {
   border-width: 2px;
   align-self: center;
 }
+
+/* Free Games button + tile shimmer when something is ready to claim. */
+.free-games-btn { position: relative; overflow: hidden; }
+.free-games-btn.is-ready {
+  box-shadow: var(--bevel-light), var(--bevel-dark), 0 0 16px rgba(245, 200, 66, 0.55), var(--sh-button-rest);
+  animation: free-games-pulse 1.6s ease-in-out infinite;
+}
+.free-games-btn.is-ready::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: -50%;
+  width: 40%;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.65) 50%, transparent 100%);
+  transform: skewX(-18deg);
+  animation: free-games-shine 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+.free-games-dot {
+  position: absolute;
+  top: -4px; right: -4px;
+  width: 10px; height: 10px;
+  background: var(--crimson-300);
+  border: 2px solid var(--ink-900);
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(255, 85, 68, 0.85);
+  pointer-events: none;
+}
+@keyframes free-games-pulse {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+@keyframes free-games-shine {
+  0%   { left: -50%; }
+  60%, 100% { left: 130%; }
+}
+
+/* Per-tile ready state in the Free Games modal: gold border + same shine. */
+.free-games-tile { position: relative; transition: box-shadow 200ms; }
+.free-games-tile.is-ready {
+  box-shadow: 0 0 0 3px var(--gold-300) inset, var(--glow-gold);
+}
+.free-games-tile.is-ready::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, transparent 35%, rgba(255, 255, 255, 0.45) 50%, transparent 65%);
+  background-size: 220% 100%;
+  animation: tile-shine 2.6s ease-in-out infinite;
+}
+@keyframes tile-shine {
+  0%   { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
+
+/* Generic "action ready" shine — drop on any button to call attention to
+   it (e.g. SPIN button on Daily Spin when the cooldown is up). */
+.action-ready {
+  position: relative;
+  overflow: hidden;
+  animation: action-ready-pulse 1.4s ease-in-out infinite;
+  box-shadow: var(--bevel-light), var(--bevel-dark), 0 0 18px rgba(245, 200, 66, 0.7);
+}
+.action-ready::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: -55%;
+  width: 45%;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.7) 50%, transparent 100%);
+  transform: skewX(-18deg);
+  animation: free-games-shine 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes action-ready-pulse {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
 .balance-bar::before {
   content: ""; position: absolute; inset: 0;
   pointer-events: none;

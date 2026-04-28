@@ -134,7 +134,7 @@ export function DailySpinClient() {
               <div className="stack-lg">
                 <p className="text-mute">Free Coins every day. Pull the lever.</p>
                 <button
-                  className="btn btn-lg btn-block"
+                  className={`btn btn-lg btn-block${busy ? "" : " action-ready"}`}
                   onClick={spin}
                   disabled={busy}
                   style={{

@@ -259,7 +259,7 @@ export function MonopolyClient() {
             </div>
 
             <button
-              className="btn btn-lg"
+              className={`btn btn-lg${state.ready && !busy && !rolling ? " action-ready" : ""}`}
               onClick={roll}
               disabled={busy || !state.ready}
               style={{ width: "min(220px, 100%)" }}

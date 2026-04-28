@@ -9,6 +9,7 @@ import { AppLive } from "@/components/social/AppLive";
 import { HeaderPresence } from "@/components/social/HeaderPresence";
 import { HeaderBalance } from "@/components/HeaderBalance";
 import { DeckProvider } from "@/components/PlayingCard";
+import { FreeGamesButton } from "@/app/lobby/FreeGamesButton";
 import { readSession } from "@/lib/auth/session";
 import { getUserById, recentChatMessages } from "@/lib/db";
 import { getBalance } from "@/lib/wallet";
@@ -36,6 +37,9 @@ export async function GameShell({
   const championId = await getChampionId();
   const deckItem = user.equipped_card_deck ? findItem(user.equipped_card_deck) : undefined;
   const palette = (deckItem?.meta as { palette?: string } | undefined)?.palette ?? "classic";
+
+  const FREE_GAMES = new Set(["daily-spin", "monopoly", "crossy-road", "flappy"]);
+  const isFreeGame = FREE_GAMES.has(game);
 
   const me = {
     id: user.id,
@@ -75,6 +79,7 @@ export async function GameShell({
           }}
         >
           <Link href="/lobby" className="btn btn-ghost btn-sm">← Lobby</Link>
+          {isFreeGame && <FreeGamesButton compact />}
           <h1 className="game-shell-title" style={{ fontSize: "var(--fs-h3)", margin: 0 }}>
             {title}
           </h1>
