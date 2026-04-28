@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CosmeticItem, Rarity } from "@/lib/shop/catalog";
-import { rarityOf, RARITY_COLOR, DECK_PALETTES } from "@/lib/shop/catalog";
+import { rarityOf, RARITY_COLOR, DECK_PALETTES, isDefaultItem } from "@/lib/shop/catalog";
 import { Avatar } from "@/components/Avatar";
+import { ModalShell, ModalCloseButton } from "@/components/ModalShell";
+import { PACK_TIERS, PACK_TIER_ORDER, type PackTier } from "@/lib/shop/packs";
 import * as Sfx from "@/lib/sfx";
 
 type Equipped = {
@@ -15,8 +17,8 @@ type Equipped = {
   hat: string | null;
 };
 
-const PACK_PRICE = 10_000;
 const PACK_SIZE = 5;
+const RARITY_ORDER: Rarity[] = ["common", "rare", "epic", "legendary", "mythic"];
 
 const KIND_LABEL: Record<CosmeticItem["kind"], string> = {
   avatar_color: "Avatar Colors",
@@ -31,14 +33,6 @@ const THEME_SWATCHES: Record<string, string[]> = {
   frontier:  ["#f4ecdc", "#d4a574", "#c93a2c", "#8a8077"],
   sunset:    ["#5a1a1a", "#e87a3a", "#f5c842", "#5a3a78"],
   midnight:  ["#1a0f08", "#3d2418", "#f5c842", "#5fa8d3"],
-};
-
-// Same weights as the server roller — for the "What's in the pack" preview.
-const RARITY_WEIGHT: Record<Rarity, number> = {
-  common: 60,
-  rare: 25,
-  epic: 12,
-  legendary: 3,
 };
 
 export function ShopClient({
@@ -68,9 +62,14 @@ export function ShopClient({
 
   // Loadout modal
   const [showLoadout, setShowLoadout] = useState(false);
+  // Showcase (full collection) modal
+  const [showShowcase, setShowShowcase] = useState(false);
+  // Currently selected pack tier — defaults to the cheapest.
+  const [tier, setTier] = useState<PackTier>("dust");
 
-  async function buyPack() {
+  async function buyPack(tierId: PackTier) {
     if (busy) return;
+    setTier(tierId);
     setBusy(true);
     setError(null);
     setPackItems(null);
@@ -78,7 +77,11 @@ export function ShopClient({
     setRevealedCount(0);
     setChosenId(null);
     setKeptId(null);
-    const res = await fetch("/api/shop/pack/buy", { method: "POST" });
+    const res = await fetch("/api/shop/pack/buy", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tier: tierId }),
+    });
     const data = await res.json();
     setBusy(false);
     if (!res.ok) {
@@ -172,12 +175,13 @@ export function ShopClient({
     }
   }
 
-  // Build the "What's in the pack" preview with rarity counts
-  const totalPool = catalog.length;
-  const rarityCounts: Record<Rarity, number> = { common: 0, rare: 0, epic: 0, legendary: 0 };
-  for (const c of catalog) rarityCounts[rarityOf(c.price)]++;
+  // Pool counts for the showcase + pack preview. Default items don't
+  // roll into packs; we still display them in the showcase.
+  const rollableCatalog = catalog.filter((c) => !isDefaultItem(c));
+  const rarityCounts: Record<Rarity, number> = { common: 0, rare: 0, epic: 0, legendary: 0, mythic: 0 };
+  for (const c of rollableCatalog) rarityCounts[rarityOf(c.price)]++;
 
-  const ownedItems = catalog.filter((c) => owned.has(c.id) || c.price === 0);
+  const ownedItems = catalog.filter((c) => owned.has(c.id) || isDefaultItem(c));
 
   return (
     <>
@@ -221,73 +225,120 @@ export function ShopClient({
               {balance.toLocaleString()} ¢
             </div>
             <button
-              className="btn btn-lg"
-              onClick={buyPack}
-              disabled={busy || balance < PACK_PRICE}
-              style={{
-                background: "var(--gold-300)",
-                color: "var(--ink-900)",
-                fontSize: "var(--fs-h3)",
-                animation: balance >= PACK_PRICE ? "shop-pack-pulse 1.6s ease-in-out infinite alternate" : undefined,
-              }}
+              className="btn"
+              onClick={() => setShowShowcase(true)}
             >
-              {busy ? "..." : `Buy Pack · ${PACK_PRICE.toLocaleString()}¢`}
+              Collection ({ownedItems.length} / {catalog.length})
             </button>
             <button
               className="btn"
               onClick={() => setShowLoadout(true)}
             >
-              My Loadout ({ownedItems.length})
+              My Loadout
             </button>
           </div>
         </div>
         {error && <p style={{ color: "var(--crimson-300)", marginTop: "var(--sp-3)" }}>{error}</p>}
       </div>
 
-      {/* === What's in the pack === */}
+      {/* === Pack tiers === */}
       <div className="panel" style={{ padding: "var(--sp-5)" }}>
-        <div className="panel-title">What's In a Pack</div>
-        <p className="text-mute" style={{ fontSize: 13, marginBottom: "var(--sp-3)" }}>
-          Each pack draws {PACK_SIZE} random cosmetics from the catalog ({totalPool} items total)
-          weighted by rarity. You pick 1.
+        <div className="panel-title">Cosmetic Packs</div>
+        <p className="text-mute" style={{ fontSize: 13, marginBottom: "var(--sp-4)" }}>
+          Pricier packs roll better odds. Items you already own never appear; defaults are off the table.
+          Each pack draws {PACK_SIZE} cosmetics; you keep 1.
         </p>
         <div className="grid grid-4" style={{ gap: "var(--sp-3)" }}>
-          {(["common", "rare", "epic", "legendary"] as Rarity[]).map((r) => {
-            const tone = RARITY_COLOR[r];
-            const totalWeight = (Object.values(RARITY_WEIGHT) as number[]).reduce((a, b) => a + b, 0);
-            const pct = (RARITY_WEIGHT[r] / totalWeight) * 100;
+          {PACK_TIER_ORDER.map((id) => {
+            const t = PACK_TIERS[id];
+            const totalWeight = (Object.values(t.weights) as number[]).reduce((a, b) => a + b, 0);
+            const canAfford = balance >= t.price;
             return (
               <div
-                key={r}
+                key={id}
+                className={`pack-tier${t.animated ? " is-vault" : ""}`}
                 style={{
-                  background: tone.bg,
-                  color: tone.fg,
-                  border: "3px solid var(--ink-900)",
+                  background: t.primary,
+                  color: "var(--ink-900)",
+                  border: `4px solid ${t.border}`,
                   padding: "var(--sp-3)",
-                  textAlign: "center",
-                  boxShadow: r === "legendary" ? "var(--glow-gold)" : "var(--bevel-light)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "var(--sp-2)",
+                  boxShadow: t.glow ?? "var(--sh-card-rest)",
+                  opacity: canAfford ? 1 : 0.55,
                 }}
               >
-                <div
+                <div className="between" style={{ alignItems: "baseline" }}>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: 18,
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      color: "var(--ink-900)",
+                      textShadow: `1px 1px 0 ${t.secondary}`,
+                    }}
+                  >
+                    {t.name}
+                  </span>
+                  <span style={{ fontFamily: "var(--font-display)", fontSize: 28, opacity: 0.7 }}>
+                    {t.glyph}
+                  </span>
+                </div>
+                <p className="text-mute" style={{ fontSize: 11, lineHeight: 1.3, color: "var(--ink-900)", opacity: 0.85, minHeight: 32 }}>
+                  {t.blurb}
+                </p>
+                <div className="stack" style={{ gap: 2 }}>
+                  {RARITY_ORDER.map((r) => {
+                    const w = t.weights[r];
+                    if (w <= 0) return null;
+                    const pct = (w / totalWeight) * 100;
+                    const tone = RARITY_COLOR[r];
+                    return (
+                      <div key={r} className="row" style={{ gap: 4, fontSize: 11, fontFamily: "var(--font-display)" }}>
+                        <span
+                          className={r === "mythic" ? "rarity-mythic" : ""}
+                          style={{
+                            background: r !== "mythic" ? tone.bg : undefined,
+                            color: r !== "mythic" ? tone.fg : undefined,
+                            border: "2px solid var(--ink-900)",
+                            padding: "1px 5px",
+                            letterSpacing: "0.06em",
+                            textTransform: "uppercase",
+                            minWidth: 64,
+                            textAlign: "center",
+                          }}
+                        >
+                          {r}
+                        </span>
+                        <span>{pct.toFixed(0)}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button
+                  className="btn btn-block"
+                  disabled={busy || !canAfford}
+                  onClick={() => buyPack(id)}
                   style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 14,
-                    letterSpacing: "var(--ls-loose)",
-                    textTransform: "uppercase",
+                    fontSize: "var(--fs-h4)",
+                    background: t.secondary,
+                    color: "var(--parchment-50)",
+                    textShadow: "1px 1px 0 var(--ink-900)",
                   }}
                 >
-                  {r}
-                </div>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: 22, marginTop: 4 }}>
-                  {pct.toFixed(0)}%
-                </div>
-                <div style={{ fontSize: 11, marginTop: 2, opacity: 0.85 }}>
-                  {rarityCounts[r]} items
-                </div>
+                  {t.price.toLocaleString()} ¢
+                </button>
               </div>
             );
           })}
         </div>
+        <p className="text-mute" style={{ fontSize: 11, marginTop: "var(--sp-3)" }}>
+          Pool: {rollableCatalog.length} non-default items ·
+          {" "}{rarityCounts.common} common · {rarityCounts.rare} rare · {rarityCounts.epic} epic ·
+          {" "}{rarityCounts.legendary} legendary · <span className="rarity-mythic" style={{ padding: "0 4px" }}>{rarityCounts.mythic} mythic</span>
+        </p>
       </div>
 
       {/* === Pack opening overlay === */}
@@ -302,6 +353,14 @@ export function ShopClient({
           onClose={closePack}
         />
       )}
+
+      {/* === Showcase: full collection === */}
+      <ShowcaseModal
+        open={showShowcase}
+        onClose={() => setShowShowcase(false)}
+        catalog={catalog}
+        owned={owned}
+      />
 
       {/* === Loadout modal === */}
       {showLoadout && (
@@ -845,12 +904,118 @@ function rarityBg(rarity: ReturnType<typeof rarityOf>): string {
     case "rare":      return "linear-gradient(180deg, var(--sky-500), var(--saddle-500))";
     case "epic":      return "linear-gradient(180deg, var(--crimson-500), var(--saddle-500))";
     case "legendary": return "linear-gradient(180deg, var(--gold-500), var(--saddle-500))";
+    case "mythic":    return "linear-gradient(180deg, var(--neon-gold), var(--crimson-500))";
   }
+}
+
+// =============================================================
+// Showcase modal — full catalog grouped by kind, with owned /
+// unowned visual state. Read-only; no equip from here. Default
+// items are always shown as owned because they're implicit.
+// =============================================================
+function ShowcaseModal({
+  open,
+  onClose,
+  catalog,
+  owned,
+}: {
+  open: boolean;
+  onClose: () => void;
+  catalog: CosmeticItem[];
+  owned: Set<string>;
+}) {
+  const groups = (Object.keys(KIND_LABEL) as CosmeticItem["kind"][]).map((k) => ({
+    kind: k,
+    items: catalog.filter((c) => c.kind === k).sort((a, b) => a.price - b.price),
+  }));
+  const totalOwned = catalog.filter((c) => owned.has(c.id) || isDefaultItem(c)).length;
+  return (
+    <ModalShell open={open} onClose={onClose} width={920}>
+      <div className="between" style={{ marginBottom: "var(--sp-4)" }}>
+        <div>
+          <div className="uppercase" style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)", color: "var(--gold-700)" }}>
+            Collection
+          </div>
+          <p className="text-mute" style={{ fontSize: "var(--fs-small)", marginTop: 4 }}>
+            {totalOwned} of {catalog.length} cosmetics. Greyed-out tiles haven't been pulled yet.
+          </p>
+        </div>
+        <ModalCloseButton onClose={onClose} />
+      </div>
+      <div className="stack-lg">
+        {groups.map(({ kind, items }) => (
+          <section key={kind}>
+            <div className="divider" style={{ marginBottom: "var(--sp-3)" }}>{KIND_LABEL[kind]}</div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
+                gap: "var(--sp-2)",
+              }}
+            >
+              {items.map((it) => {
+                const isOwned = owned.has(it.id) || isDefaultItem(it);
+                const r = rarityOf(it.price);
+                const tone = RARITY_COLOR[r];
+                return (
+                  <div
+                    key={it.id}
+                    title={it.name}
+                    style={{
+                      background: "var(--parchment-100)",
+                      border: `3px solid ${isOwned ? "var(--ink-900)" : "var(--saddle-300)"}`,
+                      padding: "var(--sp-2)",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 4,
+                      filter: isOwned ? undefined : "grayscale(0.85) opacity(0.55)",
+                      boxShadow: r === "mythic" && isOwned ? "var(--glow-gold)" : undefined,
+                    }}
+                  >
+                    <div style={{ width: 56, height: 56, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <ItemPreview item={it} />
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-display)",
+                        fontSize: 11,
+                        textAlign: "center",
+                        lineHeight: 1.05,
+                        color: "var(--ink-900)",
+                      }}
+                    >
+                      {it.name}
+                    </div>
+                    <span
+                      className={r === "mythic" ? "rarity-mythic" : ""}
+                      style={{
+                        background: r !== "mythic" ? tone.bg : undefined,
+                        color: r !== "mythic" ? tone.fg : undefined,
+                        border: "2px solid var(--ink-900)",
+                        padding: "1px 5px",
+                        fontFamily: "var(--font-display)",
+                        fontSize: 9,
+                        letterSpacing: "var(--ls-loose)",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {r}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+    </ModalShell>
+  );
 }
 
 function labelFor(code: string) {
   const labels: Record<string, string> = {
-    insufficient_funds: `Need at least ${PACK_PRICE.toLocaleString()}¢ for a pack.`,
+    insufficient_funds: "Not enough Coins for that pack tier.",
     all_owned: "You already own every cosmetic. Nothing left to roll.",
     not_owned: "You don't own that item.",
     item_not_found: "Item not found.",

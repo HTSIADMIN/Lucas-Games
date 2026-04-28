@@ -15,13 +15,14 @@ export type CosmeticItem = {
   meta: Record<string, unknown>;
 };
 
-export type Rarity = "common" | "rare" | "epic" | "legendary";
+export type Rarity = "common" | "rare" | "epic" | "legendary" | "mythic";
 
 export function rarityOf(price: number): Rarity {
   if (price <= 0) return "common";
-  if (price < 100_000) return "rare";
-  if (price < 500_000) return "epic";
-  return "legendary";
+  if (price < 100_000)   return "rare";
+  if (price < 500_000)   return "epic";
+  if (price < 2_000_000) return "legendary";
+  return "mythic";
 }
 
 export const RARITY_COLOR: Record<Rarity, { bg: string; fg: string; glow?: string }> = {
@@ -29,7 +30,16 @@ export const RARITY_COLOR: Record<Rarity, { bg: string; fg: string; glow?: strin
   rare:      { bg: "var(--sky-300)",     fg: "var(--parchment-50)" },
   epic:      { bg: "var(--crimson-300)", fg: "var(--parchment-50)" },
   legendary: { bg: "var(--gold-300)",    fg: "var(--ink-900)", glow: "var(--glow-gold)" },
+  // Mythic uses an animated rainbow background; see .rarity-mythic.
+  mythic:    { bg: "var(--neon-gold)",   fg: "var(--ink-900)", glow: "var(--glow-gold)" },
 };
+
+/** Items the player owns automatically — never roll into a pack and
+ *  always show as owned in the showcase. Default items have either
+ *  meta.default: true or price === 0. */
+export function isDefaultItem(item: CosmeticItem): boolean {
+  return item.price <= 0 || (item.meta as { default?: boolean }).default === true;
+}
 
 export const CATALOG: CosmeticItem[] = [
   // ============ AVATAR COLORS — solids ============
@@ -76,7 +86,7 @@ export const CATALOG: CosmeticItem[] = [
   { id: "hat_halo",          kind: "hat", name: "Halo",            description: "Heaven sent.",                   price:1_000_000, meta: { hat: "halo" } },
 
   // ============ CARD DECKS ============
-  { id: "deck_classic",   kind: "card_deck", name: "Classic Deck", description: "Default suits.",                price:       0, meta: { palette: "classic" } },
+  { id: "deck_classic",   kind: "card_deck", name: "Classic Deck", description: "Default suits.",                price:       0, meta: { palette: "classic", default: true } },
   { id: "deck_outlaw",    kind: "card_deck", name: "Outlaw Deck",  description: "Crimson hearts, dust-gold diamonds.", price: 100_000, meta: { palette: "outlaw" } },
   { id: "deck_saloon",    kind: "card_deck", name: "Saloon Deck",  description: "Red and gold.",                  price: 200_000, meta: { palette: "saloon" } },
   { id: "deck_wanted",    kind: "card_deck", name: "Wanted Deck",  description: "Aged sepia.",                    price: 350_000, meta: { palette: "wanted" } },
@@ -87,6 +97,46 @@ export const CATALOG: CosmeticItem[] = [
   { id: "theme_frontier", kind: "theme", name: "Frontier",         description: "High contrast. Faded sun.",        price:  250_000, meta: { theme: "frontier" } },
   { id: "theme_sunset",   kind: "theme", name: "Sunset Saloon",    description: "Burnt sienna and dusk.",           price:  350_000, meta: { theme: "sunset" } },
   { id: "theme_midnight", kind: "theme", name: "Midnight Tavern",  description: "Lights low, lanterns lit.",       price:  600_000, meta: { theme: "midnight" } },
+
+  // ============ MYTHIC — animated, only available from the highest pack ============
+  // The renderer detects meta.animated tokens and applies CSS keyframes.
+  // See .lg-anim-* in globals.css.
+  {
+    id: "avatar_mythic_prismatic",
+    kind: "avatar_color",
+    name: "Prismatic",
+    description: "Every colour of the spectrum, all at once.",
+    price: 2_500_000,
+    // Sentinel: when equipped, the stored avatar_color is the literal
+    // "animated:prismatic" token. Avatar.tsx detects the prefix and
+    // applies the matching CSS animation class instead of using it
+    // as a background.
+    meta: { color: "animated:prismatic", animated: "prismatic" },
+  },
+  {
+    id: "frame_mythic_solar",
+    kind: "frame",
+    name: "Solar Frame",
+    description: "Spinning corona of gold and crimson light.",
+    price: 4_000_000,
+    meta: { color: "var(--neon-gold)", width: 8, glow: true, badge: "☀", animated: "solar" },
+  },
+  {
+    id: "hat_mythic_crown",
+    kind: "hat",
+    name: "Outlaw Crown",
+    description: "Jewelled crown that pulses gold.",
+    price: 5_000_000,
+    meta: { hat: "crown", animated: "crown" },
+  },
+  {
+    id: "frame_mythic_aether",
+    kind: "frame",
+    name: "Aether Frame",
+    description: "Drifting rainbow shimmer. Looks alive.",
+    price: 7_500_000,
+    meta: { color: "#ff5544", width: 8, glow: true, animated: "aether" },
+  },
 ];
 
 export function findItem(id: string): CosmeticItem | undefined {

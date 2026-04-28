@@ -64,6 +64,11 @@ export function CrashClient() {
   const phaseRef = useRef<RoundView["status"] | null>(null);
   const autoRef = useRef<{ on: boolean; at: number }>({ on: false, at: 2 });
   const cashedThisRoundRef = useRef(false);
+  // Optimistic cashout lock — populated the instant the player taps
+  // (or the auto-cashout rule fires), before the server has confirmed.
+  // Cleared once myBet.cashoutX comes back from the server, or on
+  // round change.
+  const [pendingCashoutAt, setPendingCashoutAt] = useState<number | null>(null);
   // Refs for the render loop so it always sees the freshest values without
   // re-creating its closure (the rAF loop is now mounted once).
   const roundRef = useRef<RoundView | null>(null);
@@ -82,8 +87,11 @@ export function CrashClient() {
     });
   }, []);
 
-  // Reset cash-this-round flag when round id changes
-  useEffect(() => { cashedThisRoundRef.current = false; }, [round?.id]);
+  // Reset cash-this-round flag + pending optimistic lock when round id changes.
+  useEffect(() => {
+    cashedThisRoundRef.current = false;
+    setPendingCashoutAt(null);
+  }, [round?.id]);
 
   // Poll round state
   async function refreshState() {
@@ -440,16 +448,28 @@ export function CrashClient() {
   }
 
   async function cashout() {
+    // Optimistic lock — flip the local state instantly so the readout
+    // stops climbing, the cashout button disables, and the win SFX
+    // fires the moment the player taps. The fetch is fire-and-forget
+    // for the UI; we still await it to grab the server's authoritative
+    // balance and roll back on failure.
+    if (cashedThisRoundRef.current) return;
+    cashedThisRoundRef.current = true;
+    const lockedAt = liveX;
+    setPendingCashoutAt(lockedAt);
+    Sfx.play("chips.stack");
     setBusy(true);
     const res = await fetch("/api/games/crash/cashout", { method: "POST" });
     const data = await res.json();
     setBusy(false);
     if (!res.ok) {
+      // Bust between click and server. Revert the optimistic lock.
+      cashedThisRoundRef.current = false;
+      setPendingCashoutAt(null);
       setError(labelFor(data.error ?? "error"));
       return;
     }
     setBalance(data.balance);
-    Sfx.play("win.notify");
     refreshState();
     router.refresh();
   }
@@ -500,23 +520,33 @@ export function CrashClient() {
             overflow: "hidden",
           }}
         >
-          {/* Big multiplier readout — pulses with value */}
-          <div
-            className="crash-readout"
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 88,
-              lineHeight: 1,
-              color: isCrashed ? "var(--crimson-300)" : (myCashedOut ? "var(--cactus-300)" : tierColor(liveX)),
-              textShadow: isCrashed
-                ? "4px 4px 0 var(--ink-900), 0 0 24px rgba(255, 85, 68, 0.8)"
-                : `4px 4px 0 var(--ink-900), 0 0 ${Math.min(40, 8 + liveX * 2)}px ${tierGlow(liveX)}`,
-              transform: isRunning ? `scale(${1 + Math.min(0.04, liveX * 0.005)})` : "none",
-              transition: "transform 120ms var(--ease-snap), color 200ms var(--ease-out)",
-            }}
-          >
-            {isBetting ? `${secondsLeft}s` : `${liveX.toFixed(2)}×`}
-          </div>
+          {/* Big multiplier readout — pulses with value. Once the
+              player has cashed out (server-confirmed myCashedOut OR
+              optimistic pendingCashoutAt), the readout freezes at
+              the locked-in value. */}
+          {(() => {
+            const lockedAt = myBet?.cashoutX ?? pendingCashoutAt ?? null;
+            const showLocked = lockedAt !== null;
+            const displayedX = showLocked ? lockedAt : liveX;
+            return (
+              <div
+                className="crash-readout"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 88,
+                  lineHeight: 1,
+                  color: isCrashed ? "var(--crimson-300)" : (showLocked ? "var(--cactus-300)" : tierColor(liveX)),
+                  textShadow: isCrashed
+                    ? "4px 4px 0 var(--ink-900), 0 0 24px rgba(255, 85, 68, 0.8)"
+                    : `4px 4px 0 var(--ink-900), 0 0 ${Math.min(40, 8 + displayedX * 2)}px ${tierGlow(displayedX)}`,
+                  transform: isRunning && !showLocked ? `scale(${1 + Math.min(0.04, liveX * 0.005)})` : "none",
+                  transition: "transform 120ms var(--ease-snap), color 200ms var(--ease-out)",
+                }}
+              >
+                {isBetting ? `${secondsLeft}s` : `${displayedX.toFixed(2)}×`}
+              </div>
+            );
+          })()}
           {isCrashed && (
             <div
               style={{
@@ -574,12 +604,21 @@ export function CrashClient() {
               : "Place Your Bet"}
           </div>
 
-          {myBet && isRunning && !myCashedOut && (
+          {myBet && isRunning && !myCashedOut && pendingCashoutAt === null && (
             <div className="stack-lg">
               <p className="text-mute">Your bet: {myBet.amount.toLocaleString()} ¢</p>
               <button className="btn btn-lg btn-block btn-danger" onClick={cashout} disabled={busy}>
                 Cash Out at {liveX.toFixed(2)}× (+{Math.floor(myBet.amount * liveX).toLocaleString()} ¢)
               </button>
+            </div>
+          )}
+
+          {myBet && pendingCashoutAt !== null && !myCashedOut && !isCrashed && (
+            <div className="stack-lg">
+              <p style={{ color: "var(--cactus-500)" }}>
+                Cashed at {pendingCashoutAt.toFixed(2)}× → +{(Math.floor(myBet.amount * pendingCashoutAt) - myBet.amount).toLocaleString()} ¢
+              </p>
+              <p className="text-mute" style={{ fontSize: 12 }}>Confirming…</p>
             </div>
           )}
 

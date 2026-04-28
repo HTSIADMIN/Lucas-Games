@@ -1186,3 +1186,95 @@ img, svg, canvas {
   0%   { transform: translateY(20px); opacity: 0; }
   100% { transform: translateY(0);    opacity: 1; }
 }
+
+/* ============================================================
+   MYTHIC COSMETICS — animated avatar colour, frame, hat.
+   Avatar.tsx applies these classes when the equipped item has
+   meta.animated: "<token>".
+   ============================================================ */
+
+/* Avatar background: prismatic — slow rainbow sweep. */
+.lg-anim-avatar-prismatic {
+  background: linear-gradient(135deg,
+    #ff4d4d, #ffd84d, #8aff5a, #5fdcff, #b46cff, #ff4dff, #ff4d4d);
+  background-size: 400% 400%;
+  animation: lg-prismatic 6s linear infinite;
+}
+@keyframes lg-prismatic {
+  0%   { background-position:   0% 50%; }
+  100% { background-position: 400% 50%; }
+}
+
+/* Frame: solar — rotating golden corona behind the avatar.
+   Implemented as a glowing outer ring via box-shadow that shifts
+   colour around the gold/crimson palette. */
+.lg-anim-frame-solar {
+  animation: lg-solar 2.4s linear infinite;
+}
+@keyframes lg-solar {
+  0%   { box-shadow: 0 0 14px rgba(245, 200, 66, 0.85),
+                     0 0 28px rgba(245, 200, 66, 0.55); }
+  50%  { box-shadow: 0 0 18px rgba(255, 85,  68, 0.85),
+                     0 0 36px rgba(255, 85,  68, 0.55); }
+  100% { box-shadow: 0 0 14px rgba(245, 200, 66, 0.85),
+                     0 0 28px rgba(245, 200, 66, 0.55); }
+}
+
+/* Frame: aether — drifting rainbow border. We can't rotate the
+   border directly, so we emulate by hue-rotating the box shadow
+   stack and pulsing it. */
+.lg-anim-frame-aether {
+  animation: lg-aether 4s ease-in-out infinite;
+}
+@keyframes lg-aether {
+  0%   { box-shadow: 0 0 14px #ff4d4d, 0 0 28px rgba(255, 77, 77, 0.45); border-color: #ff4d4d; }
+  20%  { box-shadow: 0 0 14px #ffd84d, 0 0 28px rgba(255, 216, 77, 0.45); border-color: #ffd84d; }
+  40%  { box-shadow: 0 0 14px #8aff5a, 0 0 28px rgba(138, 255, 90, 0.45); border-color: #8aff5a; }
+  60%  { box-shadow: 0 0 14px #5fdcff, 0 0 28px rgba(95, 220, 255, 0.45); border-color: #5fdcff; }
+  80%  { box-shadow: 0 0 14px #b46cff, 0 0 28px rgba(180, 108, 255, 0.45); border-color: #b46cff; }
+  100% { box-shadow: 0 0 14px #ff4d4d, 0 0 28px rgba(255, 77, 77, 0.45); border-color: #ff4d4d; }
+}
+
+/* Hat: Outlaw Crown — gentle gold pulse on the band + jewel hue
+   shift on the three jewels. */
+.lg-anim-hat-crown {
+  animation: lg-crown-pulse 2.4s ease-in-out infinite;
+}
+@keyframes lg-crown-pulse {
+  0%, 100% { filter: drop-shadow(1px 2px 0 var(--ink-900)) drop-shadow(0 0  6px rgba(245, 200, 66, 0.6)); }
+  50%      { filter: drop-shadow(1px 2px 0 var(--ink-900)) drop-shadow(0 0 14px rgba(245, 200, 66, 0.95)); }
+}
+.lg-crown-jewel-a { animation: lg-crown-jewel-a 3s linear infinite; }
+.lg-crown-jewel-b { animation: lg-crown-jewel-b 3s linear infinite; }
+.lg-crown-jewel-c { animation: lg-crown-jewel-c 3s linear infinite; }
+@keyframes lg-crown-jewel-a {
+  0%   { fill: #ff5544; } 33%  { fill: #ffd84d; }
+  66%  { fill: #5fdcff; } 100% { fill: #ff5544; }
+}
+@keyframes lg-crown-jewel-b {
+  0%   { fill: #5fdcff; } 33%  { fill: #ff5544; }
+  66%  { fill: #ffd84d; } 100% { fill: #5fdcff; }
+}
+@keyframes lg-crown-jewel-c {
+  0%   { fill: #8aff5a; } 33%  { fill: #5fdcff; }
+  66%  { fill: #ff5544; } 100% { fill: #8aff5a; }
+}
+
+/* Rarity-mythic chip: animated rainbow background for rarity badges
+   in the Showcase + Pack cards. */
+.rarity-mythic {
+  background: linear-gradient(90deg, #ff4d4d, #ffd84d, #8aff5a, #5fdcff, #b46cff, #ff4d4d);
+  background-size: 400% 100%;
+  color: var(--ink-900);
+  animation: lg-prismatic 5s linear infinite;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.25);
+}
+
+/* Pack-tier card: vault tier shimmers like the items it can drop. */
+.pack-tier.is-vault {
+  animation: lg-vault-shimmer 3s ease-in-out infinite;
+}
+@keyframes lg-vault-shimmer {
+  0%, 100% { box-shadow: var(--bevel-light), var(--bevel-dark), 0 0 18px rgba(245, 200, 66, 0.55), var(--sh-card-rest); }
+  50%      { box-shadow: var(--bevel-light), var(--bevel-dark), 0 0 28px rgba(255, 85,  68, 0.85), var(--sh-card-rest); }
+}

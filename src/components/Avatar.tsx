@@ -30,9 +30,22 @@ export function Avatar({
   const baseBorderWidth = size <= 24 ? 2 : size <= 40 ? 2 : 3;
   const fs = fontSize ?? Math.floor(size * 0.4);
 
-  // Frame metadata (color, width, optional badge, glow flag).
+  // Animated avatar colour tokens: when the equipped colour string
+  // starts with "animated:<token>", we render a CSS class that runs
+  // the matching keyframes instead of using the string as background.
+  const animatedColor = typeof color === "string" && color.startsWith("animated:")
+    ? color.slice("animated:".length)
+    : null;
+
+  // Frame metadata (color, width, optional badge, glow flag, animated).
   const frameItem = frame ? findItem(frame) : undefined;
-  const frameMeta = (frameItem?.meta ?? {}) as { color?: string; width?: number; glow?: boolean; badge?: string };
+  const frameMeta = (frameItem?.meta ?? {}) as {
+    color?: string;
+    width?: number;
+    glow?: boolean;
+    badge?: string;
+    animated?: string;
+  };
   // Frame widths are authored for full-size 48-96px avatars. Cap them on
   // smaller renders (presence strip, leaderboard rows) so the border
   // doesn't swallow the inner pixel area.
@@ -41,10 +54,12 @@ export function Avatar({
   const effectiveBorderWidth = Math.min(requestedBorderWidth, widthCap);
   const effectiveBorderColor = frameItem ? (frameMeta.color ?? "var(--ink-900)") : "var(--ink-900)";
   const frameGlow = frameItem && frameMeta.glow ? `0 0 12px ${frameMeta.color}` : undefined;
+  const frameAnimClass = frameMeta.animated ? `lg-anim-frame-${frameMeta.animated}` : "";
 
   // Hat metadata.
   const hatItem = hat ? findItem(hat) : undefined;
-  const hatMeta = (hatItem?.meta ?? {}) as { hat?: HatKind };
+  const hatMeta = (hatItem?.meta ?? {}) as { hat?: HatKind; animated?: string };
+  const hatAnimClass = hatMeta.animated ? `lg-anim-hat-${hatMeta.animated}` : "";
 
   return (
     <span
@@ -59,13 +74,13 @@ export function Avatar({
       }}
     >
       <span
-        className="avatar"
+        className={`avatar${animatedColor ? ` lg-anim-avatar-${animatedColor}` : ""}${frameAnimClass ? ` ${frameAnimClass}` : ""}`}
         style={{
           width: size,
           height: size,
           borderWidth: effectiveBorderWidth,
           borderColor: effectiveBorderColor,
-          background: color,
+          background: animatedColor ? undefined : color,
           fontSize: fs,
           color: "var(--ink-900)",
           boxShadow: frameGlow,
@@ -74,7 +89,7 @@ export function Avatar({
         {initials}
       </span>
 
-      {hatMeta.hat && <Hat kind={hatMeta.hat} size={size} />}
+      {hatMeta.hat && <Hat kind={hatMeta.hat} size={size} animClass={hatAnimClass} />}
 
       {typeof level === "number" && level > 0 && (
         <span
@@ -134,15 +149,17 @@ type HatKind =
   | "tophat"
   | "bandana_red"
   | "bandana_blue"
-  | "halo";
+  | "halo"
+  | "crown";
 
-function Hat({ kind, size }: { kind: HatKind; size: number }) {
+function Hat({ kind, size, animClass }: { kind: HatKind; size: number; animClass?: string }) {
   const w = size * 1.05;
   const h = size * 0.55;
   const top = -h * 0.55;
   const left = -(w - size) / 2;
   return (
     <span
+      className={animClass}
       style={{
         position: "absolute",
         top,
@@ -260,6 +277,28 @@ function hatPath(kind: HatKind): React.ReactNode {
         <>
           <ellipse cx="16" cy="13" rx="11" ry="3" fill="none" stroke="#ffd84d" strokeWidth="2" />
           <ellipse cx="16" cy="13" rx="11" ry="3" fill="none" stroke="#fff8e1" strokeWidth="1" />
+        </>
+      );
+    case "crown":
+      return (
+        <>
+          {/* Base band */}
+          <rect x="4" y="13" width="24" height="3" fill="#7a5510" />
+          <rect x="4" y="14" width="24" height="2" fill="#f5c842" />
+          <rect x="4" y="16" width="24" height="1" fill="#7a5510" />
+          {/* Three peaks */}
+          <rect x="6"  y="6"  width="2" height="7"  fill="#f5c842" />
+          <rect x="15" y="3"  width="2" height="10" fill="#f5c842" />
+          <rect x="24" y="6"  width="2" height="7"  fill="#f5c842" />
+          {/* Connectors */}
+          <rect x="6"  y="11" width="20" height="2" fill="#f5c842" />
+          <rect x="6"  y="6"  width="2"  height="1" fill="#ffe9a8" />
+          <rect x="15" y="3"  width="2"  height="1" fill="#ffe9a8" />
+          <rect x="24" y="6"  width="2"  height="1" fill="#ffe9a8" />
+          {/* Jewels — animated colour pulse via .lg-anim-hat-crown */}
+          <rect x="6"  y="5"  width="2" height="2" fill="#ff5544" className="lg-crown-jewel-a" />
+          <rect x="15" y="2"  width="2" height="2" fill="#5fdcff" className="lg-crown-jewel-b" />
+          <rect x="24" y="5"  width="2" height="2" fill="#8aff5a" className="lg-crown-jewel-c" />
         </>
       );
   }
