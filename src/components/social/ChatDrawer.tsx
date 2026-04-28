@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLive } from "./LiveProvider";
 import { GameIcon } from "@/components/GameIcon";
 import { Avatar } from "@/components/Avatar";
+import * as Sfx from "@/lib/sfx";
 
 export function ChatDrawer({ currentUserId }: { currentUserId: string | null }) {
   const { chat, bets, championId } = useLive();
@@ -42,6 +43,7 @@ export function ChatDrawer({ currentUserId }: { currentUserId: string | null }) 
     if (latest.user_id === currentUserId) return;
     if (open && tab === "chat") return;
     setPingKey((k) => k + 1);
+    Sfx.play("ui.notify");
   }, [chat, open, tab, currentUserId]);
 
   // Mark read when the chat tab is open.

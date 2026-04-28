@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import * as Sfx from "@/lib/sfx";
 import { GameIcon, type IconName } from "@/components/GameIcon";
 import { BetInput } from "@/components/BetInput";
 import {
@@ -149,6 +150,7 @@ export function SlotsClient() {
     setWinningCells(new Set());
     setBonusEnded(null);
     setBusy(true);
+    Sfx.play("card.shuffle");
 
     // Start reel-spin animation (staggered ends)
     const t0 = Date.now();
@@ -216,10 +218,13 @@ export function SlotsClient() {
           }
         }
         setWinningCells(cells);
+        if (data.linePayout > bet * 10) Sfx.play("win.big");
+        else Sfx.play("win.notify");
       }
 
       // Bonus trigger
       if (data.bonusTriggered && data.bonusBoard) {
+        Sfx.play("win.levelup");
         setBonus({
           board: data.bonusBoard,
           respinsLeft: 3,

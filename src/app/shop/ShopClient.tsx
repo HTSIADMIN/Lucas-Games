@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { CosmeticItem, Rarity } from "@/lib/shop/catalog";
 import { rarityOf, RARITY_COLOR, DECK_PALETTES } from "@/lib/shop/catalog";
 import { Avatar } from "@/components/Avatar";
+import * as Sfx from "@/lib/sfx";
 
 type Equipped = {
   avatar_color: string;
@@ -87,9 +88,13 @@ export function ShopClient({
     setBalance(data.balance);
     setPackItems(data.items);
     setPackToken(data.packToken);
+    Sfx.play("card.shuffle");
     // Stagger the card reveals (350ms apart, same cadence as monopoly packs).
     for (let i = 0; i < data.items.length; i++) {
-      setTimeout(() => setRevealedCount((c) => Math.max(c, i + 1)), 350 + i * 350);
+      setTimeout(() => {
+        setRevealedCount((c) => Math.max(c, i + 1));
+        Sfx.play("card.deal");
+      }, 350 + i * 350);
     }
     router.refresh();
   }
@@ -116,6 +121,7 @@ export function ShopClient({
     setOwned((p) => new Set(p).add(item.id));
     setKeptId(item.id);
     setBalance(data.balance);
+    Sfx.play("win.levelup");
     router.refresh();
   }
 

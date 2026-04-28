@@ -781,6 +781,47 @@ img, svg, canvas {
   text-shadow: 1px 1px 0 var(--gold-700);
   margin-top: 2px;
 }
+.sfx-controls {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  background: var(--saddle-600);
+  border: 2px solid var(--ink-900);
+  padding: 4px 8px;
+}
+.sfx-mute {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--gold-300);
+  padding: 0;
+  line-height: 1;
+}
+.sfx-mute:hover { color: var(--gold-100); }
+.sfx-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 8px;
+  background: var(--saddle-500);
+  border: 2px solid var(--ink-900);
+  outline: none;
+  cursor: pointer;
+}
+.sfx-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--gold-300);
+  border: 2px solid var(--ink-900);
+}
+.sfx-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--gold-300);
+  border: 2px solid var(--ink-900);
+}
+
 .site-nav { display: flex; gap: var(--sp-1); }
 .site-nav a {
   font-family: var(--font-display);
@@ -920,6 +961,9 @@ img, svg, canvas {
   /* Header balance shrinks to coins-only on phones to save room. */
   .header-balance .header-balance-name { display: none; }
   .header-balance { padding: 2px var(--sp-2) 2px 2px; }
+  /* Sound controls compress to just the mute button on phones. */
+  .sfx-slider { display: none; }
+  .sfx-controls { padding: 2px 6px; }
   .balance-bar { flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-1) var(--sp-3) var(--sp-1) var(--sp-1); }
   .balance { font-size: var(--fs-h4); padding: var(--sp-1) var(--sp-2); }
   .avatar-username .uname { font-size: var(--fs-body); }

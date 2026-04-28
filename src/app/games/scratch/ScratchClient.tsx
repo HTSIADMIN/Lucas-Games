@@ -11,6 +11,7 @@ import {
 import { ScratchSym } from "./Symbols";
 import { BigWinOverlay } from "./BigWinOverlay";
 import { QuickDrawModal } from "./QuickDrawModal";
+import * as Sfx from "@/lib/sfx";
 
 type BuyResponse = { ok: true; ticket: ScratchOutcome; balance: number; availableAt?: string };
 
@@ -170,6 +171,19 @@ export function ScratchClient() {
     setPhase("settled");
     if (!ticket) return;
     setStreak((s) => (ticket.payout > 0 ? s + 1 : 0));
+    // Win stinger ladder
+    if (ticket.tier === "jackpot") {
+      Sfx.play("win.big");
+      window.setTimeout(() => Sfx.play("coins.shower"), 600);
+    } else if (ticket.tier === "large") {
+      Sfx.play("win.levelup");
+    } else if (ticket.tier === "medium" || ticket.tier === "small") {
+      Sfx.play("win.notify");
+    } else if (ticket.bonusPayout > 0) {
+      Sfx.play("coins.clink");
+    } else {
+      Sfx.play("ui.notify");
+    }
     if (ticket.tier === "large" || ticket.tier === "jackpot") {
       // Slight delay so the player sees the reveal first.
       window.setTimeout(() => setBigWinOpen(true), 450);
@@ -216,6 +230,7 @@ export function ScratchClient() {
       setTicket(t.ticket);
       setPhase("scratching");
       setBalance(t.balance);
+      Sfx.play("coins.handle");
       if (useDaily) {
         setDailyReady(false);
         setDailyAt(t.availableAt ?? null);

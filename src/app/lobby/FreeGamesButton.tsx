@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { GameIcon } from "@/components/GameIcon";
 import { FREE_GAMES } from "@/lib/games/freeGames";
 import { ModalShell, ModalCloseButton } from "@/components/ModalShell";
+import * as Sfx from "@/lib/sfx";
 
 type EarnStatus = {
   serverNow: number;
@@ -16,6 +17,7 @@ export function FreeGamesButton({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<EarnStatus | null>(null);
   const [tick, setTick] = useState(0);
+  const wasReadyRef = useRef<boolean>(false);
 
   // Poll status every 30s; refresh immediately when modal opens.
   useEffect(() => {
@@ -43,6 +45,15 @@ export function FreeGamesButton({ compact = false }: { compact?: boolean }) {
   }, [open]);
 
   const anyReady = !!status && (status.dailySpin.ready || status.monopoly.ready);
+
+  // Chime once when readiness flips on (cooldown finished while the
+  // player was looking at the page).
+  useEffect(() => {
+    if (anyReady && !wasReadyRef.current) {
+      Sfx.play("win.levelup");
+    }
+    wasReadyRef.current = anyReady;
+  }, [anyReady]);
 
   return (
     <>

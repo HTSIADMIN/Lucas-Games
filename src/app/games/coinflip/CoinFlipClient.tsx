@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
+import * as Sfx from "@/lib/sfx";
 
 type Side = "heads" | "tails";
 
@@ -50,6 +51,7 @@ export function CoinFlipClient() {
     setBusy(true);
     setSpinning(true);
     setTossKey((k) => k + 1);
+    Sfx.play("coin.drop");
 
     const res = await fetch("/api/games/coinflip/flip", {
       method: "POST",
@@ -78,8 +80,12 @@ export function CoinFlipClient() {
       setResult(data);
       setBalance(data.balance);
       setStampKey((k) => k + 1);
-      if (data.win) setConfettiKey((k) => k + 1);
-      else setShakeKey((k) => k + 1);
+      if (data.win) {
+        setConfettiKey((k) => k + 1);
+        Sfx.play("coins.clink");
+      } else {
+        setShakeKey((k) => k + 1);
+      }
       setHistory((prev) => {
         const next: HistoryEntry = { id: Date.now(), result: data.result, win: data.win };
         return [next, ...prev].slice(0, MAX_HISTORY);

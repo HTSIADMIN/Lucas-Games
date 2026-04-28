@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { chanceOfWin, multiplierFor, type DiceDirection } from "@/lib/games/dice/engine";
+import * as Sfx from "@/lib/sfx";
 
 type Result = {
   roll: number;
@@ -56,6 +57,7 @@ export function DiceClient() {
     setError(null);
     setResult(null);
     setRolling(true);
+    Sfx.play("card.deal");
     setDisplayed(1 + Math.floor(Math.random() * 100));
     const startedAt = Date.now();
 
@@ -82,8 +84,15 @@ export function DiceClient() {
       setBalance(data.balance);
       setMarkerKey((k) => k + 1);
       setStampKey((k) => k + 1);
-      if (data.win) setConfettiKey((k) => k + 1);
-      else setShakeKey((k) => k + 1);
+      if (data.win) {
+        setConfettiKey((k) => k + 1);
+        if (data.multiplier >= 10) Sfx.play("win.big");
+        else if (data.multiplier >= 3) Sfx.play("win.levelup");
+        else Sfx.play("win.notify");
+      } else {
+        setShakeKey((k) => k + 1);
+        Sfx.play("ui.notify");
+      }
       setBusy(false);
       router.refresh();
     }, wait);

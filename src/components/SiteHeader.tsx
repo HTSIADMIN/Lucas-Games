@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ProfileButton } from "@/components/social/ProfileButton";
+import { SfxControls } from "@/components/SfxControls";
 
 export function SiteHeader({
   current,
@@ -21,6 +22,7 @@ export function SiteHeader({
         </div>
       </Link>
       <div className="site-header-center">{centerSlot}</div>
+      <SfxControls />
       <nav className="site-nav">
         <Link href="/lobby" aria-current={current === "lobby" ? "page" : undefined}>
           Lobby

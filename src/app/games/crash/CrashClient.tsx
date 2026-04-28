@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
+import * as Sfx from "@/lib/sfx";
 import { useLive } from "@/components/social/LiveProvider";
 import { multiplierAt } from "@/lib/games/crash/engine";
 import { getBrowserClient } from "@/lib/supabase/browser";
@@ -120,7 +121,10 @@ export function CrashClient() {
 
   // Refresh history whenever a round transitions out of "crashed".
   useEffect(() => {
-    if (round?.status === "crashed") refreshHistory();
+    if (round?.status === "crashed") {
+      refreshHistory();
+      Sfx.play("ui.notify");
+    }
   }, [round?.status, round?.id]);
 
   // Realtime: react instantly to crash_rounds + crash_bets changes.
@@ -445,6 +449,7 @@ export function CrashClient() {
       return;
     }
     setBalance(data.balance);
+    Sfx.play("win.notify");
     refreshState();
     router.refresh();
   }

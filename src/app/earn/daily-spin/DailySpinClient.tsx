@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SpinSlice } from "@/lib/games/dailySpin/engine";
+import * as Sfx from "@/lib/sfx";
 
 type Status = {
   ready: boolean;
@@ -50,6 +51,7 @@ export function DailySpinClient() {
     setBusy(true);
     setError(null);
     setResult(null);
+    Sfx.play("roulette.ball");
 
     const res = await fetch("/api/earn/daily-spin", { method: "POST" });
     const data = await res.json();
@@ -76,6 +78,11 @@ export function DailySpinClient() {
       setConfettiKey((k) => k + 1);
       setBusy(false);
       router.refresh();
+      const tone = data.tone as string | undefined;
+      if (tone === "jackpot") Sfx.play("win.big");
+      else if (tone === "high") Sfx.play("win.levelup");
+      else if (tone === "mid") Sfx.play("win.notify");
+      else Sfx.play("coins.clink");
     }, SPIN_MS + REVEAL_DELAY);
   }
 
