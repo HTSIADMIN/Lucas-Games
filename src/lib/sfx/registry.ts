@@ -36,6 +36,18 @@ export const SFX_REGISTRY = {
   // UI / generic
   "roulette.ball": { src: "/sfx/casino-roulette-ball.wav",             volume: 0.6,  throttleMs: 1000, voices: 1 },
   "ui.notify":     { src: "/sfx/retro-arcade-casino-notification.wav", volume: 0.5,  throttleMs: 400, voices: 2 },
+  // Tight UI click — tap, modal-open, plinko drop. Mild and short.
+  "ui.click":      { src: "/sfx/ui-click.mp3",                         volume: 0.55, throttleMs: 40,  voices: 5 },
+
+  // Dice — punchy single-die toss; replaces card.deal on dice roll.
+  "dice.throw":    { src: "/sfx/dice-throw.ogg",                       volume: 0.7,  throttleMs: 250, voices: 2 },
+
+  // Chip table sounds.
+  "chips.stack":   { src: "/sfx/chips-stack.ogg",                      volume: 0.7,  throttleMs: 200, voices: 3 },
+  "chips.collide": { src: "/sfx/chips-collide.ogg",                    volume: 0.55, throttleMs: 80,  voices: 4 },
+
+  // Card-pack tear — distinct sweep used when opening shop / monopoly packs.
+  "pack.open":     { src: "/sfx/pack-open.ogg",                        volume: 0.7,  throttleMs: 800, voices: 1 },
 } as const satisfies Record<string, SfxSpec>;
 
 export type SfxName = keyof typeof SFX_REGISTRY;

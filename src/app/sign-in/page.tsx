@@ -40,7 +40,7 @@ export default function SignInPage() {
 
   async function press(digit: string) {
     if (pin.length >= 4 || submitting) return;
-    Sfx.play("card.place");
+    Sfx.play("ui.click");
     const next = pin + digit;
     setPin(next);
     if (next.length === 4 && selected) {
@@ -71,8 +71,8 @@ export default function SignInPage() {
     }
   }
 
-  function backspace() { Sfx.play("card.place"); setPin((p) => p.slice(0, -1)); }
-  function clearPin() { Sfx.play("card.place"); setPin(""); }
+  function backspace() { Sfx.play("ui.click"); setPin((p) => p.slice(0, -1)); }
+  function clearPin() { Sfx.play("ui.click"); setPin(""); }
 
   function reset() {
     setSelected(null);

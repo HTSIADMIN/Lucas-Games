@@ -88,7 +88,7 @@ export function ShopClient({
     setBalance(data.balance);
     setPackItems(data.items);
     setPackToken(data.packToken);
-    Sfx.play("card.shuffle");
+    Sfx.play("pack.open");
     // Stagger the card reveals (350ms apart, same cadence as monopoly packs).
     for (let i = 0; i < data.items.length; i++) {
       setTimeout(() => {

@@ -52,7 +52,7 @@ export function ModalShell({
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    Sfx.play("card.place");
+    Sfx.play("ui.click");
     return () => { document.body.style.overflow = prev; };
   }, [open]);
 

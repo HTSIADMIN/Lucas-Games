@@ -186,7 +186,9 @@ export function PlinkoClient() {
         return;
       }
 
-      Sfx.play("coin.drop");
+      // Soft UI tick on the drop — the original coin.drop was too
+      // weighty for a button press.
+      Sfx.play("ui.click");
       // Spawn a new flying ball with its own path.
       const path = buildBallPath(localRows, data.bucket);
       const id = crypto.randomUUID();
@@ -207,11 +209,12 @@ export function PlinkoClient() {
         setResult(data);
         // Server-truth balance — overrides optimistic if any drift.
         setBalance(data.balance);
-        // Tier-scale the landing chime by multiplier.
+        // Tier-scale the landing chime by multiplier. Light hits use
+        // the new chips-collide for a quick poker-table clack.
         const m = data.multiplier ?? 0;
         if (m >= 50)      Sfx.play("win.big");
         else if (m >= 5)  Sfx.play("win.levelup");
-        else if (m >= 1)  Sfx.play("coins.clink");
+        else if (m >= 1)  Sfx.play("chips.collide");
         else              Sfx.play("ui.notify");
         // Remove the ball after a small landing pause.
         setTimeout(() => {

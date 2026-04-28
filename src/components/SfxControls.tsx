@@ -28,7 +28,7 @@ export function SfxControls() {
           // Confirmation chime when unmuting (so the user knows audio
           // is back on). No chime when muting — that would defeat
           // the whole point.
-          if (!next) Sfx.play("coin.drop");
+          if (!next) Sfx.play("ui.click");
         }}
         aria-pressed={muted}
         aria-label={muted ? "Unmute" : "Mute"}

@@ -162,7 +162,7 @@ export function MonopolyClient() {
     setPackCards(d.cards as Property[]);
     setPackOpening(true);
     setRevealedCount(0);
-    Sfx.play("card.shuffle");
+    Sfx.play("pack.open");
     for (let i = 0; i < (d.cards as Property[]).length; i++) {
       setTimeout(() => {
         setRevealedCount(i + 1);
