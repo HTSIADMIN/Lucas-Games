@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lucas Games — GAME ICON: SLOTS -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" shape-rendering="crispEdges">
+  <!-- ground shadow -->
+  <ellipse cx="24" cy="44" rx="20" ry="2" fill="#1a0f08" opacity="0.3"/>
+
+  <!-- ===== SLOT MACHINE CABINET (wood frame) ===== -->
+  <!-- main body outline -->
+  <rect x="4"  y="6"  width="40" height="36" fill="#1a0f08"/>
+  <rect x="5"  y="7"  width="38" height="34" fill="#4a2818"/>
+  <!-- wood grain -->
+  <rect x="5"  y="7"  width="38" height="2"  fill="#6b3f24"/>
+  <rect x="5"  y="39" width="38" height="2"  fill="#3d2418"/>
+  <!-- side highlights -->
+  <rect x="5"  y="7"  width="1"  height="34" fill="#6b3f24"/>
+  <rect x="42" y="7"  width="1"  height="34" fill="#3d2418"/>
+
+  <!-- top sign panel -->
+  <rect x="8"  y="9"  width="32" height="6" fill="#1a0f08"/>
+  <rect x="9"  y="10" width="30" height="4" fill="#f5c842"/>
+  <rect x="9"  y="10" width="30" height="1" fill="#ffe9a8"/>
+  <rect x="9"  y="13" width="30" height="1" fill="#c8941d"/>
+  <!-- "777" or stars on sign -->
+  <g fill="#1a0f08">
+    <rect x="13" y="11" width="1" height="2"/>
+    <rect x="14" y="11" width="2" height="1"/>
+    <rect x="15" y="12" width="1" height="1"/>
+    <rect x="20" y="11" width="1" height="2"/>
+    <rect x="21" y="11" width="2" height="1"/>
+    <rect x="22" y="12" width="1" height="1"/>
+    <rect x="27" y="11" width="1" height="2"/>
+    <rect x="28" y="11" width="2" height="1"/>
+    <rect x="29" y="12" width="1" height="1"/>
+  </g>
+
+  <!-- ===== REEL WINDOW (3 reels) ===== -->
+  <rect x="8"  y="17" width="28" height="16" fill="#1a0f08"/>
+  <rect x="9"  y="18" width="26" height="14" fill="#fef6e4"/>
+  <!-- reel dividers -->
+  <rect x="17" y="17" width="1"  height="16" fill="#1a0f08"/>
+  <rect x="26" y="17" width="1"  height="16" fill="#1a0f08"/>
+
+  <!-- REEL 1 (sheriff star) -->
+  <g transform="translate(9 18)">
+    <rect x="0" y="0" width="8" height="14" fill="#fef6e4"/>
+    <!-- star -->
+    <g fill="#1a0f08">
+      <rect x="3" y="2"  width="2" height="1"/>
+      <rect x="2" y="3"  width="4" height="1"/>
+      <rect x="0" y="5"  width="8" height="2"/>
+      <rect x="1" y="7"  width="6" height="1"/>
+      <rect x="2" y="8"  width="4" height="1"/>
+      <rect x="0" y="9"  width="2" height="3"/>
+      <rect x="6" y="9"  width="2" height="3"/>
+    </g>
+    <g fill="#f5c842">
+      <rect x="3" y="3"  width="2" height="1"/>
+      <rect x="1" y="5"  width="6" height="2"/>
+      <rect x="2" y="7"  width="4" height="1"/>
+      <rect x="3" y="8"  width="2" height="1"/>
+    </g>
+  </g>
+
+  <!-- REEL 2 (gold coin / $) -->
+  <g transform="translate(18 18)">
+    <rect x="0" y="0" width="8" height="14" fill="#fef6e4"/>
+    <ellipse cx="4" cy="7" rx="3.5" ry="3.5" fill="#1a0f08"/>
+    <ellipse cx="4" cy="7" rx="3"   ry="3"   fill="#f5c842"/>
+    <rect x="3" y="4" width="2" height="6" fill="#7a5510"/>
+    <rect x="2" y="5" width="4" height="1" fill="#7a5510"/>
+    <rect x="2" y="8" width="4" height="1" fill="#7a5510"/>
+    <rect x="3" y="5" width="1" height="1" fill="#f5c842"/>
+    <rect x="4" y="8" width="1" height="1" fill="#f5c842"/>
+  </g>
+
+  <!-- REEL 3 (sheriff hat) -->
+  <g transform="translate(27 18)">
+    <rect x="0" y="0" width="8" height="14" fill="#fef6e4"/>
+    <!-- hat brim -->
+    <rect x="0" y="9" width="8" height="1" fill="#1a0f08"/>
+    <rect x="0" y="10" width="8" height="1" fill="#6b3f24"/>
+    <rect x="0" y="11" width="8" height="1" fill="#1a0f08"/>
+    <!-- crown -->
+    <rect x="2" y="3" width="4" height="1" fill="#1a0f08"/>
+    <rect x="1" y="4" width="6" height="5" fill="#6b3f24"/>
+    <rect x="1" y="4" width="1" height="5" fill="#1a0f08"/>
+    <rect x="6" y="4" width="1" height="5" fill="#1a0f08"/>
+    <rect x="3" y="4" width="2" height="2" fill="#3d2418"/>
+  </g>
+
+  <!-- ===== LEVER (right side) ===== -->
+  <rect x="44" y="14" width="2" height="10" fill="#1a0f08"/>
+  <rect x="44" y="13" width="3" height="2"  fill="#c8941d"/>
+  <rect x="43" y="11" width="5" height="3"  fill="#1a0f08"/>
+  <rect x="44" y="12" width="3" height="2"  fill="#e05a3c"/>
+
+  <!-- ===== COIN SLOT / BUTTONS BELOW ===== -->
+  <rect x="10" y="35" width="10" height="3" fill="#1a0f08"/>
+  <rect x="11" y="36" width="8"  height="1" fill="#3d2418"/>
+  <!-- spin button -->
+  <rect x="24" y="35" width="12" height="4" fill="#1a0f08"/>
+  <rect x="25" y="36" width="10" height="2" fill="#e05a3c"/>
+  <rect x="25" y="36" width="10" height="1" fill="#ffb8a8"/>
+  <!-- SPIN text on button -->
+  <g fill="#fef6e4">
+    <rect x="27" y="36" width="1" height="2"/>
+    <rect x="29" y="36" width="1" height="2"/>
+    <rect x="31" y="36" width="1" height="2"/>
+    <rect x="33" y="36" width="1" height="2"/>
+  </g>
+</svg>

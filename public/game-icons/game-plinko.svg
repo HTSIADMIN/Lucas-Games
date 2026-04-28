@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lucas Games — GAME ICON: PLINKO -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" shape-rendering="crispEdges">
+  <!-- ground shadow -->
+  <ellipse cx="24" cy="44" rx="20" ry="2" fill="#1a0f08" opacity="0.3"/>
+
+  <!-- ===== BOARD FRAME ===== -->
+  <rect x="3"  y="4"  width="42" height="40" fill="#1a0f08"/>
+  <rect x="4"  y="5"  width="40" height="38" fill="#a87545"/>
+  <!-- wood grain -->
+  <rect x="4"  y="5"  width="40" height="2" fill="#6b3f24"/>
+  <rect x="4"  y="41" width="40" height="2" fill="#6b3f24"/>
+  <rect x="4"  y="5"  width="2"  height="38" fill="#6b3f24"/>
+  <rect x="42" y="5"  width="2"  height="38" fill="#3d2418"/>
+
+  <!-- ===== INNER PLAYFIELD (recessed) ===== -->
+  <rect x="6"  y="7"  width="36" height="32" fill="#3d2418"/>
+
+  <!-- ===== PEGS (triangular pyramid: 4 rows) ===== -->
+  <g fill="#fef6e4">
+    <!-- row 1 (1 peg) -->
+    <rect x="23" y="11" width="2" height="2"/>
+    <!-- row 2 (2 pegs) -->
+    <rect x="19" y="16" width="2" height="2"/>
+    <rect x="27" y="16" width="2" height="2"/>
+    <!-- row 3 (3 pegs) -->
+    <rect x="15" y="21" width="2" height="2"/>
+    <rect x="23" y="21" width="2" height="2"/>
+    <rect x="31" y="21" width="2" height="2"/>
+    <!-- row 4 (4 pegs) -->
+    <rect x="11" y="26" width="2" height="2"/>
+    <rect x="19" y="26" width="2" height="2"/>
+    <rect x="27" y="26" width="2" height="2"/>
+    <rect x="35" y="26" width="2" height="2"/>
+  </g>
+  <!-- peg shadows -->
+  <g fill="#1a0f08" opacity="0.6">
+    <rect x="23" y="13" width="2" height="1"/>
+    <rect x="19" y="18" width="2" height="1"/>
+    <rect x="27" y="18" width="2" height="1"/>
+    <rect x="15" y="23" width="2" height="1"/>
+    <rect x="23" y="23" width="2" height="1"/>
+    <rect x="31" y="23" width="2" height="1"/>
+    <rect x="11" y="28" width="2" height="1"/>
+    <rect x="19" y="28" width="2" height="1"/>
+    <rect x="27" y="28" width="2" height="1"/>
+    <rect x="35" y="28" width="2" height="1"/>
+  </g>
+
+  <!-- ===== BALL DROPPING (mid-flight, between rows 2 and 3, slightly off-center) ===== -->
+  <ellipse cx="22" cy="19" rx="2.5" ry="2.5" fill="#1a0f08"/>
+  <ellipse cx="22" cy="19" rx="2"   ry="2"   fill="#e05a3c"/>
+  <rect x="21" y="18" width="2" height="1" fill="#ffb8a8"/>
+  <!-- ball motion trail -->
+  <g fill="#e05a3c" opacity="0.5">
+    <rect x="22" y="14" width="2" height="1"/>
+    <rect x="23" y="11" width="1" height="1"/>
+  </g>
+
+  <!-- another ball just entering the board (top center) -->
+  <ellipse cx="24" cy="9"  rx="1.5" ry="1.5" fill="#1a0f08"/>
+  <ellipse cx="24" cy="9"  rx="1"   ry="1"   fill="#5fa8d3"/>
+
+  <!-- ===== MULTIPLIER SLOTS (bottom row) ===== -->
+  <!-- slot dividers -->
+  <g fill="#1a0f08">
+    <rect x="9"  y="32" width="1" height="7"/>
+    <rect x="15" y="32" width="1" height="7"/>
+    <rect x="21" y="32" width="1" height="7"/>
+    <rect x="27" y="32" width="1" height="7"/>
+    <rect x="33" y="32" width="1" height="7"/>
+    <rect x="39" y="32" width="1" height="7"/>
+  </g>
+  <!-- slot fills (color-coded by payout) -->
+  <rect x="6"  y="32" width="3" height="7" fill="#e05a3c"/>  <!-- highest -->
+  <rect x="10" y="32" width="5" height="7" fill="#f5c842"/>
+  <rect x="16" y="32" width="5" height="7" fill="#3d6b2e"/>
+  <rect x="22" y="32" width="5" height="7" fill="#3d6b2e"/>
+  <rect x="28" y="32" width="5" height="7" fill="#f5c842"/>
+  <rect x="34" y="32" width="5" height="7" fill="#e05a3c"/>
+  <rect x="40" y="32" width="2" height="7" fill="#e05a3c"/>
+
+  <!-- slot bottom shadow -->
+  <rect x="6"  y="38" width="36" height="1" fill="#1a0f08" opacity="0.5"/>
+
+  <!-- payout numbers (tiny pixel marks indicating multipliers) -->
+  <g fill="#1a0f08">
+    <!-- slot 1: high -->
+    <rect x="7"  y="35" width="1" height="2"/>
+    <!-- slot 2 -->
+    <rect x="12" y="35" width="2" height="2"/>
+    <!-- slot 3 -->
+    <rect x="18" y="35" width="2" height="2"/>
+    <!-- slot 4 -->
+    <rect x="24" y="35" width="2" height="2"/>
+    <!-- slot 5 -->
+    <rect x="30" y="35" width="2" height="2"/>
+    <!-- slot 6 -->
+    <rect x="36" y="35" width="2" height="2"/>
+  </g>
+</svg>

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lucas Games — GAME ICON: FRONTIER MONOPOLY -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" shape-rendering="crispEdges">
+  <!-- ground shadow -->
+  <ellipse cx="24" cy="44" rx="20" ry="2" fill="#1a0f08" opacity="0.3"/>
+
+  <!-- ===== BOARD CORNER (perspective tilt, parchment center, properties around edges) ===== -->
+  <!-- shadow -->
+  <rect x="4" y="4" width="42" height="42" fill="#1a0f08"/>
+  <!-- board base -->
+  <rect x="3" y="3" width="42" height="42" fill="#fbe9c4"/>
+  <!-- inner boundary -->
+  <rect x="11" y="11" width="26" height="26" fill="#3d6b2e"/>
+  <rect x="11" y="11" width="26" height="26" fill="none" stroke="#1a0f08" stroke-width="1"/>
+
+  <!-- TOP ROW of property tiles -->
+  <g>
+    <rect x="3" y="3"  width="42" height="8" fill="none" stroke="#1a0f08" stroke-width="1"/>
+    <!-- dividers -->
+    <g fill="#1a0f08">
+      <rect x="11" y="3" width="1" height="8"/>
+      <rect x="19" y="3" width="1" height="8"/>
+      <rect x="27" y="3" width="1" height="8"/>
+      <rect x="35" y="3" width="1" height="8"/>
+    </g>
+    <!-- property color bands -->
+    <rect x="12" y="4"  width="7" height="2" fill="#e05a3c"/>
+    <rect x="20" y="4"  width="7" height="2" fill="#f5c842"/>
+    <rect x="28" y="4"  width="7" height="2" fill="#5fa8d3"/>
+    <!-- corner squares (left = "GO!", right = arrow) -->
+    <g fill="#1a0f08">
+      <rect x="5" y="6" width="1" height="3"/>
+      <rect x="7" y="6" width="1" height="3"/>
+      <rect x="9" y="6" width="1" height="3"/>
+      <rect x="5" y="6" width="5" height="1"/>
+      <rect x="6" y="8" width="1" height="1"/>
+      <rect x="8" y="8" width="1" height="1"/>
+    </g>
+    <!-- right arrow -->
+    <polygon points="40,5 43,7 40,9 40,7.5 38,7.5 38,6.5 40,6.5" fill="#e05a3c"/>
+  </g>
+
+  <!-- LEFT COLUMN of property tiles -->
+  <g>
+    <rect x="3" y="3" width="8" height="42" fill="none" stroke="#1a0f08" stroke-width="1"/>
+    <g fill="#1a0f08">
+      <rect x="3" y="11" width="8" height="1"/>
+      <rect x="3" y="19" width="8" height="1"/>
+      <rect x="3" y="27" width="8" height="1"/>
+      <rect x="3" y="35" width="8" height="1"/>
+    </g>
+    <rect x="4" y="12" width="7" height="2" fill="#3d6b2e"/>
+    <rect x="4" y="20" width="7" height="2" fill="#a87545"/>
+    <rect x="4" y="28" width="7" height="2" fill="#e05a3c"/>
+    <rect x="4" y="36" width="7" height="2" fill="#f5c842"/>
+  </g>
+
+  <!-- RIGHT COLUMN of property tiles -->
+  <g>
+    <rect x="37" y="3" width="8" height="42" fill="none" stroke="#1a0f08" stroke-width="1"/>
+    <g fill="#1a0f08">
+      <rect x="37" y="11" width="8" height="1"/>
+      <rect x="37" y="19" width="8" height="1"/>
+      <rect x="37" y="27" width="8" height="1"/>
+      <rect x="37" y="35" width="8" height="1"/>
+    </g>
+    <rect x="38" y="12" width="7" height="2" fill="#5fa8d3"/>
+    <rect x="38" y="20" width="7" height="2" fill="#3d6b2e"/>
+    <rect x="38" y="28" width="7" height="2" fill="#a87545"/>
+    <rect x="38" y="36" width="7" height="2" fill="#c8941d"/>
+  </g>
+
+  <!-- BOTTOM ROW -->
+  <g>
+    <rect x="3" y="37" width="42" height="8" fill="none" stroke="#1a0f08" stroke-width="1"/>
+    <g fill="#1a0f08">
+      <rect x="11" y="37" width="1" height="8"/>
+      <rect x="19" y="37" width="1" height="8"/>
+      <rect x="27" y="37" width="1" height="8"/>
+      <rect x="35" y="37" width="1" height="8"/>
+    </g>
+    <rect x="12" y="42" width="7" height="2" fill="#f5c842"/>
+    <rect x="20" y="42" width="7" height="2" fill="#e05a3c"/>
+    <rect x="28" y="42" width="7" height="2" fill="#5fa8d3"/>
+  </g>
+
+  <!-- ===== CENTER PARCHMENT CARD ("DEED") ===== -->
+  <rect x="14" y="15" width="20" height="14" fill="#fef6e4"/>
+  <rect x="14" y="15" width="20" height="14" fill="none" stroke="#1a0f08" stroke-width="1"/>
+  <rect x="14" y="15" width="20" height="3"  fill="#c8941d"/>
+  <!-- DEED text (compact pixel) -->
+  <g fill="#1a0f08">
+    <!-- D -->
+    <rect x="17" y="20" width="2" height="1"/>
+    <rect x="17" y="20" width="1" height="3"/>
+    <rect x="19" y="21" width="1" height="1"/>
+    <rect x="17" y="22" width="2" height="1"/>
+    <!-- E -->
+    <rect x="21" y="20" width="2" height="1"/>
+    <rect x="21" y="20" width="1" height="3"/>
+    <rect x="21" y="21" width="2" height="1"/>
+    <rect x="21" y="22" width="2" height="1"/>
+    <!-- E -->
+    <rect x="25" y="20" width="2" height="1"/>
+    <rect x="25" y="20" width="1" height="3"/>
+    <rect x="25" y="21" width="2" height="1"/>
+    <rect x="25" y="22" width="2" height="1"/>
+    <!-- D -->
+    <rect x="29" y="20" width="2" height="1"/>
+    <rect x="29" y="20" width="1" height="3"/>
+    <rect x="31" y="21" width="1" height="1"/>
+    <rect x="29" y="22" width="2" height="1"/>
+  </g>
+  <!-- $ amount -->
+  <g fill="#c8941d">
+    <rect x="22" y="25" width="4" height="2"/>
+  </g>
+
+  <!-- ===== TOP HAT TOKEN (on a property tile) ===== -->
+  <g transform="translate(15 4)">
+    <!-- shadow -->
+    <ellipse cx="3" cy="6" rx="3" ry="0.5" fill="#1a0f08" opacity="0.5"/>
+    <!-- brim -->
+    <rect x="0" y="4" width="6" height="2" fill="#1a0f08"/>
+    <!-- crown -->
+    <rect x="1" y="0" width="4" height="4" fill="#1a0f08"/>
+    <rect x="1" y="0" width="4" height="1" fill="#3d2418"/>
+    <!-- band -->
+    <rect x="1" y="3" width="4" height="1" fill="#c8941d"/>
+  </g>
+
+  <!-- ===== DICE (corner) ===== -->
+  <g transform="translate(34 34)">
+    <!-- die 1 -->
+    <rect x="0" y="0" width="6" height="6" fill="#1a0f08"/>
+    <rect x="1" y="1" width="4" height="4" fill="#fef6e4"/>
+    <rect x="2" y="2" width="1" height="1" fill="#1a0f08"/>
+    <rect x="3" y="3" width="1" height="1" fill="#1a0f08"/>
+    <rect x="2" y="4" width="1" height="1" fill="#1a0f08"/>
+  </g>
+  <g transform="translate(40 38)">
+    <rect x="0" y="0" width="6" height="6" fill="#1a0f08"/>
+    <rect x="1" y="1" width="4" height="4" fill="#fef6e4"/>
+    <rect x="2" y="2" width="1" height="1" fill="#1a0f08"/>
+    <rect x="3" y="3" width="1" height="1" fill="#1a0f08"/>
+  </g>
+</svg>

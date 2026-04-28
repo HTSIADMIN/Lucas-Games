@@ -2002,6 +2002,28 @@ function peg128(x: number, y: number): Px[] {
   ];
 }
 
+// Lobby tile artwork lives as standalone SVGs in /public/game-icons/.
+// Mapping each `lobby.*` sprite name to its file lets us swap in
+// designed art without touching every call site. Anything missing
+// here falls through to the hand-laid pixel sprites below.
+const LOBBY_SVG: Partial<Record<IconName, string>> = {
+  "lobby.blackjack":     "/game-icons/game-blackjack.svg",
+  "lobby.coinflip":      "/game-icons/game-coinflip.svg",
+  "lobby.coinflip_duel": "/game-icons/game-coinflip-duel.svg",
+  "lobby.crash":         "/game-icons/game-crash.svg",
+  "lobby.crossy_road":   "/game-icons/game-crossy.svg",
+  "lobby.daily_spin":    "/game-icons/game-daily-spin.svg",
+  "lobby.dice":          "/game-icons/game-dice.svg",
+  "lobby.flappy":        "/game-icons/game-flappy.svg",
+  "lobby.mines":         "/game-icons/game-mines.svg",
+  "lobby.monopoly":      "/game-icons/game-monopoly.svg",
+  "lobby.plinko":        "/game-icons/game-plinko.svg",
+  "lobby.poker":         "/game-icons/game-poker.svg",
+  "lobby.roulette":      "/game-icons/game-roulette.svg",
+  "lobby.scratch":       "/game-icons/game-scratcher.svg",
+  "lobby.slots":         "/game-icons/game-slots.svg",
+};
+
 export function GameIcon({
   name,
   size = 24,
@@ -2013,6 +2035,28 @@ export function GameIcon({
   className?: string;
   style?: CSSProperties;
 }) {
+  // SVG file art (lobby tiles). Rendered as <img> so the browser
+  // caches and decodes them once, and pixelated rendering matches
+  // the rest of the casino's vibe.
+  const svgPath = LOBBY_SVG[name];
+  if (svgPath) {
+    return (
+      <img
+        src={svgPath}
+        width={size}
+        height={size}
+        alt=""
+        aria-hidden
+        className={className}
+        style={{
+          display: "inline-block",
+          verticalAlign: "middle",
+          imageRendering: "pixelated",
+          ...style,
+        }}
+      />
+    );
+  }
   // Dispatch by sprite resolution. Most lobby icons are 128×128 dioramas;
   // a few simpler ones live on the 32-grid; everything non-lobby uses the
   // original 16-grid sprite system.

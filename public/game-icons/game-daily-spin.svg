@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lucas Games — GAME ICON: DAILY SPIN -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" shape-rendering="crispEdges">
+  <!-- ground shadow -->
+  <ellipse cx="24" cy="44" rx="18" ry="2" fill="#1a0f08" opacity="0.3"/>
+
+  <!-- ===== WHEEL OUTER RIM (wood) ===== -->
+  <ellipse cx="24" cy="26" rx="20" ry="20" fill="#1a0f08"/>
+  <ellipse cx="24" cy="26" rx="20" ry="20" fill="#6b3f24"/>
+  <!-- rim highlight -->
+  <ellipse cx="22" cy="14" rx="12" ry="3" fill="#a87545"/>
+
+  <!-- ===== INNER FACE ===== -->
+  <ellipse cx="24" cy="26" rx="18" ry="18" fill="#1a0f08"/>
+
+  <!-- ===== 8 WEDGES ===== -->
+  <g>
+    <!-- right -->
+    <polygon points="24,26 42,26 40,32 38,36" fill="#f5c842"/>
+    <!-- bottom-right -->
+    <polygon points="24,26 38,36 33,40 30,42" fill="#e05a3c"/>
+    <!-- bottom -->
+    <polygon points="24,26 30,42 24,44 18,42" fill="#3d6b2e"/>
+    <!-- bottom-left -->
+    <polygon points="24,26 18,42 14,40 10,36" fill="#5fa8d3"/>
+    <!-- left -->
+    <polygon points="24,26 10,36 8,32 6,26" fill="#f5c842"/>
+    <!-- top-left -->
+    <polygon points="24,26 6,26 8,20 10,16" fill="#e05a3c"/>
+    <!-- top -->
+    <polygon points="24,26 10,16 14,12 18,10" fill="#3d6b2e"/>
+    <!-- top-right -->
+    <polygon points="24,26 18,10 24,8 30,10" fill="#5fa8d3"/>
+    <!-- top-right-far -->
+    <polygon points="24,26 30,10 38,16 42,26" fill="#f5c842"/>
+  </g>
+
+  <!-- wedge separators -->
+  <g stroke="#1a0f08" stroke-width="1" fill="none">
+    <line x1="24" y1="26" x2="42" y2="26"/>
+    <line x1="24" y1="26" x2="38" y2="36"/>
+    <line x1="24" y1="26" x2="30" y2="42"/>
+    <line x1="24" y1="26" x2="18" y2="42"/>
+    <line x1="24" y1="26" x2="10" y2="36"/>
+    <line x1="24" y1="26" x2="6"  y2="26"/>
+    <line x1="24" y1="26" x2="10" y2="16"/>
+    <line x1="24" y1="26" x2="18" y2="10"/>
+    <line x1="24" y1="26" x2="24" y2="8"/>
+    <line x1="24" y1="26" x2="30" y2="10"/>
+    <line x1="24" y1="26" x2="38" y2="16"/>
+  </g>
+
+  <!-- prize markings on each wedge (small symbols) -->
+  <g fill="#1a0f08">
+    <!-- gold pile (right) -->
+    <rect x="36" y="25" width="2" height="2"/>
+    <rect x="35" y="27" width="3" height="1"/>
+    <!-- $ on top-right-far -->
+    <rect x="35" y="20" width="2" height="3"/>
+    <!-- coin (top) -->
+    <rect x="23" y="13" width="2" height="2"/>
+    <!-- big star (top-left) -->
+    <rect x="13" y="20" width="3" height="2"/>
+    <!-- small dot (left) -->
+    <rect x="10" y="25" width="2" height="2"/>
+    <!-- bag (bottom-left) -->
+    <rect x="13" y="34" width="3" height="2"/>
+    <!-- jackpot (bottom) -->
+    <rect x="22" y="38" width="4" height="2"/>
+    <!-- (bottom-right) -->
+    <rect x="33" y="34" width="3" height="2"/>
+  </g>
+
+  <!-- rim studs (decorative bolts on outer ring) -->
+  <g fill="#c8941d">
+    <rect x="23" y="7"  width="2" height="2"/>
+    <rect x="23" y="43" width="2" height="2"/>
+    <rect x="5"  y="25" width="2" height="2"/>
+    <rect x="41" y="25" width="2" height="2"/>
+    <rect x="11" y="12" width="2" height="2"/>
+    <rect x="35" y="12" width="2" height="2"/>
+    <rect x="11" y="38" width="2" height="2"/>
+    <rect x="35" y="38" width="2" height="2"/>
+  </g>
+
+  <!-- ===== CENTER HUB ===== -->
+  <ellipse cx="24" cy="26" rx="4" ry="4" fill="#1a0f08"/>
+  <ellipse cx="24" cy="26" rx="3" ry="3" fill="#c8941d"/>
+  <ellipse cx="23" cy="25" rx="2" ry="1" fill="#ffd84d"/>
+  <!-- center bolt -->
+  <rect x="23" y="25" width="2" height="2" fill="#7a5510"/>
+
+  <!-- ===== POINTER ARROW (top, pointing down at wheel) ===== -->
+  <g>
+    <polygon points="24,2 28,8 20,8" fill="#1a0f08"/>
+    <polygon points="24,3 27,7 21,7" fill="#e05a3c"/>
+    <polygon points="24,4 26,6 22,6" fill="#ff5544"/>
+  </g>
+</svg>
