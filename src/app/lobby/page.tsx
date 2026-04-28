@@ -6,7 +6,7 @@ import { AppLive } from "@/components/social/AppLive";
 import { HeaderPresence } from "@/components/social/HeaderPresence";
 import { readSession } from "@/lib/auth/session";
 import { getBalance } from "@/lib/wallet";
-import { getUserById, recentChatMessages } from "@/lib/db";
+import { getUserById, listOpenCoinflipDuels, recentChatMessages } from "@/lib/db";
 import { getUserLevel } from "@/lib/xpServer";
 import { getChampionId } from "@/lib/champion";
 import { GameIcon, type GameIconName } from "@/components/GameIcon";
@@ -59,6 +59,12 @@ export default async function LobbyPage() {
   const initialChat = await recentChatMessages(50);
   const xpInfo = await getUserLevel(user.id);
   const championId = await getChampionId();
+  // Count of open coinflip duels — anything > 0 makes the tile
+  // pulse so other players know there's a bet waiting to be matched.
+  // We exclude the current player's own open duels (you can't accept
+  // your own challenge) so the alert is actionable.
+  const openDuels = await listOpenCoinflipDuels();
+  const openDuelsForMe = openDuels.filter((d) => d.challenger_id !== user.id).length;
   const me = {
     id: user.id,
     username: user.username,
@@ -109,31 +115,41 @@ export default async function LobbyPage() {
         </section>
 
         <div className="grid grid-4 lobby-tile-grid">
-          {CATEGORY_ORDER.flatMap(({ key }) => GAMES.filter((g) => g.category === key)).map((g) => (
-            <Link
-              key={g.slug}
-              href={g.live ? `/games/${g.slug}` : "#"}
-              className="tile"
-              style={!g.live ? { opacity: 0.55, cursor: "not-allowed", pointerEvents: "none" } : undefined}
-              aria-disabled={!g.live || undefined}
-            >
-              <div className="tile-art">
-                <GameIcon name={g.icon} size={140} />
-              </div>
-              <div className="tile-name">{g.name}</div>
-              <div className="tile-meta">
-                <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
-                  <span className={`badge ${g.live ? "badge-cactus" : ""}`}>
-                    {g.live ? "OPEN" : g.tag}
-                  </span>
-                  {g.multiplayer && (
-                    <span className="badge badge-sky">2P+</span>
+          {CATEGORY_ORDER.flatMap(({ key }) => GAMES.filter((g) => g.category === key)).map((g) => {
+            const isDuelAlert = g.slug === "coinflip-duel" && openDuelsForMe > 0;
+            return (
+              <Link
+                key={g.slug}
+                href={g.live ? `/games/${g.slug}` : "#"}
+                className={`tile${isDuelAlert ? " tile-alert" : ""}`}
+                style={!g.live ? { opacity: 0.55, cursor: "not-allowed", pointerEvents: "none" } : undefined}
+                aria-disabled={!g.live || undefined}
+              >
+                <div className="tile-art" style={{ position: "relative" }}>
+                  <GameIcon name={g.icon} size={140} />
+                  {isDuelAlert && (
+                    <span aria-hidden className="tile-alert-dot">
+                      {openDuelsForMe}
+                    </span>
                   )}
-                </span>
-                <span>{g.live ? "Play →" : "Coming soon"}</span>
-              </div>
-            </Link>
-          ))}
+                </div>
+                <div className="tile-name">{g.name}</div>
+                <div className="tile-meta">
+                  <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+                    <span className={`badge ${isDuelAlert ? "badge-crimson" : g.live ? "badge-cactus" : ""}`}>
+                      {isDuelAlert
+                        ? `${openDuelsForMe} OPEN BET${openDuelsForMe === 1 ? "" : "S"}`
+                        : g.live ? "OPEN" : g.tag}
+                    </span>
+                    {g.multiplayer && !isDuelAlert && (
+                      <span className="badge badge-sky">2P+</span>
+                    )}
+                  </span>
+                  <span>{g.live ? (isDuelAlert ? "Accept →" : "Play →") : "Coming soon"}</span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
 
       </main>
