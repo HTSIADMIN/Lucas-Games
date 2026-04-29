@@ -5,14 +5,11 @@ import {
   getMyClan,
   updateClanSettings,
 } from "@/lib/clans/db";
-import { CLAN_ANIMALS, CLAN_EMBLEMS } from "@/lib/clans/constants";
+import { CLAN_ANIMALS } from "@/lib/clans/constants";
 
 export const runtime = "nodejs";
 
-const ALLOWED_ANIMALS = new Set<string>([
-  ...CLAN_ANIMALS.map((a) => a.key),
-  ...CLAN_EMBLEMS.map((e) => e.key),
-]);
+const ALLOWED_ANIMALS = new Set<string>(CLAN_ANIMALS.map((a) => a.key));
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const s = await readSession();

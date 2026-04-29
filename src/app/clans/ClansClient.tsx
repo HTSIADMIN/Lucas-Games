@@ -12,8 +12,6 @@ import {
   CHEST_TIER_COLOR,
   CHEST_TIER_LABEL,
   CLAN_ANIMALS,
-  CLAN_EMBLEMS,
-  CLAN_EMBLEM_FILE,
   CLAN_FOUNDING_FEE,
   CLAN_MAX_MEMBERS,
 } from "@/lib/clans/constants";
@@ -864,7 +862,7 @@ function CreateClanModal({
 }) {
   const [name, setName] = useState("");
   const [tag, setTag] = useState("");
-  const [animalIcon, setAnimalIcon] = useState<ClanAnimal>("sheriffs_badge");
+  const [animalIcon, setAnimalIcon] = useState<ClanAnimal>("wolf");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1520,9 +1518,6 @@ function relativeLastActive(iso: string | null | undefined): string {
 }
 
 function ClanCrest({ animal, size }: { animal: ClanAnimal; size: number }) {
-  // V3 emblems live in /public/clan-icons; legacy animal ids fall
-  // back to the hand-pixeled GameIcon sprites.
-  const svg = CLAN_EMBLEM_FILE[animal];
   return (
     <div
       style={{
@@ -1535,37 +1530,20 @@ function ClanCrest({ animal, size }: { animal: ClanAnimal; size: number }) {
         justifyContent: "center",
         boxShadow: "var(--bevel-light)",
         flexShrink: 0,
-        overflow: "hidden",
       }}
     >
-      {svg ? (
-        <img
-          src={svg}
-          width={size - 6}
-          height={size - 6}
-          alt=""
-          aria-hidden
-          style={{ display: "block", imageRendering: "pixelated" }}
-        />
-      ) : (
-        // Legacy animal fallback — only the eight v1 ids are in the
-        // GameIcon clan.* sprite set, so cast through unknown rather
-        // than widen IconName to cover ids that already have SVGs.
-        <GameIcon
-          name={(`clan.${animal}` as unknown) as Parameters<typeof GameIcon>[0]["name"]}
-          size={Math.floor(size * 0.85)}
-        />
-      )}
+      <GameIcon
+        name={(`clan.${animal}` as unknown) as Parameters<typeof GameIcon>[0]["name"]}
+        size={Math.floor(size * 0.85)}
+      />
     </div>
   );
 }
 
 function AnimalGrid({ value, onChange }: { value: ClanAnimal; onChange: (a: ClanAnimal) => void }) {
-  // V3+ emblem set is the picker. Legacy animals stay supported for
-  // existing clans but new clans pick from the themed emblems.
   return (
     <div className="grid grid-4" style={{ gap: 6 }}>
-      {CLAN_EMBLEMS.map((a) => (
+      {CLAN_ANIMALS.map((a) => (
         <button
           key={a.key}
           type="button"

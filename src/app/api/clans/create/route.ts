@@ -2,16 +2,11 @@ import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
 import { debit, getBalance } from "@/lib/wallet";
 import { createClan, clansEnabled, getMyClan } from "@/lib/clans/db";
-import { CLAN_ANIMALS, CLAN_EMBLEMS, CLAN_FOUNDING_FEE } from "@/lib/clans/constants";
+import { CLAN_ANIMALS, CLAN_FOUNDING_FEE } from "@/lib/clans/constants";
 
 export const runtime = "nodejs";
 
-// Accept either the legacy animal set or the v3+ emblem set so old
-// clients keep working while new clients pick from the new artwork.
-const ALLOWED_ANIMALS = new Set<string>([
-  ...CLAN_ANIMALS.map((a) => a.key),
-  ...CLAN_EMBLEMS.map((e) => e.key),
-]);
+const ALLOWED_ANIMALS = new Set<string>(CLAN_ANIMALS.map((a) => a.key));
 
 export async function POST(req: Request) {
   const s = await readSession();
