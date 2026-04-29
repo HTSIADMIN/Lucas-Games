@@ -4,6 +4,8 @@ import { readSession } from "@/lib/auth/session";
 import { verifySession } from "@/lib/auth/jwt";
 import { credit, getBalance } from "@/lib/wallet";
 import { insertGameSession } from "@/lib/db";
+import { recordChallengeEvent } from "@/lib/challenges/record";
+import { updatePersonalBest } from "@/lib/arcade/weekly";
 
 export const runtime = "nodejs";
 
@@ -50,14 +52,35 @@ export async function POST(req: Request) {
 
   const raw = effRows * COIN_PER_ROW + effCoins * COIN_PER_PICKUP;
   const payout = Math.max(0, Math.min(MAX_PAYOUT, raw));
+
+  // Personal best + score-threshold challenge fire whether the run
+  // pays out or not.
+  const pb = await updatePersonalBest(s.user.id, "crossy_road", effRows).catch(() => ({ best: effRows, isNew: false }));
+  recordChallengeEvent(s.user.id, { kind: "score", game: "crossy_road", score: effRows }).catch(() => { /* ignore */ });
+
   if (raw <= 0 || payout < MIN_PAYOUT) {
     REDEEMED.add(payload.jti);
+    // Even sub-payout runs need to land in game_sessions so the
+    // weekly leaderboard can see them. Previously we early-returned
+    // without recording, which is why low-payout high-score runs
+    // were silently dropped from the standings.
+    await insertGameSession({
+      id: randomUUID(),
+      user_id: s.user.id,
+      game: "crossy_road",
+      bet: 0,
+      payout: 0,
+      state: { rows: effRows, coins: effCoins, durationMs },
+      status: "settled",
+    });
     return NextResponse.json({
       ok: true,
       score: effRows,
       coins: effCoins,
       payout: 0,
       reason: "below_minimum",
+      bestScore: pb.best,
+      isNewBest: pb.isNew,
       balance: await getBalance(s.user.id),
     });
   }
@@ -86,6 +109,8 @@ export async function POST(req: Request) {
     score: effRows,
     coins: effCoins,
     payout,
+    bestScore: pb.best,
+    isNewBest: pb.isNew,
     balance: await getBalance(s.user.id),
   });
 }

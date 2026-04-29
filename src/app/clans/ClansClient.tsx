@@ -582,6 +582,7 @@ function ClanDashboard({
 // Leaderboard
 // ============================================================
 function Leaderboard({ clans, myClanId }: { clans: Clan[]; myClanId: string | null }) {
+  const [inspecting, setInspecting] = useState<string | null>(null);
   return (
     <div className="panel" style={{ padding: "var(--sp-5)" }}>
       <div className="panel-title">Weekly Standings</div>
@@ -597,14 +598,23 @@ function Leaderboard({ clans, myClanId }: { clans: Clan[]; myClanId: string | nu
               rank <= 3 ? { bg: "var(--parchment-200)", fg: "var(--saddle-500)", crown: false } :
               { bg: "var(--parchment-100)", fg: "var(--saddle-400)", crown: false };
             return (
-              <div
+              <button
                 key={c.id}
+                type="button"
+                onClick={() => setInspecting(c.id)}
+                title="View clan members"
                 className="between"
                 style={{
+                  width: "100%",
                   padding: "var(--sp-2) var(--sp-3)",
                   background: isMine ? "var(--gold-100)" : tone.bg,
                   borderBottom: "2px dashed var(--saddle-300)",
+                  borderTop: 0,
+                  borderLeft: 0,
+                  borderRight: 0,
                   fontFamily: "var(--font-display)",
+                  cursor: "pointer",
+                  textAlign: "left",
                 }}
               >
                 <div className="row" style={{ gap: 8 }}>
@@ -629,13 +639,155 @@ function Leaderboard({ clans, myClanId }: { clans: Clan[]; myClanId: string | nu
                 <span className="text-money" style={{ fontSize: 13 }}>
                   {Number(c.total_xp_week).toLocaleString()} XP
                 </span>
-              </div>
+              </button>
             );
           })}
         </div>
       )}
       <div style={{ marginTop: "var(--sp-3)", fontSize: 12 }} className="text-mute">
-        Top 10 clans win chests at the weekly reset. Rank 1 = Legendary, 2-3 = Epic, 4-10 = Rare.
+        Tap a clan to see its members. Top 10 clans win chests at the weekly reset. Rank 1 = Legendary, 2-3 = Epic, 4-10 = Rare.
+      </div>
+      {inspecting && (
+        <ClanDetailModal clanId={inspecting} onClose={() => setInspecting(null)} />
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// Public clan detail modal — opens from any leaderboard row, fetches
+// the target clan's roster via /api/clans/[id], and shows each
+// member's contribution share + last-active. Read-only; no kick or
+// invite controls (those still live inside your own clan view).
+// ============================================================
+function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => void }) {
+  const [clan, setClan] = useState<Clan | null>(null);
+  const [members, setMembers] = useState<EnrichedMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`/api/clans/${clanId}`);
+        const d = (await r.json().catch(() => ({}))) as {
+          ok?: boolean;
+          clan?: Clan;
+          members?: EnrichedMember[];
+          error?: string;
+        };
+        if (cancelled) return;
+        if (!r.ok || !d.clan) {
+          setErr(d.error ?? `Couldn't load (${r.status})`);
+        } else {
+          setClan(d.clan);
+          setMembers(d.members ?? []);
+        }
+      } catch (e) {
+        if (!cancelled) setErr(e instanceof Error ? e.message : "error");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clanId]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(26,15,8,0.78)",
+        zIndex: 220,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "var(--sp-4)",
+        backdropFilter: "blur(2px)",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="panel-wood"
+        style={{
+          width: "min(560px, 100%)",
+          maxHeight: "calc(100vh - 32px)",
+          overflowY: "auto",
+          padding: "var(--sp-5)",
+          border: "4px solid var(--ink-900)",
+          boxShadow: "var(--sh-popover), var(--glow-gold)",
+        }}
+      >
+        {loading && <p className="text-mute">Loading…</p>}
+        {!loading && err && (
+          <p style={{ color: "var(--crimson-300)" }}>{err}</p>
+        )}
+        {!loading && clan && (
+          <>
+            <div className="row" style={{ alignItems: "center", gap: 12, marginBottom: "var(--sp-3)" }}>
+              <ClanCrest animal={clan.animal_icon} size={56} />
+              <div>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)", color: "var(--gold-300)", textShadow: "2px 2px 0 var(--ink-900)" }}>
+                  {clan.name} <span className="text-mute" style={{ fontSize: 14 }}>[{clan.tag}]</span>
+                </div>
+                <div className="text-mute" style={{ fontSize: 12 }}>
+                  {clan.member_count} of {CLAN_MAX_MEMBERS} members · {Number(clan.total_xp_week).toLocaleString()} weekly XP
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost"
+                onClick={onClose}
+                style={{ marginLeft: "auto" }}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="stack" style={{ gap: 0 }}>
+              {members.map((m) => (
+                <div
+                  key={m.user_id}
+                  className="between"
+                  style={{
+                    padding: "var(--sp-2) 0",
+                    borderBottom: "2px dashed var(--saddle-300)",
+                    fontFamily: "var(--font-display)",
+                  }}
+                >
+                  <div className="row" style={{ gap: 8, alignItems: "center" }}>
+                    <Avatar
+                      initials={m.initials ?? "??"}
+                      color={m.avatar_color ?? "var(--gold-300)"}
+                      size={28}
+                      fontSize={11}
+                      frame={m.equipped_frame ?? null}
+                      hat={m.equipped_hat ?? null}
+                    />
+                    <div>
+                      <div style={{ fontSize: 14 }}>
+                        {m.username ?? "?"}
+                        {m.role === "leader" && (
+                          <span style={{ marginLeft: 6, fontSize: 11, color: "var(--gold-500)" }}>★</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div className="text-money" style={{ fontSize: 13 }}>
+                      {Number(m.weekly_xp).toLocaleString()} XP
+                    </div>
+                    <div className="text-mute" style={{ fontSize: 10 }}>
+                      {memberContribution(m, members)} · {relativeLastActive(m.last_active_at)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

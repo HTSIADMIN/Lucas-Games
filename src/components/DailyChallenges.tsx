@@ -34,14 +34,31 @@ export function DailyChallenges() {
   const [rows, setRows] = useState<ChallengeRow[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [errMsg, setErrMsg] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setErrMsg(null);
     try {
       const r = await fetch("/api/challenges/state");
-      if (!r.ok) return;
-      const d = (await r.json()) as { challenges: ChallengeRow[] };
-      setRows(d.challenges);
+      const d = (await r.json().catch(() => ({}))) as {
+        ok?: boolean;
+        challenges?: ChallengeRow[];
+        message?: string;
+        error?: string;
+      };
+      if (!r.ok) {
+        setErrMsg(d.message ?? `Couldn't load (${r.status}).`);
+        // Always set rows to an empty array so we exit the
+        // perpetual-loading state and the modal can render the
+        // error.
+        setRows([]);
+        return;
+      }
+      setRows(d.challenges ?? []);
+    } catch (err) {
+      setErrMsg(err instanceof Error ? err.message : "Couldn't load challenges.");
+      setRows([]);
     } finally {
       setLoading(false);
     }
@@ -194,6 +211,27 @@ export function DailyChallenges() {
             </p>
 
             {loading && !rows && <p className="text-mute">Loading…</p>}
+            {!loading && errMsg && (
+              <div
+                style={{
+                  background: "var(--crimson-500)",
+                  color: "var(--parchment-50)",
+                  padding: "var(--sp-3)",
+                  border: "3px solid var(--ink-900)",
+                  marginBottom: "var(--sp-3)",
+                  fontFamily: "var(--font-display)",
+                  fontSize: 12,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                {errMsg}
+              </div>
+            )}
+            {!loading && !errMsg && rows && rows.length === 0 && (
+              <p className="text-mute" style={{ textAlign: "center", padding: "var(--sp-4)" }}>
+                No challenges yet. Try again in a moment.
+              </p>
+            )}
             {rows?.map((row) => {
               const pct = Math.min(100, Math.round((row.progress / row.goal) * 100));
               const claimable = !!row.completedAt && !row.claimedAt;

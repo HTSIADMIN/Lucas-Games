@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { WeeklyArcadeLeaderboard } from "@/components/WeeklyArcadeLeaderboard";
 
 const W = 480;
 const H = 540;
@@ -556,6 +557,9 @@ export function FlappyClient() {
     const data = await res.json();
     if (!res.ok) { setError(data.error ?? "error"); return; }
     runTokenRef.current = data.runToken;
+    if (typeof data.bestScore === "number") {
+      setHighScore((h) => Math.max(h, data.bestScore));
+    }
     // 3-2-1-GO countdown before play actually starts.
     setPhase("countdown");
     let n = 3;
@@ -586,6 +590,7 @@ export function FlappyClient() {
     const data = await res.json();
     if (!res.ok) { setError(data.error ?? "error"); return; }
     setSubmission({ score: data.score, payout: data.payout, multiplier: data.multiplier ?? 1 });
+    if (typeof data.bestScore === "number") setHighScore(data.bestScore);
     setPhase("submitted");
     runTokenRef.current = null;
     router.refresh();
@@ -807,6 +812,11 @@ export function FlappyClient() {
               </p>
             )}
           </div>
+        </div>
+
+        {/* Weekly leaderboard — top score this week wins 10M ¢. */}
+        <div style={{ gridColumn: "1 / -1" }}>
+          <WeeklyArcadeLeaderboard game="flappy" />
         </div>
       </div>
     </div>

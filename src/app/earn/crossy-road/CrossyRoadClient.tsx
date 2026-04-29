@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { WeeklyArcadeLeaderboard } from "@/components/WeeklyArcadeLeaderboard";
 
 const COLS = 9;
 const ROWS_VISIBLE = 11;
@@ -591,6 +592,9 @@ export function CrossyRoadClient() {
       return;
     }
     runTokenRef.current = data.runToken;
+    if (typeof data.bestScore === "number") {
+      setHighScore((h) => Math.max(h, data.bestScore));
+    }
     startedAtRef.current = Date.now();
     phaseRef.current = "playing";
     setPhase("playing");
@@ -612,6 +616,7 @@ export function CrossyRoadClient() {
       return;
     }
     setSubmission({ score: data.score, payout: data.payout });
+    if (typeof data.bestScore === "number") setHighScore(data.bestScore);
     setPhase("submitted");
     runTokenRef.current = null;
     router.refresh();
@@ -726,6 +731,8 @@ export function CrossyRoadClient() {
           <li>Cap 50,000¢ per run</li>
         </ul>
       </div>
+
+      <WeeklyArcadeLeaderboard game="crossy_road" />
     </div>
   );
 }

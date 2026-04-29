@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { readSession } from "@/lib/auth/session";
 import { signSession } from "@/lib/auth/jwt";
+import { getPersonalBest } from "@/lib/arcade/weekly";
 
 export const runtime = "nodejs";
 
@@ -20,8 +21,7 @@ export async function POST(req: Request) {
   }
 
   const jti = randomUUID();
-  // Stamp the mode into `username` so the submit endpoint can verify it
-  // without a separate datastore lookup.
   const token = await signSession({ sub: s.user.id, username: `flappy:${mode}:${jti}`, jti });
-  return NextResponse.json({ ok: true, runToken: token, startedAt: Date.now(), mode });
+  const bestScore = await getPersonalBest(s.user.id, "flappy").catch(() => 0);
+  return NextResponse.json({ ok: true, runToken: token, startedAt: Date.now(), mode, bestScore });
 }

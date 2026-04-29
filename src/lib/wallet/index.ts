@@ -3,6 +3,7 @@
 
 import { insertWalletTransaction, walletBalance } from "@/lib/db";
 import { recordChallengeEvent } from "@/lib/challenges/record";
+import { maybeBoostWin } from "@/lib/events/globalEvents";
 import type { GameSlug } from "@/lib/challenges/catalog";
 
 export type WalletWrite = {
@@ -70,9 +71,18 @@ export async function credit(input: WalletWrite) {
   if (!Number.isFinite(input.amount) || input.amount <= 0 || !Number.isInteger(input.amount)) {
     throw new Error("invalid_amount");
   }
+  // Lucky Hour boost — when a global "lucky hour" event is active,
+  // all win-flavored credits get bumped before they hit the
+  // ledger. Refunds, shop refunds, challenge rewards, and
+  // pack trade-ins are excluded so the boost only inflates real
+  // gameplay payouts.
+  const boosted = WIN_REASONS.has(input.reason)
+    ? maybeBoostWin(input.amount)
+    : { amount: input.amount, bonus: 0 };
+  const finalAmount = boosted.amount;
   const result = await insertWalletTransaction({
     user_id: input.userId,
-    delta: input.amount,
+    delta: finalAmount,
     reason: input.reason,
     ref_kind: input.refKind ?? null,
     ref_id: input.refId ?? null,
@@ -82,7 +92,7 @@ export async function credit(input: WalletWrite) {
   if (WIN_REASONS.has(input.reason)) {
     const game = gameSlugForReason(input.reason);
     if (game) {
-      recordChallengeEvent(input.userId, { kind: "win_game", game, payout: input.amount })
+      recordChallengeEvent(input.userId, { kind: "win_game", game, payout: finalAmount })
         .catch(() => { /* ignore */ });
     }
   }

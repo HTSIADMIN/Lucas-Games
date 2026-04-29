@@ -4,6 +4,8 @@ import { readSession } from "@/lib/auth/session";
 import { verifySession } from "@/lib/auth/jwt";
 import { credit, getBalance } from "@/lib/wallet";
 import { insertGameSession } from "@/lib/db";
+import { recordChallengeEvent } from "@/lib/challenges/record";
+import { updatePersonalBest } from "@/lib/arcade/weekly";
 
 export const runtime = "nodejs";
 
@@ -65,6 +67,13 @@ export async function POST(req: Request) {
 
   REDEEMED.add(payload.jti);
 
+  // Personal best gets updated regardless of payout — even sub-min
+  // runs are valid scores and feed the weekly leaderboard.
+  const pb = await updatePersonalBest(s.user.id, "flappy", effective).catch(() => ({ best: effective, isNew: false }));
+  // Score-threshold daily challenges fire whether the player earns
+  // coins or not, so feed the event from this central spot.
+  recordChallengeEvent(s.user.id, { kind: "score", game: "flappy", score: effective }).catch(() => { /* ignore */ });
+
   if (effective <= 0 || payout < MIN_PAYOUT) {
     await insertGameSession({
       id: randomUUID(),
@@ -82,6 +91,8 @@ export async function POST(req: Request) {
       multiplier: cfg.multiplier,
       payout: 0,
       reason: "below_minimum",
+      bestScore: pb.best,
+      isNewBest: pb.isNew,
       balance: await getBalance(s.user.id),
     });
   }
@@ -109,6 +120,8 @@ export async function POST(req: Request) {
     mode,
     multiplier: cfg.multiplier,
     payout,
+    bestScore: pb.best,
+    isNewBest: pb.isNew,
     balance: await getBalance(s.user.id),
   });
 }

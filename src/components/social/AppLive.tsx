@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { LiveProvider } from "./LiveProvider";
 import { ChatDrawer } from "./ChatDrawer";
 import { DailyChallenges } from "@/components/DailyChallenges";
+import { EventTicker } from "@/components/EventTicker";
 import type { ChatMessagePublic } from "@/lib/db";
 
 export type Me = {
@@ -37,6 +38,7 @@ export function AppLive({
 }) {
   return (
     <LiveProvider me={me} initialChat={initialChat} game={game} championId={championId}>
+      {me && <EventTicker />}
       {children}
       {me && <ChatDrawer currentUserId={me.id} />}
       {me && <DailyChallenges />}

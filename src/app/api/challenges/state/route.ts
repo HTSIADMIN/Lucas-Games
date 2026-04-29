@@ -12,7 +12,28 @@ export async function GET() {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const rows = await ensureTodayChallenges(s.user.id);
+  let rows;
+  try {
+    rows = await ensureTodayChallenges(s.user.id);
+  } catch (err) {
+    // Most common cause: the daily_challenges table doesn't exist
+    // yet because migration 0020 hasn't been applied. Return a
+    // structured error so the client can show a real message
+    // instead of infinite loading.
+    const msg = err instanceof Error ? err.message : "error";
+    const isMissingTable =
+      msg.includes("relation") && msg.includes("does not exist");
+    return NextResponse.json(
+      {
+        error: isMissingTable ? "table_missing" : "internal",
+        message: isMissingTable
+          ? "Daily Challenges aren't set up yet — apply migration 0020_daily_challenges.sql."
+          : msg,
+        challenges: [],
+      },
+      { status: isMissingTable ? 503 : 500 },
+    );
+  }
   const challenges = rows.map((row) => {
     const tpl = findChallenge(row.challenge_id);
     return {
