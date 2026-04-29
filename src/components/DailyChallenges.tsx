@@ -256,7 +256,7 @@ export function DailyChallenges() {
                       >
                         {row.difficulty.toUpperCase()}
                       </span>
-                      <span style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-body-lg)" }}>
+                      <span style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-body-lg)", color: "var(--ink-900)" }}>
                         {row.title}
                       </span>
                     </div>
