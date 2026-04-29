@@ -718,9 +718,16 @@ function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => v
           padding: "var(--sp-5)",
           border: "4px solid var(--ink-900)",
           boxShadow: "var(--sh-popover), var(--glow-gold)",
+          // Force every nested text node to inherit parchment so
+          // the dark wood background stays readable. Individual
+          // inline `color` styles below still override per-element
+          // (gold-300 for the title, crimson for errors, etc.).
+          color: "var(--parchment-50)",
         }}
       >
-        {loading && <p className="text-mute">Loading…</p>}
+        {loading && (
+          <p style={{ color: "var(--parchment-200)" }}>Loading…</p>
+        )}
         {!loading && err && (
           <p style={{ color: "var(--crimson-300)" }}>{err}</p>
         )}
@@ -730,17 +737,26 @@ function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => v
               <ClanCrest animal={clan.animal_icon} size={56} />
               <div>
                 <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)", color: "var(--gold-300)", textShadow: "2px 2px 0 var(--ink-900)" }}>
-                  {clan.name} <span className="text-mute" style={{ fontSize: 14 }}>[{clan.tag}]</span>
+                  {clan.name}{" "}
+                  <span style={{ fontSize: 14, color: "var(--parchment-200)" }}>[{clan.tag}]</span>
                 </div>
-                <div className="text-mute" style={{ fontSize: 12 }}>
+                <div style={{ fontSize: 12, color: "var(--parchment-200)" }}>
                   {clan.member_count} of {CLAN_MAX_MEMBERS} members · {Number(clan.total_xp_week).toLocaleString()} weekly XP
                 </div>
               </div>
               <button
                 type="button"
-                className="btn btn-sm btn-ghost"
                 onClick={onClose}
-                style={{ marginLeft: "auto" }}
+                style={{
+                  marginLeft: "auto",
+                  background: "transparent",
+                  color: "var(--parchment-50)",
+                  border: "2px solid var(--parchment-200)",
+                  padding: "2px 8px",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-display)",
+                  fontSize: 14,
+                }}
                 aria-label="Close"
               >
                 ✕
@@ -753,8 +769,9 @@ function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => v
                   className="between"
                   style={{
                     padding: "var(--sp-2) 0",
-                    borderBottom: "2px dashed var(--saddle-300)",
+                    borderBottom: "2px dashed var(--saddle-500)",
                     fontFamily: "var(--font-display)",
+                    color: "var(--parchment-50)",
                   }}
                 >
                   <div className="row" style={{ gap: 8, alignItems: "center" }}>
@@ -767,19 +784,19 @@ function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => v
                       hat={m.equipped_hat ?? null}
                     />
                     <div>
-                      <div style={{ fontSize: 14 }}>
+                      <div style={{ fontSize: 14, color: "var(--parchment-50)" }}>
                         {m.username ?? "?"}
                         {m.role === "leader" && (
-                          <span style={{ marginLeft: 6, fontSize: 11, color: "var(--gold-500)" }}>★</span>
+                          <span style={{ marginLeft: 6, fontSize: 11, color: "var(--gold-300)" }}>★</span>
                         )}
                       </div>
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div className="text-money" style={{ fontSize: 13 }}>
+                    <div style={{ fontSize: 13, color: "var(--gold-300)" }}>
                       {Number(m.weekly_xp).toLocaleString()} XP
                     </div>
-                    <div className="text-mute" style={{ fontSize: 10 }}>
+                    <div style={{ fontSize: 10, color: "var(--parchment-200)" }}>
                       {memberContribution(m, members)} · {relativeLastActive(m.last_active_at)}
                     </div>
                   </div>

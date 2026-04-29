@@ -21,8 +21,14 @@ export async function GET() {
     // structured error so the client can show a real message
     // instead of infinite loading.
     const msg = err instanceof Error ? err.message : "error";
+    // Supabase phrases missing-table errors a couple of different
+    // ways depending on whether it's the SQL planner or the schema-
+    // cache lookup. Match both so the modal shows the migration hint
+    // either way instead of falling back to "internal".
     const isMissingTable =
-      msg.includes("relation") && msg.includes("does not exist");
+      (msg.includes("relation") && msg.includes("does not exist")) ||
+      msg.includes("Could not find the table") ||
+      msg.includes("schema cache");
     return NextResponse.json(
       {
         error: isMissingTable ? "table_missing" : "internal",
