@@ -21,7 +21,13 @@ export type User = {
 
 // ============ CLANS ============
 export type ClanAnimal =
-  | "wolf" | "bear" | "eagle" | "snake" | "bull" | "coyote" | "hawk" | "stag";
+  // Legacy animal-themed icon set kept for backwards compat with
+  // pre-v3 clans. New clans use the themed emblem ids below.
+  | "wolf" | "bear" | "eagle" | "snake" | "bull" | "coyote" | "hawk" | "stag"
+  // V3 themed clan emblems (matches public/clan-icons/*.svg).
+  | "aces_eights" | "blood_moon_riders" | "dead_mans_hand" | "golden_compass"
+  | "iron_horseshoe" | "phantom_posse" | "prospectors_guild" | "rattlesnake_gang"
+  | "saguaro_brotherhood" | "sheriffs_badge" | "thunderhoof_cavalry" | "train_barons";
 
 export type Clan = {
   id: string;
@@ -67,6 +73,25 @@ export type ClanMember = {
   role: "leader" | "member";
   weekly_xp: number;
   joined_at: string;
+  /** Set on every authenticated request. Drives the "active 3h ago"
+   *  line on the clan member panel. */
+  last_active_at?: string | null;
+};
+
+export type DailyChallenge = {
+  user_id: string;
+  /** YYYY-MM-DD UTC */
+  day: string;
+  slot: 0 | 1 | 2;
+  challenge_id: string;
+  goal: number;
+  progress: number;
+  coin_reward: number;
+  challenge_points: number;
+  difficulty: "easy" | "medium" | "hard";
+  completed_at: string | null;
+  claimed_at: string | null;
+  created_at: string;
 };
 
 export type ClanSeason = {

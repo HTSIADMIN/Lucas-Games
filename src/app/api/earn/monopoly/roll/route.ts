@@ -21,6 +21,7 @@ import {
   type MysteryCard,
 } from "@/lib/games/monopoly/board";
 import { randInt } from "@/lib/games/rng";
+import { recordChallengeEvent } from "@/lib/challenges/record";
 
 export const runtime = "nodejs";
 
@@ -41,6 +42,9 @@ export async function POST() {
 
   const state = await getMonopolyState(s.user.id);
   if (!state) return NextResponse.json({ error: "no_state" }, { status: 400 });
+
+  // Daily-challenge event — fire as soon as the roll is committed.
+  recordChallengeEvent(s.user.id, { kind: "use_monopoly_roll" }).catch(() => { /* ignore */ });
 
   const now = Date.now();
   if (state.next_roll_at && new Date(state.next_roll_at).getTime() > now) {

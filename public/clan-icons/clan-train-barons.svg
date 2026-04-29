@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lucas Games — CLAN EMBLEM: TRAIN-BARONS -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <style>@font-face{font-family:"M6X11";src:url("/fonts/m6x11.ttf") format("truetype");}text{font-family:"M6X11",monospace !important;}</style>
+  <defs>
+    <linearGradient id="tb-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5a4830"/>
+      <stop offset="100%" stop-color="#1a0f08"/>
+    </linearGradient>
+    <linearGradient id="tb-iron" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5a5048"/>
+      <stop offset="100%" stop-color="#2a2018"/>
+    </linearGradient>
+    <linearGradient id="tb-brass" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffe9a8"/>
+      <stop offset="50%" stop-color="#c89a4a"/>
+      <stop offset="100%" stop-color="#5a3810"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Hexagonal industrial shield -->
+  <path d="M 100 8 L 184 50 L 184 150 L 100 192 L 16 150 L 16 50 Z"
+        fill="url(#tb-bg)" stroke="#1a0f08" stroke-width="4"/>
+  <!-- inner brass border -->
+  <path d="M 100 18 L 174 56 L 174 144 L 100 182 L 26 144 L 26 56 Z"
+        fill="none" stroke="#c89a4a" stroke-width="2"/>
+  <!-- corner rivets -->
+  <g fill="url(#tb-brass)" stroke="#1a0f08" stroke-width="1">
+    <circle cx="100" cy="14" r="3"/>
+    <circle cx="180" cy="52" r="3"/>
+    <circle cx="180" cy="148" r="3"/>
+    <circle cx="100" cy="186" r="3"/>
+    <circle cx="20" cy="148" r="3"/>
+    <circle cx="20" cy="52" r="3"/>
+  </g>
+
+  <!-- Smoke clouds rising from the locomotive -->
+  <g fill="#3a3028" opacity="0.85">
+    <ellipse cx="80" cy="42" rx="10" ry="6"/>
+    <ellipse cx="92" cy="35" rx="13" ry="7"/>
+    <ellipse cx="106" cy="28" rx="14" ry="7"/>
+    <ellipse cx="118" cy="38" rx="11" ry="6"/>
+  </g>
+  <g fill="#5a5048" opacity="0.6">
+    <ellipse cx="92" cy="38" rx="8" ry="4"/>
+    <ellipse cx="108" cy="32" rx="9" ry="4"/>
+  </g>
+
+  <!-- Mountain backdrop -->
+  <g fill="#1a0f08" opacity="0.6">
+    <polygon points="20,110 60,76 80,90 110,68 140,84 180,108 180,122 20,122"/>
+  </g>
+
+  <!-- Track at the bottom -->
+  <g>
+    <rect x="20" y="142" width="160" height="3" fill="#1a0f08"/>
+    <rect x="20" y="148" width="160" height="3" fill="#1a0f08"/>
+    <!-- ties -->
+    <g fill="#3a2810">
+      <rect x="22" y="150" width="6" height="6"/>
+      <rect x="40" y="150" width="6" height="6"/>
+      <rect x="60" y="150" width="6" height="6"/>
+      <rect x="80" y="150" width="6" height="6"/>
+      <rect x="100" y="150" width="6" height="6"/>
+      <rect x="120" y="150" width="6" height="6"/>
+      <rect x="140" y="150" width="6" height="6"/>
+      <rect x="160" y="150" width="6" height="6"/>
+      <rect x="172" y="150" width="6" height="6"/>
+    </g>
+  </g>
+
+  <!-- LOCOMOTIVE (heroic 3/4 view, head-on with slight angle) -->
+  <g transform="translate(48 78)">
+    <!-- main boiler (cylinder) -->
+    <rect x="20" y="20" width="80" height="30" rx="3" fill="url(#tb-iron)" stroke="#1a0f08" stroke-width="2"/>
+    <!-- boiler bands -->
+    <rect x="30" y="20" width="3" height="30" fill="#c89a4a"/>
+    <rect x="60" y="20" width="3" height="30" fill="#c89a4a"/>
+    <rect x="90" y="20" width="3" height="30" fill="#c89a4a"/>
+    <!-- boiler highlight -->
+    <rect x="20" y="22" width="80" height="2" fill="#7a6850"/>
+
+    <!-- chimney -->
+    <rect x="40" y="6" width="14" height="16" fill="url(#tb-iron)" stroke="#1a0f08" stroke-width="1.5"/>
+    <rect x="36" y="2" width="22" height="6" fill="#1a0f08"/>
+    <rect x="38" y="4" width="18" height="2" fill="#5a4830"/>
+
+    <!-- dome (steam) -->
+    <ellipse cx="74" cy="20" rx="8" ry="6" fill="url(#tb-brass)" stroke="#1a0f08" stroke-width="1.5"/>
+    <ellipse cx="72" cy="18" rx="3" ry="2" fill="#ffe9a8"/>
+
+    <!-- cab -->
+    <rect x="100" y="10" width="26" height="40" fill="url(#tb-iron)" stroke="#1a0f08" stroke-width="2"/>
+    <rect x="100" y="10" width="26" height="3" fill="#5a4830"/>
+    <!-- cab window -->
+    <rect x="106" y="18" width="14" height="14" fill="#143348" stroke="#1a0f08" stroke-width="1"/>
+    <line x1="113" y1="18" x2="113" y2="32" stroke="#1a0f08" stroke-width="0.6"/>
+    <line x1="106" y1="25" x2="120" y2="25" stroke="#1a0f08" stroke-width="0.6"/>
+    <!-- window glow -->
+    <rect x="107" y="19" width="6" height="5" fill="#5fa8d3" opacity="0.6"/>
+
+    <!-- headlight (giant brass lamp) -->
+    <ellipse cx="14" cy="32" rx="8" ry="10" fill="url(#tb-brass)" stroke="#1a0f08" stroke-width="2"/>
+    <ellipse cx="14" cy="32" rx="5" ry="7" fill="#fef6e4"/>
+    <ellipse cx="14" cy="30" rx="3" ry="4" fill="#ffd84d"/>
+    <ellipse cx="13" cy="28" rx="1.2" ry="1.5" fill="#fef6e4"/>
+    <!-- light beam -->
+    <path d="M 6 32 L -16 22 L -16 42 Z" fill="#ffd84d" opacity="0.25"/>
+
+    <!-- cowcatcher -->
+    <path d="M 4 50 L -10 64 L 30 64 L 24 50 Z" fill="url(#tb-iron)" stroke="#1a0f08" stroke-width="2"/>
+    <g stroke="#1a0f08" stroke-width="1">
+      <line x1="4" y1="54" x2="0" y2="62"/>
+      <line x1="9" y1="54" x2="6" y2="62"/>
+      <line x1="14" y1="54" x2="14" y2="62"/>
+      <line x1="19" y1="54" x2="22" y2="62"/>
+      <line x1="24" y1="54" x2="28" y2="62"/>
+    </g>
+
+    <!-- wheels (large + small) -->
+    <circle cx="34" cy="58" r="10" fill="#1a0f08" stroke="#1a0f08" stroke-width="1"/>
+    <circle cx="34" cy="58" r="8" fill="url(#tb-iron)"/>
+    <circle cx="34" cy="58" r="3" fill="#c89a4a"/>
+    <g stroke="#1a0f08" stroke-width="1.5" fill="none">
+      <line x1="34" y1="50" x2="34" y2="66"/>
+      <line x1="26" y1="58" x2="42" y2="58"/>
+    </g>
+
+    <circle cx="64" cy="58" r="14" fill="#1a0f08" stroke="#1a0f08" stroke-width="1"/>
+    <circle cx="64" cy="58" r="12" fill="url(#tb-iron)"/>
+    <circle cx="64" cy="58" r="4" fill="#c89a4a"/>
+    <g stroke="#1a0f08" stroke-width="1.5" fill="none">
+      <line x1="64" y1="46" x2="64" y2="70"/>
+      <line x1="52" y1="58" x2="76" y2="58"/>
+      <line x1="56" y1="50" x2="72" y2="66"/>
+      <line x1="56" y1="66" x2="72" y2="50"/>
+    </g>
+
+    <circle cx="100" cy="58" r="10" fill="#1a0f08"/>
+    <circle cx="100" cy="58" r="8" fill="url(#tb-iron)"/>
+    <circle cx="100" cy="58" r="3" fill="#c89a4a"/>
+
+    <!-- piston connecting rod -->
+    <rect x="34" y="56" width="68" height="3" fill="#c89a4a" stroke="#1a0f08" stroke-width="0.8"/>
+  </g>
+
+  <!-- Banner -->
+  <path d="M 22 158 L 100 152 L 178 158 L 170 184 L 100 178 L 30 184 Z"
+        fill="#1a0f08" stroke="#c89a4a" stroke-width="2"/>
+  <text x="100" y="172" text-anchor="middle" font-family="M6X11, monospace" font-size="11"
+        font-weight="bold" fill="#ffe9a8" letter-spacing="3">TRAIN BARONS</text>
+</svg>

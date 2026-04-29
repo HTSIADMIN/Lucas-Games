@@ -5,6 +5,8 @@ import type { ClanAnimal, ClanChestTier } from "@/lib/db";
 export const CLAN_FOUNDING_FEE = 25_000;
 export const CLAN_MAX_MEMBERS = 8;
 
+// Legacy animal set is kept around for any clans created before v3,
+// so old icons still resolve. New clans pick from CLAN_EMBLEMS.
 export const CLAN_ANIMALS: { key: ClanAnimal; name: string; tagline: string }[] = [
   { key: "wolf",   name: "Wolf",   tagline: "Pack hunter." },
   { key: "bear",   name: "Bear",   tagline: "Slow to anger." },
@@ -15,6 +17,40 @@ export const CLAN_ANIMALS: { key: ClanAnimal; name: string; tagline: string }[] 
   { key: "hawk",   name: "Hawk",   tagline: "Sharp eye." },
   { key: "stag",   name: "Stag",   tagline: "Steady ruler." },
 ];
+
+/** New themed emblems for v3+ clans. Each maps to a designed SVG in
+ *  public/clan-icons/ via CLAN_EMBLEM_FILE below. */
+export const CLAN_EMBLEMS: { key: ClanAnimal; name: string; tagline: string }[] = [
+  { key: "aces_eights",         name: "Aces & Eights",      tagline: "The dead man's hand." },
+  { key: "blood_moon_riders",   name: "Blood Moon Riders",  tagline: "Run with the wolves." },
+  { key: "dead_mans_hand",      name: "Dead Man's Hand",    tagline: "Last cards on the table." },
+  { key: "golden_compass",      name: "Golden Compass",     tagline: "True north pays." },
+  { key: "iron_horseshoe",      name: "Iron Horseshoe",     tagline: "Forged-in luck." },
+  { key: "phantom_posse",       name: "Phantom Posse",      tagline: "Riders unseen." },
+  { key: "prospectors_guild",   name: "Prospectors' Guild", tagline: "Strike it rich." },
+  { key: "rattlesnake_gang",    name: "Rattlesnake Gang",   tagline: "Strike first." },
+  { key: "saguaro_brotherhood", name: "Saguaro Brotherhood",tagline: "Standing tall in the dust." },
+  { key: "sheriffs_badge",      name: "Sheriff's Badge",    tagline: "Law of the land." },
+  { key: "thunderhoof_cavalry", name: "Thunderhoof Cavalry",tagline: "Charge at dawn." },
+  { key: "train_barons",        name: "Train Barons",       tagline: "Own the rails." },
+];
+
+/** Map a clan icon id to its SVG path. Legacy animal ids fall back
+ *  to the old pixel-grid avatars baked into GameIcon. */
+export const CLAN_EMBLEM_FILE: Partial<Record<ClanAnimal, string>> = {
+  aces_eights:         "/clan-icons/clan-aces-eights.svg",
+  blood_moon_riders:   "/clan-icons/clan-blood-moon-riders.svg",
+  dead_mans_hand:      "/clan-icons/clan-dead-mans-hand.svg",
+  golden_compass:      "/clan-icons/clan-golden-compass.svg",
+  iron_horseshoe:      "/clan-icons/clan-iron-horseshoe.svg",
+  phantom_posse:       "/clan-icons/clan-phantom-posse.svg",
+  prospectors_guild:   "/clan-icons/clan-prospectors-guild.svg",
+  rattlesnake_gang:    "/clan-icons/clan-rattlesnake-gang.svg",
+  saguaro_brotherhood: "/clan-icons/clan-saguaro-brotherhood.svg",
+  sheriffs_badge:      "/clan-icons/clan-sheriffs-badge.svg",
+  thunderhoof_cavalry: "/clan-icons/clan-thunderhoof-cavalry.svg",
+  train_barons:        "/clan-icons/clan-train-barons.svg",
+};
 
 export const CHEST_TIER_LABEL: Record<ClanChestTier, string> = {
   rare: "Rare Chest",

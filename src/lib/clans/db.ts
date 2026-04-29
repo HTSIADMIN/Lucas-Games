@@ -68,22 +68,36 @@ export async function getClan(id: string): Promise<Clan | null> {
 }
 
 export async function listClanMembers(clanId: string): Promise<
-  (ClanMember & { username?: string; avatar_color?: string; initials?: string })[]
+  (ClanMember & {
+    username?: string;
+    avatar_color?: string;
+    initials?: string;
+    equipped_frame?: string | null;
+    equipped_hat?: string | null;
+  })[]
 > {
   const { data, error } = await client()
     .from("clan_members")
-    .select(`*, users:users!inner(username, avatar_color, initials)`)
+    .select(`*, users:users!inner(username, avatar_color, initials, equipped_frame, equipped_hat)`)
     .eq("clan_id", clanId)
     .order("weekly_xp", { ascending: false });
   if (error) throw new Error(`listClanMembers: ${error.message}`);
   type Row = ClanMember & {
-    users: { username: string; avatar_color: string; initials: string } | null;
+    users: {
+      username: string;
+      avatar_color: string;
+      initials: string;
+      equipped_frame: string | null;
+      equipped_hat: string | null;
+    } | null;
   };
   return ((data ?? []) as Row[]).map((r) => ({
     ...r,
     username: r.users?.username,
     avatar_color: r.users?.avatar_color,
     initials: r.users?.initials,
+    equipped_frame: r.users?.equipped_frame ?? null,
+    equipped_hat: r.users?.equipped_hat ?? null,
   }));
 }
 

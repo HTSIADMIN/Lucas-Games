@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lucas Games — CLAN EMBLEM: BLOOD-MOON-RIDERS -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <style>@font-face{font-family:"M6X11";src:url("/fonts/m6x11.ttf") format("truetype");}text{font-family:"M6X11",monospace !important;}</style>
+  <defs>
+    <radialGradient id="bm-sky" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#3a1a2a"/>
+      <stop offset="60%" stop-color="#1a0a14"/>
+      <stop offset="100%" stop-color="#0a0408"/>
+    </radialGradient>
+    <radialGradient id="bm-moon" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#ff8868"/>
+      <stop offset="40%" stop-color="#c83838"/>
+      <stop offset="80%" stop-color="#8b1a1a"/>
+      <stop offset="100%" stop-color="#3a0a0a"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Pointed gothic shield -->
+  <path d="M 100 8 L 184 28 L 184 110 Q 184 162 100 192 Q 16 162 16 110 L 16 28 Z"
+        fill="url(#bm-sky)" stroke="#1a0f08" stroke-width="4"/>
+  <path d="M 100 16 L 176 32 L 176 108 Q 176 154 100 184 Q 24 154 24 108 L 24 32 Z"
+        fill="none" stroke="#8b1a1a" stroke-width="1.5" opacity="0.7"/>
+
+  <!-- Stars in sky -->
+  <g fill="#fef6e4" opacity="0.7">
+    <circle cx="40" cy="50" r="0.8"/>
+    <circle cx="155" cy="40" r="1"/>
+    <circle cx="60" cy="35" r="0.6"/>
+    <circle cx="170" cy="80" r="0.8"/>
+    <circle cx="35" cy="90" r="0.7"/>
+  </g>
+  <g fill="#fef6e4" opacity="0.4">
+    <circle cx="80" cy="45" r="0.5"/>
+    <circle cx="135" cy="55" r="0.5"/>
+    <circle cx="50" cy="120" r="0.5"/>
+  </g>
+
+  <!-- Wispy clouds -->
+  <g fill="#3a1a2a" opacity="0.7">
+    <ellipse cx="60" cy="60" rx="20" ry="3"/>
+    <ellipse cx="145" cy="70" rx="25" ry="2.5"/>
+  </g>
+
+  <!-- THE BLOOD MOON -->
+  <circle cx="100" cy="80" r="42" fill="url(#bm-moon)" stroke="#1a0f08" stroke-width="2"/>
+  <!-- Moon craters / surface markings -->
+  <g fill="#5a0a0a" opacity="0.6">
+    <circle cx="88" cy="68" r="4"/>
+    <circle cx="115" cy="78" r="6"/>
+    <circle cx="95" cy="92" r="3"/>
+    <circle cx="105" cy="100" r="2.5"/>
+    <ellipse cx="85" cy="85" rx="5" ry="3"/>
+  </g>
+  <!-- moon rim glow (front) -->
+  <path d="M 60 80 Q 100 36 140 80" fill="none" stroke="#ff8868" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- Atmospheric red glow around moon -->
+  <circle cx="100" cy="80" r="48" fill="none" stroke="#c83838" stroke-width="1" opacity="0.4"/>
+  <circle cx="100" cy="80" r="54" fill="none" stroke="#c83838" stroke-width="0.6" opacity="0.25"/>
+
+  <!-- Silhouette horizon: jagged mesa line + cliffs -->
+  <path d="M 24 130 L 50 130 L 56 122 L 72 122 L 80 116 L 95 116 L 100 122 L 110 122 L 118 114 L 130 114 L 138 122 L 156 122 L 164 130 L 176 130 L 176 184 L 24 184 Z"
+        fill="#0a0408" stroke="#1a0f08" stroke-width="1"/>
+
+  <!-- Lone rider silhouette on top of mesa -->
+  <g fill="#0a0408" transform="translate(94 100)">
+    <!-- horse body -->
+    <ellipse cx="6" cy="14" rx="14" ry="4"/>
+    <!-- horse legs -->
+    <rect x="-4" y="14" width="2" height="8"/>
+    <rect x="2" y="14" width="2" height="8"/>
+    <rect x="10" y="14" width="2" height="8"/>
+    <rect x="16" y="14" width="2" height="8"/>
+    <!-- horse neck/head -->
+    <path d="M -6 14 L -10 8 L -6 4 L -2 12 Z"/>
+    <!-- horse tail -->
+    <path d="M 20 12 Q 24 14 22 18 Z"/>
+    <!-- rider torso -->
+    <rect x="2" y="6" width="6" height="10"/>
+    <!-- rider head -->
+    <circle cx="5" cy="3" r="2.5"/>
+    <!-- cowboy hat -->
+    <ellipse cx="5" cy="0" rx="6" ry="1"/>
+    <rect x="2" y="-3" width="6" height="3"/>
+    <!-- rifle -->
+    <rect x="8" y="6" width="9" height="1" transform="rotate(-15 12 6)"/>
+  </g>
+
+  <!-- Bats flying -->
+  <g fill="#0a0408">
+    <path d="M 50 50 L 55 48 L 53 51 L 57 49 L 55 52 L 50 50 Z"/>
+    <path d="M 145 35 L 150 33 L 148 36 L 152 34 L 150 37 L 145 35 Z"/>
+    <path d="M 60 70 L 64 68 L 63 71 L 66 69 L 64 71 Z"/>
+  </g>
+
+  <!-- Howling wolf silhouette in foreground -->
+  <g fill="#0a0408" transform="translate(36 138)">
+    <!-- body -->
+    <ellipse cx="8" cy="6" rx="8" ry="3"/>
+    <!-- legs -->
+    <rect x="3" y="6" width="1.5" height="6"/>
+    <rect x="11" y="6" width="1.5" height="6"/>
+    <!-- raised head, howling -->
+    <path d="M 0 -6 L -2 4 L 4 6 L 6 0 Z"/>
+    <!-- snout up -->
+    <path d="M -4 -8 L -2 4 L -4 0 Z"/>
+    <!-- ears -->
+    <path d="M -1 -10 L 1 -6 L -2 -6 Z"/>
+    <!-- tail -->
+    <path d="M 16 4 Q 20 0 18 6 Z"/>
+  </g>
+
+  <!-- Banner -->
+  <path d="M 16 162 L 100 156 L 184 162 L 174 188 L 100 180 L 26 188 Z"
+        fill="#1a0408" stroke="#8b1a1a" stroke-width="2"/>
+  <text x="100" y="174" text-anchor="middle" font-family="M6X11, monospace" font-size="11"
+        font-weight="bold" fill="#c83838" letter-spacing="3">BLOOD MOON RIDERS</text>
+</svg>

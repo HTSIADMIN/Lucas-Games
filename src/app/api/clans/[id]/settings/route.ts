@@ -5,11 +5,14 @@ import {
   getMyClan,
   updateClanSettings,
 } from "@/lib/clans/db";
-import { CLAN_ANIMALS } from "@/lib/clans/constants";
+import { CLAN_ANIMALS, CLAN_EMBLEMS } from "@/lib/clans/constants";
 
 export const runtime = "nodejs";
 
-const ALLOWED_ANIMALS = new Set(CLAN_ANIMALS.map((a) => a.key));
+const ALLOWED_ANIMALS = new Set<string>([
+  ...CLAN_ANIMALS.map((a) => a.key),
+  ...CLAN_EMBLEMS.map((e) => e.key),
+]);
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const s = await readSession();
@@ -37,7 +40,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     patch.tag = t;
   }
   if (typeof body.animalIcon === "string") {
-    if (!ALLOWED_ANIMALS.has(body.animalIcon as (typeof CLAN_ANIMALS)[number]["key"])) {
+    if (!ALLOWED_ANIMALS.has(body.animalIcon)) {
       return NextResponse.json({ error: "animal_invalid" }, { status: 400 });
     }
     patch.animalIcon = body.animalIcon;

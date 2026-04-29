@@ -100,4 +100,10 @@ export const getActiveSlotRun        = impl.getActiveSlotRun;
 export const insertSlotRun           = impl.insertSlotRun;
 export const updateSlotRun           = impl.updateSlotRun;
 
+export const listDailyChallenges          = impl.listDailyChallenges;
+export const insertDailyChallenges        = impl.insertDailyChallenges;
+export const bumpDailyChallengeProgress   = impl.bumpDailyChallengeProgress;
+export const markDailyChallengeClaimed    = impl.markDailyChallengeClaimed;
+export const touchClanMemberLastActive    = impl.touchClanMemberLastActive;
+
 export * from "./types";

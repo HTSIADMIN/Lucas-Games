@@ -11,6 +11,7 @@ import {
   CoinflipDuel,
   CrashBet,
   CrashRound,
+  DailyChallenge,
   EarnCooldown,
   GameSession,
   MinesGame,
@@ -749,4 +750,85 @@ export async function updateSlotRun(id: string, patch: Partial<SlotRun>): Promis
     .maybeSingle();
   if (error) throw new Error(`updateSlotRun: ${error.message}`);
   return (data as SlotRun | null) ?? null;
+}
+
+// ============ DAILY CHALLENGES ============
+
+export async function listDailyChallenges(userId: string, day: string): Promise<DailyChallenge[]> {
+  const { data, error } = await client()
+    .from("daily_challenges")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("day", day)
+    .order("slot", { ascending: true });
+  if (error) throw new Error(`listDailyChallenges: ${error.message}`);
+  return (data ?? []) as DailyChallenge[];
+}
+
+export async function insertDailyChallenges(rows: DailyChallenge[]): Promise<void> {
+  if (rows.length === 0) return;
+  const { error } = await client().from("daily_challenges").insert(rows);
+  if (error) throw new Error(`insertDailyChallenges: ${error.message}`);
+}
+
+/** Bump progress on a single (user, day, slot). Returns the row
+ *  after the update so callers can detect newly-completed challenges
+ *  without an extra round trip. */
+export async function bumpDailyChallengeProgress(
+  userId: string, day: string, slot: number, delta: number,
+): Promise<DailyChallenge | null> {
+  const { data: row } = await client()
+    .from("daily_challenges")
+    .select("*")
+    .eq("user_id", userId).eq("day", day).eq("slot", slot)
+    .maybeSingle();
+  if (!row) return null;
+  const cur = row as DailyChallenge;
+  if (cur.completed_at) return cur;
+  const nextProgress = Math.min(cur.goal, cur.progress + delta);
+  const completed = nextProgress >= cur.goal && !cur.completed_at;
+  const { data, error } = await client()
+    .from("daily_challenges")
+    .update({
+      progress: nextProgress,
+      completed_at: completed ? new Date().toISOString() : null,
+    })
+    .eq("user_id", userId).eq("day", day).eq("slot", slot)
+    .select("*")
+    .maybeSingle();
+  if (error) throw new Error(`bumpDailyChallengeProgress: ${error.message}`);
+  return (data as DailyChallenge | null) ?? null;
+}
+
+/** Mark the challenge as claimed once the player taps the reward
+ *  button. Returns the updated row (or null if it was already claimed
+ *  / not eligible). */
+export async function markDailyChallengeClaimed(
+  userId: string, day: string, slot: number,
+): Promise<DailyChallenge | null> {
+  const { data, error } = await client()
+    .from("daily_challenges")
+    .update({ claimed_at: new Date().toISOString() })
+    .eq("user_id", userId).eq("day", day).eq("slot", slot)
+    .is("claimed_at", null)
+    .not("completed_at", "is", null)
+    .select("*")
+    .maybeSingle();
+  if (error) throw new Error(`markDailyChallengeClaimed: ${error.message}`);
+  return (data as DailyChallenge | null) ?? null;
+}
+
+// ============ CLAN MEMBER LAST-ACTIVE ============
+// Touched from readSession on every authenticated request so the
+// member panel can show "active 3h ago".
+export async function touchClanMemberLastActive(userId: string): Promise<void> {
+  const { error } = await client()
+    .from("clan_members")
+    .update({ last_active_at: new Date().toISOString() })
+    .eq("user_id", userId);
+  if (error) {
+    // Non-fatal — log but don't fail the request.
+    // eslint-disable-next-line no-console
+    console.warn(`touchClanMemberLastActive: ${error.message}`);
+  }
 }

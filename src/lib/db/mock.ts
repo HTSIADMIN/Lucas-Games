@@ -25,6 +25,7 @@ import {
   UserPublic,
   UserSession,
   WalletTransaction,
+  DailyChallenge,
 } from "./types";
 
 type Schema = {
@@ -46,6 +47,7 @@ type Schema = {
   monopoly_states: MonopolyState[];
   monopoly_owned: MonopolyOwned[];
   slot_runs: SlotRun[];
+  daily_challenges: DailyChallenge[];
   _walletSeq: number;
   _crashBetSeq: number;
   _chatSeq: number;
@@ -62,6 +64,7 @@ const EMPTY: Schema = {
   blackjack_rounds: [], blackjack_seats: [], coinflip_duels: [],
   monopoly_states: [], monopoly_owned: [],
   slot_runs: [],
+  daily_challenges: [],
   _walletSeq: 0, _crashBetSeq: 0, _chatSeq: 0, _bjSeatSeq: 0,
 };
 
@@ -552,4 +555,53 @@ export async function updateSlotRun(id: string, patch: Partial<SlotRun>): Promis
   Object.assign(r, patch);
   commit();
   return r;
+}
+
+// ============ DAILY CHALLENGES ============
+
+export async function listDailyChallenges(userId: string, day: string): Promise<DailyChallenge[]> {
+  return db().daily_challenges
+    .filter((c) => c.user_id === userId && c.day === day)
+    .sort((a, b) => a.slot - b.slot);
+}
+
+export async function insertDailyChallenges(rows: DailyChallenge[]): Promise<void> {
+  db().daily_challenges.push(...rows);
+  commit();
+}
+
+export async function bumpDailyChallengeProgress(
+  userId: string, day: string, slot: number, delta: number,
+): Promise<DailyChallenge | null> {
+  const row = db().daily_challenges.find(
+    (c) => c.user_id === userId && c.day === day && c.slot === slot,
+  );
+  if (!row) return null;
+  if (row.completed_at) return row;
+  const next = Math.min(row.goal, row.progress + delta);
+  row.progress = next;
+  if (next >= row.goal && !row.completed_at) {
+    row.completed_at = new Date().toISOString();
+  }
+  commit();
+  return row;
+}
+
+export async function markDailyChallengeClaimed(
+  userId: string, day: string, slot: number,
+): Promise<DailyChallenge | null> {
+  const row = db().daily_challenges.find(
+    (c) => c.user_id === userId && c.day === day && c.slot === slot,
+  );
+  if (!row || row.claimed_at || !row.completed_at) return null;
+  row.claimed_at = new Date().toISOString();
+  commit();
+  return row;
+}
+
+// ============ CLAN MEMBER LAST-ACTIVE ============
+// Mock no-op — clan tables aren't backed by mock impl; the supabase
+// adapter handles this in production. Kept for signature parity.
+export async function touchClanMemberLastActive(_userId: string): Promise<void> {
+  void _userId;
 }

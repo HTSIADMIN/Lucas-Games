@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lucas Games — CLAN EMBLEM: RATTLESNAKE-GANG -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <style>@font-face{font-family:"M6X11";src:url("/fonts/m6x11.ttf") format("truetype");}text{font-family:"M6X11",monospace !important;}</style>
+  <defs>
+    <radialGradient id="rs-bg" cx="50%" cy="50%" r="65%">
+      <stop offset="0%" stop-color="#5a1a1a"/>
+      <stop offset="60%" stop-color="#2a0a0a"/>
+      <stop offset="100%" stop-color="#0a0202"/>
+    </radialGradient>
+    <linearGradient id="rs-snake" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c89a4a"/>
+      <stop offset="50%" stop-color="#8a6020"/>
+      <stop offset="100%" stop-color="#3a2810"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Diamond shield (rotated square with cut corners) -->
+  <path d="M 100 10 L 180 60 L 180 140 L 100 190 L 20 140 L 20 60 Z"
+        fill="url(#rs-bg)" stroke="#1a0f08" stroke-width="4"/>
+  <path d="M 100 10 L 180 60 L 180 140 L 100 190 L 20 140 L 20 60 Z"
+        fill="none" stroke="#e05a3c" stroke-width="1.5"/>
+
+  <!-- Inner crimson glow ring -->
+  <path d="M 100 22 L 170 64 L 170 136 L 100 178 L 30 136 L 30 64 Z"
+        fill="none" stroke="#8b3a3a" stroke-width="2" opacity="0.6"/>
+
+  <!-- Coiled snake body — back coils -->
+  <ellipse cx="100" cy="110" rx="55" ry="40" fill="none" stroke="#1a0f08" stroke-width="14"/>
+  <ellipse cx="100" cy="110" rx="55" ry="40" fill="none" stroke="url(#rs-snake)" stroke-width="11"/>
+
+  <ellipse cx="100" cy="110" rx="38" ry="28" fill="none" stroke="#1a0f08" stroke-width="14"/>
+  <ellipse cx="100" cy="110" rx="38" ry="28" fill="none" stroke="url(#rs-snake)" stroke-width="11"/>
+
+  <!-- Diamond pattern on body (front coil) -->
+  <g fill="#1a0f08">
+    <path d="M 60 110 L 65 105 L 70 110 L 65 115 Z"/>
+    <path d="M 80 130 L 85 125 L 90 130 L 85 135 Z"/>
+    <path d="M 110 132 L 115 127 L 120 132 L 115 137 Z"/>
+    <path d="M 135 115 L 140 110 L 145 115 L 140 120 Z"/>
+    <path d="M 130 95 L 135 90 L 140 95 L 135 100 Z"/>
+  </g>
+
+  <!-- Snake head (raised, striking) -->
+  <g transform="translate(120 50)">
+    <path d="M 0 30 Q -8 20 -2 8 Q 8 0 22 4 Q 30 10 28 22 Q 24 32 14 32 Z"
+          fill="url(#rs-snake)" stroke="#1a0f08" stroke-width="2"/>
+    <!-- head pattern -->
+    <path d="M 4 16 L 8 12 L 12 16 L 8 20 Z" fill="#1a0f08"/>
+    <!-- yellow eyes (slit pupils) -->
+    <ellipse cx="16" cy="14" rx="3" ry="3" fill="#ffd84d"/>
+    <ellipse cx="16" cy="14" rx="0.8" ry="2.5" fill="#1a0f08"/>
+    <ellipse cx="22" cy="18" rx="2.5" ry="2.5" fill="#ffd84d"/>
+    <ellipse cx="22" cy="18" rx="0.6" ry="2" fill="#1a0f08"/>
+    <!-- nostril -->
+    <circle cx="8" cy="22" r="0.8" fill="#1a0f08"/>
+  </g>
+
+  <!-- Fangs -->
+  <path d="M 122 78 L 120 90 L 124 88 Z" fill="#fef6e4" stroke="#1a0f08" stroke-width="0.5"/>
+  <path d="M 132 80 L 134 92 L 138 88 Z" fill="#fef6e4" stroke="#1a0f08" stroke-width="0.5"/>
+
+  <!-- Forked tongue -->
+  <path d="M 130 92 Q 138 100 144 96 M 130 92 Q 138 102 142 110"
+        fill="none" stroke="#e05a3c" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Rattle tail -->
+  <g transform="translate(155 130) rotate(20)">
+    <path d="M 0 0 L 14 0 L 16 4 L 0 4 Z" fill="#c89a4a" stroke="#1a0f08" stroke-width="1"/>
+    <path d="M 14 -2 L 28 -2 L 30 4 L 14 4 Z" fill="#8a6020" stroke="#1a0f08" stroke-width="1"/>
+    <path d="M 28 -4 L 38 -4 L 40 4 L 28 4 Z" fill="#5a3810" stroke="#1a0f08" stroke-width="1"/>
+  </g>
+
+  <!-- Banner ribbon -->
+  <path d="M 30 170 L 100 162 L 170 170 L 162 188 L 100 180 L 38 188 Z"
+        fill="#8b1a1a" stroke="#1a0f08" stroke-width="2"/>
+  <text x="100" y="178" text-anchor="middle" font-family="M6X11, monospace" font-size="13"
+        font-weight="bold" fill="#ffd84d" letter-spacing="3">RATTLESNAKES</text>
+
+  <!-- Corner skull marks -->
+  <g fill="#ffd84d" opacity="0.5">
+    <circle cx="35" cy="40" r="2"/>
+    <circle cx="165" cy="40" r="2"/>
+  </g>
+</svg>

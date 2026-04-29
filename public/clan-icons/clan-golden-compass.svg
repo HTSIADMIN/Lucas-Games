@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lucas Games — CLAN EMBLEM: GOLDEN-COMPASS -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <style>@font-face{font-family:"M6X11";src:url("/fonts/m6x11.ttf") format("truetype");}text{font-family:"M6X11",monospace !important;}</style>
+  <defs>
+    <radialGradient id="gc-bg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#5fa8d3"/>
+      <stop offset="60%" stop-color="#2c6a8e"/>
+      <stop offset="100%" stop-color="#143348"/>
+    </radialGradient>
+    <linearGradient id="gc-gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffe9a8"/>
+      <stop offset="50%" stop-color="#f5c842"/>
+      <stop offset="100%" stop-color="#7a5510"/>
+    </linearGradient>
+    <radialGradient id="gc-face" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fef6e4"/>
+      <stop offset="80%" stop-color="#fbe9c4"/>
+      <stop offset="100%" stop-color="#d4a574"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Round shield -->
+  <circle cx="100" cy="100" r="92" fill="url(#gc-bg)" stroke="#1a0f08" stroke-width="4"/>
+  <circle cx="100" cy="100" r="92" fill="none" stroke="#f5c842" stroke-width="1.5"/>
+  <circle cx="100" cy="100" r="86" fill="none" stroke="#7a5510" stroke-width="1" stroke-dasharray="2 4"/>
+
+  <!-- Compass outer ring with cardinal markers -->
+  <circle cx="100" cy="100" r="68" fill="url(#gc-gold)" stroke="#1a0f08" stroke-width="3"/>
+  <circle cx="100" cy="100" r="64" fill="url(#gc-face)" stroke="#7a5510" stroke-width="1"/>
+
+  <!-- Tick marks (32 of them) -->
+  <g stroke="#1a0f08">
+    <line x1="100" y1="36" x2="100" y2="42" stroke-width="1.5" transform="rotate(0.0 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(11.25 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(22.5 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(33.75 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="42" stroke-width="1.5" transform="rotate(45.0 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(56.25 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(67.5 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(78.75 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="42" stroke-width="1.5" transform="rotate(90.0 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(101.25 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(112.5 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(123.75 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="42" stroke-width="1.5" transform="rotate(135.0 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(146.25 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(157.5 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(168.75 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="42" stroke-width="1.5" transform="rotate(180.0 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(191.25 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(202.5 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(213.75 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="42" stroke-width="1.5" transform="rotate(225.0 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(236.25 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(247.5 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(258.75 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="42" stroke-width="1.5" transform="rotate(270.0 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(281.25 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(292.5 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(303.75 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="42" stroke-width="1.5" transform="rotate(315.0 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(326.25 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(337.5 100 100)"/>
+    <line x1="100" y1="36" x2="100" y2="40" stroke-width="0.6" transform="rotate(348.75 100 100)"/>
+  </g>
+
+  <!-- Cardinal letters -->
+  <text x="100" y="50" text-anchor="middle" font-family="M6X11, monospace" font-size="11" font-weight="bold" fill="#1a0f08">N</text>
+  <text x="150" y="104" text-anchor="middle" font-family="M6X11, monospace" font-size="11" font-weight="bold" fill="#1a0f08">E</text>
+  <text x="100" y="158" text-anchor="middle" font-family="M6X11, monospace" font-size="11" font-weight="bold" fill="#1a0f08">S</text>
+  <text x="50" y="104" text-anchor="middle" font-family="M6X11, monospace" font-size="11" font-weight="bold" fill="#1a0f08">W</text>
+
+  <!-- Compass star points (8-point) -->
+  <g>
+    <!-- N point (red, prominent) -->
+    <path d="M 100 60 L 106 100 L 100 96 L 94 100 Z" fill="#c83838" stroke="#1a0f08" stroke-width="1"/>
+    <path d="M 100 60 L 100 96 L 94 100 Z" fill="#8b1a1a"/>
+    <!-- S point -->
+    <path d="M 100 140 L 106 100 L 100 104 L 94 100 Z" fill="#fbe9c4" stroke="#1a0f08" stroke-width="1"/>
+    <path d="M 100 140 L 100 104 L 94 100 Z" fill="#a87545"/>
+    <!-- E -->
+    <path d="M 140 100 L 100 94 L 104 100 L 100 106 Z" fill="#fbe9c4" stroke="#1a0f08" stroke-width="1"/>
+    <path d="M 140 100 L 100 106 L 104 100 Z" fill="#a87545"/>
+    <!-- W -->
+    <path d="M 60 100 L 100 94 L 96 100 L 100 106 Z" fill="#fbe9c4" stroke="#1a0f08" stroke-width="1"/>
+    <path d="M 60 100 L 100 106 L 96 100 Z" fill="#a87545"/>
+
+    <!-- Diagonal points (smaller) -->
+    <g opacity="0.85">
+      <path d="M 128 72 L 104 96 L 102 98 L 100 100 Z" fill="#a87545" stroke="#1a0f08" stroke-width="0.5"/>
+      <path d="M 128 128 L 100 100 L 102 102 L 104 104 Z" fill="#a87545" stroke="#1a0f08" stroke-width="0.5"/>
+      <path d="M 72 128 L 100 100 L 98 102 L 96 104 Z" fill="#a87545" stroke="#1a0f08" stroke-width="0.5"/>
+      <path d="M 72 72 L 100 100 L 98 98 L 96 96 Z" fill="#a87545" stroke="#1a0f08" stroke-width="0.5"/>
+    </g>
+  </g>
+
+  <!-- Center jewel/pivot -->
+  <circle cx="100" cy="100" r="8" fill="#1a0f08"/>
+  <circle cx="100" cy="100" r="6" fill="url(#gc-gold)"/>
+  <circle cx="100" cy="100" r="3" fill="#c83838"/>
+  <circle cx="98"  cy="98"  r="1.2" fill="#ffe9a8"/>
+
+  <!-- Decorative outer rivets -->
+  <g fill="#f5c842" stroke="#1a0f08" stroke-width="1">
+    <circle cx="100" cy="22" r="3"/>
+    <circle cx="100" cy="178" r="3"/>
+    <circle cx="22"  cy="100" r="3"/>
+    <circle cx="178" cy="100" r="3"/>
+    <circle cx="46" cy="46" r="2.5"/>
+    <circle cx="154" cy="46" r="2.5"/>
+    <circle cx="46" cy="154" r="2.5"/>
+    <circle cx="154" cy="154" r="2.5"/>
+  </g>
+
+  <!-- Banner -->
+  <path d="M 28 168 L 100 162 L 172 168 L 164 188 L 100 180 L 36 188 Z"
+        fill="#143348" stroke="#1a0f08" stroke-width="2"/>
+  <text x="100" y="178" text-anchor="middle" font-family="M6X11, monospace" font-size="11"
+        font-weight="bold" fill="#f5c842" letter-spacing="3">GOLDEN COMPASS</text>
+</svg>

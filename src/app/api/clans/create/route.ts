@@ -2,11 +2,16 @@ import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
 import { debit, getBalance } from "@/lib/wallet";
 import { createClan, clansEnabled, getMyClan } from "@/lib/clans/db";
-import { CLAN_ANIMALS, CLAN_FOUNDING_FEE } from "@/lib/clans/constants";
+import { CLAN_ANIMALS, CLAN_EMBLEMS, CLAN_FOUNDING_FEE } from "@/lib/clans/constants";
 
 export const runtime = "nodejs";
 
-const ALLOWED_ANIMALS = new Set(CLAN_ANIMALS.map((a) => a.key));
+// Accept either the legacy animal set or the v3+ emblem set so old
+// clients keep working while new clients pick from the new artwork.
+const ALLOWED_ANIMALS = new Set<string>([
+  ...CLAN_ANIMALS.map((a) => a.key),
+  ...CLAN_EMBLEMS.map((e) => e.key),
+]);
 
 export async function POST(req: Request) {
   const s = await readSession();
@@ -22,7 +27,7 @@ export async function POST(req: Request) {
 
   if (name.length < 2 || name.length > 20) return NextResponse.json({ error: "name_invalid" }, { status: 400 });
   if (tag.length < 2 || tag.length > 4) return NextResponse.json({ error: "tag_invalid" }, { status: 400 });
-  if (!ALLOWED_ANIMALS.has(animalIcon as (typeof CLAN_ANIMALS)[number]["key"])) {
+  if (!ALLOWED_ANIMALS.has(animalIcon)) {
     return NextResponse.json({ error: "animal_invalid" }, { status: 400 });
   }
 

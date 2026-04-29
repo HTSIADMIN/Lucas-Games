@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lucas Games — CLAN EMBLEM: THUNDERHOOF-CAVALRY -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <style>@font-face{font-family:"M6X11";src:url("/fonts/m6x11.ttf") format("truetype");}text{font-family:"M6X11",monospace !important;}</style>
+  <defs>
+    <radialGradient id="th-bg" cx="50%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#5fdcff"/>
+      <stop offset="40%" stop-color="#2c6a8e"/>
+      <stop offset="100%" stop-color="#143348"/>
+    </radialGradient>
+    <linearGradient id="th-bronze" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffe9a8"/>
+      <stop offset="100%" stop-color="#7a5510"/>
+    </linearGradient>
+    <linearGradient id="th-horse" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fbe9c4"/>
+      <stop offset="100%" stop-color="#6b3f24"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Round shield with bronze rim -->
+  <circle cx="100" cy="100" r="92" fill="url(#th-bronze)" stroke="#1a0f08" stroke-width="3"/>
+  <circle cx="100" cy="100" r="84" fill="url(#th-bg)" stroke="#1a0f08" stroke-width="2"/>
+  <!-- decorative inner ring -->
+  <circle cx="100" cy="100" r="80" fill="none" stroke="#5fdcff" stroke-width="0.6" opacity="0.7"/>
+
+  <!-- Lightning bolts in background (radiating) -->
+  <g fill="#ffd84d" opacity="0.6">
+    <path d="M 45 30 L 55 60 L 45 56 L 60 90 L 50 80 L 65 110 Z"/>
+    <path d="M 155 30 L 145 60 L 155 56 L 140 90 L 150 80 L 135 110 Z"/>
+  </g>
+  <g fill="#fef6e4" opacity="0.4">
+    <path d="M 45 30 L 55 60 L 45 56 L 60 90 L 50 80 Z"/>
+    <path d="M 155 30 L 145 60 L 155 56 L 140 90 L 150 80 Z"/>
+  </g>
+
+  <!-- Speed lines / dust trail behind -->
+  <g fill="#fbe9c4" opacity="0.6">
+    <ellipse cx="40" cy="120" rx="14" ry="3"/>
+    <ellipse cx="22" cy="130" rx="10" ry="2"/>
+    <ellipse cx="48" cy="135" rx="12" ry="2.5"/>
+    <ellipse cx="30" cy="142" rx="8" ry="2"/>
+  </g>
+
+  <!-- HORSE (rearing, mid-gallop, side view) -->
+  <g transform="translate(60 60)">
+    <!-- back leg (back) -->
+    <path d="M 76 70 Q 78 80 80 92 L 84 92 L 86 100 L 82 102 L 78 88 Z"
+          fill="url(#th-horse)" stroke="#1a0f08" stroke-width="2"/>
+    <!-- back leg (front) -->
+    <path d="M 64 72 Q 64 84 60 96 L 56 100 L 60 102 L 64 102 L 70 90 Z"
+          fill="url(#th-horse)" stroke="#1a0f08" stroke-width="2"/>
+
+    <!-- body (muscular) -->
+    <path d="M 16 40 Q 8 44 12 60 Q 20 70 40 72 L 70 72 Q 82 70 84 60 Q 84 50 78 44 L 60 38 L 30 38 Z"
+          fill="url(#th-horse)" stroke="#1a0f08" stroke-width="2"/>
+    <!-- body shading -->
+    <path d="M 16 40 Q 8 44 12 60 L 18 58 Q 16 50 22 42 Z" fill="#a87545" opacity="0.5"/>
+
+    <!-- front leg raised (pawing) -->
+    <path d="M 22 40 Q 16 32 12 22 L 8 24 L 14 36 Z"
+          fill="url(#th-horse)" stroke="#1a0f08" stroke-width="2"/>
+    <!-- hoof -->
+    <ellipse cx="10" cy="22" rx="4" ry="2" fill="#1a0f08"/>
+
+    <!-- front leg planted -->
+    <path d="M 32 70 Q 30 84 26 96 L 22 100 L 28 102 L 34 100 L 38 88 Z"
+          fill="url(#th-horse)" stroke="#1a0f08" stroke-width="2"/>
+    <ellipse cx="28" cy="100" rx="6" ry="2.5" fill="#1a0f08"/>
+
+    <!-- hooves on standing legs -->
+    <ellipse cx="62" cy="102" rx="4" ry="2" fill="#1a0f08"/>
+    <ellipse cx="84" cy="100" rx="4" ry="2" fill="#1a0f08"/>
+
+    <!-- neck (arched, powerful) -->
+    <path d="M 18 38 Q 6 24 16 8 Q 28 0 42 8 L 38 24 L 30 32 Z"
+          fill="url(#th-horse)" stroke="#1a0f08" stroke-width="2"/>
+
+    <!-- head -->
+    <path d="M 22 14 Q 14 8 16 0 Q 22 -4 32 -2 L 38 8 L 36 18 Z"
+          fill="url(#th-horse)" stroke="#1a0f08" stroke-width="2"/>
+    <!-- muzzle -->
+    <ellipse cx="20" cy="6" rx="4" ry="3" fill="#a87545"/>
+    <!-- nostril -->
+    <ellipse cx="18" cy="5" rx="1" ry="1.5" fill="#1a0f08"/>
+    <!-- eye -->
+    <ellipse cx="30" cy="4" rx="1.5" ry="1.5" fill="#1a0f08"/>
+    <ellipse cx="29.5" cy="3.5" rx="0.5" ry="0.5" fill="#fef6e4"/>
+    <!-- ears -->
+    <path d="M 32 -4 L 35 -10 L 38 -2 Z" fill="#a87545" stroke="#1a0f08" stroke-width="1"/>
+
+    <!-- mane (flowing back) -->
+    <path d="M 30 -2 Q 22 4 18 14 Q 14 22 10 30 L 18 22 L 22 14 L 28 6 Z"
+          fill="#1a0f08"/>
+    <path d="M 36 8 Q 32 16 28 24 L 34 18 L 38 12 Z" fill="#1a0f08"/>
+    <!-- mane highlights -->
+    <path d="M 26 0 L 22 8 L 24 12 Z" fill="#3a2810"/>
+
+    <!-- tail (whipping back) -->
+    <path d="M 84 50 Q 100 50 110 60 Q 116 70 108 78 Q 100 80 92 72 Q 88 64 84 60 Z"
+          fill="#1a0f08"/>
+    <path d="M 88 56 L 96 64 L 92 70 Z" fill="#3a2810"/>
+
+    <!-- saddle -->
+    <path d="M 36 36 L 60 36 L 58 44 L 38 44 Z"
+          fill="#5a3810" stroke="#1a0f08" stroke-width="1.5"/>
+    <rect x="36" y="38" width="22" height="2" fill="#c89a4a"/>
+    <!-- saddle horn -->
+    <circle cx="40" cy="36" r="2" fill="#c89a4a" stroke="#1a0f08" stroke-width="1"/>
+  </g>
+
+  <!-- CROSSED SABERS behind horse -->
+  <g opacity="0.7">
+    <g transform="translate(100 100) rotate(-30)">
+      <line x1="-60" y1="0" x2="60" y2="0" stroke="#7a7068" stroke-width="3"/>
+      <line x1="-60" y1="0" x2="60" y2="0" stroke="#fef6e4" stroke-width="1"/>
+      <rect x="-66" y="-3" width="8" height="6" rx="1" fill="url(#th-bronze)" stroke="#1a0f08" stroke-width="0.8"/>
+    </g>
+    <g transform="translate(100 100) rotate(30)">
+      <line x1="-60" y1="0" x2="60" y2="0" stroke="#7a7068" stroke-width="3"/>
+      <line x1="-60" y1="0" x2="60" y2="0" stroke="#fef6e4" stroke-width="1"/>
+      <rect x="-66" y="-3" width="8" height="6" rx="1" fill="url(#th-bronze)" stroke="#1a0f08" stroke-width="0.8"/>
+    </g>
+  </g>
+
+  <!-- Banner -->
+  <path d="M 24 168 L 100 162 L 176 168 L 168 188 L 100 180 L 32 188 Z"
+        fill="#143348" stroke="#c89a4a" stroke-width="2"/>
+  <text x="100" y="178" text-anchor="middle" font-family="M6X11, monospace" font-size="10"
+        font-weight="bold" fill="#ffe9a8" letter-spacing="2">THUNDERHOOF CAVALRY</text>
+</svg>

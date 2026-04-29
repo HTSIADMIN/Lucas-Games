@@ -5,6 +5,7 @@ import { credit, getBalance } from "@/lib/wallet";
 import { getCooldown, setCooldown } from "@/lib/db";
 import { COOLDOWN_HOURS, SLICES, spinWheel } from "@/lib/games/dailySpin/engine";
 import { clansEnabled, consumeBonusSpinToken, getBonusSpinTokens } from "@/lib/clans/db";
+import { recordChallengeEvent } from "@/lib/challenges/record";
 
 export const runtime = "nodejs";
 
@@ -48,6 +49,7 @@ export async function POST() {
     refKind: "daily_spin",
     refId: claimId,
   });
+  recordChallengeEvent(s.user.id, { kind: "use_daily_spin" }).catch(() => { /* ignore */ });
 
   // Only set the cooldown if this was the regular daily spin, not a bonus.
   let availableAt: string | null = cd?.available_at ?? null;
