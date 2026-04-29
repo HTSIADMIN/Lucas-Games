@@ -5,11 +5,10 @@ import { credit, debit, getBalance } from "@/lib/wallet";
 import { listMonopolyOwned, upsertMonopolyOwned } from "@/lib/db";
 import {
   MAX_LEVEL,
-  MAXED_TRADEIN_BY_TIER,
   MONOPOLY_PACKS,
   PROPERTIES,
-  UPGRADE_CARDS,
   findProperty,
+  tradeInForMonopolySlot,
   type MonopolyPackId,
   type MonopolyPackSpec,
   type PropertyTier,
@@ -17,11 +16,6 @@ import {
 import { randInt } from "@/lib/games/rng";
 
 export const runtime = "nodejs";
-
-// Total card cost to take a property from level 0 → MAX_LEVEL.
-// Used as the "saturation" threshold: any further pulls of an already-
-// MAX property are pure duplicates and convert to a coin trade-in.
-const FULL_UPGRADE_CARDS = UPGRADE_CARDS.reduce((a, b) => a + b, 0);
 
 /** Pick a tier by weight, then a random property in that tier. */
 function rollTierAndProperty(spec: MonopolyPackSpec): { tier: PropertyTier; propertyId: string } {
@@ -37,47 +31,6 @@ function rollTierAndProperty(spec: MonopolyPackSpec): { tier: PropertyTier; prop
   const inTier = PROPERTIES.filter((p) => p.tier === pickedTier);
   const idx = randInt(0, inTier.length - 1);
   return { tier: pickedTier, propertyId: inTier[idx].id };
-}
-
-/** Smart pull. If the random property is already MAX-level, walk up
- *  to higher tiers looking for a non-max property the player can
- *  still upgrade. Falls back to "any non-max", and finally to "give
- *  up and convert to a coin trade-in" if the player has fully maxed
- *  the entire collection. */
-function smartPull(
-  spec: MonopolyPackSpec,
-  ownedLevels: Map<string, number>,
-): { propertyId: string | null; tradeInCoins: number; tier: PropertyTier } {
-  const initial = rollTierAndProperty(spec);
-  const isMax = (id: string) => (ownedLevels.get(id) ?? 0) >= MAX_LEVEL;
-
-  if (!isMax(initial.propertyId)) {
-    return { propertyId: initial.propertyId, tradeInCoins: 0, tier: initial.tier };
-  }
-
-  // Maxed — bump up tiers (or stay at the top tier of the pack)
-  // searching for an unmaxed property. We loop a few tiers above the
-  // initial tier; if everything's maxed, sweep across all properties
-  // for any non-max regardless of tier; if STILL nothing, trade in.
-  for (let t = initial.tier; t <= 5; t++) {
-    const candidates = PROPERTIES.filter((p) => p.tier === t && !isMax(p.id));
-    if (candidates.length > 0) {
-      const c = candidates[randInt(0, candidates.length - 1)];
-      return { propertyId: c.id, tradeInCoins: 0, tier: c.tier };
-    }
-  }
-  const anyOpen = PROPERTIES.filter((p) => !isMax(p.id));
-  if (anyOpen.length > 0) {
-    const c = anyOpen[randInt(0, anyOpen.length - 1)];
-    return { propertyId: c.id, tradeInCoins: 0, tier: c.tier };
-  }
-  // Fully maxed collection — trade in for coins scaled to the tier
-  // we WOULD have rolled, so the floor isn't a flat amount.
-  return {
-    propertyId: null,
-    tradeInCoins: MAXED_TRADEIN_BY_TIER[initial.tier],
-    tier: initial.tier,
-  };
 }
 
 export async function POST(req: Request) {
@@ -109,22 +62,34 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg }, { status: msg === "insufficient_funds" ? 400 : 500 });
   }
 
-  // Snapshot the player's collection so smartPull can dodge maxed
+  // Snapshot the player's collection so we can detect maxed-out
   // properties without a per-card DB round trip.
   const owned = await listMonopolyOwned(s.user.id);
   const ownedLevels = new Map<string, number>(owned.map((o) => [o.property_id, o.level]));
+  const isMax = (id: string) => (ownedLevels.get(id) ?? 0) >= MAX_LEVEL;
 
   type Pull =
     | { kind: "card"; propertyId: string }
     | { kind: "tradein"; coins: number; tier: PropertyTier };
 
+  // Per-slot pull: roll a tier+property by the pack's weights. If
+  // the rolled property is already at MAX_LEVEL the slot trades in
+  // for coins scaled to the rolled tier. We deliberately don't
+  // "walk up" tiers when the rolled property is maxed — that
+  // silently promoted cheap-pack rolls into higher-tier cards and
+  // hid the trade-in entirely. Instead the player gets a coin
+  // reimbursement and the next slot rolls fresh.
   const pulls: Pull[] = [];
   for (let i = 0; i < spec.size; i++) {
-    const r = smartPull(spec, ownedLevels);
-    if (r.propertyId) {
-      pulls.push({ kind: "card", propertyId: r.propertyId });
+    const r = rollTierAndProperty(spec);
+    if (isMax(r.propertyId)) {
+      pulls.push({
+        kind: "tradein",
+        coins: tradeInForMonopolySlot(spec, r.tier),
+        tier: r.tier,
+      });
     } else {
-      pulls.push({ kind: "tradein", coins: r.tradeInCoins, tier: r.tier });
+      pulls.push({ kind: "card", propertyId: r.propertyId });
     }
   }
 
@@ -162,8 +127,6 @@ export async function POST(req: Request) {
     if (p.kind === "card") return { kind: "card" as const, ...findProperty(p.propertyId)! };
     return { kind: "tradein" as const, coins: p.coins, tier: p.tier };
   });
-
-  void FULL_UPGRADE_CARDS; // reserved for a future "extra cards beyond max" trade-in tier
 
   return NextResponse.json({
     ok: true,

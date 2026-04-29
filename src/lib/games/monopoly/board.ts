@@ -192,16 +192,24 @@ export const MONOPOLY_PACKS: Record<MonopolyPackId, MonopolyPackSpec> = {
 
 export const MONOPOLY_PACK_ORDER: MonopolyPackId[] = ["drifter", "prospector", "outlaw", "tycoon"];
 
-/** Coin trade-in value when a pulled card lands on a property the
- *  player has already maxed out (level 5). Scales with tier so
- *  pulling a T5 dupe at full collection is worth more than a T1. */
-export const MAXED_TRADEIN_BY_TIER: Record<PropertyTier, number> = {
-  1: 500,
-  2: 1_500,
-  3: 4_000,
-  4: 10_000,
-  5: 30_000,
+/** Per-slot trade-in fraction of the pack's per-slot cost when the
+ *  rolled property is already at MAX_LEVEL. Scales by tier so a
+ *  would-have-been-T5 slot pays back more than a T1. Tuned with the
+ *  per-slot price so a fully-maxed Tycoon pack returns ~70% of its
+ *  cost while a fully-maxed Drifter returns ~35% — meaningful
+ *  refund at every tier without becoming a coin-mining loop. */
+export const MAXED_TRADEIN_FRACTION: Record<PropertyTier, number> = {
+  1: 0.20,
+  2: 0.30,
+  3: 0.45,
+  4: 0.65,
+  5: 0.85,
 };
+
+export function tradeInForMonopolySlot(spec: MonopolyPackSpec, tier: PropertyTier): number {
+  const perSlot = spec.price / Math.max(1, spec.size);
+  return Math.floor(perSlot * (MAXED_TRADEIN_FRACTION[tier] ?? 0));
+}
 
 export const ROLL_COOLDOWN_MS = 60 * 60 * 1000;
 
