@@ -6,7 +6,14 @@ import { AppLive } from "@/components/social/AppLive";
 import { HeaderPresence } from "@/components/social/HeaderPresence";
 import { readSession } from "@/lib/auth/session";
 import { getBalance } from "@/lib/wallet";
-import { getUserById, listOpenCoinflipDuels, recentChatMessages } from "@/lib/db";
+import {
+  getActiveBlackjackRound,
+  getUserById,
+  listBlackjackSeats,
+  listOpenCoinflipDuels,
+  recentChatMessages,
+} from "@/lib/db";
+import { getDefaultTableId, listSeatedUserIds } from "@/lib/games/poker/scheduler";
 import { getUserLevel } from "@/lib/xpServer";
 import { getChampionId } from "@/lib/champion";
 import { GameIcon, type GameIconName } from "@/components/GameIcon";
@@ -59,12 +66,36 @@ export default async function LobbyPage() {
   const initialChat = await recentChatMessages(50);
   const xpInfo = await getUserLevel(user.id);
   const championId = await getChampionId();
-  // Count of open coinflip duels — anything > 0 makes the tile
-  // pulse so other players know there's a bet waiting to be matched.
-  // We exclude the current player's own open duels (you can't accept
-  // your own challenge) so the alert is actionable.
-  const openDuels = await listOpenCoinflipDuels();
+  // Multiplayer "waiting" alerts. The lobby checks each MP game and
+  // pulses its tile when another player is waiting for the user to
+  // join. We always exclude the current player's own seat / challenge
+  // so the alert is actionable from this user's perspective.
+  //
+  // Coinflip Duel: open challenges from anyone-but-me.
+  // Poker:         seated player at The Saloon table who isn't me.
+  // Blackjack-MP:  active round that has at least one seat I don't own.
+  const [openDuels, pokerTableId, blackjackRound] = await Promise.all([
+    listOpenCoinflipDuels(),
+    getDefaultTableId().catch(() => null),
+    getActiveBlackjackRound().catch(() => null),
+  ]);
   const openDuelsForMe = openDuels.filter((d) => d.challenger_id !== user.id).length;
+  const pokerWaitersForMe = pokerTableId
+    ? (await listSeatedUserIds(pokerTableId).catch(() => [] as string[])).filter((id) => id !== user.id).length
+    : 0;
+  const blackjackWaitersForMe = blackjackRound
+    ? (await listBlackjackSeats(blackjackRound.id).catch(() => [])).filter((seat) => seat.user_id !== user.id).length
+    : 0;
+  const ALERTS: Record<string, number> = {
+    "coinflip-duel": openDuelsForMe,
+    "poker": pokerWaitersForMe,
+    "blackjack-mp": blackjackWaitersForMe,
+  };
+  const ALERT_LABEL: Record<string, (n: number) => string> = {
+    "coinflip-duel": (n) => `${n} OPEN BET${n === 1 ? "" : "S"}`,
+    "poker":         (n) => `${n} AT TABLE`,
+    "blackjack-mp":  (n) => `${n} AT TABLE`,
+  };
   const me = {
     id: user.id,
     username: user.username,
@@ -116,36 +147,36 @@ export default async function LobbyPage() {
 
         <div className="grid grid-4 lobby-tile-grid">
           {CATEGORY_ORDER.flatMap(({ key }) => GAMES.filter((g) => g.category === key)).map((g) => {
-            const isDuelAlert = g.slug === "coinflip-duel" && openDuelsForMe > 0;
+            const alertCount = ALERTS[g.slug] ?? 0;
+            const isAlert = g.live && alertCount > 0;
+            const alertText = isAlert && ALERT_LABEL[g.slug] ? ALERT_LABEL[g.slug](alertCount) : null;
             return (
               <Link
                 key={g.slug}
                 href={g.live ? `/games/${g.slug}` : "#"}
-                className={`tile${isDuelAlert ? " tile-alert" : ""}`}
+                className={`tile${isAlert ? " tile-alert" : ""}`}
                 style={!g.live ? { opacity: 0.55, cursor: "not-allowed", pointerEvents: "none" } : undefined}
                 aria-disabled={!g.live || undefined}
               >
                 <div className="tile-art" style={{ position: "relative" }}>
                   <GameIcon name={g.icon} size={140} />
-                  {isDuelAlert && (
+                  {isAlert && (
                     <span aria-hidden className="tile-alert-dot">
-                      {openDuelsForMe}
+                      {alertCount}
                     </span>
                   )}
                 </div>
                 <div className="tile-name">{g.name}</div>
                 <div className="tile-meta">
                   <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
-                    <span className={`badge ${isDuelAlert ? "badge-crimson" : g.live ? "badge-cactus" : ""}`}>
-                      {isDuelAlert
-                        ? `${openDuelsForMe} OPEN BET${openDuelsForMe === 1 ? "" : "S"}`
-                        : g.live ? "OPEN" : g.tag}
+                    <span className={`badge ${isAlert ? "badge-crimson" : g.live ? "badge-cactus" : ""}`}>
+                      {isAlert ? alertText : g.live ? "OPEN" : g.tag}
                     </span>
-                    {g.multiplayer && !isDuelAlert && (
+                    {g.multiplayer && !isAlert && (
                       <span className="badge badge-sky">2P+</span>
                     )}
                   </span>
-                  <span>{g.live ? (isDuelAlert ? "Accept →" : "Play →") : "Coming soon"}</span>
+                  <span>{g.live ? (isAlert ? "Join →" : "Play →") : "Coming soon"}</span>
                 </div>
               </Link>
             );

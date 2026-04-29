@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lucas Games — GAME ICON: ROULETTE -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" shape-rendering="crispEdges">
+  <!-- ground shadow -->
+  <ellipse cx="24" cy="44" rx="20" ry="2" fill="#1a0f08" opacity="0.4"/>
+
+  <!-- ===== OUTER RIM (gold) ===== -->
+  <ellipse cx="24" cy="26" rx="22" ry="20" fill="#1a0f08"/>
+  <ellipse cx="24" cy="24" rx="22" ry="20" fill="#7a5510"/>
+  <ellipse cx="24" cy="24" rx="21" ry="19" fill="#c8941d"/>
+  <ellipse cx="24" cy="23" rx="21" ry="19" fill="#f5c842"/>
+  <!-- top rim highlight -->
+  <ellipse cx="22" cy="14" rx="14" ry="3" fill="#ffe9a8"/>
+
+  <!-- ===== POCKET RING (where ball sits) ===== -->
+  <ellipse cx="24" cy="22" rx="18" ry="16" fill="#1a0f08"/>
+  <ellipse cx="24" cy="22" rx="17" ry="15" fill="#3d2418"/>
+
+  <!-- ===== WEDGES (alternating red/black, simplified) ===== -->
+  <!-- wheel face -->
+  <ellipse cx="24" cy="22" rx="14" ry="12" fill="#1a0f08"/>
+
+  <!-- wedges drawn as alternating polygons radiating from center (24, 22) -->
+  <g>
+    <!-- 8 wedges: black, red, black, red, ... -->
+    <polygon points="24,22 38,22 36,28 33,32" fill="#e05a3c"/>     <!-- right-bottom -->
+    <polygon points="24,22 33,32 28,34 25,34" fill="#1a0f08"/>     <!-- bottom-right -->
+    <polygon points="24,22 25,34 23,34 20,33" fill="#e05a3c"/>     <!-- bottom-center -->
+    <polygon points="24,22 20,33 15,32 12,28" fill="#1a0f08"/>     <!-- bottom-left -->
+    <polygon points="24,22 12,28 10,22 12,16" fill="#e05a3c"/>     <!-- left -->
+    <polygon points="24,22 12,16 15,12 20,11" fill="#1a0f08"/>     <!-- top-left -->
+    <polygon points="24,22 20,11 24,10 28,11" fill="#e05a3c"/>     <!-- top -->
+    <polygon points="24,22 28,11 33,12 36,16" fill="#1a0f08"/>     <!-- top-right -->
+    <polygon points="24,22 36,16 38,22" fill="#e05a3c"/>           <!-- right (close to first) -->
+  </g>
+
+  <!-- wedge separator lines -->
+  <g stroke="#fef6e4" stroke-width="0.5" opacity="0.6" fill="none">
+    <line x1="24" y1="22" x2="38" y2="22"/>
+    <line x1="24" y1="22" x2="33" y2="32"/>
+    <line x1="24" y1="22" x2="25" y2="34"/>
+    <line x1="24" y1="22" x2="15" y2="32"/>
+    <line x1="24" y1="22" x2="10" y2="22"/>
+    <line x1="24" y1="22" x2="15" y2="12"/>
+    <line x1="24" y1="22" x2="24" y2="10"/>
+    <line x1="24" y1="22" x2="33" y2="12"/>
+  </g>
+
+  <!-- numbers (just dots representing slots) -->
+  <g fill="#fef6e4">
+    <rect x="34" y="21" width="1" height="1"/>
+    <rect x="13" y="21" width="1" height="1"/>
+    <rect x="23" y="13" width="1" height="1"/>
+    <rect x="23" y="30" width="1" height="1"/>
+    <rect x="30" y="14" width="1" height="1"/>
+    <rect x="17" y="14" width="1" height="1"/>
+    <rect x="30" y="29" width="1" height="1"/>
+    <rect x="17" y="29" width="1" height="1"/>
+  </g>
+
+  <!-- ===== CENTER HUB ===== -->
+  <ellipse cx="24" cy="22" rx="4" ry="3" fill="#1a0f08"/>
+  <ellipse cx="24" cy="21" rx="4" ry="3" fill="#c8941d"/>
+  <ellipse cx="24" cy="20" rx="3" ry="2" fill="#f5c842"/>
+  <ellipse cx="23" cy="19" rx="2" ry="1" fill="#ffe9a8"/>
+  <!-- hub spokes -->
+  <g stroke="#1a0f08" stroke-width="1" fill="none">
+    <line x1="24" y1="18" x2="24" y2="14"/>
+    <line x1="24" y1="22" x2="24" y2="26"/>
+    <line x1="20" y1="20" x2="14" y2="20"/>
+    <line x1="28" y1="20" x2="34" y2="20"/>
+  </g>
+
+  <!-- ===== WHITE BALL on outer track ===== -->
+  <ellipse cx="34" cy="18" rx="2.5" ry="2" fill="#1a0f08"/>
+  <ellipse cx="34" cy="17" rx="2.5" ry="2" fill="#fef6e4"/>
+  <rect    x="33" y="16" width="2" height="1" fill="#ffffff"/>
+
+  <!-- motion trail behind ball -->
+  <g fill="#fef6e4" opacity="0.5">
+    <rect x="29" y="14" width="3" height="1"/>
+    <rect x="26" y="13" width="2" height="1"/>
+  </g>
+</svg>

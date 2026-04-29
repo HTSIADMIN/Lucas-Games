@@ -138,6 +138,71 @@ export const TIER_WEIGHT: Record<PropertyTier, number> = {
   5: 3,
 };
 
+// Tiered pack catalog. Each pack pulls 5 cards from a different
+// rarity distribution; expensive packs drop their lowest-tier
+// weights to zero so paying more meaningfully changes what you can
+// pull. Drifter is the legacy 10k pack (kept identical for
+// compatibility). Tycoon is mostly T4 with a real shot at T5.
+export type MonopolyPackId = "drifter" | "prospector" | "outlaw" | "tycoon";
+
+export type MonopolyPackSpec = {
+  id: MonopolyPackId;
+  name: string;
+  blurb: string;
+  price: number;
+  size: number;
+  /** Weight per tier. Tiers with weight 0 are excluded entirely. */
+  weights: Record<PropertyTier, number>;
+};
+
+export const MONOPOLY_PACKS: Record<MonopolyPackId, MonopolyPackSpec> = {
+  drifter: {
+    id: "drifter",
+    name: "Drifter Pack",
+    blurb: "5 cards · all tiers possible.",
+    price: 10_000,
+    size: 5,
+    weights: { 1: 35, 2: 30, 3: 20, 4: 12, 5: 3 },
+  },
+  prospector: {
+    id: "prospector",
+    name: "Prospector Pack",
+    blurb: "5 cards · no Tier 1; weighted to T2/T3.",
+    price: 35_000,
+    size: 5,
+    weights: { 1: 0, 2: 38, 3: 35, 4: 22, 5: 5 },
+  },
+  outlaw: {
+    id: "outlaw",
+    name: "Outlaw Pack",
+    blurb: "5 cards · Tier 3 minimum; chunky T4 odds.",
+    price: 90_000,
+    size: 5,
+    weights: { 1: 0, 2: 0, 3: 50, 4: 40, 5: 10 },
+  },
+  tycoon: {
+    id: "tycoon",
+    name: "Tycoon Pack",
+    blurb: "5 cards · Tier 4 minimum; real shot at Tier 5.",
+    price: 250_000,
+    size: 5,
+    weights: { 1: 0, 2: 0, 3: 0, 4: 70, 5: 30 },
+  },
+};
+
+export const MONOPOLY_PACK_ORDER: MonopolyPackId[] = ["drifter", "prospector", "outlaw", "tycoon"];
+
+/** Coin trade-in value when a pulled card lands on a property the
+ *  player has already maxed out (level 5). Scales with tier so
+ *  pulling a T5 dupe at full collection is worth more than a T1. */
+export const MAXED_TRADEIN_BY_TIER: Record<PropertyTier, number> = {
+  1: 500,
+  2: 1_500,
+  3: 4_000,
+  4: 10_000,
+  5: 30_000,
+};
+
 export const ROLL_COOLDOWN_MS = 60 * 60 * 1000;
 
 // Corner payouts

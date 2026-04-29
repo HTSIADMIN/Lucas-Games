@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lucas Games — GAME ICON: POKER -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" shape-rendering="crispEdges">
+  <!-- felt patch -->
+  <ellipse cx="24" cy="44" rx="22" ry="3" fill="#1f3818" opacity="0.5"/>
+  <ellipse cx="24" cy="42" rx="24" ry="6" fill="#3d6b2e"/>
+  <ellipse cx="24" cy="42" rx="24" ry="6" fill="none" stroke="#1a0f08" stroke-width="1"/>
+
+  <!-- ===== CHIP STACK (back-left) ===== -->
+  <g transform="translate(2 22)">
+    <!-- bottom chip -->
+    <rect x="0" y="13" width="14" height="3" fill="#1a0f08"/>
+    <rect x="1" y="13" width="12" height="2" fill="#e05a3c"/>
+    <rect x="1" y="14" width="12" height="1" fill="#8b3a3a"/>
+    <!-- mid chip -->
+    <rect x="0" y="9"  width="14" height="4" fill="#1a0f08"/>
+    <rect x="1" y="10" width="12" height="3" fill="#5fa8d3"/>
+    <rect x="1" y="10" width="12" height="1" fill="#c9e4f2"/>
+    <rect x="1" y="12" width="12" height="1" fill="#2c6a8e"/>
+    <!-- top chip -->
+    <rect x="0" y="5"  width="14" height="4" fill="#1a0f08"/>
+    <rect x="1" y="6"  width="12" height="3" fill="#f5c842"/>
+    <rect x="1" y="6"  width="12" height="1" fill="#ffe9a8"/>
+    <rect x="1" y="8"  width="12" height="1" fill="#c8941d"/>
+    <!-- top edge dots -->
+    <g fill="#1a0f08">
+      <rect x="2"  y="7" width="1" height="1"/>
+      <rect x="5"  y="7" width="1" height="1"/>
+      <rect x="8"  y="7" width="1" height="1"/>
+      <rect x="11" y="7" width="1" height="1"/>
+    </g>
+  </g>
+
+  <!-- ===== CARD FAN (5 cards spreading right) ===== -->
+  <!-- Card 5 (back, leftmost rotation) -->
+  <g transform="translate(14 12) rotate(-22 8 14)">
+    <rect x="0" y="0" width="14" height="22" fill="#1a0f08"/>
+    <rect x="1" y="1" width="12" height="20" fill="#fef6e4"/>
+    <rect x="1" y="1" width="12" height="1" fill="#ffffff"/>
+    <!-- 10 -->
+    <g fill="#1a0f08">
+      <rect x="2" y="3" width="1" height="4"/>
+      <rect x="4" y="3" width="3" height="1"/>
+      <rect x="4" y="6" width="3" height="1"/>
+      <rect x="4" y="3" width="1" height="4"/>
+      <rect x="6" y="3" width="1" height="4"/>
+    </g>
+    <!-- mini spade -->
+    <g fill="#1a0f08">
+      <rect x="3" y="9"  width="3" height="2"/>
+      <rect x="2" y="10" width="5" height="1"/>
+      <rect x="4" y="11" width="1" height="1"/>
+    </g>
+  </g>
+
+  <!-- Card 4 -->
+  <g transform="translate(18 10) rotate(-11 8 14)">
+    <rect x="0" y="0" width="14" height="22" fill="#1a0f08"/>
+    <rect x="1" y="1" width="12" height="20" fill="#fef6e4"/>
+    <rect x="1" y="1" width="12" height="1" fill="#ffffff"/>
+    <!-- J -->
+    <g fill="#1a0f08">
+      <rect x="3" y="3" width="3" height="1"/>
+      <rect x="4" y="4" width="1" height="3"/>
+      <rect x="2" y="6" width="1" height="1"/>
+      <rect x="3" y="7" width="2" height="1"/>
+    </g>
+    <!-- mini spade -->
+    <g fill="#1a0f08">
+      <rect x="3" y="10" width="3" height="2"/>
+      <rect x="2" y="11" width="5" height="1"/>
+    </g>
+  </g>
+
+  <!-- Card 3 (center, upright) -->
+  <g transform="translate(22 8)">
+    <rect x="0" y="0" width="14" height="22" fill="#1a0f08"/>
+    <rect x="1" y="1" width="12" height="20" fill="#fef6e4"/>
+    <rect x="1" y="1" width="12" height="1" fill="#ffffff"/>
+    <!-- Q -->
+    <g fill="#1a0f08">
+      <rect x="3" y="3" width="3" height="1"/>
+      <rect x="2" y="4" width="1" height="3"/>
+      <rect x="6" y="4" width="1" height="3"/>
+      <rect x="3" y="7" width="3" height="1"/>
+      <rect x="5" y="6" width="2" height="2"/>
+    </g>
+    <!-- center spade large -->
+    <g fill="#1a0f08">
+      <rect x="6" y="11" width="2" height="2"/>
+      <rect x="4" y="13" width="6" height="3"/>
+      <rect x="3" y="14" width="8" height="2"/>
+      <rect x="6" y="16" width="2" height="1"/>
+      <rect x="5" y="17" width="4" height="1"/>
+    </g>
+  </g>
+
+  <!-- Card 2 -->
+  <g transform="translate(26 10) rotate(11 8 14)">
+    <rect x="0" y="0" width="14" height="22" fill="#1a0f08"/>
+    <rect x="1" y="1" width="12" height="20" fill="#fef6e4"/>
+    <rect x="1" y="1" width="12" height="1" fill="#ffffff"/>
+    <!-- K -->
+    <g fill="#1a0f08">
+      <rect x="2" y="3" width="1" height="5"/>
+      <rect x="6" y="3" width="1" height="1"/>
+      <rect x="5" y="4" width="1" height="1"/>
+      <rect x="4" y="5" width="1" height="1"/>
+      <rect x="3" y="6" width="1" height="2"/>
+      <rect x="4" y="6" width="3" height="2"/>
+    </g>
+    <!-- mini spade -->
+    <g fill="#1a0f08">
+      <rect x="3" y="10" width="3" height="2"/>
+      <rect x="2" y="11" width="5" height="1"/>
+    </g>
+  </g>
+
+  <!-- Card 1 (front, rightmost — A♠ — the show-stopper) -->
+  <g transform="translate(30 12) rotate(22 8 14)">
+    <rect x="0" y="0" width="14" height="22" fill="#1a0f08"/>
+    <rect x="1" y="1" width="12" height="20" fill="#fef6e4"/>
+    <rect x="1" y="1" width="12" height="1" fill="#ffffff"/>
+    <!-- A -->
+    <g fill="#1a0f08">
+      <rect x="3" y="3" width="3" height="1"/>
+      <rect x="2" y="4" width="1" height="4"/>
+      <rect x="6" y="4" width="1" height="4"/>
+      <rect x="2" y="6" width="5" height="1"/>
+    </g>
+    <!-- big spade -->
+    <g fill="#1a0f08">
+      <rect x="6"  y="11" width="2" height="2"/>
+      <rect x="4"  y="13" width="6" height="3"/>
+      <rect x="3"  y="14" width="8" height="2"/>
+      <rect x="6"  y="16" width="2" height="1"/>
+      <rect x="5"  y="17" width="4" height="1"/>
+    </g>
+  </g>
+</svg>

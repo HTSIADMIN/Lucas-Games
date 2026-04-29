@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lucas Games — GAME ICON: CROSSY ROAD -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" shape-rendering="crispEdges">
+  <!-- ===== GROUND LAYERS (top-down/perspective view) ===== -->
+  <!-- top grass strip -->
+  <rect x="0" y="0"  width="48" height="6" fill="#3d6b2e"/>
+  <rect x="0" y="0"  width="48" height="2" fill="#6ba84f"/>
+  <g fill="#1a0f08" opacity="0.4">
+    <rect x="4"  y="3" width="1" height="1"/>
+    <rect x="14" y="2" width="1" height="1"/>
+    <rect x="32" y="3" width="1" height="1"/>
+    <rect x="42" y="2" width="1" height="1"/>
+  </g>
+
+  <!-- ===== ROAD (asphalt with lane lines) ===== -->
+  <rect x="0" y="6"  width="48" height="36" fill="#3d2418"/>
+  <rect x="0" y="6"  width="48" height="1"  fill="#1a0f08"/>
+  <rect x="0" y="41" width="48" height="1"  fill="#1a0f08"/>
+
+  <!-- lane divider lines (dashed) -->
+  <g fill="#f5c842">
+    <rect x="2"  y="17" width="4" height="1"/>
+    <rect x="10" y="17" width="4" height="1"/>
+    <rect x="18" y="17" width="4" height="1"/>
+    <rect x="26" y="17" width="4" height="1"/>
+    <rect x="34" y="17" width="4" height="1"/>
+    <rect x="42" y="17" width="4" height="1"/>
+
+    <rect x="2"  y="30" width="4" height="1"/>
+    <rect x="10" y="30" width="4" height="1"/>
+    <rect x="18" y="30" width="4" height="1"/>
+    <rect x="26" y="30" width="4" height="1"/>
+    <rect x="34" y="30" width="4" height="1"/>
+    <rect x="42" y="30" width="4" height="1"/>
+  </g>
+
+  <!-- bottom safe strip (sidewalk/grass) -->
+  <rect x="0" y="42" width="48" height="6" fill="#a87545"/>
+  <rect x="0" y="42" width="48" height="1" fill="#d4a574"/>
+
+  <!-- ===== WAGON (approaching from right) ===== -->
+  <g transform="translate(28 19)">
+    <!-- wagon shadow -->
+    <ellipse cx="9" cy="10" rx="11" ry="1" fill="#1a0f08" opacity="0.5"/>
+    <!-- wagon body -->
+    <rect x="0"  y="2"  width="18" height="8" fill="#1a0f08"/>
+    <rect x="1"  y="3"  width="16" height="6" fill="#6b3f24"/>
+    <rect x="1"  y="3"  width="16" height="1" fill="#a87545"/>
+    <!-- canvas top -->
+    <rect x="2"  y="0"  width="14" height="3" fill="#fef6e4"/>
+    <rect x="2"  y="0"  width="14" height="1" fill="#1a0f08"/>
+    <rect x="2"  y="0"  width="14" height="1" fill="#e8c089"/>
+    <!-- canvas ribs -->
+    <g fill="#a87545">
+      <rect x="5"  y="0" width="1" height="3"/>
+      <rect x="9"  y="0" width="1" height="3"/>
+      <rect x="13" y="0" width="1" height="3"/>
+    </g>
+    <!-- wheels -->
+    <g fill="#1a0f08">
+      <ellipse cx="4"  cy="11" rx="3" ry="2"/>
+      <ellipse cx="14" cy="11" rx="3" ry="2"/>
+    </g>
+    <g fill="#6b3f24">
+      <ellipse cx="4"  cy="11" rx="2" ry="1"/>
+      <ellipse cx="14" cy="11" rx="2" ry="1"/>
+    </g>
+    <g fill="#c8941d">
+      <rect x="3"  y="11" width="2" height="1"/>
+      <rect x="13" y="11" width="2" height="1"/>
+    </g>
+  </g>
+
+  <!-- speed lines behind wagon -->
+  <g fill="#fef6e4" opacity="0.6">
+    <rect x="22" y="22" width="3" height="1"/>
+    <rect x="20" y="25" width="4" height="1"/>
+    <rect x="22" y="28" width="3" height="1"/>
+  </g>
+
+  <!-- ===== CHARACTER (cowboy chicken / mascot, mid-hop, in upper lane) ===== -->
+  <g transform="translate(8 9)">
+    <!-- shadow -->
+    <ellipse cx="5" cy="11" rx="4" ry="0.8" fill="#1a0f08" opacity="0.5"/>
+    <!-- body (chicken-like, white) -->
+    <rect x="2" y="3"  width="6" height="7" fill="#1a0f08"/>
+    <rect x="3" y="4"  width="4" height="5" fill="#fef6e4"/>
+    <rect x="3" y="4"  width="4" height="1" fill="#ffffff"/>
+    <!-- wing -->
+    <rect x="2" y="6"  width="1" height="3" fill="#e8c089"/>
+    <!-- comb (red on top) -->
+    <rect x="3" y="0"  width="4" height="1" fill="#1a0f08"/>
+    <rect x="3" y="1"  width="1" height="1" fill="#e05a3c"/>
+    <rect x="5" y="1"  width="1" height="1" fill="#e05a3c"/>
+    <rect x="4" y="2"  width="2" height="1" fill="#e05a3c"/>
+    <!-- cowboy hat ON TOP of comb -->
+    <rect x="2" y="2"  width="6" height="1" fill="#1a0f08"/>
+    <rect x="3" y="3"  width="4" height="1" fill="#6b3f24"/>
+    <!-- eye -->
+    <rect x="6" y="5"  width="1" height="1" fill="#1a0f08"/>
+    <!-- beak -->
+    <rect x="8" y="6"  width="2" height="1" fill="#f5c842"/>
+    <rect x="8" y="7"  width="1" height="1" fill="#c8941d"/>
+    <!-- legs (pixel) -->
+    <rect x="3" y="10" width="1" height="2" fill="#c8941d"/>
+    <rect x="6" y="10" width="1" height="2" fill="#c8941d"/>
+    <rect x="2" y="11" width="2" height="1" fill="#c8941d"/>
+    <rect x="6" y="11" width="2" height="1" fill="#c8941d"/>
+  </g>
+
+  <!-- hop motion lines -->
+  <g fill="#fef6e4" opacity="0.7">
+    <rect x="6"  y="22" width="2" height="1"/>
+    <rect x="20" y="22" width="2" height="1"/>
+  </g>
+
+  <!-- bouncing dust under character -->
+  <g fill="#a87545" opacity="0.7">
+    <rect x="11" y="21" width="1" height="1"/>
+    <rect x="13" y="22" width="1" height="1"/>
+    <rect x="15" y="21" width="1" height="1"/>
+  </g>
+</svg>

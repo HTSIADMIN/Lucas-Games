@@ -7,12 +7,13 @@ import {
   BOARD_SIZE,
   LEVEL_MULTIPLIER,
   MAX_LEVEL,
-  PACK_PRICE,
-  PACK_SIZE,
+  MONOPOLY_PACKS,
+  MONOPOLY_PACK_ORDER,
   PROPERTIES,
   UPGRADE_CARDS,
   UPGRADE_COINS,
   gridPos,
+  type MonopolyPackId,
   type Property,
   type PropertyTier,
   type SpaceType,
@@ -58,6 +59,10 @@ type State = {
 };
 type Owned = Record<string, { level: number; cards: number }>;
 
+type PackPullCard =
+  | (Property & { kind: "card" })
+  | { kind: "tradein"; coins: number; tier: PropertyTier };
+
 type RollResult = {
   dice: [number, number];
   fromPosition: number;
@@ -87,8 +92,13 @@ export function MonopolyClient() {
   const [animPosition, setAnimPosition] = useState<number>(0);
 
   const [packOpening, setPackOpening] = useState(false);
-  const [packCards, setPackCards] = useState<Property[] | null>(null);
+  // Pack pulls now mix property cards and "trade-in" entries (when
+  // a roll lands on an already-MAX-level property and gets converted
+  // to coins instead of yet another duplicate). The opening overlay
+  // renders both faces.
+  const [packCards, setPackCards] = useState<PackPullCard[] | null>(null);
   const [revealedCount, setRevealedCount] = useState(0);
+  const [packTradeInTotal, setPackTradeInTotal] = useState(0);
 
   const [, force] = useState(0);
   useEffect(() => {
@@ -161,24 +171,30 @@ export function MonopolyClient() {
     }, 1100);
   }
 
-  async function buyPack() {
+  async function buyPack(packId: MonopolyPackId) {
     setBusy(true); setError(null);
-    const r = await fetch("/api/earn/monopoly/buy-pack", { method: "POST" });
+    const r = await fetch("/api/earn/monopoly/buy-pack", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ packId }),
+    });
     const d = await r.json();
     setBusy(false);
     if (!r.ok) { setError(labelFor(d.error ?? "error")); return; }
     setBalance(d.balance);
-    setPackCards(d.cards as Property[]);
+    const cards = d.cards as PackPullCard[];
+    setPackCards(cards);
+    setPackTradeInTotal(typeof d.tradeInCoins === "number" ? d.tradeInCoins : 0);
     setPackOpening(true);
     setRevealedCount(0);
     Sfx.play("pack.open");
-    for (let i = 0; i < (d.cards as Property[]).length; i++) {
+    for (let i = 0; i < cards.length; i++) {
       setTimeout(() => {
         setRevealedCount(i + 1);
         Sfx.play("card.deal");
       }, 350 + i * 350);
     }
-    setTimeout(() => refresh(), 350 + (d.cards as Property[]).length * 350 + 200);
+    setTimeout(() => refresh(), 350 + cards.length * 350 + 200);
     router.refresh();
   }
 
@@ -307,18 +323,73 @@ export function MonopolyClient() {
       {/* === PACK STORE === */}
       <div className="panel" style={{ padding: "var(--sp-5)", marginBottom: "var(--sp-6)" }}>
         <div className="panel-title">Card Pack Store</div>
-        <div className="row-lg" style={{ flexWrap: "wrap" }}>
-          <p className="text-mute" style={{ flex: "1 1 200px", minWidth: 0 }}>
-            {PACK_SIZE} property cards per pack. Higher tiers are rarer.
-          </p>
-          <button
-            className="btn btn-lg"
-            onClick={buyPack}
-            disabled={busy || (balance != null && balance < PACK_PRICE)}
-            style={{ flex: "1 1 200px" }}
-          >
-            Buy Pack ({PACK_PRICE.toLocaleString()} ¢)
-          </button>
+        <p className="text-mute" style={{ marginBottom: "var(--sp-3)", fontSize: "var(--fs-small)" }}>
+          Pricier packs raise the floor on what you can pull. If a pack rolls a property you've already maxed, it
+          re-rolls into something you can still upgrade — or trades in for coins if your whole collection is maxed.
+        </p>
+        <div className="grid grid-2" style={{ gap: "var(--sp-3)" }}>
+          {MONOPOLY_PACK_ORDER.map((id) => {
+            const spec = MONOPOLY_PACKS[id];
+            const canAfford = balance == null || balance >= spec.price;
+            const tiers = (Object.keys(spec.weights) as unknown as PropertyTier[])
+              .map((t) => Number(t) as PropertyTier)
+              .filter((t) => spec.weights[t] > 0);
+            const minTier = Math.min(...tiers) as PropertyTier;
+            const maxTier = Math.max(...tiers) as PropertyTier;
+            return (
+              <div
+                key={id}
+                className="panel"
+                style={{
+                  background: "var(--parchment-100)",
+                  border: `4px solid ${TIER_BG[maxTier]}`,
+                  padding: "var(--sp-3)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                }}
+              >
+                <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h4)" }}>
+                    {spec.name}
+                  </span>
+                  <span className="badge" style={{ background: TIER_BG[maxTier], color: TIER_FG[maxTier] }}>
+                    T{minTier}–T{maxTier}
+                  </span>
+                </div>
+                <p className="text-mute" style={{ fontSize: 12, margin: 0 }}>{spec.blurb}</p>
+                <div className="row" style={{ gap: 4, flexWrap: "wrap" }}>
+                  {([1, 2, 3, 4, 5] as PropertyTier[]).map((t) => {
+                    const w = spec.weights[t] ?? 0;
+                    const total = tiers.reduce((s, tt) => s + spec.weights[tt], 0);
+                    const pct = total === 0 ? 0 : Math.round((w / total) * 100);
+                    if (w === 0) return null;
+                    return (
+                      <span
+                        key={t}
+                        className="badge"
+                        style={{
+                          background: TIER_BG[t],
+                          color: TIER_FG[t],
+                          fontSize: 10,
+                        }}
+                      >
+                        T{t}: {pct}%
+                      </span>
+                    );
+                  })}
+                </div>
+                <button
+                  className="btn"
+                  onClick={() => buyPack(id)}
+                  disabled={busy || !canAfford}
+                  style={{ marginTop: 4 }}
+                >
+                  Buy · {spec.price.toLocaleString()} ¢
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -473,9 +544,23 @@ export function MonopolyClient() {
               ))}
             </div>
             {revealedCount === packCards.length && (
-              <button className="btn btn-lg" onClick={closePack}>
-                Sweet
-              </button>
+              <>
+                {packTradeInTotal > 0 && (
+                  <p
+                    className="text-money"
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: "var(--fs-h4)",
+                      marginBottom: "var(--sp-3)",
+                    }}
+                  >
+                    Trade-in bonus · +{packTradeInTotal.toLocaleString()} ¢
+                  </p>
+                )}
+                <button className="btn btn-lg" onClick={closePack}>
+                  Sweet
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -797,7 +882,9 @@ function Die({ value, rolling }: { value: number; rolling: boolean }) {
   );
 }
 
-function PackCard({ card, revealed }: { card: Property; revealed: boolean }) {
+function PackCard({ card, revealed }: { card: PackPullCard; revealed: boolean }) {
+  const isTradein = card.kind === "tradein";
+  const tier = card.tier;
   return (
     <div style={{ perspective: 800, height: 160 }}>
       <div
@@ -815,18 +902,18 @@ function PackCard({ card, revealed }: { card: Property; revealed: boolean }) {
             position: "absolute",
             inset: 0,
             backfaceVisibility: "hidden",
-            background: TIER_BG[card.tier],
-            color: TIER_FG[card.tier],
+            background: isTradein ? "linear-gradient(180deg, var(--gold-300), var(--saddle-500))" : TIER_BG[tier],
+            color: isTradein ? "var(--ink-900)" : TIER_FG[tier],
             border: "4px solid var(--ink-900)",
             padding: "var(--sp-3)",
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
-            boxShadow: card.tier >= 4 ? "var(--glow-gold)" : "var(--sh-card-rest)",
+            boxShadow: isTradein || tier >= 4 ? "var(--glow-gold)" : "var(--sh-card-rest)",
             overflow: "hidden",
           }}
         >
-          {card.tier === 5 && (
+          {(isTradein || tier === 5) && (
             <div
               style={{
                 position: "absolute",
@@ -844,18 +931,31 @@ function PackCard({ card, revealed }: { card: Property; revealed: boolean }) {
             style={{
               alignSelf: "flex-start",
               background: "var(--ink-900)",
-              color: TIER_BG[card.tier],
-              borderColor: TIER_FG[card.tier],
+              color: isTradein ? "var(--gold-300)" : TIER_BG[tier],
+              borderColor: isTradein ? "var(--gold-300)" : TIER_FG[tier],
             }}
           >
-            {TIER_LABEL[card.tier]}
+            {isTradein ? "TRADE-IN" : TIER_LABEL[tier]}
           </div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 1.1 }}>
-            {card.name}
-          </div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 14, opacity: 0.85 }}>
-            +{card.basePayout.toLocaleString()} ¢
-          </div>
+          {isTradein ? (
+            <>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 1.1 }}>
+                Maxed Already
+              </div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--ink-900)", textShadow: "1px 1px 0 var(--gold-100)" }}>
+                +{card.coins.toLocaleString()} ¢
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 18, lineHeight: 1.1 }}>
+                {card.name}
+              </div>
+              <div style={{ fontFamily: "var(--font-display)", fontSize: 14, opacity: 0.85 }}>
+                +{card.basePayout.toLocaleString()} ¢
+              </div>
+            </>
+          )}
         </div>
         <div
           style={{

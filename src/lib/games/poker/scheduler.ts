@@ -69,6 +69,21 @@ export async function getDefaultTableId(): Promise<string | null> {
   return (data as { id: string } | null)?.id ?? null;
 }
 
+/** Lightweight count of seats currently occupied by other players,
+ *  used by the lobby to flash a "someone's waiting" alert on the
+ *  Poker tile. We exclude the calling user so they don't get
+ *  pinged about their own seat. Returns 0 if Supabase is unset. */
+export async function listSeatedUserIds(tableId: string): Promise<string[]> {
+  const { data } = await supa()
+    .from("poker_seats")
+    .select("user_id")
+    .eq("table_id", tableId)
+    .not("user_id", "is", null);
+  return ((data ?? []) as { user_id: string | null }[])
+    .map((r) => r.user_id)
+    .filter((u): u is string => !!u);
+}
+
 export async function getTable(tableId: string) {
   const { data } = await supa().from("poker_tables").select("*").eq("id", tableId).maybeSingle();
   return data as { id: string; name: string; small_blind: number; big_blind: number; max_seats: number } | null;
