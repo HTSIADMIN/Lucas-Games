@@ -226,7 +226,7 @@ export function ClansClient({ meId }: { meId: string }) {
             busy={busy}
             onPickMember={(uid) => setProfileUserId(uid)}
             onLeave={async () => {
-              if (!confirm("Leave the clan? Weekly XP stays with the clan.")) return;
+              if (!confirm("Leave the clan? Weekly points stay with the clan.")) return;
               setBusy(true);
               await fetch("/api/clans/leave", { method: "POST" });
               await refresh();
@@ -438,7 +438,7 @@ function ClanDashboard({
             )}
           </div>
           <div className="text-mute" style={{ fontSize: 13 }}>
-            {clan.member_count} / {CLAN_MAX_MEMBERS} riders · {clan.total_xp_week.toLocaleString()} XP this week
+            {clan.member_count} / {CLAN_MAX_MEMBERS} riders · {clan.total_xp_week.toLocaleString()} pts this week
           </div>
         </div>
         {isLeader && (
@@ -532,7 +532,7 @@ function ClanDashboard({
               <div className="row" style={{ gap: 8, alignItems: "center" }}>
                 <div style={{ textAlign: "right", fontFamily: "var(--font-display)" }}>
                   <div className="text-money" style={{ fontSize: 14 }}>
-                    {Number(m.weekly_xp).toLocaleString()} XP
+                    {Number(m.weekly_xp).toLocaleString()} pts
                   </div>
                   <div className="text-mute" style={{ fontSize: 10, letterSpacing: "0.04em" }}>
                     {memberContribution(m, members)} · {relativeLastActive(m.last_active_at)}
@@ -635,7 +635,7 @@ function Leaderboard({ clans, myClanId }: { clans: Clan[]; myClanId: string | nu
                   </div>
                 </div>
                 <span className="text-money" style={{ fontSize: 13 }}>
-                  {Number(c.total_xp_week).toLocaleString()} XP
+                  {Number(c.total_xp_week).toLocaleString()} pts
                 </span>
               </button>
             );
@@ -716,28 +716,23 @@ function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => v
           padding: "var(--sp-5)",
           border: "4px solid var(--ink-900)",
           boxShadow: "var(--sh-popover), var(--glow-gold)",
-          // All text inside the modal renders pure white (#fff) so
-          // every line stays legible on the dark wood background.
-          // The class also has a CSS rule that overrides any nested
-          // .text-mute / .text-money / inherited grays.
-          color: "#fff",
         }}
       >
-        {loading && <p style={{ color: "#fff" }}>Loading…</p>}
-        {!loading && err && (
-          <p style={{ color: "#fff" }}>{err}</p>
-        )}
+        {loading && <p>Loading…</p>}
+        {!loading && err && <p>{err}</p>}
         {!loading && clan && (
           <>
             <div className="row" style={{ alignItems: "center", gap: 12, marginBottom: "var(--sp-3)" }}>
               <ClanCrest animal={clan.animal_icon} size={56} />
               <div>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)", color: "#fff", textShadow: "2px 2px 0 var(--ink-900)" }}>
-                  {clan.name}{" "}
-                  <span style={{ fontSize: 14, color: "#fff" }}>[{clan.tag}]</span>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)" }}>
+                  {clan.name} <span style={{ fontSize: 14 }}>[{clan.tag}]</span>
                 </div>
-                <div style={{ fontSize: 12, color: "#fff" }}>
-                  {clan.member_count} of {CLAN_MAX_MEMBERS} members · {Number(clan.total_xp_week).toLocaleString()} weekly XP
+                <div style={{ fontSize: 12 }}>
+                  {clan.member_count} of {CLAN_MAX_MEMBERS} members ·{" "}
+                  <span className="clan-detail-points">
+                    {Number(clan.total_xp_week).toLocaleString()} pts
+                  </span>{" "}this week
                 </div>
               </div>
               <button
@@ -746,8 +741,7 @@ function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => v
                 style={{
                   marginLeft: "auto",
                   background: "transparent",
-                  color: "#fff",
-                  border: "2px solid #fff",
+                  border: "2px solid var(--ink-900)",
                   padding: "2px 8px",
                   cursor: "pointer",
                   fontFamily: "var(--font-display)",
@@ -767,7 +761,6 @@ function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => v
                     padding: "var(--sp-2) 0",
                     borderBottom: "2px dashed var(--saddle-500)",
                     fontFamily: "var(--font-display)",
-                    color: "#fff",
                   }}
                 >
                   <div className="row" style={{ gap: 8, alignItems: "center" }}>
@@ -779,20 +772,18 @@ function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => v
                       frame={m.equipped_frame ?? null}
                       hat={m.equipped_hat ?? null}
                     />
-                    <div>
-                      <div style={{ fontSize: 14, color: "#fff" }}>
-                        {m.username ?? "?"}
-                        {m.role === "leader" && (
-                          <span style={{ marginLeft: 6, fontSize: 11, color: "#fff" }}>★</span>
-                        )}
-                      </div>
+                    <div style={{ fontSize: 14 }}>
+                      {m.username ?? "?"}
+                      {m.role === "leader" && (
+                        <span style={{ marginLeft: 6, fontSize: 11 }}>★</span>
+                      )}
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 13, color: "#fff" }}>
-                      {Number(m.weekly_xp).toLocaleString()} XP
+                    <div className="clan-detail-points" style={{ fontSize: 13 }}>
+                      {Number(m.weekly_xp).toLocaleString()} pts
                     </div>
-                    <div style={{ fontSize: 10, color: "#fff" }}>
+                    <div style={{ fontSize: 10 }}>
                       {memberContribution(m, members)} · {relativeLastActive(m.last_active_at)}
                     </div>
                   </div>
@@ -836,7 +827,7 @@ function ClanCard({
         </div>
       </div>
       <div className="text-money" style={{ fontFamily: "var(--font-display)", fontSize: 14 }}>
-        {Number(clan.total_xp_week).toLocaleString()} XP
+        {Number(clan.total_xp_week).toLocaleString()} pts
       </div>
       <button
         className="btn btn-block btn-sm"
@@ -1233,7 +1224,7 @@ function ClanHistory({ entries }: { entries: HistoryEntry[] }) {
                     Week of {new Date(e.week_start).toLocaleDateString()}
                   </div>
                   <div className="text-mute" style={{ fontSize: 11 }}>
-                    {e.total_xp.toLocaleString()} XP
+                    {e.total_xp.toLocaleString()} pts
                   </div>
                 </div>
                 <span
