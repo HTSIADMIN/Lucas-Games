@@ -1215,6 +1215,16 @@ img, svg, canvas {
 .wrap     { flex-wrap: wrap; }
 .text-mute  { color: var(--saddle-400); }
 .text-money { color: var(--gold-500); text-shadow: 2px 2px 0 var(--gold-100); }
+
+/* Clan-detail modal: every nested text node renders white so the
+   wood-grain background stays legible. Overrides text-mute /
+   text-money / .badge / etc. that would otherwise inherit darker
+   tones from their default classes. */
+.clan-detail-modal,
+.clan-detail-modal * {
+  color: #fff !important;
+  text-shadow: none !important;
+}
 .uppercase { text-transform: uppercase; letter-spacing: var(--ls-loose); }
 
 .divider {

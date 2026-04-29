@@ -710,7 +710,7 @@ function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => v
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="panel-wood"
+        className="panel-wood clan-detail-modal"
         style={{
           width: "min(560px, 100%)",
           maxHeight: "calc(100vh - 32px)",
@@ -718,29 +718,27 @@ function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => v
           padding: "var(--sp-5)",
           border: "4px solid var(--ink-900)",
           boxShadow: "var(--sh-popover), var(--glow-gold)",
-          // Force every nested text node to inherit parchment so
-          // the dark wood background stays readable. Individual
-          // inline `color` styles below still override per-element
-          // (gold-300 for the title, crimson for errors, etc.).
-          color: "var(--parchment-50)",
+          // All text inside the modal renders pure white (#fff) so
+          // every line stays legible on the dark wood background.
+          // The class also has a CSS rule that overrides any nested
+          // .text-mute / .text-money / inherited grays.
+          color: "#fff",
         }}
       >
-        {loading && (
-          <p style={{ color: "var(--parchment-200)" }}>Loading…</p>
-        )}
+        {loading && <p style={{ color: "#fff" }}>Loading…</p>}
         {!loading && err && (
-          <p style={{ color: "var(--crimson-300)" }}>{err}</p>
+          <p style={{ color: "#fff" }}>{err}</p>
         )}
         {!loading && clan && (
           <>
             <div className="row" style={{ alignItems: "center", gap: 12, marginBottom: "var(--sp-3)" }}>
               <ClanCrest animal={clan.animal_icon} size={56} />
               <div>
-                <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)", color: "var(--gold-300)", textShadow: "2px 2px 0 var(--ink-900)" }}>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)", color: "#fff", textShadow: "2px 2px 0 var(--ink-900)" }}>
                   {clan.name}{" "}
-                  <span style={{ fontSize: 14, color: "var(--parchment-200)" }}>[{clan.tag}]</span>
+                  <span style={{ fontSize: 14, color: "#fff" }}>[{clan.tag}]</span>
                 </div>
-                <div style={{ fontSize: 12, color: "var(--parchment-200)" }}>
+                <div style={{ fontSize: 12, color: "#fff" }}>
                   {clan.member_count} of {CLAN_MAX_MEMBERS} members · {Number(clan.total_xp_week).toLocaleString()} weekly XP
                 </div>
               </div>
@@ -750,8 +748,8 @@ function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => v
                 style={{
                   marginLeft: "auto",
                   background: "transparent",
-                  color: "var(--parchment-50)",
-                  border: "2px solid var(--parchment-200)",
+                  color: "#fff",
+                  border: "2px solid #fff",
                   padding: "2px 8px",
                   cursor: "pointer",
                   fontFamily: "var(--font-display)",
@@ -771,7 +769,7 @@ function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => v
                     padding: "var(--sp-2) 0",
                     borderBottom: "2px dashed var(--saddle-500)",
                     fontFamily: "var(--font-display)",
-                    color: "var(--parchment-50)",
+                    color: "#fff",
                   }}
                 >
                   <div className="row" style={{ gap: 8, alignItems: "center" }}>
@@ -784,19 +782,19 @@ function ClanDetailModal({ clanId, onClose }: { clanId: string; onClose: () => v
                       hat={m.equipped_hat ?? null}
                     />
                     <div>
-                      <div style={{ fontSize: 14, color: "var(--parchment-50)" }}>
+                      <div style={{ fontSize: 14, color: "#fff" }}>
                         {m.username ?? "?"}
                         {m.role === "leader" && (
-                          <span style={{ marginLeft: 6, fontSize: 11, color: "var(--gold-300)" }}>★</span>
+                          <span style={{ marginLeft: 6, fontSize: 11, color: "#fff" }}>★</span>
                         )}
                       </div>
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 13, color: "var(--gold-300)" }}>
+                    <div style={{ fontSize: 13, color: "#fff" }}>
                       {Number(m.weekly_xp).toLocaleString()} XP
                     </div>
-                    <div style={{ fontSize: 10, color: "var(--parchment-200)" }}>
+                    <div style={{ fontSize: 10, color: "#fff" }}>
                       {memberContribution(m, members)} · {relativeLastActive(m.last_active_at)}
                     </div>
                   </div>
