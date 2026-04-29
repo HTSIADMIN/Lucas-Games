@@ -87,3 +87,26 @@ export const PACK_TIER_ORDER: PackTier[] = ["dust", "brass", "silver", "vault"];
 export function isValidPackTier(t: unknown): t is PackTier {
   return typeof t === "string" && t in PACK_TIERS;
 }
+
+/** Per-slot trade-in fraction of the pack's per-slot cost when the
+ *  player has nothing left to pull at-or-above the rolled rarity.
+ *  Scales by rarity so trading in a "would-have-been-mythic" slot
+ *  pays back more than a "would-have-been-common" slot. Fractions
+ *  are tuned so a fully-collected pack returns ~10–45% of its
+ *  price depending on tier (cheap tiers low, vault highest because
+ *  reaching that endgame is a serious investment). */
+export const RARITY_FRACTION: Record<Rarity, number> = {
+  common:    0.05,
+  rare:      0.10,
+  epic:      0.25,
+  legendary: 0.50,
+  mythic:    0.85,
+};
+
+/** Compute the coin trade-in for a single pack slot. */
+export function tradeInForSlot(tier: PackTierSpec, rarity: Rarity): number {
+  const perSlot = tier.price / Math.max(1, tier.size);
+  return Math.floor(perSlot * (RARITY_FRACTION[rarity] ?? 0));
+}
+
+export const RARITY_ORDER: Rarity[] = ["common", "rare", "epic", "legendary", "mythic"];

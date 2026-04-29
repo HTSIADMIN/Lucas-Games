@@ -53,9 +53,15 @@ export function ShopClient({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Pack state
-  const [packItems, setPackItems] = useState<CosmeticItem[] | null>(null);
+  // Pack state. Pulls is the per-slot list; each slot is either a
+  // claimable cosmetic (`card`) or a coin trade-in (already credited
+  // server-side, just for display).
+  type ShopPull =
+    | { kind: "card"; item: CosmeticItem }
+    | { kind: "tradein"; coins: number; rarity: Rarity };
+  const [packPulls, setPackPulls] = useState<ShopPull[] | null>(null);
   const [packToken, setPackToken] = useState<string | null>(null);
+  const [packTradeInTotal, setPackTradeInTotal] = useState(0);
   const [revealedCount, setRevealedCount] = useState(0);
   const [chosenId, setChosenId] = useState<string | null>(null);
   const [keptId, setKeptId] = useState<string | null>(null);
@@ -72,8 +78,9 @@ export function ShopClient({
     setTier(tierId);
     setBusy(true);
     setError(null);
-    setPackItems(null);
+    setPackPulls(null);
     setPackToken(null);
+    setPackTradeInTotal(0);
     setRevealedCount(0);
     setChosenId(null);
     setKeptId(null);
@@ -89,11 +96,13 @@ export function ShopClient({
       return;
     }
     setBalance(data.balance);
-    setPackItems(data.items);
+    const pulls = (data.pulls as ShopPull[] | undefined) ?? [];
+    setPackPulls(pulls);
     setPackToken(data.packToken);
+    setPackTradeInTotal(typeof data.tradeInCoins === "number" ? data.tradeInCoins : 0);
     Sfx.play("pack.open");
     // Stagger the card reveals (350ms apart, same cadence as monopoly packs).
-    for (let i = 0; i < data.items.length; i++) {
+    for (let i = 0; i < pulls.length; i++) {
       setTimeout(() => {
         setRevealedCount((c) => Math.max(c, i + 1));
         Sfx.play("card.deal");
@@ -129,8 +138,9 @@ export function ShopClient({
   }
 
   function closePack() {
-    setPackItems(null);
+    setPackPulls(null);
     setPackToken(null);
+    setPackTradeInTotal(0);
     setRevealedCount(0);
     setChosenId(null);
     setKeptId(null);
@@ -343,9 +353,10 @@ export function ShopClient({
       </div>
 
       {/* === Pack opening overlay === */}
-      {packItems && (
+      {packPulls && (
         <PackOpeningOverlay
-          items={packItems}
+          pulls={packPulls}
+          tradeInTotal={packTradeInTotal}
           revealedCount={revealedCount}
           chosenId={chosenId}
           keptId={keptId}
@@ -381,8 +392,13 @@ export function ShopClient({
 // ============================================================
 // Pack opening overlay (mirrors the monopoly card-back-to-face flip)
 // ============================================================
+type PackPull =
+  | { kind: "card"; item: CosmeticItem }
+  | { kind: "tradein"; coins: number; rarity: Rarity };
+
 function PackOpeningOverlay({
-  items,
+  pulls,
+  tradeInTotal,
   revealedCount,
   chosenId,
   keptId,
@@ -390,7 +406,8 @@ function PackOpeningOverlay({
   onChoose,
   onClose,
 }: {
-  items: CosmeticItem[];
+  pulls: PackPull[];
+  tradeInTotal: number;
   revealedCount: number;
   chosenId: string | null;
   keptId: string | null;
@@ -398,8 +415,18 @@ function PackOpeningOverlay({
   onChoose: (item: CosmeticItem) => void;
   onClose: () => void;
 }) {
-  const allRevealed = revealedCount === items.length;
-  const phase: "revealing" | "picking" | "kept" = keptId ? "kept" : allRevealed ? "picking" : "revealing";
+  const allRevealed = revealedCount === pulls.length;
+  const cardCount = pulls.filter((p) => p.kind === "card").length;
+  // If every slot traded in (player has nothing left to pull at-or-
+  // above any allowed rarity), there's nothing to pick — jump
+  // straight to the kept state once reveals finish so the close
+  // button shows up alongside the trade-in summary.
+  const phase: "revealing" | "picking" | "kept" =
+    keptId || (allRevealed && cardCount === 0)
+      ? "kept"
+      : allRevealed
+      ? "picking"
+      : "revealing";
   return (
     <div
       style={{
@@ -440,7 +467,7 @@ function PackOpeningOverlay({
             marginBottom: "var(--sp-2)",
           }}
         >
-          {phase === "revealing" ? "PACK OPENING" : phase === "picking" ? "PICK ONE" : "YOURS!"}
+          {phase === "revealing" ? "PACK OPENING" : phase === "picking" ? "PICK ONE" : cardCount === 0 ? "TRADED IN" : "YOURS!"}
         </div>
         <p
           style={{
@@ -450,9 +477,13 @@ function PackOpeningOverlay({
           }}
         >
           {phase === "revealing"
-            ? "Five cosmetics rolled. Hold tight..."
+            ? `${pulls.length} slots rolled. Hold tight...`
             : phase === "picking"
-            ? "Click one card to keep it. The other four are gone."
+            ? cardCount === 1
+              ? "Only one fresh cosmetic in this pack — claim it below."
+              : `Click one of the ${cardCount} cosmetics to keep it. The rest vanish.`
+            : cardCount === 0
+            ? "You've already collected what this pack could roll. Coins traded in instead."
             : "Item added to your loadout. The rest of the pack vanished."}
         </p>
 
@@ -460,13 +491,25 @@ function PackOpeningOverlay({
           className="pack-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`,
+            gridTemplateColumns: `repeat(${pulls.length}, minmax(0, 1fr))`,
             gap: "var(--sp-3)",
             marginBottom: "var(--sp-5)",
           }}
         >
-          {items.map((item, i) => {
+          {pulls.map((pull, i) => {
             const revealed = i < revealedCount;
+            if (pull.kind === "tradein") {
+              return (
+                <TradeInCard
+                  key={`tradein-${i}`}
+                  rarity={pull.rarity}
+                  coins={pull.coins}
+                  revealed={revealed}
+                  fade={phase === "kept" && cardCount > 0}
+                />
+              );
+            }
+            const item = pull.item;
             const isChosen = item.id === chosenId;
             const isKept = item.id === keptId;
             const fade = phase === "kept" && !isKept;
@@ -487,6 +530,18 @@ function PackOpeningOverlay({
           })}
         </div>
 
+        {tradeInTotal > 0 && (
+          <p
+            className="text-money"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "var(--fs-h4)",
+              marginBottom: "var(--sp-3)",
+            }}
+          >
+            Trade-in bonus · +{tradeInTotal.toLocaleString()} ¢
+          </p>
+        )}
         {phase === "kept" && (
           <button className="btn btn-lg" onClick={onClose}>
             Sweet
@@ -660,6 +715,117 @@ function PackCard({
           >
             ?
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Trade-in slot — drawn in place of a regular PackCard when the
+// pack rolls a rarity the player has fully collected. The coins
+// are already credited at /buy time; this is purely a "you got this
+// instead" display so the user understands where the bonus came
+// from.
+// ============================================================
+function TradeInCard({
+  rarity,
+  coins,
+  revealed,
+  fade,
+}: {
+  rarity: Rarity;
+  coins: number;
+  revealed: boolean;
+  fade: boolean;
+}) {
+  const tone = RARITY_COLOR[rarity];
+  return (
+    <div
+      className="pack-card"
+      style={{
+        perspective: 800,
+        height: 240,
+        transition: "opacity 400ms, transform 400ms",
+        opacity: fade ? 0 : 1,
+        transform: fade ? "scale(0.85) translateY(20px)" : "scale(1)",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          transformStyle: "preserve-3d",
+          transition: "transform 0.5s var(--ease-snap)",
+          transform: revealed ? "rotateY(0deg)" : "rotateY(180deg)",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backfaceVisibility: "hidden",
+            background: "linear-gradient(180deg, var(--gold-300), var(--saddle-500))",
+            color: "var(--ink-900)",
+            border: `4px solid ${tone.bg}`,
+            boxShadow: "var(--glow-gold)",
+            padding: "var(--sp-3)",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: 0, left: 0,
+              width: 60,
+              height: "100%",
+              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)",
+              animation: "packShine 1.6s linear infinite",
+              pointerEvents: "none",
+            }}
+          />
+          <span
+            className="badge"
+            style={{
+              alignSelf: "flex-start",
+              background: "var(--ink-900)",
+              color: "var(--gold-300)",
+              borderColor: "var(--gold-300)",
+            }}
+          >
+            TRADE-IN
+          </span>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 20, lineHeight: 1.1 }}>
+            All {rarity} owned
+          </div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--ink-900)", textShadow: "1px 1px 0 var(--gold-100)" }}>
+            +{coins.toLocaleString()} ¢
+          </div>
+        </div>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backfaceVisibility: "hidden",
+            transform: "rotateY(180deg)",
+            background: "var(--saddle-500)",
+            backgroundImage: "repeating-linear-gradient(45deg, var(--saddle-400) 0 8px, var(--saddle-600) 8px 16px)",
+            border: "4px solid var(--ink-900)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--gold-300)",
+            fontFamily: "var(--font-display)",
+            fontSize: 24,
+            textShadow: "2px 2px 0 var(--ink-900)",
+            letterSpacing: "var(--ls-loose)",
+          }}
+        >
+          ★
         </div>
       </div>
     </div>
