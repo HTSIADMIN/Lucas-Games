@@ -31,10 +31,10 @@ export const PACK_TIERS: Record<PackTier, PackTierSpec> = {
   dust: {
     id: "dust",
     name: "Dust Pouch",
-    blurb: "Cheapest tier. Mostly commons; legendaries are vanishingly rare.",
+    blurb: "Cheapest tier. Mostly commons; legendaries and mythics are vanishingly rare.",
     price: 10_000,
     size: 5,
-    weights: { common: 65, rare: 25, epic: 8,  legendary: 2,  mythic: 0 },
+    weights: { common: 645, rare: 250, epic: 80, legendary: 20, mythic: 5 },
     primary:   "var(--saddle-300)",
     secondary: "var(--saddle-500)",
     border:    "var(--ink-900)",
@@ -89,18 +89,18 @@ export function isValidPackTier(t: unknown): t is PackTier {
 }
 
 /** Per-slot trade-in fraction of the pack's per-slot cost when the
- *  player has nothing left to pull at-or-above the rolled rarity.
- *  Scales by rarity so trading in a "would-have-been-mythic" slot
- *  pays back more than a "would-have-been-common" slot. Fractions
- *  are tuned so a fully-collected pack returns ~10–45% of its
- *  price depending on tier (cheap tiers low, vault highest because
- *  reaching that endgame is a serious investment). */
+ *  player has nothing left to pull at the rolled rarity. Scales by
+ *  rarity so trading in a "would-have-been-mythic" slot pays back
+ *  more than a "would-have-been-common" one. Common is set high
+ *  enough that a fully-collected-commons player still gets a
+ *  meaningful refund out of cheap packs (the bulk of cheap-pack
+ *  weight lands on common). */
 export const RARITY_FRACTION: Record<Rarity, number> = {
-  common:    0.05,
-  rare:      0.10,
-  epic:      0.25,
-  legendary: 0.50,
-  mythic:    0.85,
+  common:    0.30,
+  rare:      0.45,
+  epic:      0.65,
+  legendary: 0.85,
+  mythic:    1.00,
 };
 
 /** Compute the coin trade-in for a single pack slot. */

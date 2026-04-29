@@ -72,39 +72,26 @@ export async function POST(req: Request) {
   };
   for (const c of candidates) buckets[rarityOf(c.price)].push(c);
 
-  // Build the rolled-rarities the tier *allows*. A pack that zeros
-  // out a rarity (e.g. dust → mythic = 0) should never grant items
-  // of that rarity, even if everything cheaper is owned. Instead the
-  // slot trades in for coins.
-  const allowedRarities = RARITY_ORDER.filter((r) => (tier.weights[r] ?? 0) > 0);
-
   type Pull =
     | { kind: "card"; item: CosmeticItem }
     | { kind: "tradein"; coins: number; rarity: Rarity };
 
-  // Per-slot smart pull: pick a rarity by weight, then walk up
-  // through the allowed rarities looking for an unowned item the
-  // player can actually use. If no allowed rarity has anything
-  // unowned, the slot trades in for coins scaled to the rolled
-  // rarity. This keeps cheap packs from accidentally dropping
-  // mythics once the lower tiers are saturated.
+  // Per-slot pull: pick a rarity by the tier's weights, then either
+  // grant an unowned item of *that exact rarity* or trade the slot
+  // in for coins. We deliberately don't "walk up" rarities when the
+  // rolled rarity is empty — bypassing the rarity ladder by handing
+  // out free legendaries from a Dust pack reads as broken. Instead
+  // the player gets a coin reimbursement scaled to the rolled
+  // rarity, and the next slot rolls fresh.
   const pulls: Pull[] = [];
   for (let slot = 0; slot < tier.size; slot++) {
     const rolledRarity = pickRarity(tier.weights);
-    const startIdx = allowedRarities.indexOf(rolledRarity);
-    let chosen: CosmeticItem | null = null;
-    if (startIdx >= 0) {
-      for (let i = startIdx; i < allowedRarities.length; i++) {
-        const r = allowedRarities[i];
-        if (buckets[r].length === 0) continue;
-        chosen = pickFromPool(buckets[r]);
-        // Remove from its bucket so subsequent slots in this pack
-        // can't roll the same item again.
-        buckets[r] = buckets[r].filter((x) => x.id !== chosen!.id);
-        break;
-      }
-    }
-    if (chosen) {
+    const bucket = buckets[rolledRarity];
+    if (bucket && bucket.length > 0) {
+      const chosen = pickFromPool(bucket);
+      // Remove from its bucket so subsequent slots in this pack
+      // can't roll the same item again.
+      buckets[rolledRarity] = bucket.filter((x) => x.id !== chosen.id);
       pulls.push({ kind: "card", item: chosen });
     } else {
       pulls.push({
