@@ -120,7 +120,8 @@ export function CoinflipDuelClient() {
     });
     setOverlayPhase("flipping");
     setOverlayKey((k) => k + 1);
-    Sfx.play("coin.drop");
+    // Wood-click toss start — matches the slots reel-stop sound.
+    Sfx.play("ui.wood");
     setTimeout(() => {
       setOverlayPhase("revealed");
       if (iWonLocal === true) Sfx.play("coins.shower");

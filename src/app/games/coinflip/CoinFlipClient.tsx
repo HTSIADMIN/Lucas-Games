@@ -52,7 +52,9 @@ export function CoinFlipClient() {
     setBusy(true);
     setSpinning(true);
     setTossKey((k) => k + 1);
-    Sfx.play("coin.drop");
+    // Same wood-click the slots reels fire on each stop — feels
+    // chunkier and more "lever-thunk" than the old coin.drop ping.
+    Sfx.play("ui.wood");
 
     const res = await fetch("/api/games/coinflip/flip", {
       method: "POST",
@@ -108,12 +110,15 @@ export function CoinFlipClient() {
           className="panel"
           key={`felt-${shakeKey}`}
           style={{
-            padding: "var(--sp-3)",
+            // Taller felt + bigger top padding so the cf-toss lift
+            // (up to ~140px) stays inside the overflow:hidden box
+            // and doesn't clip the top of the coin mid-flight.
+            padding: "100px var(--sp-3) var(--sp-3)",
             background: "radial-gradient(circle at 50% 40%, #2d5b22, #1f3818)",
             color: "var(--parchment-50)",
             position: "relative",
             overflow: "hidden",
-            minHeight: 220,
+            minHeight: 380,
             animation: shakeKey > 0 ? "cf-shake 0.5s var(--ease-snap)" : undefined,
             display: "flex",
             flexDirection: "column",
@@ -537,9 +542,9 @@ function Confetti() {
 const COIN_KEYFRAMES = `
 @keyframes cf-toss {
   0%   { transform: translateY(0); }
-  20%  { transform: translateY(-110px); }
-  60%  { transform: translateY(-150px); }
-  85%  { transform: translateY(-30px); }
+  20%  { transform: translateY(-95px); }
+  55%  { transform: translateY(-130px); }
+  85%  { transform: translateY(-25px); }
   100% { transform: translateY(0); }
 }
 @keyframes cf-shadow {

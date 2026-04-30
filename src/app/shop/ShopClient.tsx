@@ -1027,26 +1027,41 @@ function ItemPreview({ item }: { item: CosmeticItem }) {
   if (item.kind === "coin_face") {
     const meta = item.meta as { front?: string; back?: string; key?: string };
     const front = meta.front;
+    // Render a single front coin sized to the parent. The
+    // showcase cell is 56×56 and the loadout tile-art is 16:9 with
+    // overflow hidden — both want a coin that scales down nicely
+    // rather than the previous fixed 64+64 pair which overflowed.
     if (!front) {
-      // Default pixel coin — match the in-game radial gradient.
       return (
         <div
           style={{
-            width: 64, height: 64, borderRadius: "50%",
+            width: "100%",
+            height: "100%",
+            maxWidth: 48,
+            maxHeight: 48,
+            aspectRatio: "1 / 1",
+            borderRadius: "50%",
             background: "radial-gradient(circle at 35% 30%, #ffe9a8, #f5c842 50%, #c8941d 80%, #7a5510 100%)",
-            border: "4px solid #7a5510",
+            border: "3px solid #7a5510",
             boxShadow: "var(--bevel-light)",
           }}
         />
       );
     }
     return (
-      <div className="row" style={{ gap: 6 }}>
-        <img src={front} width={64} height={64} alt="" style={{ imageRendering: "pixelated", border: "3px solid var(--ink-900)", borderRadius: "50%" }} />
-        {meta.back && (
-          <img src={meta.back} width={64} height={64} alt="" style={{ imageRendering: "pixelated", border: "3px solid var(--ink-900)", borderRadius: "50%" }} />
-        )}
-      </div>
+      <img
+        src={front}
+        alt={item.name}
+        style={{
+          width: "100%",
+          height: "100%",
+          maxWidth: 56,
+          maxHeight: 56,
+          objectFit: "contain",
+          imageRendering: "pixelated",
+          borderRadius: "50%",
+        }}
+      />
     );
   }
   if (item.kind === "card_deck") {
