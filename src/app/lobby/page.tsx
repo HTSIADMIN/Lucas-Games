@@ -17,6 +17,7 @@ import { getDefaultTableId, listSeatedUserIds } from "@/lib/games/poker/schedule
 import { getUserLevel } from "@/lib/xpServer";
 import { getChampionId } from "@/lib/champion";
 import { GameIcon, type GameIconName } from "@/components/GameIcon";
+import { TilePresence } from "@/components/TilePresence";
 import { SignOutButton } from "./SignOutButton";
 import { FreeGamesButton } from "./FreeGamesButton";
 
@@ -168,13 +169,15 @@ export default async function LobbyPage() {
                 </div>
                 <div className="tile-name">{g.name}</div>
                 <div className="tile-meta">
-                  <span style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
-                    <span className={`badge ${isAlert ? "badge-crimson" : g.live ? "badge-cactus" : ""}`}>
-                      {isAlert ? alertText : g.live ? "OPEN" : g.tag}
-                    </span>
+                  <span style={{ display: "inline-flex", gap: 4, alignItems: "center", flexWrap: "wrap" }}>
+                    {isAlert && (
+                      <span className="badge badge-crimson">{alertText}</span>
+                    )}
+                    {!g.live && <span className="badge">{g.tag}</span>}
                     {g.multiplayer && !isAlert && (
                       <span className="badge badge-sky">2P+</span>
                     )}
+                    {g.live && <TilePresence slug={g.slug} />}
                   </span>
                   <span>{g.live ? (isAlert ? "Join →" : "Play →") : "Coming soon"}</span>
                 </div>
