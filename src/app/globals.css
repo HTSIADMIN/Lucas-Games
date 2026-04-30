@@ -1340,6 +1340,78 @@ img, svg, canvas {
   50%      { transform: scale(1.3); opacity: 0.7; }
 }
 
+/* Shiny red POPULAR badge — pinned to the top-left of a lobby
+   tile's art panel. Crimson background with a diagonal white
+   shimmer sweep, gentle scale pulse, and a soft red glow so it
+   reads as "this one's hot" even from across the page. */
+.tile-popular-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(180deg, #ff5544 0%, #c93a2c 50%, #8b1a1a 100%);
+  color: var(--parchment-50);
+  border: 2px solid var(--ink-900);
+  padding: 3px 8px 3px 7px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+  box-shadow:
+    inset 0 -2px 0 rgba(0,0,0,0.35),
+    inset 0 2px 0 rgba(255,255,255,0.3),
+    0 0 12px rgba(255, 85, 68, 0.7),
+    0 2px 0 rgba(0,0,0,0.4);
+  overflow: hidden;
+  animation: tile-popular-pulse 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+.tile-popular-text {
+  position: relative;
+  z-index: 2;
+}
+.tile-popular-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.55) 48%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(255, 255, 255, 0.55) 52%,
+    transparent 65%);
+  background-size: 220% 100%;
+  background-position: 220% 0;
+  animation: tile-popular-shine 2.2s linear infinite;
+  z-index: 1;
+  mix-blend-mode: screen;
+}
+@keyframes tile-popular-shine {
+  0%   { background-position: 220% 0; }
+  100% { background-position: -120% 0; }
+}
+@keyframes tile-popular-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      inset 0 -2px 0 rgba(0,0,0,0.35),
+      inset 0 2px 0 rgba(255,255,255,0.3),
+      0 0 12px rgba(255, 85, 68, 0.7),
+      0 2px 0 rgba(0,0,0,0.4);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow:
+      inset 0 -2px 0 rgba(0,0,0,0.35),
+      inset 0 2px 0 rgba(255,255,255,0.45),
+      0 0 22px rgba(255, 85, 68, 1),
+      0 2px 0 rgba(0,0,0,0.4);
+  }
+}
+
 /* Slots cash-coin polish — radial gold sheen base (set inline), a
    slow shine sweep, a fixed glint spot at the top-left, and a
    gentle scale-pulse on premium / top-tier coins so high-value

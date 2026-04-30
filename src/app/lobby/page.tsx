@@ -33,6 +33,8 @@ type GameTile = {
   icon: GameIconName;
   category: GameCategory;
   multiplayer?: boolean;
+  /** Show a shiny red POPULAR badge on the tile. */
+  popular?: boolean;
 };
 
 const GAMES: GameTile[] = [
@@ -46,7 +48,7 @@ const GAMES: GameTile[] = [
   { slug: "dice",          name: "Dice",            tag: "QUICK",   live: true, icon: "lobby.dice",           category: "dice" },
   // Other
   { slug: "scratch",       name: "Golden Bounty",   tag: "INSTANT", live: true, icon: "lobby.scratch",        category: "other" },
-  { slug: "slots",         name: "Slots",           tag: "JACKPOT", live: true, icon: "lobby.slots",          category: "other" },
+  { slug: "slots",         name: "Slots",           tag: "JACKPOT", live: true, icon: "lobby.slots",          category: "other", popular: true },
   { slug: "roulette",      name: "Roulette",        tag: "CLASSIC", live: true, icon: "lobby.roulette",       category: "other" },
   { slug: "mines",         name: "Mines",           tag: "RISKY",   live: true, icon: "lobby.mines",          category: "other" },
   { slug: "plinko",        name: "Plinko",          tag: "PHYSICS", live: true, icon: "lobby.plinko",         category: "other" },
@@ -166,6 +168,12 @@ export default async function LobbyPage() {
                   {isAlert && (
                     <span aria-hidden className="tile-alert-dot">
                       {alertCount}
+                    </span>
+                  )}
+                  {g.popular && !isAlert && (
+                    <span className="tile-popular-badge" aria-label="Popular">
+                      <span className="tile-popular-shine" aria-hidden />
+                      <span className="tile-popular-text">★ POPULAR</span>
                     </span>
                   )}
                 </div>
