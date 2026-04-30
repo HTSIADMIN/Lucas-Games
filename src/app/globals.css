@@ -1229,6 +1229,40 @@ img, svg, canvas {
   color: var(--saddle-700) !important;
   font-weight: bold;
 }
+
+/* Clan-leaderboard row: signal that the whole row is clickable.
+   Hover lifts the row slightly and brightens the background; a
+   chevron at the right reinforces "tap to inspect". The shadow on
+   the rest position keeps a pixel of separation so rows don't read
+   as a flat block of background color. */
+.clan-row {
+  position: relative;
+  transition: transform 80ms var(--ease-snap), box-shadow 80ms var(--ease-snap), background 80ms;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.08);
+}
+.clan-row:hover,
+.clan-row:focus-visible {
+  transform: translateX(2px);
+  background: var(--gold-100) !important;
+  box-shadow: -3px 0 0 var(--gold-300), 0 1px 0 rgba(0,0,0,0.12);
+  outline: none;
+}
+.clan-row:active {
+  transform: translateX(1px) scale(0.997);
+}
+.clan-row-chevron {
+  display: inline-block;
+  margin-left: 8px;
+  color: var(--saddle-400);
+  font-family: var(--font-display);
+  font-size: 14px;
+  transition: transform 80ms var(--ease-snap), color 80ms;
+}
+.clan-row:hover .clan-row-chevron,
+.clan-row:focus-visible .clan-row-chevron {
+  transform: translateX(3px);
+  color: var(--gold-700);
+}
 .uppercase { text-transform: uppercase; letter-spacing: var(--ls-loose); }
 
 .divider {

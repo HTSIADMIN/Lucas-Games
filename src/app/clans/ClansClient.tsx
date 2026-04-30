@@ -601,7 +601,7 @@ function Leaderboard({ clans, myClanId }: { clans: Clan[]; myClanId: string | nu
                 type="button"
                 onClick={() => setInspecting(c.id)}
                 title="View clan members"
-                className="between"
+                className="between clan-row"
                 style={{
                   width: "100%",
                   padding: "var(--sp-2) var(--sp-3)",
@@ -634,9 +634,12 @@ function Leaderboard({ clans, myClanId }: { clans: Clan[]; myClanId: string | nu
                     </div>
                   </div>
                 </div>
-                <span className="text-money" style={{ fontSize: 13 }}>
-                  {Number(c.total_xp_week).toLocaleString()} pts
-                </span>
+                <div className="row" style={{ gap: 0, alignItems: "center" }}>
+                  <span className="text-money" style={{ fontSize: 13 }}>
+                    {Number(c.total_xp_week).toLocaleString()} pts
+                  </span>
+                  <span className="clan-row-chevron" aria-hidden>›</span>
+                </div>
               </button>
             );
           })}
