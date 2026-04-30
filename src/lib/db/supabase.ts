@@ -692,15 +692,17 @@ export async function recentSlotsBetAvg(userId: string, limit = 10): Promise<num
  *  `+sum(payout deltas)`, so the live pool value equals
  *  `STARTING_POOL - (sum of both reasons' deltas)`. We do this on
  *  read instead of holding a counter because module-level state is
- *  reset on every cold start in serverless. */
+ *  reset on every cold start in serverless.
+ *
+ *  Pulls the sum via a server-side Postgres function so we get the
+ *  true total instead of the first-1000-rows partial that PostgREST
+ *  returns by default. The function is `slots_jackpot_ledger_sum`
+ *  defined in migration 0024.
+ */
 export async function slotsJackpotLedgerSum(): Promise<number> {
-  const { data, error } = await client()
-    .from("wallet_transactions")
-    .select("delta")
-    .in("reason", ["slots_bet", "slots_jackpot"]);
+  const { data, error } = await client().rpc("slots_jackpot_ledger_sum");
   if (error) throw new Error(`slotsJackpotLedgerSum: ${error.message}`);
-  const rows = (data ?? []) as { delta: number | string }[];
-  return rows.reduce((s, r) => s + Number(r.delta), 0);
+  return Number(data ?? 0);
 }
 
 export async function setSlotsMeter(userId: string, value: number): Promise<void> {
