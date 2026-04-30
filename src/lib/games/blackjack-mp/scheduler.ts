@@ -13,8 +13,8 @@ import {
 import { credit, getBalance } from "@/lib/wallet";
 import { freshDeck, cardValue, type Card } from "@/lib/games/cards";
 
-export const BET_WINDOW_MS = 15_000;
-export const ACTION_WINDOW_MS = 15_000;
+export const BET_WINDOW_MS = 7_000;
+export const ACTION_WINDOW_MS = 7_000;
 export const COOLDOWN_AFTER_SETTLE_MS = 5_000;
 
 function handTotal(hand: Card[]): number {

@@ -8,7 +8,7 @@ import {
   updateBlackjackRound,
   updateBlackjackSeat,
 } from "@/lib/db";
-import { advanceTurn, handTotal, getBlackjackState } from "@/lib/games/blackjack-mp/scheduler";
+import { ACTION_WINDOW_MS, advanceTurn, handTotal, getBlackjackState } from "@/lib/games/blackjack-mp/scheduler";
 import { cardValue, type Card } from "@/lib/games/cards";
 
 export const runtime = "nodejs";
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
       await updateBlackjackSeat(seat.id, { hand });
       await updateBlackjackRound(round.id, {
         deck: deck as unknown as { rank: string; suit: string }[],
-        action_deadline_at: new Date(Date.now() + 15_000).toISOString(),
+        action_deadline_at: new Date(Date.now() + ACTION_WINDOW_MS).toISOString(),
       });
     }
 
@@ -128,7 +128,7 @@ export async function POST(req: Request) {
     });
     await updateBlackjackRound(round.id, {
       deck: deck as unknown as { rank: string; suit: string }[],
-      action_deadline_at: new Date(Date.now() + 15_000).toISOString(),
+      action_deadline_at: new Date(Date.now() + ACTION_WINDOW_MS).toISOString(),
     });
 
     // If first hand auto-stands (aces / blackjack), move to the next playing hand.
