@@ -708,13 +708,17 @@ function CellContents({ cell }: { cell: Cell }) {
   if (cell.kind === "COIN") {
     const c = COIN_TIER_COLOR(cell.cashValue);
     const label = formatCoin(cell.cashValue);
+    const isPremium = cell.cashValue >= 5;
+    const isTopTier = cell.cashValue >= 10;
     return (
       <div
+        className={`slots-cash-coin${isTopTier ? " is-top" : isPremium ? " is-premium" : ""}`}
         style={{
+          position: "relative",
           width: "78%",
           height: "78%",
           borderRadius: 999,
-          background: c.bg,
+          background: `radial-gradient(circle at 30% 25%, #ffffff 0%, ${c.bg} 35%, ${c.bg} 65%, ${c.ring} 100%)`,
           border: `3px solid ${c.ring}`,
           display: "flex",
           alignItems: "center",
@@ -722,11 +726,22 @@ function CellContents({ cell }: { cell: Cell }) {
           fontFamily: "var(--font-display)",
           fontSize: "calc(min(2.4vw, 22px))",
           color: c.fg,
-          textShadow: c.fg === "#1a0f08" ? "1px 1px 0 rgba(255,255,255,0.4)" : "1px 1px 0 rgba(0,0,0,0.5)",
-          boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.25), inset 0 3px 0 rgba(255,255,255,0.35)",
+          textShadow: c.fg === "#1a0f08"
+            ? "1px 1px 0 rgba(255,255,255,0.6), 0 0 8px rgba(255,255,255,0.4)"
+            : "1px 1px 0 rgba(0,0,0,0.6), 0 0 8px rgba(255,255,255,0.25)",
+          boxShadow: isTopTier
+            ? `inset 0 -4px 0 rgba(0,0,0,0.35), inset 0 4px 0 rgba(255,255,255,0.5), 0 0 16px ${c.bg}, 0 0 32px rgba(255, 216, 77, 0.7)`
+            : isPremium
+            ? `inset 0 -3px 0 rgba(0,0,0,0.3), inset 0 3px 0 rgba(255,255,255,0.45), 0 0 10px ${c.bg}`
+            : "inset 0 -3px 0 rgba(0,0,0,0.25), inset 0 3px 0 rgba(255,255,255,0.4)",
+          overflow: "hidden",
         }}
       >
-        {label}
+        {/* Shine sweep — diagonal white strip animated across the coin face */}
+        <span aria-hidden className="slots-cash-coin-shine" />
+        {/* Bright pin-light glint at the top-left for 3D feel */}
+        <span aria-hidden className="slots-cash-coin-glint" />
+        <span style={{ position: "relative", zIndex: 2 }}>{label}</span>
       </div>
     );
   }
@@ -1107,10 +1122,15 @@ function BonusGrid({
             const c = isCoin ? COIN_TIER_COLOR(cell.value as number) : null;
             const tierC = isBuilding ? TIER_COLOR[cell.building as number] ?? TIER_COLOR[1] : null;
             const floats = coinFloats.filter((f) => f.idx === idx);
+            const coinValue = isCoin ? (cell.value as number) : 0;
+            const isPremium = isCoin && coinValue >= 5;
+            const isTopTier = isCoin && coinValue >= 10;
+            // Coins get a radial gold-sheen background; locked
+            // building cells keep the flat tier color.
             const cellBg = isBuilding
               ? tierC!.bg
               : isCoin
-              ? c!.bg
+              ? `radial-gradient(circle at 30% 25%, #ffffff 0%, ${c!.bg} 35%, ${c!.bg} 65%, ${c!.ring} 100%)`
               : "rgba(255, 246, 228, 0.04)";
             const cellBorder = isBuilding
               ? `3px solid var(--ink-900)`
@@ -1121,6 +1141,7 @@ function BonusGrid({
             return (
               <div
                 key={row}
+                className={isCoin ? `slots-cash-coin${isTopTier ? " is-top" : isPremium ? " is-premium" : ""}` : undefined}
                 style={{
                   position: "relative",
                   aspectRatio: "1 / 1",
@@ -1134,12 +1155,16 @@ function BonusGrid({
                   fontSize: 20,
                   color: cellFg,
                   textShadow: (cell.locked && cellFg === "#1a0f08") || (cell.locked && cellFg === "var(--ink-900)")
-                    ? "1px 1px 0 rgba(255,255,255,0.4)"
-                    : "1px 1px 0 rgba(0,0,0,0.5)",
+                    ? "1px 1px 0 rgba(255,255,255,0.6), 0 0 8px rgba(255,255,255,0.4)"
+                    : "1px 1px 0 rgba(0,0,0,0.6), 0 0 8px rgba(255,255,255,0.25)",
                   boxShadow: cell.locked
                     ? isBuilding
                       ? "inset 0 -3px 0 rgba(0,0,0,0.4), inset 0 3px 0 rgba(255,255,255,0.25), 0 0 12px rgba(245, 200, 66, 0.5)"
-                      : "inset 0 -3px 0 rgba(0,0,0,0.25), inset 0 3px 0 rgba(255,255,255,0.35), var(--glow-gold)"
+                      : isTopTier
+                      ? `inset 0 -4px 0 rgba(0,0,0,0.35), inset 0 4px 0 rgba(255,255,255,0.5), 0 0 16px ${c!.bg}, 0 0 32px rgba(255, 216, 77, 0.7)`
+                      : isPremium
+                      ? `inset 0 -3px 0 rgba(0,0,0,0.3), inset 0 3px 0 rgba(255,255,255,0.45), 0 0 10px ${c!.bg}, var(--glow-gold)`
+                      : "inset 0 -3px 0 rgba(0,0,0,0.25), inset 0 3px 0 rgba(255,255,255,0.4), var(--glow-gold)"
                     : undefined,
                   animation: cell.locked
                     ? isBuilding
@@ -1149,15 +1174,23 @@ function BonusGrid({
                   overflow: "hidden",
                 }}
               >
+                {isCoin && (
+                  <>
+                    <span aria-hidden className="slots-cash-coin-shine" />
+                    <span aria-hidden className="slots-cash-coin-glint" />
+                  </>
+                )}
                 {isBuilding && (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, position: "relative", zIndex: 2 }}>
                     <BuildingSym tier={cell.building as number} size={36} />
                     <span style={{ fontSize: 14, fontWeight: "bold", lineHeight: 1, color: "var(--gold-300)", textShadow: "1px 1px 0 var(--ink-900)" }}>
                       {TIER_MULTIPLIER[cell.building as number]}×
                     </span>
                   </div>
                 )}
-                {!isBuilding && isCoin ? formatCoin(cell.value as number) : null}
+                {!isBuilding && isCoin && (
+                  <span style={{ position: "relative", zIndex: 2 }}>{formatCoin(cell.value as number)}</span>
+                )}
                 {floats.map((f) => (
                   <span
                     key={f.id}
@@ -1257,11 +1290,11 @@ function BuildingTiers() {
 function Paytable() {
   const SYMS: Sym[] = ["BOOT", "GUN", "STAR", "GOLD", "SHERIFF"];
   const PAYS: Record<Sym, { 3: number; 4: number; 5: number }> = {
-    BOOT:    { 3: 1, 4: 3,   5: 8 },
-    GUN:     { 3: 1, 4: 5,   5: 14 },
-    STAR:    { 3: 2, 4: 8,   5: 25 },
-    GOLD:    { 3: 4, 4: 15,  5: 60 },
-    SHERIFF: { 3: 8, 4: 30,  5: 150 },
+    BOOT:    { 3:  4, 4:  12, 5:  32 },
+    GUN:     { 3:  4, 4:  20, 5:  56 },
+    STAR:    { 3:  8, 4:  32, 5: 100 },
+    GOLD:    { 3: 16, 4:  60, 5: 240 },
+    SHERIFF: { 3: 32, 4: 120, 5: 600 },
   };
   return (
     <div className="panel" style={{ padding: "var(--sp-5)" }}>

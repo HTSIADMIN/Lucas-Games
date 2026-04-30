@@ -81,12 +81,18 @@ export const PAYLINES: number[][] = [
 
 // Pay multipliers (× bet/20 — each line contributes per-line at 1/20th the bet).
 // Match-of-X for matching from leftmost reel onwards.
+//
+// Bumped roughly 4× over the v1 paytable: ledger telemetry showed
+// line wins paying back only ~2% of total wagered (1.5M / 130M),
+// which made big bets feel like they returned coppers between
+// bonus hits. New values lift expected line-RTP into the 8–12%
+// range so non-bonus spins land meaningful coin amounts.
 const LINE_PAYS: Record<"BOOT" | "GUN" | "STAR" | "GOLD" | "SHERIFF", { 3: number; 4: number; 5: number }> = {
-  BOOT:    { 3: 1,  4: 3,   5: 8 },
-  GUN:     { 3: 1, 4: 5,   5: 14 },
-  STAR:    { 3: 2,  4: 8,   5: 25 },
-  GOLD:    { 3: 4,  4: 15,  5: 60 },
-  SHERIFF: { 3: 8,  4: 30,  5: 150 },
+  BOOT:    { 3:  4, 4:  12, 5:  32 },
+  GUN:     { 3:  4, 4:  20, 5:  56 },
+  STAR:    { 3:  8, 4:  32, 5: 100 },
+  GOLD:    { 3: 16, 4:  60, 5: 240 },
+  SHERIFF: { 3: 32, 4: 120, 5: 600 },
 };
 
 // Per-reel symbol weights. Reels 1..3 carry mostly the standard symbols;
