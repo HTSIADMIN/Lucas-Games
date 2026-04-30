@@ -622,6 +622,18 @@ export function CrossyRoadClient() {
     router.refresh();
   }
 
+  // Auto-claim on death — same UX as Flappy. Player just sees the
+  // run banked instead of having to tap a button after splat.
+  useEffect(() => {
+    if (phase !== "dead") return;
+    if (!runTokenRef.current) return;
+    const t = window.setTimeout(() => {
+      submit();
+    }, 600);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   return (
     <div className="stack-lg">
       <div className="grid grid-2" style={{ alignItems: "start" }}>
@@ -666,12 +678,9 @@ export function CrossyRoadClient() {
                 Splat
               </h3>
               <p style={{ marginBottom: 14, opacity: 0.85 }}>
-                {score} rows · {coins} coin{coins === 1 ? "" : "s"}
+                {score} rows · {coins} coin{coins === 1 ? "" : "s"} — banked!
               </p>
-              <div className="row" style={{ gap: 8 }}>
-                <button className="btn" onClick={submit}>Claim</button>
-                <button className="btn btn-ghost" onClick={start}>Try Again</button>
-              </div>
+              <button className="btn btn-ghost btn-block" onClick={start}>Try Again</button>
             </Overlay>
           )}
         </div>

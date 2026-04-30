@@ -50,7 +50,7 @@ const GAMES: GameTile[] = [
   { slug: "roulette",      name: "Roulette",        tag: "CLASSIC", live: true, icon: "lobby.roulette",       category: "other" },
   { slug: "mines",         name: "Mines",           tag: "RISKY",   live: true, icon: "lobby.mines",          category: "other" },
   { slug: "plinko",        name: "Plinko",          tag: "PHYSICS", live: true, icon: "lobby.plinko",         category: "other" },
-  { slug: "crash",         name: "Crash",           tag: "LIVE",    live: true, icon: "lobby.crash",          category: "other" },
+  { slug: "crash",         name: "Crash",           tag: "LIVE",    live: true, icon: "lobby.crash",          category: "other", multiplayer: true },
 ];
 
 const CATEGORY_ORDER: { key: GameCategory; label: string }[] = [

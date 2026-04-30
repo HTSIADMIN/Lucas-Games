@@ -101,9 +101,13 @@ export function progressFor(
       return event.kind === "buy_monopoly_pack" ? 1 : 0;
     case "score_threshold":
       // Score challenges complete in one shot once the threshold is
-      // hit. We snapshot a goal of 1 in the daily row and add 1 the
-      // first time the score event meets the threshold.
-      return event.kind === "score" && event.game === metric.game && event.score >= metric.score ? 1 : 0;
+      // hit. The catalog snapshots goalMin = goalMax = metric.score
+      // into the daily_challenges row's `goal`, so this returns
+      // exactly that goal value the first time the score event
+      // clears the bar — bumping progress straight to completion.
+      return event.kind === "score" && event.game === metric.game && event.score >= metric.score
+        ? metric.score
+        : 0;
   }
 }
 

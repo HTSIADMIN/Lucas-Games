@@ -596,6 +596,19 @@ export function FlappyClient() {
     router.refresh();
   }
 
+  // Auto-claim on death — the player shouldn't have to tap a button
+  // to bank the run. We give the splat overlay a beat to read first
+  // (~600ms) so the death feedback isn't replaced instantly.
+  useEffect(() => {
+    if (phase !== "dead") return;
+    if (!runTokenRef.current) return;
+    const t = window.setTimeout(() => {
+      submit();
+    }, 600);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   const m = MODES[mode];
   const projectedPayout = Math.min(m.maxPayout, score * m.perPipe);
 
@@ -669,12 +682,9 @@ export function FlappyClient() {
                 {score} pipe{score === 1 ? "" : "s"} · {m.label} · {m.multiplier}× mode
               </div>
               <div style={{ marginBottom: 14, fontFamily: "var(--font-display)", fontSize: 22, color: "var(--gold-300)" }}>
-                {projectedPayout >= 1000 ? `+${projectedPayout.toLocaleString()} ¢ available` : "Need more pipes for a payout"}
+                {projectedPayout >= 1000 ? `+${projectedPayout.toLocaleString()} ¢ banked!` : "Need more pipes for a payout"}
               </div>
-              <div className="row" style={{ gap: 8 }}>
-                <button className="btn" onClick={submit} disabled={projectedPayout < 1000}>Claim</button>
-                <button className="btn btn-ghost" onClick={start}>Try Again</button>
-              </div>
+              <button className="btn btn-ghost btn-block" onClick={start}>Try Again</button>
             </Overlay>
           )}
         </div>
