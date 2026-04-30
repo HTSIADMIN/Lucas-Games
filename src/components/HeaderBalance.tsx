@@ -1,4 +1,5 @@
 import { Avatar } from "@/components/Avatar";
+import { LiveBalance } from "@/components/LiveBalance";
 
 // Compact profile + balance pill rendered in the SiteHeader's right slot
 // while a player is inside a game. Lets the cash stay visible at all times.
@@ -36,9 +37,7 @@ export function HeaderBalance({
       />
       <div className="header-balance-text">
         <span className="header-balance-name">{username}</span>
-        <span className="header-balance-coins" data-balance>
-          {balance.toLocaleString()} ¢
-        </span>
+        <LiveBalance initial={balance} className="header-balance-coins" />
       </div>
     </div>
   );

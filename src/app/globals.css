@@ -1148,6 +1148,26 @@ img, svg, canvas {
   .row-lg { gap: var(--sp-3); }
   .podium-grid { gap: var(--sp-2) !important; }
   .poker-grid { grid-template-columns: 1fr !important; }
+  /* Poker community cards are 5 × 84-wide cards = 444px native and
+     overflow most phone viewports. Shrink to ~50px on mobile so all
+     five fit without horizontal scroll. The PlayingCard inner divs
+     receive their width / font-size from inline styles, so we have
+     to !important-override at every level. */
+  .poker-community-cards { gap: 4px !important; flex-wrap: nowrap !important; }
+  .poker-community-cards > div {
+    width: 50px !important;
+    height: 78px !important;
+    padding: 2px 4px !important;
+  }
+  .poker-community-cards > div > div {
+    font-size: 13px !important;
+  }
+  .poker-community-cards > div > div > div {
+    font-size: 16px !important;
+  }
+  .poker-community-cards .poker-community-empty {
+    border-width: 2px !important;
+  }
   /* Game pages get extra-dense on phones so the main action button is
      visible without scrolling. */
   .page-game .panel { padding: var(--sp-3) !important; }

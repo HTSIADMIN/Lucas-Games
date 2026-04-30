@@ -18,6 +18,8 @@ import { getUserLevel } from "@/lib/xpServer";
 import { getChampionId } from "@/lib/champion";
 import { GameIcon, type GameIconName } from "@/components/GameIcon";
 import { TilePresence } from "@/components/TilePresence";
+import { LiveBalance } from "@/components/LiveBalance";
+import { WelcomeModal } from "@/components/WelcomeModal";
 import { SignOutButton } from "./SignOutButton";
 import { FreeGamesButton } from "./FreeGamesButton";
 
@@ -125,7 +127,7 @@ export default async function LobbyPage() {
               <div className="uname">{user.username}</div>
               <div className="role">LVL {xpInfo.level}</div>
             </div>
-            <div className="balance">{balance.toLocaleString()} ¢</div>
+            <LiveBalance initial={balance} className="balance" />
           </div>
           <div
             className="lobby-action-buttons"
@@ -187,6 +189,7 @@ export default async function LobbyPage() {
         </div>
 
       </main>
+      <WelcomeModal />
     </AppLive>
   );
 }

@@ -35,13 +35,15 @@ export function BigEventToast() {
     for (const b of bets) {
       if (seenRef.current.has(b.id)) continue;
       seenRef.current.add(b.id);
-      // Only the wealth-relative qualifier triggers a toast — the
-      // existing absolute / odds qualifiers stay in the feed but
-      // don't pop up so the bottom-left isn't always firing.
-      if (!b.bigWealth) continue;
+      // For now we toast every bet that lands in the live feed.
+      // The bigWealth/bigOdds flags still get computed and shown
+      // on the chip, but the bottom-left toast doesn't gate on them.
       // Drop very old rows so polling doesn't toast historic events
       // when a player first opens the page.
       if (Date.now() - b.at > STALE_AFTER_MS) continue;
+      // Skip pure no-ops (net = 0) so push/refund-style settlements
+      // don't pop a meaningless toast.
+      if (b.net === 0) continue;
       fresh.push({
         id: b.id,
         net: b.net,

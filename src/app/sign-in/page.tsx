@@ -96,6 +96,10 @@ export default function SignInPage() {
       body: JSON.stringify({ username: newUsername.trim(), pin: newPin }),
     });
     if (res.ok) {
+      // Tag this browser as new so the lobby can pop the welcome
+      // modal on first paint. Cleared inside the modal once the
+      // player taps "Get Playing".
+      try { window.localStorage.setItem("lg.welcomeNew", "1"); } catch { /* ignore */ }
       router.push("/lobby");
     } else {
       const data = await res.json().catch(() => ({}));

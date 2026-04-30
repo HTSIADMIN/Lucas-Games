@@ -301,7 +301,7 @@ export function PokerClient() {
               border: "3px solid var(--cactus-500)",
             }}
           >
-            <div className="row" style={{ gap: 6 }}>
+            <div className="row poker-community-cards" style={{ gap: 6, justifyContent: "center" }}>
               {Array.from({ length: 5 }).map((_, i) => {
                 const c = state.community[i];
                 if (c) {
@@ -319,6 +319,7 @@ export function PokerClient() {
                 return (
                   <div
                     key={`empty-${i}`}
+                    className="poker-community-empty"
                     style={{
                       width: 84, height: 120,
                       border: "3px dashed var(--saddle-300)",
