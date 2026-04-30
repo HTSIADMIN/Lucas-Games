@@ -1236,35 +1236,65 @@ img, svg, canvas {
 .text-mute  { color: var(--saddle-400); }
 .text-money { color: var(--gold-500); text-shadow: 2px 2px 0 var(--gold-100); }
 
-/* Clan-detail modal: dark ink reads best against the warm-tan
-   panel-wood background. Overrides any nested text-mute /
-   text-money / inherited tones so usernames, points, and meta
-   lines all stay legible. */
+/* Clan-detail modal — text + accent colors are exposed as CSS
+   variables so each theme can override them. Default (saloon) uses
+   dark ink on the warm-tan panel-wood background; sunset and
+   midnight flip to parchment text on a darker wood. */
+.clan-detail-modal {
+  --clan-modal-text: var(--ink-900);
+  --clan-modal-accent: var(--saddle-700);
+}
 .clan-detail-modal,
 .clan-detail-modal * {
-  color: var(--ink-900) !important;
+  color: var(--clan-modal-text) !important;
   text-shadow: none !important;
 }
 .clan-detail-modal .clan-detail-points {
-  color: var(--saddle-700) !important;
+  color: var(--clan-modal-accent) !important;
   font-weight: bold;
 }
 
-/* Clan-leaderboard row: signal that the whole row is clickable.
-   Hover lifts the row slightly and brightens the background; a
-   chevron at the right reinforces "tap to inspect". The shadow on
-   the rest position keeps a pixel of separation so rows don't read
-   as a flat block of background color. */
+[data-theme="frontier"] .clan-detail-modal {
+  --clan-modal-text: #2a1810;
+  --clan-modal-accent: #6b3f24;
+}
+[data-theme="sunset"] .panel-wood.clan-detail-modal {
+  background: #4a1a1a;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 8px);
+}
+[data-theme="sunset"] .clan-detail-modal {
+  --clan-modal-text: #fef6e4;
+  --clan-modal-accent: #ffd4a0;
+}
+[data-theme="midnight"] .panel-wood.clan-detail-modal {
+  background: #1a0f08;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,216,77,0.06) 0, rgba(255,216,77,0.06) 1px, transparent 1px, transparent 8px);
+}
+[data-theme="midnight"] .clan-detail-modal {
+  --clan-modal-text: #fef6e4;
+  --clan-modal-accent: #ffd84d;
+}
+
+/* Clan-leaderboard row — same theme-aware pattern. The hover tint
+   becomes a CSS variable so dark themes can slide to a warmer
+   accent instead of light gold-100 (which washes out on burgundy
+   and ink backgrounds). */
 .clan-row {
   position: relative;
   transition: transform 80ms var(--ease-snap), box-shadow 80ms var(--ease-snap), background 80ms;
   box-shadow: 0 1px 0 rgba(0,0,0,0.08);
+  --clan-row-hover-bg: var(--gold-100);
+  --clan-row-hover-accent: var(--gold-300);
+  --clan-row-chevron: var(--saddle-400);
+  --clan-row-chevron-hover: var(--gold-700);
 }
 .clan-row:hover,
 .clan-row:focus-visible {
   transform: translateX(2px);
-  background: var(--gold-100) !important;
-  box-shadow: -3px 0 0 var(--gold-300), 0 1px 0 rgba(0,0,0,0.12);
+  background: var(--clan-row-hover-bg) !important;
+  box-shadow: -3px 0 0 var(--clan-row-hover-accent), 0 1px 0 rgba(0,0,0,0.12);
   outline: none;
 }
 .clan-row:active {
@@ -1273,7 +1303,7 @@ img, svg, canvas {
 .clan-row-chevron {
   display: inline-block;
   margin-left: 8px;
-  color: var(--saddle-400);
+  color: var(--clan-row-chevron);
   font-family: var(--font-display);
   font-size: 14px;
   transition: transform 80ms var(--ease-snap), color 80ms;
@@ -1281,7 +1311,26 @@ img, svg, canvas {
 .clan-row:hover .clan-row-chevron,
 .clan-row:focus-visible .clan-row-chevron {
   transform: translateX(3px);
-  color: var(--gold-700);
+  color: var(--clan-row-chevron-hover);
+}
+
+[data-theme="sunset"] .clan-row {
+  --clan-row-hover-bg: #6b1a1a;
+  --clan-row-hover-accent: #ffd4a0;
+  --clan-row-chevron: #ffb888;
+  --clan-row-chevron-hover: #ffd4a0;
+}
+[data-theme="midnight"] .clan-row {
+  --clan-row-hover-bg: #3d2418;
+  --clan-row-hover-accent: #ffd84d;
+  --clan-row-chevron: #d4a574;
+  --clan-row-chevron-hover: #ffd84d;
+}
+[data-theme="frontier"] .clan-row {
+  --clan-row-hover-bg: #d4a574;
+  --clan-row-hover-accent: #6b3f24;
+  --clan-row-chevron: #6b3f24;
+  --clan-row-chevron-hover: #4a2818;
 }
 
 /* Lobby-tile live-presence dot: tiny pulsing green light next to
