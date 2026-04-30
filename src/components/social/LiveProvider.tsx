@@ -30,6 +30,7 @@ export type LiveBet = {
   net: number;
   multiplier: number;
   bigOdds: boolean;
+  bigWealth: boolean;
   at: number;
 };
 
@@ -108,18 +109,29 @@ export function LiveProvider({
             status: string;
           };
           if (row.status !== "settled") return;
-          const { multiplier, bigOdds, qualifies } = qualifyBet({ bet: row.bet, payout: row.payout });
-          if (!qualifies) return;
           const net = row.payout - row.bet;
-          // Look up user info for the avatar.
-          const { data } = await supa.from("users_public").select("*").eq("id", row.user_id).maybeSingle();
-          const u = (data ?? {}) as {
+          // Look up user info AND current balance in parallel.
+          // Pre-bet wealth = current_balance - net (this settle just
+          // landed, so the live wallet view is post-settle).
+          const [{ data: userData }, { data: balData }] = await Promise.all([
+            supa.from("users_public").select("*").eq("id", row.user_id).maybeSingle(),
+            supa.from("wallet_balances").select("balance").eq("user_id", row.user_id).maybeSingle(),
+          ]);
+          const u = (userData ?? {}) as {
             username?: string;
             avatar_color?: string;
             initials?: string;
             equipped_frame?: string | null;
             equipped_hat?: string | null;
           };
+          const curBal = balData ? Number((balData as { balance: number | string }).balance) : undefined;
+          const wealth = curBal != null ? Math.max(0, curBal - net) : undefined;
+          const { multiplier, bigOdds, bigWealth, qualifies } = qualifyBet({
+            bet: row.bet,
+            payout: row.payout,
+            wealth,
+          });
+          if (!qualifies) return;
           setBets((prev) =>
             [
               {
@@ -136,6 +148,7 @@ export function LiveProvider({
                 net,
                 multiplier,
                 bigOdds,
+                bigWealth,
                 at: Date.now(),
               },
               ...prev,

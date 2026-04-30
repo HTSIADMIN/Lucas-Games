@@ -54,11 +54,32 @@ export async function GET() {
     users: UserBlob | UserBlob[] | null;
   };
 
-  const bets = (data as unknown as Row[])
+  // Batch-fetch current balances so the wealth-fraction check fires.
+  // Pre-bet balance = current_balance - net; a 10-minute window is
+  // narrow enough that current ≈ post-settle, and we accept the
+  // approximation for older settles where the player has played more
+  // since.
+  const rows = data as unknown as Row[];
+  const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
+  const balByUser = new Map<string, number>();
+  if (userIds.length > 0) {
+    const { data: bals } = await supa
+      .from("wallet_balances")
+      .select("user_id, balance")
+      .in("user_id", userIds);
+    for (const b of (bals ?? []) as { user_id: string; balance: number | string }[]) {
+      balByUser.set(b.user_id, Number(b.balance));
+    }
+  }
+
+  const bets = rows
     .map((r) => {
       const bet = Number(r.bet);
       const payout = Number(r.payout);
-      const { multiplier, bigOdds, qualifies } = qualifyBet({ bet, payout });
+      const net = payout - bet;
+      const cur = balByUser.get(r.user_id);
+      const wealth = cur != null ? Math.max(0, cur - net) : undefined;
+      const { multiplier, bigOdds, bigWealth, qualifies } = qualifyBet({ bet, payout, wealth });
       const u = Array.isArray(r.users) ? r.users[0] : r.users;
       return {
         id: r.id,
@@ -71,9 +92,10 @@ export async function GET() {
         game: r.game,
         bet,
         payout,
-        net: payout - bet,
+        net,
         multiplier,
         bigOdds,
+        bigWealth,
         qualifies,
         at: new Date(r.settled_at ?? r.created_at).getTime(),
       };

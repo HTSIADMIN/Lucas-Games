@@ -389,11 +389,13 @@ function BetLine({ b, championId }: {
     net: number;
     multiplier?: number;
     bigOdds?: boolean;
+    bigWealth?: boolean;
   };
   championId: string | null;
 }) {
   const win = b.net > 0;
   const showMultBadge = !!b.bigOdds && (b.multiplier ?? 0) >= 50;
+  const showWealthBadge = !!b.bigWealth;
   return (
     <div style={{
       display: "flex",
@@ -402,7 +404,7 @@ function BetLine({ b, championId }: {
       padding: "6px 8px",
       background: win ? "var(--cactus-100)" : "var(--crimson-100)",
       border: "2px solid var(--ink-900)",
-      boxShadow: showMultBadge ? "var(--glow-gold)" : undefined,
+      boxShadow: showMultBadge || showWealthBadge ? "var(--glow-gold)" : undefined,
     }}>
       <Avatar
         initials={b.initials}
@@ -423,6 +425,15 @@ function BetLine({ b, championId }: {
             title={`Won ${formatMult(b.multiplier!)}× their bet`}
           >
             {formatMult(b.multiplier!)}×
+          </span>
+        )}
+        {showWealthBadge && (
+          <span
+            className={`badge ${win ? "badge-cactus" : "badge-crimson"}`}
+            style={{ marginLeft: 6, fontSize: 9, padding: "1px 5px", letterSpacing: "var(--ls-loose)" }}
+            title="Big swing relative to their wealth"
+          >
+            {win ? "BIG WIN" : "BIG LOSS"}
           </span>
         )}
       </div>

@@ -5,6 +5,7 @@ import { LiveProvider } from "./LiveProvider";
 import { ChatDrawer } from "./ChatDrawer";
 import { DailyChallenges } from "@/components/DailyChallenges";
 import { EventTicker } from "@/components/EventTicker";
+import { BigEventToast } from "@/components/BigEventToast";
 import type { ChatMessagePublic } from "@/lib/db";
 
 export type Me = {
@@ -42,6 +43,7 @@ export function AppLive({
       {children}
       {me && <ChatDrawer currentUserId={me.id} />}
       {me && <DailyChallenges />}
+      {me && <BigEventToast />}
     </LiveProvider>
   );
 }
