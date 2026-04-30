@@ -103,7 +103,11 @@ export function DailyChallenges() {
 
   return (
     <>
-      <div style={{ position: "fixed", right: 16, bottom: 84, zIndex: 99 }}>
+      {/* Sits to the LEFT of the chat fab (which is at right:16,
+          bottom:16, 56px wide). Stacking them in a column blocked the
+          opened chat panel; placing them in a row keeps both fabs
+          tappable while the chat drawer is open. */}
+      <div style={{ position: "fixed", right: 84, bottom: 16, zIndex: 99 }}>
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
