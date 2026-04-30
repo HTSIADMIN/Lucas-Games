@@ -9,6 +9,7 @@ import { AppLive } from "@/components/social/AppLive";
 import { HeaderPresence } from "@/components/social/HeaderPresence";
 import { HeaderBalance } from "@/components/HeaderBalance";
 import { DeckProvider } from "@/components/PlayingCard";
+import { CoinFaceProvider } from "@/components/CoinFaceProvider";
 import { FreeGamesButton } from "@/app/lobby/FreeGamesButton";
 import { isFreeGame } from "@/lib/games/freeGames";
 import { readSession } from "@/lib/auth/session";
@@ -87,7 +88,11 @@ export async function GameShell({
           {blurb && <span className="text-mute game-shell-blurb">{blurb}</span>}
         </div>
 
-        <DeckProvider palette={palette}>{children}</DeckProvider>
+        <DeckProvider palette={palette}>
+          <CoinFaceProvider itemId={user.equipped_coin_face ?? null}>
+            {children}
+          </CoinFaceProvider>
+        </DeckProvider>
       </main>
     </AppLive>
   );

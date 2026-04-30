@@ -37,6 +37,13 @@ export async function POST(req: Request) {
     case "theme":
       await setEquipped(s.user.id, { equipped_theme: item.id });
       break;
+    case "coin_face":
+      // The default pixel coin is stored as null so the runtime
+      // can fall back to its built-in renderer.
+      await setEquipped(s.user.id, {
+        equipped_coin_face: item.id === "coin_default" ? null : item.id,
+      });
+      break;
     default:
       return NextResponse.json({ error: "kind_invalid" }, { status: 400 });
   }

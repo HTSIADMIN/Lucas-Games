@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
+import { useCoinFace } from "@/components/CoinFaceProvider";
 import * as Sfx from "@/lib/sfx";
 
 type Side = "heads" | "tails";
@@ -654,24 +655,43 @@ function CoinFace({
   size: number;
   flipped?: boolean;
 }) {
+  const art = useCoinFace();
+  const customSrc = side === "heads" ? art.heads : art.tails;
+  const baseStyle: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    width: size,
+    height: size,
+    borderRadius: "50%",
+    transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+    backfaceVisibility: "hidden",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+  if (customSrc) {
+    return (
+      <div style={{ ...baseStyle, background: "transparent", overflow: "hidden" }}>
+        <img
+          src={customSrc}
+          alt={side}
+          width={size}
+          height={size}
+          draggable={false}
+          style={{ display: "block", imageRendering: "pixelated" }}
+        />
+      </div>
+    );
+  }
   return (
     <div
       style={{
-        position: "absolute",
-        inset: 0,
-        width: size,
-        height: size,
-        borderRadius: "50%",
+        ...baseStyle,
         background:
           "radial-gradient(circle at 35% 30%, #ffe9a8, #f5c842 50%, #c8941d 80%, #7a5510 100%)",
         border: "6px solid #7a5510",
         boxShadow:
           "inset 0 -6px 0 rgba(0,0,0,0.25), inset 0 6px 0 rgba(255,255,255,0.25)",
-        transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
-        backfaceVisibility: "hidden",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
         fontFamily: "var(--font-display)",
         color: "var(--ink-900)",
         textShadow: "2px 2px 0 var(--gold-100)",

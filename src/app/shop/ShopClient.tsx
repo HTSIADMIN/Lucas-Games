@@ -15,6 +15,7 @@ type Equipped = {
   card_deck: string;
   theme: string;
   hat: string | null;
+  coin_face: string | null;
 };
 
 const PACK_SIZE = 5;
@@ -26,6 +27,7 @@ const KIND_LABEL: Record<CosmeticItem["kind"], string> = {
   hat: "Hats",
   card_deck: "Card Decks",
   theme: "Themes",
+  coin_face: "Coin Faces",
 };
 
 const THEME_SWATCHES: Record<string, string[]> = {
@@ -170,6 +172,7 @@ export function ShopClient({
         case "hat":       return { ...eq, hat: item.id };
         case "card_deck": return { ...eq, card_deck: item.id };
         case "theme":     return { ...eq, theme: item.id };
+        case "coin_face": return { ...eq, coin_face: item.id === "coin_default" ? null : item.id };
       }
     });
     router.refresh();
@@ -183,6 +186,10 @@ export function ShopClient({
       case "hat":       return equipped.hat === item.id;
       case "card_deck": return equipped.card_deck === item.id;
       case "theme":     return equipped.theme === item.id;
+      case "coin_face":
+        return item.id === "coin_default"
+          ? equipped.coin_face == null
+          : equipped.coin_face === item.id;
     }
   }
 
@@ -856,6 +863,7 @@ function LoadoutModal({
     hat: [],
     card_deck: [],
     theme: [],
+    coin_face: [],
   };
   for (const c of owned) groups[c.kind].push(c);
 
@@ -1014,6 +1022,31 @@ function ItemPreview({ item }: { item: CosmeticItem }) {
         fontSize={24}
         hat={item.id}
       />
+    );
+  }
+  if (item.kind === "coin_face") {
+    const meta = item.meta as { front?: string; back?: string; key?: string };
+    const front = meta.front;
+    if (!front) {
+      // Default pixel coin — match the in-game radial gradient.
+      return (
+        <div
+          style={{
+            width: 64, height: 64, borderRadius: "50%",
+            background: "radial-gradient(circle at 35% 30%, #ffe9a8, #f5c842 50%, #c8941d 80%, #7a5510 100%)",
+            border: "4px solid #7a5510",
+            boxShadow: "var(--bevel-light)",
+          }}
+        />
+      );
+    }
+    return (
+      <div className="row" style={{ gap: 6 }}>
+        <img src={front} width={64} height={64} alt="" style={{ imageRendering: "pixelated", border: "3px solid var(--ink-900)", borderRadius: "50%" }} />
+        {meta.back && (
+          <img src={meta.back} width={64} height={64} alt="" style={{ imageRendering: "pixelated", border: "3px solid var(--ink-900)", borderRadius: "50%" }} />
+        )}
+      </div>
     );
   }
   if (item.kind === "card_deck") {

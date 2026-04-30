@@ -321,7 +321,10 @@ export async function grantItem(userId: string, itemId: string): Promise<boolean
 }
 export async function setEquipped(
   userId: string,
-  patch: Partial<Pick<User, "avatar_color" | "equipped_frame" | "equipped_card_deck" | "equipped_theme" | "equipped_hat">>
+  patch: Partial<Pick<User,
+    "avatar_color" | "equipped_frame" | "equipped_card_deck" |
+    "equipped_theme" | "equipped_hat" | "equipped_coin_face"
+  >>
 ): Promise<User | null> {
   const update: Record<string, unknown> = {};
   if (patch.avatar_color !== undefined) update.avatar_color = patch.avatar_color;
@@ -329,6 +332,7 @@ export async function setEquipped(
   if (patch.equipped_card_deck !== undefined) update.equipped_card_deck = patch.equipped_card_deck;
   if (patch.equipped_theme !== undefined) update.equipped_theme = patch.equipped_theme;
   if (patch.equipped_hat !== undefined) update.equipped_hat = patch.equipped_hat;
+  if (patch.equipped_coin_face !== undefined) update.equipped_coin_face = patch.equipped_coin_face;
   if (Object.keys(update).length === 0) return await getUserById(userId);
   const { data, error } = await client().from("users").update(update).eq("id", userId).select("*").maybeSingle();
   if (error) throw new Error(`setEquipped: ${error.message}`);

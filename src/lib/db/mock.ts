@@ -488,7 +488,10 @@ export async function recentChatMessages(limit = 50): Promise<ChatMessagePublic[
 
 export async function setEquipped(
   userId: string,
-  patch: Partial<Pick<User, "avatar_color" | "equipped_frame" | "equipped_card_deck" | "equipped_theme" | "equipped_hat">>
+  patch: Partial<Pick<User,
+    "avatar_color" | "equipped_frame" | "equipped_card_deck" |
+    "equipped_theme" | "equipped_hat" | "equipped_coin_face"
+  >>
 ): Promise<User | null> {
   const u = db().users.find((x) => x.id === userId);
   if (!u) return null;
@@ -497,6 +500,7 @@ export async function setEquipped(
   if (patch.equipped_card_deck !== undefined) u.equipped_card_deck = patch.equipped_card_deck;
   if (patch.equipped_theme !== undefined) u.equipped_theme = patch.equipped_theme;
   if (patch.equipped_hat !== undefined) u.equipped_hat = patch.equipped_hat;
+  if (patch.equipped_coin_face !== undefined) u.equipped_coin_face = patch.equipped_coin_face;
   commit(); return u;
 }
 

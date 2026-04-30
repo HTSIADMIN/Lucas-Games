@@ -15,6 +15,7 @@ export type User = {
   equipped_card_deck?: string;
   equipped_theme?: string;
   equipped_hat?: string | null;
+  equipped_coin_face?: string | null;
   slots_meter?: number;
   bonus_spin_tokens?: number;
 };

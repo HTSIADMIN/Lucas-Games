@@ -4,7 +4,7 @@
 //   avatar_color  + frame  + hat  + card_deck + theme
 // at the same time.
 
-export type CosmeticKind = "avatar_color" | "frame" | "card_deck" | "theme" | "hat";
+export type CosmeticKind = "avatar_color" | "frame" | "card_deck" | "theme" | "hat" | "coin_face";
 
 export type CosmeticItem = {
   id: string;
@@ -136,6 +136,63 @@ export const CATALOG: CosmeticItem[] = [
     description: "Drifting rainbow shimmer. Looks alive.",
     price: 7_500_000,
     meta: { color: "#ff5544", width: 8, glow: true, animated: "aether" },
+  },
+
+  // ============ COIN FACES ============
+  // Cosmetic coin designs that swap the default pixel coin in
+  // Coin Flip + Coin Flip Duel. Each entry references a pair of
+  // PNGs in /public/coin-faces/. The default "lucas-mark" pixel
+  // coin is implicit (price 0, default = true) so newly-registered
+  // players have something equipped.
+  {
+    id: "coin_default", kind: "coin_face", name: "Lucas Mark",
+    description: "The original brass pixel coin.",
+    price: 0, meta: { default: true, key: "default" },
+  },
+  {
+    id: "coin_bounty", kind: "coin_face", name: "Bounty",
+    description: "Wanted-poster gold; the price on someone's head.",
+    price: 75_000, meta: {
+      key: "bounty",
+      front: "/coin-faces/coin-bounty-front.png",
+      back: "/coin-faces/coin-bounty-back.png",
+    },
+  },
+  {
+    id: "coin_outlaw", kind: "coin_face", name: "Outlaw",
+    description: "Smoke-blackened steel. Heads says trouble.",
+    price: 150_000, meta: {
+      key: "outlaw",
+      front: "/coin-faces/coin-outlaw-front.png",
+      back: "/coin-faces/coin-outlaw-back.png",
+    },
+  },
+  {
+    id: "coin_prospector", kind: "coin_face", name: "Prospector",
+    description: "Hand-stamped from a fresh nugget.",
+    price: 350_000, meta: {
+      key: "prospector",
+      front: "/coin-faces/coin-prospector-front.png",
+      back: "/coin-faces/coin-prospector-back.png",
+    },
+  },
+  {
+    id: "coin_saloon", kind: "coin_face", name: "Saloon Token",
+    description: "Buys a round and a hand of cards.",
+    price: 500_000, meta: {
+      key: "saloon",
+      front: "/coin-faces/coin-saloon-front.png",
+      back: "/coin-faces/coin-saloon-back.png",
+    },
+  },
+  {
+    id: "coin_sheriff", kind: "coin_face", name: "Sheriff's Star",
+    description: "Five points of pure brass authority.",
+    price: 1_500_000, meta: {
+      key: "sheriff",
+      front: "/coin-faces/coin-sheriff-front.png",
+      back: "/coin-faces/coin-sheriff-back.png",
+    },
   },
 ];
 

@@ -44,6 +44,7 @@ export default async function ShopPage() {
             card_deck: user.equipped_card_deck ?? "deck_classic",
             theme: user.equipped_theme ?? "saloon",
             hat: user.equipped_hat ?? null,
+            coin_face: user.equipped_coin_face ?? null,
           }}
           catalog={CATALOG}
         />

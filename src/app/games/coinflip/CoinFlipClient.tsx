@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
+import { useCoinFace } from "@/components/CoinFaceProvider";
 import * as Sfx from "@/lib/sfx";
 
 type Side = "heads" | "tails";
@@ -313,25 +314,53 @@ function CoinFace({
   flipped?: boolean;
   highlight?: boolean;
 }) {
+  const art = useCoinFace();
+  const customSrc = side === "heads" ? art.heads : art.tails;
+  const baseStyle: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    width: size,
+    height: size,
+    borderRadius: "50%",
+    transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+    backfaceVisibility: "hidden",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+  if (customSrc) {
+    return (
+      <div
+        style={{
+          ...baseStyle,
+          background: "transparent",
+          boxShadow: highlight
+            ? "0 0 0 4px var(--gold-300), 0 0 36px rgba(245, 200, 66, 0.85)"
+            : "0 8px 0 rgba(0,0,0,0.4)",
+          overflow: "hidden",
+        }}
+      >
+        <img
+          src={customSrc}
+          alt={side}
+          width={size}
+          height={size}
+          draggable={false}
+          style={{ display: "block", imageRendering: "pixelated" }}
+        />
+      </div>
+    );
+  }
   return (
     <div
       style={{
-        position: "absolute",
-        inset: 0,
-        width: size,
-        height: size,
-        borderRadius: "50%",
+        ...baseStyle,
         background:
           "radial-gradient(circle at 35% 30%, #ffe9a8, #f5c842 50%, #c8941d 80%, #7a5510 100%)",
         border: "8px solid #7a5510",
         boxShadow: highlight
           ? "0 0 0 4px var(--gold-300), 0 0 36px rgba(245, 200, 66, 0.85), inset 0 -8px 0 rgba(0,0,0,0.25)"
           : "inset 0 -8px 0 rgba(0,0,0,0.25), inset 0 8px 0 rgba(255,255,255,0.25), 0 8px 0 rgba(0,0,0,0.4)",
-        transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
-        backfaceVisibility: "hidden",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
         fontFamily: "var(--font-display)",
         color: "var(--ink-900)",
         textShadow: "3px 3px 0 var(--gold-100)",
@@ -353,7 +382,6 @@ function CoinFace({
           {side}
         </div>
       </div>
-      {/* Edge ring tick marks */}
       <div
         aria-hidden
         style={{
