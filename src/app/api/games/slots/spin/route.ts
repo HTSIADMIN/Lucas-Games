@@ -12,6 +12,7 @@ import {
 } from "@/lib/db";
 import { validateBet } from "@/lib/games/common";
 import {
+  METER,
   baseSpin,
   buildInitialBonusBoard,
   cellToWire,
@@ -38,16 +39,21 @@ export async function POST(req: Request) {
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
   let bet = v.bet;
 
-  // Bet cap while the meter is filling. The Whiskey Barrel meter
-  // guarantees a Boomtown trigger when full, so a player who spammed
-  // tiny bets to fill it cheaply could then jump to a max bet on the
-  // guaranteed-trigger spin and exploit the system. Cap each spin to
-  // the player's recent rolling average (last 10 base spins). The
-  // first spin of a session has no history, so the cap is a no-op.
-  // Once the meter resets (post-trigger), the next spin establishes
-  // a fresh average.
+  // Bet cap on the guaranteed-trigger spin only. The Whiskey Barrel
+  // meter forces a Boomtown trigger once it crosses METER.full, so
+  // a player could spam tiny bets to fill it cheaply then jump to a
+  // max bet on the trigger spin to cash in. We only need to clamp
+  // the final stretch of the meter — say the last ~5 spins worth
+  // (METER_GAIN_MAX = 3, so 10 buffer covers any random advance) —
+  // and below that the bet is whatever the player picks.
+  //
+  // Previously this clamped on every spin where meterIn0 > 0, which
+  // silently capped a 100,000 ¢ bet down to whatever average the
+  // player's last 10 spins had — i.e. it locked low rollers out of
+  // bigger bets entirely once they'd taken even one cheap spin.
   const meterIn0 = await getSlotsMeter(s.user.id);
-  if (meterIn0 > 0) {
+  const CLAMP_FROM = METER.full - 10; // last ~3-5 spins of fill
+  if (meterIn0 >= CLAMP_FROM) {
     const avg = await recentSlotsBetAvg(s.user.id, 10);
     if (avg !== null && bet > avg) {
       // Clamp silently rather than reject — the player's UI shows
