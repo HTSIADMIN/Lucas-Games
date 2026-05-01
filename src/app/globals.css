@@ -1536,6 +1536,146 @@ img, svg, canvas {
   --clan-row-chevron-hover: #4a2818;
 }
 
+/* ===== Clan-modal + clan-row coverage for the five new themes
+   added in 7148cb2. Same pattern as Sunset/Midnight: the dark
+   themes flip text to parchment + warm accent; the light Ice
+   theme stays dark-on-light; High Noon goes ink-on-bone. ===== */
+
+/* Emerald — green wood panel + gold accent */
+[data-theme="emerald"] .panel-wood.clan-detail-modal {
+  background: #0f2e1a;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,216,77,0.05) 0, rgba(255,216,77,0.05) 1px, transparent 1px, transparent 8px);
+}
+[data-theme="emerald"] .clan-detail-modal {
+  --clan-modal-text: #f4ecdc;
+  --clan-modal-accent: #ffd84d;
+}
+[data-theme="emerald"] .clan-row {
+  --clan-row-hover-bg: #1a4d2e;
+  --clan-row-hover-accent: #ffd84d;
+  --clan-row-chevron: #6ba84f;
+  --clan-row-chevron-hover: #ffd84d;
+}
+
+/* Crimson — black-ash modal + warm peach accent */
+[data-theme="crimson"] .panel-wood.clan-detail-modal {
+  background: #1a0408;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,184,136,0.06) 0, rgba(255,184,136,0.06) 1px, transparent 1px, transparent 8px);
+}
+[data-theme="crimson"] .clan-detail-modal {
+  --clan-modal-text: #fef6e4;
+  --clan-modal-accent: #ffd4a0;
+}
+[data-theme="crimson"] .clan-row {
+  --clan-row-hover-bg: #4a0a0a;
+  --clan-row-hover-accent: #ffd4a0;
+  --clan-row-chevron: #ffb888;
+  --clan-row-chevron-hover: #ffd4a0;
+}
+
+/* Royal Velvet — purple panel + gold accent */
+[data-theme="royal"] .panel-wood.clan-detail-modal {
+  background: #1a0f2e;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,216,77,0.06) 0, rgba(255,216,77,0.06) 1px, transparent 1px, transparent 8px);
+}
+[data-theme="royal"] .clan-detail-modal {
+  --clan-modal-text: #fff7e6;
+  --clan-modal-accent: #ffd84d;
+}
+[data-theme="royal"] .clan-row {
+  --clan-row-hover-bg: #2a1545;
+  --clan-row-hover-accent: #ffd84d;
+  --clan-row-chevron: #d4b8e8;
+  --clan-row-chevron-hover: #ffd84d;
+}
+
+/* Ice Saloon — pale modal stays dark-on-light */
+[data-theme="ice"] .panel-wood.clan-detail-modal {
+  background: #e8f4f8;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(13,58,90,0.04) 0, rgba(13,58,90,0.04) 1px, transparent 1px, transparent 8px);
+}
+[data-theme="ice"] .clan-detail-modal {
+  --clan-modal-text: #0d3a5a;
+  --clan-modal-accent: #2c6a8e;
+}
+[data-theme="ice"] .clan-row {
+  --clan-row-hover-bg: #b8d4e0;
+  --clan-row-hover-accent: #0d3a5a;
+  --clan-row-chevron: #2c6a8e;
+  --clan-row-chevron-hover: #0d3a5a;
+}
+
+/* High Noon — bone modal stays ink-on-bone */
+[data-theme="highnoon"] .panel-wood.clan-detail-modal {
+  background: #fff7d0;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(26,15,8,0.05) 0, rgba(26,15,8,0.05) 1px, transparent 1px, transparent 8px);
+}
+[data-theme="highnoon"] .clan-detail-modal {
+  --clan-modal-text: #1a0f08;
+  --clan-modal-accent: #c8941d;
+}
+[data-theme="highnoon"] .clan-row {
+  --clan-row-hover-bg: #ffe9a8;
+  --clan-row-hover-accent: #c8941d;
+  --clan-row-chevron: #6b3f24;
+  --clan-row-chevron-hover: #1a0f08;
+}
+
+/* ===== Lobby tile-art surface — themed per-theme so the box
+   behind each game icon matches the rest of the page. The base
+   class uses var(--saddle-300) which washes out under the new
+   themes. ===== */
+[data-theme="frontier"] .tile { background: #fbe9c4; }
+[data-theme="frontier"] .tile-art { background: #d4a574; }
+
+[data-theme="sunset"] .tile {
+  background: #5a1a1a;
+  color: #fef6e4;
+}
+[data-theme="sunset"] .tile-art { background: #4a1a1a; border-color: #1a0f08; }
+[data-theme="sunset"] .tile-name { color: #fef6e4; }
+
+[data-theme="midnight"] .tile {
+  background: #2a1810;
+  color: #fef6e4;
+}
+[data-theme="midnight"] .tile-art { background: #1a0f08; border-color: #1a0f08; }
+[data-theme="midnight"] .tile-name { color: #fef6e4; }
+
+[data-theme="emerald"] .tile {
+  background: #1a4d2e;
+  color: #f4ecdc;
+}
+[data-theme="emerald"] .tile-art { background: #061a0e; border-color: #061a0e; }
+[data-theme="emerald"] .tile-name { color: #f4ecdc; }
+
+[data-theme="crimson"] .tile {
+  background: #4a0a0a;
+  color: #fef6e4;
+}
+[data-theme="crimson"] .tile-art { background: #1a0408; border-color: #0a0408; }
+[data-theme="crimson"] .tile-name { color: #fef6e4; }
+
+[data-theme="royal"] .tile {
+  background: #2a1545;
+  color: #fff7e6;
+}
+[data-theme="royal"] .tile-art { background: #1a0f2e; border-color: #0a0418; }
+[data-theme="royal"] .tile-name { color: #fff7e6; }
+
+[data-theme="ice"] .tile { background: #e8f4f8; color: #0d3a5a; }
+[data-theme="ice"] .tile-art { background: #b8d4e0; border-color: #0d3a5a; }
+[data-theme="ice"] .tile-name { color: #0d3a5a; }
+
+[data-theme="highnoon"] .tile { background: #fff7d0; color: #1a0f08; }
+[data-theme="highnoon"] .tile-art { background: #ffe9a8; border-color: #1a0f08; }
+[data-theme="highnoon"] .tile-name { color: #1a0f08; }
+
 /* Lobby-tile live-presence dot: tiny pulsing green light next to
    the active-player count chip. */
 @keyframes tile-presence-pulse {
