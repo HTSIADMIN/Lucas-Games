@@ -1814,6 +1814,95 @@ img, svg, canvas {
    default theme already styles correctly. (No-ops for now;
    adding here as a hook in case the tokens drift.) */
 
+/* ============================================================
+   SITE HEADER + NAV — themed per-theme. The base header pins
+   itself to var(--saddle-500) (warm wood) regardless of theme,
+   which clashes with every dark + light alternative. Override
+   the bar background, link colours, header balance pill, sfx
+   controls, and the mobile-nav drop-down for each theme.
+   ============================================================ */
+
+/* SUNSET — burgundy bar */
+[data-theme="sunset"] .site-header { background: #4a1a1a; }
+[data-theme="sunset"] .site-header .brand-tag { color: #ffd4a0 !important; }
+[data-theme="sunset"] .site-nav a { color: #ffd4a0; }
+[data-theme="sunset"] .site-nav a:hover { background: #6b2a2a; color: #ffd84d; }
+[data-theme="sunset"] .header-balance { background: #6b2a2a; }
+[data-theme="sunset"] .header-balance-name { color: #ffd4a0; }
+[data-theme="sunset"] .sfx-controls { background: #6b2a2a; }
+[data-theme="sunset"] .mobile-nav-trigger { background: #6b2a2a; }
+[data-theme="sunset"] .mobile-nav-panel { background: #4a1a1a; }
+[data-theme="sunset"] .mobile-nav-link { color: #ffd4a0; }
+
+/* MIDNIGHT — ink wood bar */
+[data-theme="midnight"] .site-header { background: #1a0f08; }
+[data-theme="midnight"] .site-header .brand-tag { color: #d4a574 !important; }
+[data-theme="midnight"] .site-nav a { color: #d4a574; }
+[data-theme="midnight"] .site-nav a:hover { background: #3d2418; color: #ffd84d; }
+[data-theme="midnight"] .header-balance { background: #3d2418; }
+[data-theme="midnight"] .header-balance-name { color: #d4a574; }
+[data-theme="midnight"] .sfx-controls { background: #3d2418; }
+[data-theme="midnight"] .mobile-nav-trigger { background: #3d2418; }
+[data-theme="midnight"] .mobile-nav-panel { background: #2a1810; }
+[data-theme="midnight"] .mobile-nav-link { color: #d4a574; }
+
+/* EMERALD — green bar with brass accents */
+[data-theme="emerald"] .site-header { background: #061a0e; }
+[data-theme="emerald"] .site-header .brand-tag { color: #a0c890 !important; }
+[data-theme="emerald"] .site-nav a { color: #a0c890; }
+[data-theme="emerald"] .site-nav a:hover { background: #1a4d2e; color: #ffd84d; }
+[data-theme="emerald"] .header-balance { background: #1a4d2e; }
+[data-theme="emerald"] .header-balance-name { color: #a0c890; }
+[data-theme="emerald"] .sfx-controls { background: #1a4d2e; }
+[data-theme="emerald"] .mobile-nav-trigger { background: #1a4d2e; }
+[data-theme="emerald"] .mobile-nav-panel { background: #1a4d2e; }
+[data-theme="emerald"] .mobile-nav-link { color: #a0c890; }
+
+/* CRIMSON — black-ash bar with peach accents */
+[data-theme="crimson"] .site-header { background: #0a0408; }
+[data-theme="crimson"] .site-header .brand-tag { color: #ffb888 !important; }
+[data-theme="crimson"] .site-nav a { color: #ffb888; }
+[data-theme="crimson"] .site-nav a:hover { background: #4a0a0a; color: #ffd4a0; }
+[data-theme="crimson"] .header-balance { background: #4a0a0a; }
+[data-theme="crimson"] .header-balance-name { color: #ffb888; }
+[data-theme="crimson"] .sfx-controls { background: #4a0a0a; }
+[data-theme="crimson"] .mobile-nav-trigger { background: #4a0a0a; }
+[data-theme="crimson"] .mobile-nav-panel { background: #1a0408; }
+[data-theme="crimson"] .mobile-nav-link { color: #ffb888; }
+
+/* ROYAL — purple bar with cream tag */
+[data-theme="royal"] .site-header { background: #0a0418; }
+[data-theme="royal"] .site-header .brand-tag { color: #d4b8e8 !important; }
+[data-theme="royal"] .site-nav a { color: #d4b8e8; }
+[data-theme="royal"] .site-nav a:hover { background: #2a1545; color: #ffd84d; }
+[data-theme="royal"] .header-balance { background: #2a1545; }
+[data-theme="royal"] .header-balance-name { color: #d4b8e8; }
+[data-theme="royal"] .sfx-controls { background: #2a1545; }
+[data-theme="royal"] .mobile-nav-trigger { background: #2a1545; }
+[data-theme="royal"] .mobile-nav-panel { background: #2a1545; }
+[data-theme="royal"] .mobile-nav-link { color: #d4b8e8; }
+
+/* FRONTIER — light tan bar (different from saloon's wood) */
+[data-theme="frontier"] .site-header { background: #6b3f24; }
+[data-theme="frontier"] .site-header .brand-tag { color: #f1d9b3; }
+
+/* ICE — pale blue bar */
+[data-theme="ice"] .site-header { background: #2c6a8e; }
+[data-theme="ice"] .site-header .brand-name { color: #e8f4f8; text-shadow: 2px 2px 0 #0d3a5a; }
+[data-theme="ice"] .site-header .brand-tag { color: #b8d4e0; }
+[data-theme="ice"] .site-nav a { color: #b8d4e0; }
+[data-theme="ice"] .site-nav a:hover { background: #5fa8d3; color: #fef6e4; }
+[data-theme="ice"] .header-balance { background: #0d3a5a; }
+[data-theme="ice"] .header-balance-name { color: #b8d4e0; }
+[data-theme="ice"] .sfx-controls { background: #0d3a5a; }
+[data-theme="ice"] .mobile-nav-trigger { background: #0d3a5a; }
+[data-theme="ice"] .mobile-nav-panel { background: #2c6a8e; }
+[data-theme="ice"] .mobile-nav-link { color: #b8d4e0; }
+
+/* HIGH NOON — bone bar with ink contrast */
+[data-theme="highnoon"] .site-header { background: #1a0f08; }
+[data-theme="highnoon"] .site-header .brand-tag { color: #ffd84d; }
+
 /* Lobby-tile live-presence dot: tiny pulsing green light next to
    the active-player count chip. */
 @keyframes tile-presence-pulse {
