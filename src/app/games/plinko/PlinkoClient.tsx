@@ -132,6 +132,31 @@ function simulateDrop(rows: number, targetBucket: number): {
   return { samples, totalMs: ms, hits };
 }
 
+/** Threshold at which a landing gets the slow-mo cinematic. */
+const SLOWMO_MIN_MULTIPLIER = 10;
+/** Sim time runs at this fraction of wall time during slow-mo. */
+const SLOWMO_FACTOR = 0.4;
+
+/** Wall-clock → sim-clock mapper. Hits happen during the linear
+ *  (1:1) window before the last peg-collision; after that point
+ *  sim time advances at SLOWMO_FACTOR × wall time so the final
+ *  fall + bucket settle reads as cinematic on a big win. */
+function wallToSim(wallElapsed: number, opts: {
+  slowMo: boolean;
+  lastHitSimMs: number;
+}): number {
+  if (!opts.slowMo) return wallElapsed;
+  if (wallElapsed <= opts.lastHitSimMs) return wallElapsed;
+  return opts.lastHitSimMs + (wallElapsed - opts.lastHitSimMs) * SLOWMO_FACTOR;
+}
+
+/** Compute the wall duration a slow-mo ball spends in the air —
+ *  used for the bucket-flash setTimeout + ball cleanup. */
+function wallDuration(simTotalMs: number, slowMo: boolean, lastHitSimMs: number): number {
+  if (!slowMo) return simTotalMs;
+  return lastHitSimMs + (simTotalMs - lastHitSimMs) / SLOWMO_FACTOR;
+}
+
 /** Lookup the simulated position at `elapsed` ms with a tiny lerp
  *  between adjacent samples for sub-frame smoothness. */
 function sampleAt(samples: PhysSample[], elapsed: number): PhysSample {
@@ -189,6 +214,13 @@ type FlyingBall = {
   samples: PhysSample[];
   hits: PegHit[];
   totalMs: number;
+  /** Real wall-clock duration the ball spends in the air. Equal
+   *  to totalMs unless slowMo is on, in which case the
+   *  post-final-peg fall is stretched. */
+  wallTotalMs: number;
+  /** When true, the bucket settle is animated in slow motion to
+   *  punctuate a big-multiplier landing. */
+  slowMo: boolean;
   rows: number;
   startedAtMs: number;
   multiplier: number;
@@ -342,6 +374,9 @@ export function PlinkoClient() {
       Sfx.play("ui.click");
       // Spawn a new flying ball with its own simulated trajectory.
       const sim = simulateDrop(localRows, data.bucket);
+      const lastHitSimMs = sim.hits.length > 0 ? sim.hits[sim.hits.length - 1].ms : sim.totalMs;
+      const slowMo = (data.multiplier ?? 0) >= SLOWMO_MIN_MULTIPLIER;
+      const wallTotalMs = wallDuration(sim.totalMs, slowMo, lastHitSimMs);
       const id = crypto.randomUUID();
       const startedAtMs = Date.now();
       const ball: FlyingBall = {
@@ -349,6 +384,8 @@ export function PlinkoClient() {
         samples: sim.samples,
         hits: sim.hits,
         totalMs: sim.totalMs,
+        wallTotalMs,
+        slowMo,
         rows: localRows,
         startedAtMs,
         multiplier: data.multiplier,
@@ -358,7 +395,7 @@ export function PlinkoClient() {
       };
       setBalls((prev) => [...prev, ball]);
 
-      const animMs = sim.totalMs;
+      const animMs = wallTotalMs;
       // When the ball "lands", flash the bucket + record result + sync balance.
       setTimeout(() => {
         setBucketFlashes((prev) => [...prev, { bucket: data.bucket, at: Date.now() }]);
@@ -538,7 +575,9 @@ export function PlinkoClient() {
                     so fast horizontal swings feel weighty, then
                     the live ball on top. */}
                 {balls.filter((b) => b.rows === rows).flatMap((b) => {
-                  const elapsed = Date.now() - b.startedAtMs;
+                  const wallElapsed = Date.now() - b.startedAtMs;
+                  const lastHitSimMs = b.hits.length > 0 ? b.hits[b.hits.length - 1].ms : b.totalMs;
+                  const elapsed = wallToSim(wallElapsed, { slowMo: b.slowMo, lastHitSimMs });
                   const fieldH = ROW_H * b.rows;
                   const TRAIL_OFFSETS = [60, 45, 30, 16];
                   const trail = TRAIL_OFFSETS.map((back, i) => {
@@ -619,20 +658,32 @@ export function PlinkoClient() {
                 })}
               </div>
 
-              {/* Buckets */}
+              {/* Buckets — high-mult buckets pulse continuously
+                  for anticipation; the bucket the ball lands in
+                  flashes gold + spawns an upward dust burst. */}
               <div
                 style={{
                   display: "grid",
                   gridTemplateColumns: `repeat(${previewTable.length}, 1fr)`,
                   gap: 3,
                   marginTop: 6,
+                  position: "relative",
                 }}
               >
                 {previewTable.map((m, i) => {
                   const flashing = bucketFlashes.some((f) => f.bucket === i);
+                  const bigMult = m >= 10;
+                  const hugeMult = m >= 50;
                   return (
                     <div
                       key={i}
+                      className={
+                        bigMult
+                          ? hugeMult
+                            ? "plinko-bucket-pulse plinko-bucket-pulse-huge"
+                            : "plinko-bucket-pulse"
+                          : undefined
+                      }
                       style={{
                         background: flashing ? "var(--gold-300)" : multiplierColor(m),
                         color: flashing ? "var(--ink-900)" : "var(--parchment-50)",
@@ -653,6 +704,48 @@ export function PlinkoClient() {
                     </div>
                   );
                 })}
+
+                {/* Bucket-impact dust — fans 8 sparks upward from
+                    the centre of each freshly flashed bucket. */}
+                {(() => {
+                  const nowTs = Date.now();
+                  return bucketFlashes.flatMap((f) => {
+                    const age = nowTs - f.at;
+                    if (age > 700) return [];
+                    const t = age / 700;
+                    // x in normalized [0..1] across the buckets row.
+                    const cellW = 100 / previewTable.length;
+                    const baseX = cellW * (f.bucket + 0.5);
+                    const dist = 18 + t * 38;
+                    const opacity = Math.max(0, 1 - t * 1.1);
+                    return [0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+                      // Fan upward — angle in [-100°, -80° around -90°]...
+                      // simpler: even spread over a 200° arc on top.
+                      const a = -Math.PI + (i / 7) * Math.PI;
+                      const dx = Math.cos(a) * dist;
+                      const dy = Math.sin(a) * dist - t * 12;
+                      return (
+                        <span
+                          key={`bdust-${f.bucket}-${f.at}-${i}`}
+                          aria-hidden
+                          style={{
+                            position: "absolute",
+                            left: `calc(${baseX}% + ${dx}px)`,
+                            top: dy,
+                            transform: "translate(-50%, -50%)",
+                            width: 4,
+                            height: 4,
+                            borderRadius: 999,
+                            background: "#ffe9a8",
+                            boxShadow: `0 0 6px rgba(255, 216, 77, ${opacity})`,
+                            opacity,
+                            pointerEvents: "none",
+                          }}
+                        />
+                      );
+                    });
+                  });
+                })()}
               </div>
             </div>
           );

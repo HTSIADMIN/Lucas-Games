@@ -2070,6 +2070,23 @@ img, svg, canvas {
   78%  { transform: translateY(0)   scale(1);    opacity: 1; }
   100% { transform: translateY(-4px) scale(0.98); opacity: 0; }
 }
+
+/* Plinko bucket pulse — high-multiplier buckets gently breathe so
+   the player knows where the prize tiles are even before a ball
+   reaches them. The "huge" variant adds an extra glow halo for
+   the table's top tiles (50× / 100×+). */
+@keyframes plinko-bucket-pulse {
+  0%, 100% { filter: brightness(1) saturate(1); transform: translateY(0); }
+  50%      { filter: brightness(1.18) saturate(1.15); transform: translateY(-1px); }
+}
+.plinko-bucket-pulse {
+  animation: plinko-bucket-pulse 1.4s ease-in-out infinite;
+}
+.plinko-bucket-pulse-huge {
+  animation: plinko-bucket-pulse 0.95s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(255, 216, 77, 0.5),
+              inset 0 0 6px rgba(255, 246, 228, 0.25) !important;
+}
 .uppercase { text-transform: uppercase; letter-spacing: var(--ls-loose); }
 
 .divider {
