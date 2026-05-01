@@ -6,39 +6,132 @@ import { BetInput } from "@/components/BetInput";
 import { bucketTable, type PlinkoRisk, type PlinkoRows } from "@/lib/games/plinko/engine";
 import * as Sfx from "@/lib/sfx";
 
-// Step duration for the ball bouncing through one row of pegs.
-const STEP_MS = 130;
 // Vertical pixel height per row.
 const ROW_H = 30;
 // Top padding (above first peg) and bottom padding (peg row → bucket gap).
 const TOP_PAD = 28;
 const BOT_PAD = 14;
 
-// Build a left/right decision sequence of length `rows` whose count of
-// "right" choices equals `targetBucket`. Then return cumulative ball
-// positions in normalized [0..1] x and integer y row.
-function buildBallPath(rows: number, targetBucket: number) {
+// =============================================================
+// V2 PHYSICS — gravity-driven simulation with per-peg collisions.
+// The server still decides which bucket the ball lands in; the
+// client samples the ball's trajectory deterministically from a
+// list of L/R decisions that sum to the target bucket. Each peg
+// collision applies a horizontal velocity kick + a damped vertical
+// bounce so the ball jiggles + settles instead of gliding.
+//
+// All units are normalized: x ∈ [0..1] of the board width, y ∈
+// [0..~1] of the peg-field height. The renderer maps x to % and y
+// to row-pixel offsets.
+// =============================================================
+
+type PhysSample = { ms: number; x: number; y: number; rot: number; bounce: boolean };
+
+const GRAVITY = 0.000045; // normalized y units / ms²
+const AIR_FRICTION_PER_MS = 0.0006;
+const BOUNCE_VY_DAMP = 0.32;     // 1 → no energy loss, 0 → dead stop
+const BOUNCE_VY_KICK = 0.00012;  // small upward shove off each peg
+const BALL_RADIUS = 0.012;       // for collision lookahead (normalized)
+const SIM_DT = 12;               // ms per integration step
+const SIM_MAX_MS = 6500;
+
+function makeDecisions(rows: number, targetBucket: number): number[] {
   const rights = Math.max(0, Math.min(rows, targetBucket));
   const lefts = rows - rights;
-  const decisions: number[] = [];
-  for (let i = 0; i < rights; i++) decisions.push(1);
-  for (let i = 0; i < lefts; i++) decisions.push(0);
-  // Fisher-Yates so the path looks random
-  for (let i = decisions.length - 1; i > 0; i--) {
+  const arr: number[] = [];
+  for (let i = 0; i < rights; i++) arr.push(1);
+  for (let i = 0; i < lefts; i++) arr.push(-1);
+  for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [decisions[i], decisions[j]] = [decisions[j], decisions[i]];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  // Ball x at step s = ((rows + 1) + 2R - s) / (2 * (rows + 1))
-  // (lands at (B + 0.5) / (rows + 1) when s=rows, R=B)
-  const denom = 2 * (rows + 1);
-  const path: { x: number; y: number }[] = [];
-  let R = 0;
-  for (let s = 0; s <= rows; s++) {
-    const x = ((rows + 1) + 2 * R - s) / denom;
-    path.push({ x, y: s });
-    if (decisions[s] === 1) R++;
+  return arr;
+}
+
+function simulateDrop(rows: number, targetBucket: number): { samples: PhysSample[]; totalMs: number } {
+  const decisions = makeDecisions(rows, targetBucket);
+  const pegSpread = 1 / (rows + 1); // distance between adjacent pegs in same row
+  const samples: PhysSample[] = [];
+
+  let x = 0.5;
+  let y = -0.04;
+  let vx = 0;
+  let vy = 0;
+  let rot = 0;
+  let ms = 0;
+  let nextPeg = 0;
+
+  samples.push({ ms, x, y, rot, bounce: false });
+
+  while (ms < SIM_MAX_MS) {
+    // Integrate forces
+    vy += GRAVITY * SIM_DT;
+    vx *= 1 - AIR_FRICTION_PER_MS * SIM_DT;
+    x += vx * SIM_DT;
+    y += vy * SIM_DT;
+    rot += vx * SIM_DT * 1800; // visual spin scales with horizontal speed
+    let bounced = false;
+
+    // Peg collision check — when y crosses the next peg row, apply
+    // the deterministic decision as a horizontal velocity, bounce
+    // the ball up slightly, and clear the peg so we don't double-
+    // hit on the next frame.
+    if (nextPeg < rows) {
+      const pegY = (nextPeg + 1) / (rows + 1);
+      if (y >= pegY - BALL_RADIUS) {
+        const dir = decisions[nextPeg];
+        // Horizontal kick that lands the ball roughly on the next
+        // column within a typical step time. Add ±15% chaos so
+        // every drop reads a touch differently.
+        const baseVx = (dir * pegSpread * 0.55) / 130;
+        vx = baseVx * (0.85 + Math.random() * 0.3);
+        // Bounce — invert + dampen + small upward shove.
+        vy = -Math.abs(vy) * BOUNCE_VY_DAMP - BOUNCE_VY_KICK;
+        // Nudge past the peg so the next frame doesn't re-trigger.
+        y = pegY + 0.002;
+        nextPeg++;
+        bounced = true;
+      }
+    }
+
+    // Side walls — gentle clamp so a chaotic high-bet ball doesn't
+    // fly off the board on edge drops.
+    if (x < 0.02) { x = 0.02; vx = Math.abs(vx) * 0.5; }
+    if (x > 0.98) { x = 0.98; vx = -Math.abs(vx) * 0.5; }
+
+    ms += SIM_DT;
+    samples.push({ ms, x, y, rot, bounce: bounced });
+
+    // Stop once the ball passes the bucket lip.
+    if (y >= 1.04) break;
   }
-  return path;
+
+  // Settle pause so the bucket flash has a beat to read.
+  for (let extra = 0; extra < 6; extra++) {
+    ms += SIM_DT;
+    samples.push({ ms, x, y, rot, bounce: false });
+  }
+  return { samples, totalMs: ms };
+}
+
+/** Lookup the simulated position at `elapsed` ms with a tiny lerp
+ *  between adjacent samples for sub-frame smoothness. */
+function sampleAt(samples: PhysSample[], elapsed: number): PhysSample {
+  if (samples.length === 0) return { ms: 0, x: 0.5, y: 0, rot: 0, bounce: false };
+  if (elapsed <= 0) return samples[0];
+  if (elapsed >= samples[samples.length - 1].ms) return samples[samples.length - 1];
+  const idx = Math.min(samples.length - 1, Math.floor(elapsed / SIM_DT));
+  const a = samples[idx];
+  const b = samples[Math.min(samples.length - 1, idx + 1)];
+  const span = Math.max(1, b.ms - a.ms);
+  const t = Math.min(1, Math.max(0, (elapsed - a.ms) / span));
+  return {
+    ms: elapsed,
+    x: a.x + (b.x - a.x) * t,
+    y: a.y + (b.y - a.y) * t,
+    rot: a.rot + (b.rot - a.rot) * t,
+    bounce: a.bounce || b.bounce,
+  };
 }
 
 // Peg position in row r (0-indexed, 0..rows-1), peg index k (0..r), normalized 0..1.
@@ -75,7 +168,8 @@ type Ghost = {
 
 type FlyingBall = {
   id: string;
-  path: { x: number; y: number }[];
+  samples: PhysSample[];
+  totalMs: number;
   rows: number;
   startedAtMs: number;
   multiplier: number;
@@ -95,7 +189,7 @@ export function PlinkoClient() {
   const [result, setResult] = useState<DropResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
-  const [ghosts, setGhosts] = useState<(Ghost & { path: { x: number; y: number }[]; startedAtMs: number })[]>([]);
+  const [ghosts, setGhosts] = useState<(Ghost & { samples: PhysSample[]; totalMs: number; startedAtMs: number })[]>([]);
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -123,7 +217,7 @@ export function PlinkoClient() {
             continue;
           }
           seen.add(drop.id);
-          const path = buildBallPath(drop.rows, drop.bucket);
+          const sim = simulateDrop(drop.rows, drop.bucket);
           setGhosts((prev) => [...prev, {
             id: drop.id,
             username: drop.username,
@@ -132,13 +226,13 @@ export function PlinkoClient() {
             rows: drop.rows as PlinkoRows,
             bucket: drop.bucket,
             startedAt: drop.at,
-            path,
+            samples: sim.samples,
+            totalMs: sim.totalMs,
             startedAtMs: Date.now(),
           }]);
-          const animMs = STEP_MS * (drop.rows + 1) + 300;
           setTimeout(() => {
             setGhosts((prev) => prev.filter((x) => x.id !== drop.id));
-          }, animMs);
+          }, sim.totalMs + 300);
         }
       } catch { /* ignore */ }
     }
@@ -147,16 +241,19 @@ export function PlinkoClient() {
     return () => { cancelled = true; clearInterval(t); };
   }, []);
 
-  // Re-render every 50ms while balls or ghosts are in flight so their
-  // computed step (from elapsed time) advances visually.
+  // Drive the render off requestAnimationFrame while balls or
+  // ghosts are in flight — smoother than a 50ms interval and
+  // avoids layout thrash when the tab is backgrounded.
   useEffect(() => {
     if (balls.length === 0 && ghosts.length === 0 && bucketFlashes.length === 0) return;
-    const t = setInterval(() => {
-      setTick((n) => n + 1);
-      // Garbage-collect expired bucket flashes (>800ms old).
+    let raf = 0;
+    function frame() {
+      setTick((n) => (n + 1) & 0xffff);
       setBucketFlashes((prev) => prev.filter((f) => Date.now() - f.at < 800));
-    }, 50);
-    return () => clearInterval(t);
+      raf = requestAnimationFrame(frame);
+    }
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
   }, [balls.length, ghosts.length, bucketFlashes.length]);
 
   const previewTable = bucketTable(rows, risk);
@@ -189,12 +286,16 @@ export function PlinkoClient() {
       // Soft UI tick on the drop — the original coin.drop was too
       // weighty for a button press.
       Sfx.play("ui.click");
-      // Spawn a new flying ball with its own path.
-      const path = buildBallPath(localRows, data.bucket);
+      // Spawn a new flying ball with its own simulated trajectory.
+      const sim = simulateDrop(localRows, data.bucket);
       const id = crypto.randomUUID();
       const startedAtMs = Date.now();
       const ball: FlyingBall = {
-        id, path, rows: localRows, startedAtMs,
+        id,
+        samples: sim.samples,
+        totalMs: sim.totalMs,
+        rows: localRows,
+        startedAtMs,
         multiplier: data.multiplier,
         payout: data.payout,
         bet: stake,
@@ -202,7 +303,7 @@ export function PlinkoClient() {
       };
       setBalls((prev) => [...prev, ball]);
 
-      const animMs = path.length * STEP_MS;
+      const animMs = sim.totalMs;
       // When the ball "lands", flash the bucket + record result + sync balance.
       setTimeout(() => {
         setBucketFlashes((prev) => [...prev, { bucket: data.bucket, at: Date.now() }]);
@@ -282,16 +383,16 @@ export function PlinkoClient() {
                   })
                 )}
 
-                {/* Player balls */}
+                {/* Player balls — sampled from the physics
+                    simulation. Vertical mapping is normalized y in
+                    [0..1] of the peg field; we pin y=0 to TOP_PAD
+                    and y=1 to the bottom of the peg block. */}
                 {balls.filter((b) => b.rows === rows).map((b) => {
-                  const elapsed = (Date.now() - b.startedAtMs) / STEP_MS;
-                  const idx = Math.max(0, Math.min(b.path.length - 1, Math.floor(elapsed)));
-                  const frac = elapsed - idx;
-                  const cur = b.path[idx];
-                  const next = b.path[Math.min(b.path.length - 1, idx + 1)];
-                  // Smooth interpolation between path points so the ball doesn't snap.
-                  const x = (cur.x + (next.x - cur.x) * Math.min(1, frac)) * 100;
-                  const y = TOP_PAD + (cur.y + (next.y - cur.y) * Math.min(1, frac)) * ROW_H;
+                  const elapsed = Date.now() - b.startedAtMs;
+                  const sample = sampleAt(b.samples, elapsed);
+                  const x = sample.x * 100;
+                  const fieldH = ROW_H * b.rows;
+                  const y = TOP_PAD + sample.y * fieldH;
                   return (
                     <span
                       key={b.id}
@@ -299,7 +400,7 @@ export function PlinkoClient() {
                         position: "absolute",
                         left: `${x}%`,
                         top: y,
-                        transform: "translate(-50%, -50%)",
+                        transform: `translate(-50%, -50%) rotate(${sample.rot}deg)`,
                         width: 18,
                         height: 18,
                         borderRadius: 999,
@@ -307,6 +408,7 @@ export function PlinkoClient() {
                         border: "2px solid var(--ink-900)",
                         boxShadow:
                           "inset -2px -3px 0 rgba(26,15,8,0.35), inset 1px 2px 0 rgba(255,255,255,0.55), 0 0 8px rgba(245,200,66,0.55)",
+                        willChange: "top, left, transform",
                       }}
                     />
                   );
@@ -314,13 +416,11 @@ export function PlinkoClient() {
 
                 {/* Ghost balls — other players' drops, half opacity, no glow */}
                 {ghosts.filter((g) => g.rows === rows).map((g) => {
-                  const elapsed = (Date.now() - g.startedAtMs) / STEP_MS;
-                  const idx = Math.max(0, Math.min(g.path.length - 1, Math.floor(elapsed)));
-                  const frac = elapsed - idx;
-                  const cur = g.path[idx];
-                  const next = g.path[Math.min(g.path.length - 1, idx + 1)];
-                  const x = (cur.x + (next.x - cur.x) * Math.min(1, frac)) * 100;
-                  const y = TOP_PAD + (cur.y + (next.y - cur.y) * Math.min(1, frac)) * ROW_H;
+                  const elapsed = Date.now() - g.startedAtMs;
+                  const sample = sampleAt(g.samples, elapsed);
+                  const x = sample.x * 100;
+                  const fieldH = ROW_H * g.rows;
+                  const y = TOP_PAD + sample.y * fieldH;
                   return (
                     <span
                       key={g.id}
@@ -328,7 +428,7 @@ export function PlinkoClient() {
                         position: "absolute",
                         left: `${x}%`,
                         top: y,
-                        transform: "translate(-50%, -50%)",
+                        transform: `translate(-50%, -50%) rotate(${sample.rot}deg)`,
                         width: 14,
                         height: 14,
                         borderRadius: 999,
