@@ -43,6 +43,7 @@ type State = {
     reveals: { seatNo: number; userId: string; cards: Card[]; categoryLabel: string }[];
     finalCommunity: Card[];
   } | null;
+  myCurrentHand: { categoryLabel: string } | null;
   seats: Seat[];
   balance: number;
 };
@@ -203,11 +204,22 @@ export function PokerClient() {
     return () => { clearInterval(t); clearInterval(tick); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync raise input to min raise when state advances.
+  // Reset the raise input to min raise on every fresh decision —
+  // tracked by (handNo, currentSeat) so each new turn starts with
+  // a clean slate instead of a left-over slider position from the
+  // last hand or the previous street. Also clamps up if minRaise
+  // grew under us between polls.
+  const lastTurnKeyRef = useRef<string>("");
   useEffect(() => {
     if (!state) return;
-    if (raiseTo === 0 || raiseTo < state.minRaise) setRaiseTo(state.minRaise);
-  }, [state?.minRaise]); // eslint-disable-line react-hooks/exhaustive-deps
+    const turnKey = `${state.handNo}:${state.currentSeat ?? "x"}`;
+    if (turnKey !== lastTurnKeyRef.current) {
+      lastTurnKeyRef.current = turnKey;
+      setRaiseTo(state.minRaise);
+    } else if (raiseTo < state.minRaise) {
+      setRaiseTo(state.minRaise);
+    }
+  }, [state?.handNo, state?.currentSeat, state?.minRaise]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When the active table changes, snap the buy-in input up to that
   // table's minimum (otherwise a 5,000 default fails on a Tycoon
@@ -314,8 +326,8 @@ export function PokerClient() {
             {state.handNo > 0 && <span className="text-mute" style={{ fontSize: 12, marginLeft: 8 }}>· Hand #{state.handNo}</span>}
           </div>
           <div className="row" style={{ gap: "var(--sp-3)" }}>
-            <span className="badge">{state.table.smallBlind}/{state.table.bigBlind}</span>
-            {currentActor && (
+            <span className="badge">{state.table.smallBlind.toLocaleString()}/{state.table.bigBlind.toLocaleString()}</span>
+            {currentActor && !isMyTurn && (
               <span
                 className="badge"
                 style={{
@@ -324,11 +336,57 @@ export function PokerClient() {
                   borderColor: "var(--ink-900)",
                 }}
               >
-                {isMyTurn ? `YOUR TURN · ${timerText}` : `Waiting on ${currentActor.username ?? `Seat ${currentActor.seatNo + 1}`} · ${timerText}`}
+                Waiting on {currentActor.username ?? `Seat ${currentActor.seatNo + 1}`} · {timerText}
               </span>
             )}
           </div>
         </div>
+
+        {/* Big YOUR TURN banner — bottom of the felt panel, large
+            countdown so the player can't miss their action window
+            even while looking at their hole cards. */}
+        {isMyTurn && state.actionDeadlineAt && (
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              padding: "10px var(--sp-3)",
+              background: "linear-gradient(90deg, var(--gold-300), #ffd84d, var(--gold-300))",
+              backgroundSize: "200% 100%",
+              borderTop: "3px solid var(--ink-900)",
+              fontFamily: "var(--font-display)",
+              color: "var(--ink-900)",
+              textTransform: "uppercase",
+              letterSpacing: "var(--ls-loose)",
+              textShadow: "1px 1px 0 rgba(255,246,228,0.6)",
+              boxShadow: "0 -8px 20px rgba(245,200,66,0.35)",
+              animation: "poker-turn-shine 2.4s linear infinite, poker-turn-pulse 1.1s ease-in-out infinite",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "var(--sp-3)",
+              zIndex: 5,
+              pointerEvents: "none",
+            }}
+          >
+            <span style={{ fontSize: "var(--fs-h3)" }}>★ YOUR TURN ★</span>
+            <span
+              style={{
+                fontSize: "var(--fs-h3)",
+                background: "var(--ink-900)",
+                color: actionSecs <= 5 ? "var(--crimson-300)" : "var(--gold-300)",
+                padding: "2px 12px",
+                border: "2px solid var(--ink-900)",
+                minWidth: 56,
+                textAlign: "center",
+              }}
+            >
+              {actionSecs}s
+            </span>
+          </div>
+        )}
 
         {/* The felt itself */}
         <div
@@ -432,6 +490,32 @@ export function PokerClient() {
           <div className="panel-title" style={{ fontSize: "var(--fs-h4)" }}>
             {!isSeated ? "Buy In" : isMyTurn ? `Your Action · ${timerText}` : "At The Table"}
           </div>
+
+          {/* Current best hand readout — only meaningful from the
+              flop onwards while the player is in the hand. */}
+          {state.myCurrentHand && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                background: "var(--ink-900)",
+                color: "var(--gold-300)",
+                padding: "6px 10px",
+                marginBottom: "var(--sp-3)",
+                border: "2px solid var(--ink-900)",
+                fontFamily: "var(--font-display)",
+                boxShadow: "var(--bevel-light)",
+              }}
+            >
+              <span style={{ fontSize: 10, letterSpacing: "var(--ls-loose)", textTransform: "uppercase", opacity: 0.8 }}>
+                Your Hand
+              </span>
+              <span style={{ fontSize: 14, textShadow: "1px 1px 0 var(--ink-1000)" }}>
+                {state.myCurrentHand.categoryLabel}
+              </span>
+            </div>
+          )}
 
           {!isSeated ? (
             <div className="stack-lg">
@@ -1141,6 +1225,15 @@ function PokerConfetti() {
 }
 
 const POKER_KEYFRAMES = `
+@keyframes poker-turn-shine {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+@keyframes poker-turn-pulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.12); }
+}
+
 @keyframes pk-deal {
   0% {
     transform: translate(320px, -360px) rotate(55deg) perspective(900px) rotateX(-65deg) scale(0.55);

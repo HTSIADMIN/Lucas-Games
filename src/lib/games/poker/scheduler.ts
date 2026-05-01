@@ -9,7 +9,7 @@ import { compareScores, evaluate7, categoryLabel } from "./evaluator";
 import { createClient as createSupabaseClient, SupabaseClient } from "@supabase/supabase-js";
 import { insertGameSession } from "@/lib/db";
 
-export const ACTION_WINDOW_MS = 15_000;
+export const ACTION_WINDOW_MS = 20_000;
 export const COOLDOWN_AFTER_HAND_MS = 6_000;
 export const SHOWDOWN_REVEAL_MS = 5_000;
 export const MIN_PLAYERS_TO_START = 2;
@@ -697,6 +697,10 @@ export type PokerStateView = {
   currentBet: number;
   minRaise: number;
   showdown: ShowdownInfo | null;
+  /** Best-five evaluation of my hole + community cards. Null until
+   *  there are enough cards on the board (flop+) for a meaningful
+   *  category, or when I'm not in the hand. */
+  myCurrentHand: { categoryLabel: string } | null;
   seats: Array<{
     seatNo: number;
     userId: string | null;
@@ -737,6 +741,22 @@ export async function getStateView(tableId: string, currentUserId: string): Prom
     }
   }
 
+  // My current best hand — only shown when the flop is on the
+  // board (need ≥5 cards total to land a real category). Folders
+  // and seats not at the table get null.
+  const mySeat = seats.find((s) => s.user_id === currentUserId);
+  let myCurrentHand: { categoryLabel: string } | null = null;
+  if (
+    mySeat &&
+    mySeat.in_hand &&
+    !mySeat.folded &&
+    mySeat.hole_cards.length === 2 &&
+    state.community.length >= 3
+  ) {
+    const score = evaluate7([...(mySeat.hole_cards as Card[]), ...state.community]);
+    myCurrentHand = { categoryLabel: categoryLabel(score.category) };
+  }
+
   return {
     serverNow: Date.now(),
     table: {
@@ -754,6 +774,7 @@ export async function getStateView(tableId: string, currentUserId: string): Prom
     currentBet: state.current_bet,
     minRaise: state.current_bet + Math.max(state.last_raise_amount, table.big_blind),
     showdown: state.status === "showdown" ? state.showdown : null,
+    myCurrentHand,
     seats: seats.map((s) => {
       const u = s.user_id ? userInfo[s.user_id] : undefined;
       const showHole = s.user_id === currentUserId || (state.status === "showdown" && s.in_hand && !s.folded);
