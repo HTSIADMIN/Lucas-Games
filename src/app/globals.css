@@ -1788,14 +1788,13 @@ img, svg, canvas {
 [data-theme="royal"]   .panel * { color: #fff7e6 !important; }
 
 /* Re-pin elements that genuinely sit on a bright background
-   inside a dark theme back to ink — buttons (parchment / gold
-   surface), gold/cactus/crimson/sky badges, the .text-money
-   yellow already overrides via its own rule above. */
-[data-theme="sunset"]  .panel .btn:not(.btn-ghost),
-[data-theme="midnight"] .panel .btn:not(.btn-ghost),
-[data-theme="emerald"] .panel .btn:not(.btn-ghost),
-[data-theme="crimson"] .panel .btn:not(.btn-ghost),
-[data-theme="royal"]   .panel .btn:not(.btn-ghost),
+   inside a dark theme back to ink — gold buttons, gold-flavored
+   badges, tag pills. */
+[data-theme="sunset"]  .panel .btn:not(.btn-ghost):not(.btn-wood):not(.btn-danger),
+[data-theme="midnight"] .panel .btn:not(.btn-ghost):not(.btn-wood):not(.btn-danger),
+[data-theme="emerald"] .panel .btn:not(.btn-ghost):not(.btn-wood):not(.btn-danger),
+[data-theme="crimson"] .panel .btn:not(.btn-ghost):not(.btn-wood):not(.btn-danger),
+[data-theme="royal"]   .panel .btn:not(.btn-ghost):not(.btn-wood):not(.btn-danger),
 [data-theme="sunset"]  .panel .badge.badge-gold,
 [data-theme="midnight"] .panel .badge.badge-gold,
 [data-theme="emerald"] .panel .badge.badge-gold,
@@ -1807,6 +1806,27 @@ img, svg, canvas {
 [data-theme="crimson"] .panel .tag-new,
 [data-theme="royal"]   .panel .tag-new {
   color: var(--ink-900) !important;
+}
+
+/* btn-ghost / btn-wood — these use parchment-100 / saddle-200 as
+   their background, both of which are now redefined to dark
+   surfaces on dark themes. The default ink-900 text becomes
+   invisible. Force light parchment text + matching dark drop
+   shadow so the label reads. Applies wherever the button lives,
+   including outside .panel scope (e.g. lobby Sign Out, profile
+   close button, "Switch table" inside the buy-in card). */
+[data-theme="sunset"]  .btn-ghost,
+[data-theme="midnight"] .btn-ghost,
+[data-theme="emerald"] .btn-ghost,
+[data-theme="crimson"] .btn-ghost,
+[data-theme="royal"]   .btn-ghost,
+[data-theme="sunset"]  .btn-wood,
+[data-theme="midnight"] .btn-wood,
+[data-theme="emerald"] .btn-wood,
+[data-theme="crimson"] .btn-wood,
+[data-theme="royal"]   .btn-wood {
+  color: #fef6e4 !important;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.6) !important;
 }
 
 /* Light-on-light readability — frontier and saloon are fine; ice
