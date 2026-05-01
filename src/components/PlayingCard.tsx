@@ -39,17 +39,31 @@ export function PlayingCard({ rank, suit, faceDown, size = "md", palette }: Play
   const paletteKey = palette ?? ctxPalette;
   const colors = DECK_PALETTES[paletteKey] ?? DECK_PALETTES.classic;
 
+  // Resolve optional palette overrides with sensible defaults so
+  // the legacy decks render unchanged.
+  const borderColor = colors.border ?? "var(--ink-900)";
+  const faceFill = colors.face ?? "var(--parchment-50)";
+  const animClass = colors.animated ? `lg-deck-anim-${colors.animated}` : undefined;
+
   if (faceDown || rank === "?" || suit === "?" || !rank || !suit) {
+    // Animated palettes set their own backgroundImage via .lg-deck-
+    // anim-* CSS so the keyframes can drive position/filter; static
+    // overrides use palette.backImage; everything else falls back to
+    // the original 45° stripe.
+    const inlineBackImage = animClass
+      ? undefined
+      : colors.backImage
+      ?? `repeating-linear-gradient(45deg, ${colors.back} 0 6px, var(--ink-900) 6px 12px)`;
     return (
       <div
+        className={animClass}
         style={{
           width: s.w,
           height: s.h,
           background: colors.back,
-          border: "3px solid var(--ink-900)",
+          border: `3px solid ${borderColor}`,
           boxShadow: "var(--sh-card-rest), var(--bevel-light)",
-          backgroundImage:
-            `repeating-linear-gradient(45deg, ${colors.back} 0 6px, var(--ink-900) 6px 12px)`,
+          backgroundImage: inlineBackImage,
           flexShrink: 0,
         }}
       />
@@ -63,8 +77,8 @@ export function PlayingCard({ rank, suit, faceDown, size = "md", palette }: Play
       style={{
         width: s.w,
         height: s.h,
-        background: "var(--parchment-50)",
-        border: "3px solid var(--ink-900)",
+        background: faceFill,
+        border: `3px solid ${borderColor}`,
         boxShadow: "var(--sh-card-rest)",
         position: "relative",
         flexShrink: 0,

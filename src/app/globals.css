@@ -1810,6 +1810,69 @@ img, svg, canvas {
   66%  { fill: #ff5544; } 100% { fill: #8aff5a; }
 }
 
+/* ============================================================
+   ADVANCED CARD-DECK BACK ANIMATIONS
+   Each .lg-deck-anim-<token> class is attached to the face-down
+   card's <div> by PlayingCard.tsx when the active deck palette
+   carries the matching `animated` field.
+   ============================================================ */
+
+/* Neon Wire — pulsing magenta + cyan grid that scrolls diagonally
+   so the lines feel like flowing current. */
+.lg-deck-anim-neon-wire {
+  background-color: #0a0420;
+  background-image:
+    linear-gradient(0deg, transparent 49%, rgba(255,43,214,0.6) 50%, transparent 51%),
+    linear-gradient(90deg, transparent 49%, rgba(95,220,255,0.5) 50%, transparent 51%),
+    linear-gradient(135deg, #1a0a3d, #0a0420);
+  background-size: 14px 14px, 14px 14px, 100% 100%;
+  animation: lg-deck-neon-scroll 3.6s linear infinite, lg-deck-neon-glow 1.8s ease-in-out infinite;
+}
+@keyframes lg-deck-neon-scroll {
+  0%   { background-position: 0 0,        0 0,        0 0; }
+  100% { background-position: 14px 14px,  -14px 14px, 0 0; }
+}
+@keyframes lg-deck-neon-glow {
+  0%, 100% { box-shadow: 0 0 0 rgba(255,43,214,0), var(--sh-card-rest), var(--bevel-light); }
+  50%      { box-shadow: 0 0 16px rgba(255,43,214,0.55), var(--sh-card-rest), var(--bevel-light); }
+}
+
+/* Burning Embers — flickering radial hotspots on a charred slate
+   base. The hotspots breathe (scale + opacity) so the back looks
+   like coals rather than a static gradient. */
+.lg-deck-anim-embers {
+  background-color: #1a0a08;
+  background-image:
+    radial-gradient(circle at 30% 40%, rgba(255, 100, 50, 0.85) 0%, transparent 30%),
+    radial-gradient(circle at 70% 60%, rgba(255, 200, 80, 0.65) 0%, transparent 25%),
+    radial-gradient(circle at 50% 80%, rgba(255, 60, 30, 0.5) 0%, transparent 35%),
+    linear-gradient(180deg, #3a1810, #0a0408);
+  background-size: 100% 100%;
+  animation: lg-deck-embers-flicker 2.2s ease-in-out infinite;
+}
+@keyframes lg-deck-embers-flicker {
+  0%, 100% { filter: brightness(1) saturate(1); box-shadow: 0 0 8px rgba(255, 100, 50, 0.4), var(--sh-card-rest), var(--bevel-light); }
+  35%      { filter: brightness(1.18) saturate(1.15); box-shadow: 0 0 16px rgba(255, 100, 50, 0.7), var(--sh-card-rest), var(--bevel-light); }
+  60%      { filter: brightness(0.92) saturate(0.95); box-shadow: 0 0 6px rgba(255, 100, 50, 0.3), var(--sh-card-rest), var(--bevel-light); }
+}
+
+/* Royal Court — slowly rotating conic-gradient holographic back
+   with a subtle gold glow halo. The peak deck. */
+.lg-deck-anim-royal-court {
+  background-color: #3d1a5e;
+  background-image:
+    conic-gradient(from 0deg at 50% 50%, #ffd84d 0deg, #c83a8a 90deg, #5a3a78 180deg, #3d1a5e 270deg, #ffd84d 360deg);
+  animation: lg-deck-royal-spin 6s linear infinite, lg-deck-royal-halo 2.4s ease-in-out infinite;
+}
+@keyframes lg-deck-royal-spin {
+  0%   { background-position: 0% 0%; filter: hue-rotate(0deg); }
+  100% { background-position: 0% 0%; filter: hue-rotate(360deg); }
+}
+@keyframes lg-deck-royal-halo {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 216, 77, 0.45), var(--sh-card-rest), var(--bevel-light); }
+  50%      { box-shadow: 0 0 22px rgba(255, 216, 77, 0.85), var(--sh-card-rest), var(--bevel-light); }
+}
+
 /* Rarity-mythic chip: animated rainbow background for rarity badges
    in the Showcase + Pack cards. */
 .rarity-mythic {

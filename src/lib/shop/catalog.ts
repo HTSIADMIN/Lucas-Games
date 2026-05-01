@@ -91,6 +91,13 @@ export const CATALOG: CosmeticItem[] = [
   { id: "deck_saloon",    kind: "card_deck", name: "Saloon Deck",  description: "Red and gold.",                  price: 200_000, meta: { palette: "saloon" } },
   { id: "deck_wanted",    kind: "card_deck", name: "Wanted Deck",  description: "Aged sepia.",                    price: 350_000, meta: { palette: "wanted" } },
   { id: "deck_sheriff",   kind: "card_deck", name: "Sheriff's Deck", description: "Blue and silver.",             price: 750_000, meta: { palette: "sheriff" } },
+  // Advanced legendary decks — palette-driven face + back overrides.
+  { id: "deck_frostbite", kind: "card_deck", name: "Frostbite Deck", description: "Iced face, crystalline back, glacier-blue suits.", price: 1_500_000, meta: { palette: "frostbite" } },
+  { id: "deck_bone",      kind: "card_deck", name: "Bone Cards",     description: "Bleached parchment with sun-ray relic back.",      price: 1_750_000, meta: { palette: "bone" } },
+  // Mythic decks — animated backs, only the rarest packs roll them.
+  { id: "deck_neonwire",  kind: "card_deck", name: "Neon Wire Deck", description: "Electric grid-back. Pulses with current.",         price: 2_500_000, meta: { palette: "neonwire", animated: "neon-wire" } },
+  { id: "deck_embers",    kind: "card_deck", name: "Burning Embers", description: "Smouldering back with flickering ember glow.",     price: 3_500_000, meta: { palette: "embers", animated: "embers" } },
+  { id: "deck_royalcourt",kind: "card_deck", name: "Royal Court",    description: "Holographic conic gradient — purple, gold, magenta. The crown jewel.", price: 6_000_000, meta: { palette: "royalcourt", animated: "royal-court" } },
 
   // ============ THEMES ============
   { id: "theme_saloon",   kind: "theme", name: "Saloon (Default)", description: "Warm parchment and lantern gold.", price:        0, meta: { theme: "saloon", default: true } },
@@ -200,8 +207,28 @@ export function findItem(id: string): CosmeticItem | undefined {
   return CATALOG.find((c) => c.id === id);
 }
 
-// Card-deck palette → suit colors.
-export const DECK_PALETTES: Record<string, { spades: string; hearts: string; diamonds: string; clubs: string; back: string }> = {
+// Card-deck palette → suit colors + optional face/back styling. The
+// older decks only set the four suit colors and a back fill; the
+// new advanced decks can additionally override:
+//   face          — face-card background (defaults to parchment)
+//   border        — card border colour (defaults to ink-900)
+//   backImage     — CSS background-image for the face-down back
+//                   (overrides the default 45° stripe)
+//   animated      — CSS animation token; the renderer attaches the
+//                   matching .lg-deck-anim-<token> class to the back
+export type DeckPalette = {
+  spades: string;
+  hearts: string;
+  diamonds: string;
+  clubs: string;
+  back: string;
+  face?: string;
+  border?: string;
+  backImage?: string;
+  animated?: string;
+};
+
+export const DECK_PALETTES: Record<string, DeckPalette> = {
   classic: {
     spades:   "var(--ink-900)",
     hearts:   "var(--crimson-500)",
@@ -236,5 +263,88 @@ export const DECK_PALETTES: Record<string, { spades: string; hearts: string; dia
     diamonds: "#5fa8d3",
     clubs:    "#c9c9c9",
     back:     "#143348",
+  },
+
+  // ============ ADVANCED / RARE ============
+  // Frostbite — icy blues, frosted face; the back is an angular
+  // crystal pattern in cyan.
+  frostbite: {
+    spades:   "#0d3a5a",
+    hearts:   "#2c7da0",
+    diamonds: "#5fb8d3",
+    clubs:    "#8ed6e0",
+    back:     "#0d3a5a",
+    face:     "#e6f4f8",
+    border:   "#0d3a5a",
+    backImage:
+      "linear-gradient(135deg, transparent 46%, rgba(255,255,255,0.55) 46% 54%, transparent 54%)," +
+      "linear-gradient(45deg, transparent 46%, rgba(255,255,255,0.55) 46% 54%, transparent 54%)," +
+      "linear-gradient(180deg, #1a4d72 0%, #0d3a5a 100%)",
+  },
+
+  // Bone — bleached white face with black ink suits and a skull-
+  // motif back built from CSS conic-gradient sun-rays.
+  bone: {
+    spades:   "#0a0408",
+    hearts:   "#7a0a0a",
+    diamonds: "#3a2810",
+    clubs:    "#0a0408",
+    back:     "#1a0f08",
+    face:     "#f4ecdc",
+    border:   "#1a0f08",
+    backImage:
+      "radial-gradient(circle at 50% 30%, #d4c8a8 0 18%, transparent 19%)," +
+      "conic-gradient(from 0deg at 50% 50%, #d4c8a8 0deg, transparent 8deg, transparent 22deg, #d4c8a8 22deg 30deg, transparent 30deg)," +
+      "linear-gradient(180deg, #2a1810, #0a0408)",
+  },
+
+  // Neon Wire — electric magenta + cyan suits with a glowing,
+  // animated grid back. Mythic.
+  neonwire: {
+    spades:   "#ff2bd6",
+    hearts:   "#ff66e8",
+    diamonds: "#5fdcff",
+    clubs:    "#2bffac",
+    back:     "#0a0420",
+    face:     "#0a0420",
+    border:   "#ff2bd6",
+    backImage:
+      "linear-gradient(0deg, transparent 49%, rgba(255,43,214,0.6) 50%, transparent 51%)," +
+      "linear-gradient(90deg, transparent 49%, rgba(95,220,255,0.5) 50%, transparent 51%)," +
+      "linear-gradient(135deg, #1a0a3d, #0a0420)",
+    animated: "neon-wire",
+  },
+
+  // Burning Embers — dark slate face with crimson suits and an
+  // animated glowing ember-flicker back. Mythic.
+  embers: {
+    spades:   "#1a0a08",
+    hearts:   "#ff4d2b",
+    diamonds: "#ffb84d",
+    clubs:    "#7a1a0a",
+    back:     "#1a0a08",
+    face:     "#2a1810",
+    border:   "#7a1a0a",
+    backImage:
+      "radial-gradient(circle at 30% 40%, rgba(255, 100, 50, 0.85) 0%, transparent 30%)," +
+      "radial-gradient(circle at 70% 60%, rgba(255, 200, 80, 0.65) 0%, transparent 25%)," +
+      "radial-gradient(circle at 50% 80%, rgba(255, 60, 30, 0.5) 0%, transparent 35%)," +
+      "linear-gradient(180deg, #3a1810, #0a0408)",
+    animated: "embers",
+  },
+
+  // Royal Court — deep purple + gold with a holographic shifting
+  // back. The peak mythic deck.
+  royalcourt: {
+    spades:   "#3d1a5e",
+    hearts:   "#c83a8a",
+    diamonds: "#ffd84d",
+    clubs:    "#5a3a78",
+    back:     "#3d1a5e",
+    face:     "#fff7e6",
+    border:   "#7a5510",
+    backImage:
+      "conic-gradient(from 0deg at 50% 50%, #ffd84d 0deg, #c83a8a 90deg, #5a3a78 180deg, #3d1a5e 270deg, #ffd84d 360deg)",
+    animated: "royal-court",
   },
 };
