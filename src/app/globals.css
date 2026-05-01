@@ -1676,6 +1676,144 @@ img, svg, canvas {
 [data-theme="highnoon"] .tile-art { background: #ffe9a8; border-color: #1a0f08; }
 [data-theme="highnoon"] .tile-name { color: #1a0f08; }
 
+/* ============================================================
+   DEEP THEME COVERAGE
+   The dark themes have lots of components that still hardcode
+   `background: var(--parchment-100/200/50)` + `color: var(--ink-900)`
+   inline (profile modal stats, clan members panel, shop showcase
+   tiles, etc.). The cleanest way to recolor those without rewriting
+   every inline style is to redefine the parchment + saddle vars
+   themselves on dark themes — every inline reference inherits the
+   themed colour automatically. Where dark-text-on-now-dark-bg
+   would fall apart, we add targeted `!important` rules that flip
+   the foreground.
+   ============================================================ */
+
+/* SUNSET — burgundy dark */
+[data-theme="sunset"] {
+  --parchment-50:  #4a1a1a;
+  --parchment-100: #5a1a1a;
+  --parchment-200: #6b2a2a;
+  --saddle-200:    #3a1010;
+  --saddle-300:    #8b3a3a;
+}
+[data-theme="sunset"] .panel,
+[data-theme="sunset"] .panel * {
+  color: #fef6e4;
+}
+[data-theme="sunset"] .text-money { color: #ffd84d !important; text-shadow: 1px 1px 0 #000 !important; }
+[data-theme="sunset"] .badge:not(.badge-gold):not(.badge-crimson):not(.badge-cactus):not(.badge-sky) {
+  color: #fef6e4;
+}
+
+/* MIDNIGHT — ink wood */
+[data-theme="midnight"] {
+  --parchment-50:  #1a0f08;
+  --parchment-100: #2a1810;
+  --parchment-200: #3d2418;
+  --saddle-200:    #1a0f08;
+  --saddle-300:    #4a2818;
+}
+[data-theme="midnight"] .panel,
+[data-theme="midnight"] .panel * {
+  color: #fef6e4;
+}
+[data-theme="midnight"] .text-money { color: #ffd84d !important; text-shadow: 1px 1px 0 #000 !important; }
+[data-theme="midnight"] .badge:not(.badge-gold):not(.badge-crimson):not(.badge-cactus):not(.badge-sky) {
+  color: #fef6e4;
+}
+
+/* EMERALD — forest dark */
+[data-theme="emerald"] {
+  --parchment-50:  #061a0e;
+  --parchment-100: #1a4d2e;
+  --parchment-200: #2a5a3e;
+  --saddle-200:    #0f2e1a;
+  --saddle-300:    #5a8a3e;
+}
+[data-theme="emerald"] .panel,
+[data-theme="emerald"] .panel * {
+  color: #f4ecdc;
+}
+[data-theme="emerald"] .text-money { color: #ffd84d !important; text-shadow: 1px 1px 0 #000 !important; }
+[data-theme="emerald"] .badge:not(.badge-gold):not(.badge-crimson):not(.badge-cactus):not(.badge-sky) {
+  color: #f4ecdc;
+}
+
+/* CRIMSON — blood-red dark */
+[data-theme="crimson"] {
+  --parchment-50:  #1a0408;
+  --parchment-100: #4a0a0a;
+  --parchment-200: #5a1a1a;
+  --saddle-200:    #0a0408;
+  --saddle-300:    #8b1a1a;
+}
+[data-theme="crimson"] .panel,
+[data-theme="crimson"] .panel * {
+  color: #fef6e4;
+}
+[data-theme="crimson"] .text-money { color: #ffd84d !important; text-shadow: 1px 1px 0 #000 !important; }
+[data-theme="crimson"] .badge:not(.badge-gold):not(.badge-crimson):not(.badge-cactus):not(.badge-sky) {
+  color: #fef6e4;
+}
+
+/* ROYAL VELVET — purple dark */
+[data-theme="royal"] {
+  --parchment-50:  #0a0418;
+  --parchment-100: #2a1545;
+  --parchment-200: #3a1f5e;
+  --saddle-200:    #1a0f2e;
+  --saddle-300:    #5a3a78;
+}
+[data-theme="royal"] .panel,
+[data-theme="royal"] .panel * {
+  color: #fff7e6;
+}
+[data-theme="royal"] .text-money { color: #ffd84d !important; text-shadow: 1px 1px 0 #000 !important; }
+[data-theme="royal"] .badge:not(.badge-gold):not(.badge-crimson):not(.badge-cactus):not(.badge-sky) {
+  color: #fff7e6;
+}
+
+/* Dark themes — broad foreground flip with !important so the
+   inline `color: var(--ink-900)` styles scattered through profile
+   stats, clan chests / leaderboard, shop showcase, etc. all flip
+   to a readable parchment instead of staying invisible black on
+   the dark themed background. The narrower `.btn` / `.badge-gold`
+   exceptions below pin those specific elements back to ink so
+   buttons + gold chips keep their dark-on-bright contrast. */
+[data-theme="sunset"]  .panel * { color: #fef6e4 !important; }
+[data-theme="midnight"] .panel * { color: #fef6e4 !important; }
+[data-theme="emerald"] .panel * { color: #f4ecdc !important; }
+[data-theme="crimson"] .panel * { color: #fef6e4 !important; }
+[data-theme="royal"]   .panel * { color: #fff7e6 !important; }
+
+/* Re-pin elements that genuinely sit on a bright background
+   inside a dark theme back to ink — buttons (parchment / gold
+   surface), gold/cactus/crimson/sky badges, the .text-money
+   yellow already overrides via its own rule above. */
+[data-theme="sunset"]  .panel .btn:not(.btn-ghost),
+[data-theme="midnight"] .panel .btn:not(.btn-ghost),
+[data-theme="emerald"] .panel .btn:not(.btn-ghost),
+[data-theme="crimson"] .panel .btn:not(.btn-ghost),
+[data-theme="royal"]   .panel .btn:not(.btn-ghost),
+[data-theme="sunset"]  .panel .badge.badge-gold,
+[data-theme="midnight"] .panel .badge.badge-gold,
+[data-theme="emerald"] .panel .badge.badge-gold,
+[data-theme="crimson"] .panel .badge.badge-gold,
+[data-theme="royal"]   .panel .badge.badge-gold,
+[data-theme="sunset"]  .panel .tag-new,
+[data-theme="midnight"] .panel .tag-new,
+[data-theme="emerald"] .panel .tag-new,
+[data-theme="crimson"] .panel .tag-new,
+[data-theme="royal"]   .panel .tag-new {
+  color: var(--ink-900) !important;
+}
+
+/* Light-on-light readability — frontier and saloon are fine; ice
+   + highnoon need their own dim-text overrides on cards that the
+   default theme already styles correctly. (No-ops for now;
+   adding here as a hook in case the tokens drift.) */
+
 /* Lobby-tile live-presence dot: tiny pulsing green light next to
    the active-player count chip. */
 @keyframes tile-presence-pulse {
