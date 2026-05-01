@@ -277,6 +277,11 @@
 [data-theme="midnight"] .leaderboard-row .rank { color: #a87545; }
 
 /* Theme-tinted body backgrounds — overrides default radials. */
+[data-theme="frontier"] body {
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(212, 165, 116, 0.18) 0, transparent 45%),
+    radial-gradient(circle at 80% 75%, rgba(168, 117, 69, 0.14) 0, transparent 45%);
+}
 [data-theme="sunset"] body {
   background-image:
     radial-gradient(circle at 12% 18%, rgba(232, 122, 58, 0.22) 0, transparent 40%),
@@ -286,6 +291,204 @@
   background-image:
     radial-gradient(circle at 12% 18%, rgba(95, 168, 211, 0.10) 0, transparent 40%),
     radial-gradient(circle at 88% 72%, rgba(245, 200, 66, 0.08) 0, transparent 40%);
+}
+
+/* ============================================================
+   EMERALD VAULT — deep forest green felt + brass trim. Reads
+   like a private high-stakes table.
+   ============================================================ */
+[data-theme="emerald"] {
+  --bg:           #0f2e1a;
+  --bg-deep:      #061a0e;
+  --bg-lift:      #1a4d2e;
+  --surface:      #1a4d2e;
+  --surface-edge: #5a8a3e;
+  --fg:           #f4ecdc;
+  --fg-muted:     #a0c890;
+  --fg-dim:       #6ba84f;
+  --fg-on-wood:   #f4ecdc;
+  --stroke:       #061a0e;
+  --stroke-soft:  #2a5a3e;
+}
+[data-theme="emerald"] .panel { background: #1a4d2e; color: #f4ecdc; }
+[data-theme="emerald"] .panel-title { color: #ffd84d; border-bottom-color: #2a5a3e; }
+[data-theme="emerald"] .text-mute { color: #a0c890; }
+[data-theme="emerald"] .label { color: #ffd84d; }
+[data-theme="emerald"] .divider { color: #ffd84d; }
+[data-theme="emerald"] .divider::before,
+[data-theme="emerald"] .divider::after { border-top-color: #2a5a3e; }
+[data-theme="emerald"] .balance-bar { background: #061a0e; }
+[data-theme="emerald"] .input,
+[data-theme="emerald"] input[type="text"],
+[data-theme="emerald"] input[type="number"],
+[data-theme="emerald"] input[type="password"],
+[data-theme="emerald"] textarea {
+  background: #061a0e; color: #f4ecdc; border-color: #061a0e;
+}
+[data-theme="emerald"] .leaderboard { background: #1a4d2e; }
+[data-theme="emerald"] .leaderboard-row { border-bottom-color: #2a5a3e; }
+[data-theme="emerald"] .leaderboard-row .player { color: #f4ecdc; }
+[data-theme="emerald"] .leaderboard-row .game { color: #a0c890; }
+[data-theme="emerald"] .leaderboard-row .rank { color: #ffd84d; }
+[data-theme="emerald"] body {
+  background-image:
+    radial-gradient(circle at 14% 20%, rgba(107, 168, 79, 0.18) 0, transparent 45%),
+    radial-gradient(circle at 86% 78%, rgba(245, 200, 66, 0.12) 0, transparent 45%);
+}
+
+/* ============================================================
+   ROYAL VELVET — deep purple + cream highlights. Regal parlour.
+   ============================================================ */
+[data-theme="royal"] {
+  --bg:           #1a0f2e;
+  --bg-deep:      #0a0418;
+  --bg-lift:      #3a1f5e;
+  --surface:      #2a1545;
+  --surface-edge: #7a5510;
+  --fg:           #fff7e6;
+  --fg-muted:     #d4b8e8;
+  --fg-dim:       #a888c0;
+  --fg-on-wood:   #fff7e6;
+  --stroke:       #0a0418;
+  --stroke-soft:  #3a1f5e;
+}
+[data-theme="royal"] .panel { background: #2a1545; color: #fff7e6; }
+[data-theme="royal"] .panel-title { color: #ffd84d; border-bottom-color: #5a3a78; }
+[data-theme="royal"] .text-mute { color: #d4b8e8; }
+[data-theme="royal"] .label { color: #ffd84d; }
+[data-theme="royal"] .divider { color: #ffd84d; }
+[data-theme="royal"] .divider::before,
+[data-theme="royal"] .divider::after { border-top-color: #5a3a78; }
+[data-theme="royal"] .balance-bar { background: #1a0f2e; }
+[data-theme="royal"] .input,
+[data-theme="royal"] input[type="text"],
+[data-theme="royal"] input[type="number"],
+[data-theme="royal"] input[type="password"],
+[data-theme="royal"] textarea {
+  background: #1a0f2e; color: #fff7e6; border-color: #0a0418;
+}
+[data-theme="royal"] .leaderboard { background: #2a1545; }
+[data-theme="royal"] .leaderboard-row { border-bottom-color: #5a3a78; }
+[data-theme="royal"] .leaderboard-row .player { color: #fff7e6; }
+[data-theme="royal"] .leaderboard-row .game { color: #d4b8e8; }
+[data-theme="royal"] .leaderboard-row .rank { color: #ffd84d; }
+[data-theme="royal"] body {
+  background-image:
+    radial-gradient(circle at 14% 18%, rgba(200, 58, 138, 0.22) 0, transparent 45%),
+    radial-gradient(circle at 86% 72%, rgba(245, 200, 66, 0.14) 0, transparent 45%);
+}
+
+/* ============================================================
+   CRIMSON DEN — smoky speakeasy. Black walls, blood-red panels.
+   ============================================================ */
+[data-theme="crimson"] {
+  --bg:           #0a0408;
+  --bg-deep:      #1a0a08;
+  --bg-lift:      #5a0a0a;
+  --surface:      #4a0a0a;
+  --surface-edge: #8b1a1a;
+  --fg:           #fef6e4;
+  --fg-muted:     #ffb888;
+  --fg-dim:       #c83838;
+  --fg-on-wood:   #fef6e4;
+  --stroke:       #0a0408;
+  --stroke-soft:  #2a0a08;
+}
+[data-theme="crimson"] .panel { background: #4a0a0a; color: #fef6e4; }
+[data-theme="crimson"] .panel-title { color: #ffd4a0; border-bottom-color: #8b1a1a; }
+[data-theme="crimson"] .text-mute { color: #ffb888; }
+[data-theme="crimson"] .label { color: #ff8868; }
+[data-theme="crimson"] .divider { color: #ffd4a0; }
+[data-theme="crimson"] .divider::before,
+[data-theme="crimson"] .divider::after { border-top-color: #8b1a1a; }
+[data-theme="crimson"] .balance-bar { background: #1a0408; }
+[data-theme="crimson"] .input,
+[data-theme="crimson"] input[type="text"],
+[data-theme="crimson"] input[type="number"],
+[data-theme="crimson"] input[type="password"],
+[data-theme="crimson"] textarea {
+  background: #1a0408; color: #fef6e4; border-color: #0a0408;
+}
+[data-theme="crimson"] .leaderboard { background: #4a0a0a; }
+[data-theme="crimson"] .leaderboard-row { border-bottom-color: #8b1a1a; }
+[data-theme="crimson"] .leaderboard-row .player { color: #fef6e4; }
+[data-theme="crimson"] .leaderboard-row .game { color: #ffb888; }
+[data-theme="crimson"] .leaderboard-row .rank { color: #c83838; }
+[data-theme="crimson"] body {
+  background-image:
+    radial-gradient(circle at 16% 22%, rgba(200, 56, 56, 0.20) 0, transparent 45%),
+    radial-gradient(circle at 84% 76%, rgba(232, 122, 58, 0.14) 0, transparent 45%);
+}
+
+/* ============================================================
+   ICE SALOON — pale blue + silver. The frontier in winter.
+   ============================================================ */
+[data-theme="ice"] {
+  --bg:           #d8e8f0;
+  --bg-deep:      #b8d4e0;
+  --bg-lift:      #e8f4f8;
+  --surface:      #e8f4f8;
+  --surface-edge: #5fa8d3;
+  --fg:           #0d3a5a;
+  --fg-muted:     #2c6a8e;
+  --fg-dim:       #5a8aaa;
+  --fg-on-wood:   #0d3a5a;
+  --stroke:       #0d3a5a;
+  --stroke-soft:  #5fa8d3;
+}
+[data-theme="ice"] .panel { background: #e8f4f8; color: #0d3a5a; }
+[data-theme="ice"] .panel-title { color: #0d3a5a; border-bottom-color: #b8d4e0; }
+[data-theme="ice"] .text-mute { color: #2c6a8e; }
+[data-theme="ice"] .label { color: #0d3a5a; }
+[data-theme="ice"] .divider { color: #2c6a8e; }
+[data-theme="ice"] .divider::before,
+[data-theme="ice"] .divider::after { border-top-color: #b8d4e0; }
+[data-theme="ice"] .balance-bar { background: #2c6a8e; }
+[data-theme="ice"] .leaderboard { background: #e8f4f8; }
+[data-theme="ice"] .leaderboard-row { border-bottom-color: #b8d4e0; }
+[data-theme="ice"] .leaderboard-row .player { color: #0d3a5a; }
+[data-theme="ice"] .leaderboard-row .game { color: #2c6a8e; }
+[data-theme="ice"] .leaderboard-row .rank { color: #5a8aaa; }
+[data-theme="ice"] body {
+  background-image:
+    radial-gradient(circle at 18% 24%, rgba(95, 168, 211, 0.30) 0, transparent 45%),
+    radial-gradient(circle at 82% 78%, rgba(255, 255, 255, 0.40) 0, transparent 45%);
+}
+
+/* ============================================================
+   HIGH NOON — bone-bright bg, hot yellow accents, ink black ink.
+   The "sun-scorched dirt road" theme.
+   ============================================================ */
+[data-theme="highnoon"] {
+  --bg:           #fef9e0;
+  --bg-deep:      #ffe9a8;
+  --bg-lift:      #fff7d0;
+  --surface:      #fff7d0;
+  --surface-edge: #c8941d;
+  --fg:           #1a0f08;
+  --fg-muted:     #6b3f24;
+  --fg-dim:       #a87545;
+  --fg-on-wood:   #1a0f08;
+  --stroke:       #1a0f08;
+  --stroke-soft:  #c8941d;
+}
+[data-theme="highnoon"] .panel { background: #fff7d0; color: #1a0f08; }
+[data-theme="highnoon"] .panel-title { color: #1a0f08; border-bottom-color: #c8941d; }
+[data-theme="highnoon"] .text-mute { color: #6b3f24; }
+[data-theme="highnoon"] .label { color: #6b3f24; }
+[data-theme="highnoon"] .divider { color: #6b3f24; }
+[data-theme="highnoon"] .divider::before,
+[data-theme="highnoon"] .divider::after { border-top-color: #c8941d; }
+[data-theme="highnoon"] .balance-bar { background: #1a0f08; }
+[data-theme="highnoon"] .leaderboard { background: #fff7d0; }
+[data-theme="highnoon"] .leaderboard-row { border-bottom-color: #c8941d; }
+[data-theme="highnoon"] .leaderboard-row .player { color: #1a0f08; }
+[data-theme="highnoon"] .leaderboard-row .game { color: #6b3f24; }
+[data-theme="highnoon"] .leaderboard-row .rank { color: #c8941d; }
+[data-theme="highnoon"] body {
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(255, 216, 77, 0.45) 0, transparent 50%),
+    radial-gradient(circle at 50% 100%, rgba(168, 117, 69, 0.22) 0, transparent 60%);
 }
 
 /* Bridge tokens into Tailwind v4 */

@@ -100,10 +100,16 @@ export const CATALOG: CosmeticItem[] = [
   { id: "deck_royalcourt",kind: "card_deck", name: "Royal Court",    description: "Holographic conic gradient — purple, gold, magenta. The crown jewel.", price: 6_000_000, meta: { palette: "royalcourt", animated: "royal-court" } },
 
   // ============ THEMES ============
-  { id: "theme_saloon",   kind: "theme", name: "Saloon (Default)", description: "Warm parchment and lantern gold.", price:        0, meta: { theme: "saloon", default: true } },
-  { id: "theme_frontier", kind: "theme", name: "Frontier",         description: "High contrast. Faded sun.",        price:  250_000, meta: { theme: "frontier" } },
-  { id: "theme_sunset",   kind: "theme", name: "Sunset Saloon",    description: "Burnt sienna and dusk.",           price:  350_000, meta: { theme: "sunset" } },
-  { id: "theme_midnight", kind: "theme", name: "Midnight Tavern",  description: "Lights low, lanterns lit.",       price:  600_000, meta: { theme: "midnight" } },
+  { id: "theme_saloon",   kind: "theme", name: "Saloon (Default)", description: "Warm parchment and lantern gold.",       price:        0, meta: { theme: "saloon", default: true } },
+  { id: "theme_frontier", kind: "theme", name: "Frontier",         description: "Dusty tan and warm shade.",              price:  250_000, meta: { theme: "frontier" } },
+  { id: "theme_sunset",   kind: "theme", name: "Sunset Saloon",    description: "Burnt sienna fading into purple dusk.",  price:  350_000, meta: { theme: "sunset" } },
+  { id: "theme_midnight", kind: "theme", name: "Midnight Tavern",  description: "Lights low, lanterns lit.",              price:  600_000, meta: { theme: "midnight" } },
+  // Five new themes — wider palette range, full dark + light coverage.
+  { id: "theme_emerald",  kind: "theme", name: "Emerald Vault",    description: "Forest-green felt with brass trim.",       price:  450_000, meta: { theme: "emerald" } },
+  { id: "theme_crimson",  kind: "theme", name: "Crimson Den",      description: "Smoky speakeasy. Black walls, blood panels.", price:  500_000, meta: { theme: "crimson" } },
+  { id: "theme_royal",    kind: "theme", name: "Royal Velvet",     description: "Deep purple parlour with cream + gold.",   price:  900_000, meta: { theme: "royal" } },
+  { id: "theme_ice",      kind: "theme", name: "Ice Saloon",       description: "Pale blue and silver. Frozen frontier.",   price: 1_200_000, meta: { theme: "ice" } },
+  { id: "theme_highnoon", kind: "theme", name: "High Noon",        description: "Sun-bleached bone with deep ink contrast.",price: 1_500_000, meta: { theme: "highnoon" } },
 
   // ============ MYTHIC — animated, only available from the highest pack ============
   // The renderer detects meta.animated tokens and applies CSS keyframes.

@@ -35,6 +35,11 @@ const THEME_SWATCHES: Record<string, string[]> = {
   frontier:  ["#f4ecdc", "#d4a574", "#c93a2c", "#8a8077"],
   sunset:    ["#5a1a1a", "#e87a3a", "#f5c842", "#5a3a78"],
   midnight:  ["#1a0f08", "#3d2418", "#f5c842", "#5fa8d3"],
+  emerald:   ["#0f2e1a", "#1a4d2e", "#6ba84f", "#ffd84d"],
+  crimson:   ["#0a0408", "#4a0a0a", "#c83838", "#ffb888"],
+  royal:     ["#1a0f2e", "#2a1545", "#c83a8a", "#ffd84d"],
+  ice:       ["#d8e8f0", "#5fa8d3", "#0d3a5a", "#ffffff"],
+  highnoon:  ["#fef9e0", "#ffd84d", "#c8941d", "#1a0f08"],
 };
 
 export function ShopClient({
