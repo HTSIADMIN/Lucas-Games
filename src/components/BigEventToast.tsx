@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLive } from "@/components/social/LiveProvider";
+import { useBigBetToastMuted } from "@/lib/preferences";
 
 // Bottom-left toast that pops up whenever someone takes a swing
 // big enough to count as a "big swing relative to wealth"
@@ -27,10 +28,23 @@ type Toast = {
 
 export function BigEventToast() {
   const { bets } = useLive();
+  const [muted] = useBigBetToastMuted();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const seenRef = useRef<Set<string>>(new Set());
 
+  // When muted, drain any active toasts so the player doesn't have
+  // to wait for the existing batch to fade before the screen clears.
   useEffect(() => {
+    if (muted) setToasts([]);
+  }, [muted]);
+
+  useEffect(() => {
+    if (muted) {
+      // Still mark as seen so when un-muting we don't replay
+      // backlogged events from while the toast was off.
+      for (const b of bets) seenRef.current.add(b.id);
+      return;
+    }
     const fresh: Toast[] = [];
     for (const b of bets) {
       if (seenRef.current.has(b.id)) continue;
@@ -62,7 +76,7 @@ export function BigEventToast() {
         setToasts((prev) => prev.filter((x) => x.id !== t.id));
       }, TOAST_LIFE_MS);
     });
-  }, [bets]);
+  }, [bets, muted]);
 
   // Trim the seen-set every minute so it can't grow without bound.
   useEffect(() => {

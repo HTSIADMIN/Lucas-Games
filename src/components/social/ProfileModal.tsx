@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/Avatar";
+import { useBigBetToastMuted } from "@/lib/preferences";
 
 type ProfileData = {
   user: {
@@ -225,9 +226,55 @@ export function ProfileModal({
                 </table>
               </>
             )}
+            {userId === "me" && <SettingsPanel />}
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Settings panel — only rendered on the player's own profile.
+// Holds client-side preferences that don't need a DB column.
+// ============================================================
+function SettingsPanel() {
+  const [muted, setMuted] = useBigBetToastMuted();
+  return (
+    <div
+      className="panel"
+      style={{
+        background: "var(--parchment-200)",
+        padding: "var(--sp-3)",
+        marginTop: "var(--sp-5)",
+      }}
+    >
+      <div className="label" style={{ marginBottom: "var(--sp-2)" }}>Settings</div>
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "var(--sp-3)",
+          fontFamily: "var(--font-display)",
+          fontSize: 13,
+          padding: "6px 0",
+          cursor: "pointer",
+        }}
+      >
+        <span>
+          <span style={{ display: "block" }}>Mute big-bet popups</span>
+          <span className="text-mute" style={{ fontSize: 11, fontFamily: "var(--font-body)" }}>
+            Hide the bottom-left win/loss toasts when other players land big swings.
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          checked={muted}
+          onChange={(e) => setMuted(e.target.checked)}
+          style={{ width: 22, height: 22, cursor: "pointer" }}
+        />
+      </label>
     </div>
   );
 }
