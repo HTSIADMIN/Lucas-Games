@@ -24,12 +24,21 @@ type LastWeek = {
   reward: number;
 } | null;
 
-const SCORE_LABEL: Record<"flappy" | "crossy_road", string> = {
+type ArcadeGame = "flappy" | "crossy_road" | "snake";
+
+const SCORE_LABEL: Record<ArcadeGame, string> = {
   flappy: "pipes",
   crossy_road: "rows",
+  snake: "fruit",
 };
 
-export function WeeklyArcadeLeaderboard({ game }: { game: "flappy" | "crossy_road" }) {
+const WEEKLY_PATH: Record<ArcadeGame, string> = {
+  flappy: "/api/games/flappy/weekly",
+  crossy_road: "/api/games/crossy/weekly",
+  snake: "/api/games/snake/weekly",
+};
+
+export function WeeklyArcadeLeaderboard({ game }: { game: ArcadeGame }) {
   const [rows, setRows] = useState<LBRow[] | null>(null);
   const [lastWeek, setLastWeek] = useState<LastWeek>(null);
   const [weekEnd, setWeekEnd] = useState<string | null>(null);
@@ -40,9 +49,7 @@ export function WeeklyArcadeLeaderboard({ game }: { game: "flappy" | "crossy_roa
     let cancelled = false;
     async function load() {
       try {
-        const path = game === "flappy"
-          ? "/api/games/flappy/weekly"
-          : "/api/games/crossy/weekly";
+        const path = WEEKLY_PATH[game];
         const r = await fetch(path);
         if (!r.ok) return;
         const d = await r.json() as {

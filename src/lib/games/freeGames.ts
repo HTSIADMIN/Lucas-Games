@@ -13,7 +13,7 @@
 
 import type { GameIconName } from "@/components/GameIcon";
 
-export type FreeGameSlug = "daily-spin" | "monopoly" | "crossy-road" | "flappy";
+export type FreeGameSlug = "daily-spin" | "monopoly" | "crossy-road" | "flappy" | "snake";
 
 export type FreeGame = {
   slug: FreeGameSlug;
@@ -29,6 +29,7 @@ export const FREE_GAMES: readonly FreeGame[] = [
   { slug: "monopoly",    name: "Frontier Monopoly", tag: "EVERY HOUR", icon: "lobby.monopoly",    hasTimer: true  },
   { slug: "crossy-road", name: "Crossy Road",       tag: "FREE",       icon: "lobby.crossy_road", hasTimer: false },
   { slug: "flappy",      name: "Flappy",            tag: "FREE",       icon: "lobby.flappy",      hasTimer: false },
+  { slug: "snake",       name: "Snake",             tag: "FREE",       icon: "lobby.snake",       hasTimer: false },
 ] as const;
 
 export const FREE_GAME_SLUGS: ReadonlySet<string> = new Set(FREE_GAMES.map((g) => g.slug));

@@ -1,6 +1,7 @@
-// Server-side helpers for arcade (Flappy + Crossy Road) personal
-// bests and weekly leaderboards. All callers must be inside route
-// handlers — we touch the service-role Supabase client directly.
+// Server-side helpers for arcade (Flappy + Crossy Road + Snake)
+// personal bests and weekly leaderboards. All callers must be
+// inside route handlers — we touch the service-role Supabase
+// client directly.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { credit } from "@/lib/wallet";
@@ -19,7 +20,21 @@ export function arcadeEnabled(): boolean {
   return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-export type ArcadeGame = "flappy" | "crossy_road";
+export type ArcadeGame = "flappy" | "crossy_road" | "snake";
+
+/** Maps each arcade game to its corresponding `users` column for
+ *  personal-best storage and to the JSON path on game_sessions
+ *  state where the score lives. */
+const ARCADE_BEST_COLUMN: Record<ArcadeGame, string> = {
+  flappy: "flappy_best",
+  crossy_road: "crossy_best",
+  snake: "snake_best",
+};
+const ARCADE_STATE_FIELD: Record<ArcadeGame, string> = {
+  flappy: "score",
+  crossy_road: "rows",
+  snake: "score",
+};
 
 /** Top-1 weekly reward (10M coins). */
 export const WEEKLY_TOP_REWARD = 10_000_000;
@@ -47,10 +62,10 @@ export function weekKey(d = new Date()): string {
 /** Read a single user's personal best for a game. */
 export async function getPersonalBest(userId: string, game: ArcadeGame): Promise<number> {
   if (!arcadeEnabled()) return 0;
-  const col = game === "flappy" ? "flappy_best" : "crossy_best";
+  const col = ARCADE_BEST_COLUMN[game];
   const { data } = await client().from("users").select(col).eq("id", userId).maybeSingle();
   if (!data) return 0;
-  return Number((data as Record<string, number>)[col] ?? 0);
+  return Number((data as unknown as Record<string, number>)[col] ?? 0);
 }
 
 /** Update a user's personal best for a game if `score` is higher.
@@ -61,7 +76,7 @@ export async function updatePersonalBest(
   score: number,
 ): Promise<{ best: number; isNew: boolean }> {
   if (!arcadeEnabled()) return { best: score, isNew: false };
-  const col = game === "flappy" ? "flappy_best" : "crossy_best";
+  const col = ARCADE_BEST_COLUMN[game];
   const cur = await getPersonalBest(userId, game);
   if (score <= cur) return { best: cur, isNew: false };
   await client().from("users").update({ [col]: score }).eq("id", userId);
@@ -81,7 +96,7 @@ export type LBRow = {
 export async function topWeekly(game: ArcadeGame, limit = 10): Promise<LBRow[]> {
   if (!arcadeEnabled()) return [];
   const { start, end } = weekBounds();
-  const stateField = game === "flappy" ? "score" : "rows";
+  const stateField = ARCADE_STATE_FIELD[game];
 
   const { data } = await client()
     .from("game_sessions")
@@ -158,7 +173,7 @@ export async function settleStaleWeeks(game: ArcadeGame): Promise<void> {
 }
 
 async function settleOneWeek(game: ArcadeGame, start: Date, end: Date): Promise<void> {
-  const stateField = game === "flappy" ? "score" : "rows";
+  const stateField = ARCADE_STATE_FIELD[game];
   const { data } = await client()
     .from("game_sessions")
     .select("user_id, state")

@@ -13,7 +13,7 @@ export type IconName =
   | "lobby.coinflip" | "lobby.coinflip_duel" | "lobby.dice" | "lobby.slots"
   | "lobby.blackjack" | "lobby.roulette" | "lobby.mines" | "lobby.plinko"
   | "lobby.crash" | "lobby.poker" | "lobby.daily_spin" | "lobby.crossy_road"
-  | "lobby.flappy" | "lobby.monopoly" | "lobby.scratch"
+  | "lobby.flappy" | "lobby.monopoly" | "lobby.scratch" | "lobby.snake"
   | "clan.wolf" | "clan.bear" | "clan.eagle" | "clan.snake"
   | "clan.bull" | "clan.coyote" | "clan.hawk" | "clan.stag";
 
@@ -1698,6 +1698,51 @@ const LOBBY_ICONS_32: Partial<Record<IconName, Px[]>> = {
     [ 4, 23,  6,  2, C.parchL],
     [22,  3,  4,  1, C.parchL],
     [21,  4,  6,  2, C.parchL],
+  ],
+
+  // ----- Snake — chunky green snake on grass with red apple -----
+  "lobby.snake": [
+    // Sky strip
+    [ 0,  0, 32,  6, C.skyL],
+    // Grass
+    [ 0,  6, 32, 26, C.cactusD],
+    [ 0,  6, 32,  1, C.cactus],
+    [ 1,  9,  1,  1, C.cactusL],
+    [ 7, 11,  1,  1, C.cactusL],
+    [13,  8,  1,  1, C.cactusL],
+    [22, 12,  1,  1, C.cactusL],
+    [28, 10,  1,  1, C.cactusL],
+    // Snake body — coiled S
+    [ 6, 18, 18,  4, C.cactus],
+    [ 6, 18, 18,  1, C.cactusL],
+    [ 6, 21, 18,  1, C.cactusD],
+    // Hook around the right
+    [20, 14,  4,  4, C.cactus],
+    [20, 14,  4,  1, C.cactusL],
+    [23, 14,  1,  8, C.cactusD],
+    // Tail curl on the left
+    [ 6, 22,  4,  4, C.cactus],
+    [ 6, 22,  4,  1, C.cactusL],
+    [ 6, 22,  1,  4, C.cactusD],
+    [ 9, 25,  6,  1, C.cactus],
+    [14, 24,  1,  2, C.cactus],
+    // Snake head — at right tail end
+    [25, 13,  5,  4, C.cactus],
+    [25, 13,  5,  1, C.cactusL],
+    [25, 16,  5,  1, C.cactusD],
+    [29, 13,  1,  4, C.cactusD],
+    // Eye
+    [27, 14,  2,  2, C.parchL],
+    [28, 14,  1,  1, C.ink],
+    // Forked tongue
+    [30, 15,  2,  1, C.crimson],
+    // Apple — fruit pickup
+    [11, 12,  4,  4, C.crimson],
+    [11, 12,  4,  1, C.crimsonD],
+    [12, 13,  2,  2, C.neonCrim],
+    // Apple stem
+    [12, 11,  1,  2, C.cactusD],
+    [13, 10,  1,  1, C.cactus],
   ],
 
   // ----- Monopoly — top hat on property card -----
