@@ -232,6 +232,11 @@ export type DeckPalette = {
   border?: string;
   backImage?: string;
   animated?: string;
+  /** When true, a face-up card draws its border in the same colour
+   *  as its suit (rather than the deck's `border` / ink default).
+   *  Used by the Neon Wire deck so each suit lights its own edge.
+   *  Face-down cards still use the deck `border`. */
+  borderMatchesSuit?: boolean;
 };
 
 export const DECK_PALETTES: Record<string, DeckPalette> = {
@@ -305,7 +310,9 @@ export const DECK_PALETTES: Record<string, DeckPalette> = {
   },
 
   // Neon Wire — electric magenta + cyan suits with a glowing,
-  // animated grid back. Mythic.
+  // animated grid back. Mythic. Face-up cards light their edge in
+  // the suit colour (borderMatchesSuit) for the full neon-strip
+  // look; the face-down back keeps the magenta-edge trim.
   neonwire: {
     spades:   "#ff2bd6",
     hearts:   "#ff66e8",
@@ -319,6 +326,7 @@ export const DECK_PALETTES: Record<string, DeckPalette> = {
       "linear-gradient(90deg, transparent 49%, rgba(95,220,255,0.5) 50%, transparent 51%)," +
       "linear-gradient(135deg, #1a0a3d, #0a0420)",
     animated: "neon-wire",
+    borderMatchesSuit: true,
   },
 
   // Burning Embers — dark slate face with crimson suits and an

@@ -72,14 +72,22 @@ export function PlayingCard({ rank, suit, faceDown, size = "md", palette }: Play
 
   const glyph = SUIT_GLYPH[suit as Suit];
   const color = colors[suit as Suit];
+  // Neon-style decks light the card edge in the suit colour; the
+  // matching neon glow uses that same colour so the trim reads as
+  // a strip-light on the rim. Falls back to the deck's `border`
+  // for every other deck.
+  const faceBorder = colors.borderMatchesSuit ? color : borderColor;
+  const faceBoxShadow = colors.borderMatchesSuit
+    ? `var(--sh-card-rest), 0 0 10px ${color}, inset 0 0 6px ${color}66`
+    : "var(--sh-card-rest)";
   return (
     <div
       style={{
         width: s.w,
         height: s.h,
         background: faceFill,
-        border: `3px solid ${borderColor}`,
-        boxShadow: "var(--sh-card-rest)",
+        border: `3px solid ${faceBorder}`,
+        boxShadow: faceBoxShadow,
         position: "relative",
         flexShrink: 0,
         fontFamily: "var(--font-display)",
