@@ -4,7 +4,10 @@ import { credit, debit, getBalance } from "@/lib/wallet";
 import { insertGameSession, settleGameSession } from "@/lib/db";
 
 export const MIN_BET = 100;
-export const MAX_BET = 100_000_000;
+/** Hard ceiling on a single bet across every server-RNG game.
+ *  Wallet balances are bigint at the DB level so we have plenty of
+ *  headroom. 100B is the agreed cap. */
+export const MAX_BET = 100_000_000_000;
 
 export function validateBet(bet: unknown): { ok: true; bet: number } | { ok: false; error: string } {
   if (typeof bet !== "number" || !Number.isFinite(bet) || !Number.isInteger(bet)) {

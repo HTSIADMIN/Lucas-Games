@@ -57,6 +57,20 @@ const STATUS_LABEL: Record<State["status"], string> = {
   cooldown: "Hand over",
 };
 
+/** Persisted table choice. The poker page now offers multiple
+ *  stakes tiers; we keep the player's last pick in localStorage so
+ *  they don't have to re-pick on every reload. */
+const TABLE_KEY = "lg.poker.tableId";
+
+type TableSummary = {
+  id: string;
+  name: string;
+  smallBlind: number;
+  bigBlind: number;
+  maxSeats: number;
+  minBuyIn: number;
+};
+
 export function PokerClient() {
   const router = useRouter();
   const [state, setState] = useState<State | null>(null);
@@ -66,6 +80,39 @@ export function PokerClient() {
   const [buyIn, setBuyIn] = useState(5_000);
   const [raiseTo, setRaiseTo] = useState(0);
   const meRef = useRef<string | null>(null);
+  const [tables, setTables] = useState<TableSummary[]>([]);
+  const [tableId, setTableIdState] = useState<string | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const tableIdRef = useRef<string | null>(null);
+
+  // Sync ref so the polling loop always reads the latest selection.
+  useEffect(() => { tableIdRef.current = tableId; }, [tableId]);
+
+  // Load the persisted table choice on mount.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(TABLE_KEY);
+    if (stored) setTableIdState(stored);
+  }, []);
+
+  function selectTable(id: string | null) {
+    setTableIdState(id);
+    if (typeof window !== "undefined") {
+      if (id) window.localStorage.setItem(TABLE_KEY, id);
+      else window.localStorage.removeItem(TABLE_KEY);
+    }
+    setShowPicker(false);
+  }
+
+  // Fetch the table catalog once.
+  useEffect(() => {
+    fetch("/api/games/poker/tables")
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.tables)) setTables(d.tables);
+      })
+      .catch(() => {});
+  }, []);
 
   // Per-seat last-action tracker for the action log feed.
   const lastActRef = useRef<Map<number, string | null>>(new Map());
@@ -83,7 +130,9 @@ export function PokerClient() {
 
   async function refresh() {
     try {
-      const r = await fetch("/api/games/poker/state");
+      const tid = tableIdRef.current;
+      const url = tid ? `/api/games/poker/state?table=${encodeURIComponent(tid)}` : "/api/games/poker/state";
+      const r = await fetch(url);
       if (!r.ok) return;
       const d: State = await r.json();
       // Detect stage transitions to layer in table sounds.
@@ -160,22 +209,36 @@ export function PokerClient() {
     if (raiseTo === 0 || raiseTo < state.minRaise) setRaiseTo(state.minRaise);
   }, [state?.minRaise]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // When the active table changes, snap the buy-in input up to that
+  // table's minimum (otherwise a 5,000 default fails on a Tycoon
+  // 1M-blind table that needs 20M minimum).
+  useEffect(() => {
+    if (!state) return;
+    const minBuy = state.table.bigBlind * 20;
+    if (buyIn < minBuy) setBuyIn(minBuy);
+  }, [state?.table.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function sit() {
     setBusy(true); setError(null);
     const r = await fetch("/api/games/poker/sit", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ buyIn }),
+      body: JSON.stringify({ buyIn, tableId: tableIdRef.current }),
     });
     const d = await r.json();
     setBusy(false);
     if (!r.ok) { setError(labelFor(d.error ?? "error")); return; }
+    if (typeof d.tableId === "string") selectTable(d.tableId);
     refresh();
     router.refresh();
   }
   async function leave() {
     setBusy(true); setError(null);
-    const r = await fetch("/api/games/poker/leave", { method: "POST" });
+    const r = await fetch("/api/games/poker/leave", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tableId: tableIdRef.current }),
+    });
     const d = await r.json();
     setBusy(false);
     if (!r.ok) { setError(labelFor(d.error ?? "error")); return; }
@@ -191,7 +254,7 @@ export function PokerClient() {
     const r = await fetch("/api/games/poker/action", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action, raiseTo: amount }),
+      body: JSON.stringify({ action, raiseTo: amount, tableId: tableIdRef.current }),
     });
     const d = await r.json();
     setBusy(false);
@@ -373,14 +436,22 @@ export function PokerClient() {
           {!isSeated ? (
             <div className="stack-lg">
               <p className="text-mute" style={{ fontSize: 12 }}>
-                Buy in {(state.table.bigBlind * 20).toLocaleString()}–{(state.table.bigBlind * 250).toLocaleString()} ¢.
+                {state.table.name} · {state.table.smallBlind.toLocaleString()}/{state.table.bigBlind.toLocaleString()} blinds.
+                Min buy-in <b>{(state.table.bigBlind * 20).toLocaleString()} ¢</b>, max 100B ¢.
               </p>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm btn-block"
+                onClick={() => setShowPicker(true)}
+              >
+                Switch table
+              </button>
               <input
                 type="number"
                 value={buyIn}
                 min={state.table.bigBlind * 20}
-                max={state.table.bigBlind * 250}
-                step={1000}
+                max={100_000_000_000}
+                step={Math.max(1000, state.table.bigBlind)}
                 onChange={(e) => setBuyIn(Math.floor(Number(e.target.value) || 0))}
               />
               <button
@@ -529,7 +600,114 @@ export function PokerClient() {
         </div>
       </div>
     </div>
+    {showPicker && (
+      <TablePicker
+        tables={tables}
+        currentId={state?.table.id ?? tableId}
+        canSwitch={!isSeated}
+        onPick={(id) => selectTable(id)}
+        onClose={() => setShowPicker(false)}
+      />
+    )}
     </>
+  );
+}
+
+// ============================================================
+// Table picker overlay — listed by stakes ascending, current table
+// gets a gold outline. Disabled while seated (player must leave
+// before changing tiers).
+// ============================================================
+function TablePicker({
+  tables,
+  currentId,
+  canSwitch,
+  onPick,
+  onClose,
+}: {
+  tables: TableSummary[];
+  currentId: string | null;
+  canSwitch: boolean;
+  onPick: (id: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(26,15,8,0.75)",
+        zIndex: 220,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "var(--sp-4)",
+        backdropFilter: "blur(2px)",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="panel"
+        style={{
+          width: "min(520px, 100%)",
+          maxHeight: "calc(100vh - 32px)",
+          overflowY: "auto",
+          padding: "var(--sp-5)",
+          border: "4px solid var(--ink-900)",
+          boxShadow: "var(--sh-popover), var(--glow-gold)",
+        }}
+      >
+        <div className="row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-3)" }}>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)", color: "var(--gold-300)", textShadow: "2px 2px 0 var(--ink-900)" }}>
+            Pick a Table
+          </div>
+          <button type="button" className="btn btn-sm btn-ghost" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        {!canSwitch && (
+          <p style={{ color: "var(--crimson-500)", fontSize: 12, marginBottom: "var(--sp-3)" }}>
+            Leave the current table before switching.
+          </p>
+        )}
+        <div className="stack" style={{ gap: 6 }}>
+          {tables.map((t) => {
+            const isCurrent = t.id === currentId;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                className="between"
+                disabled={!canSwitch || isCurrent}
+                onClick={() => onPick(t.id)}
+                style={{
+                  width: "100%",
+                  padding: "var(--sp-3)",
+                  background: isCurrent ? "var(--gold-100)" : "var(--parchment-100)",
+                  border: isCurrent ? "3px solid var(--gold-300)" : "2px solid var(--ink-900)",
+                  cursor: !canSwitch || isCurrent ? "default" : "pointer",
+                  opacity: !canSwitch && !isCurrent ? 0.5 : 1,
+                  textAlign: "left",
+                  fontFamily: "var(--font-display)",
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "var(--fs-body-lg)" }}>{t.name}</div>
+                  <div className="text-mute" style={{ fontSize: 11 }}>
+                    Min buy-in {t.minBuyIn.toLocaleString()} ¢
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div className="text-money" style={{ fontSize: 14 }}>
+                    {t.smallBlind.toLocaleString()}/{t.bigBlind.toLocaleString()}
+                  </div>
+                  <div className="text-mute" style={{ fontSize: 10 }}>blinds</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 

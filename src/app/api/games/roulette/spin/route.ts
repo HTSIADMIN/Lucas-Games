@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     if (e) return NextResponse.json({ error: e }, { status: 400 });
   }
   const total = bets.reduce((sum, b) => sum + b.amount, 0);
-  if (total > 100_000_000) return NextResponse.json({ error: "bet_too_high" }, { status: 400 });
+  if (total > 100_000_000_000) return NextResponse.json({ error: "bet_too_high" }, { status: 400 });
 
   const sessionId = randomUUID();
   try {

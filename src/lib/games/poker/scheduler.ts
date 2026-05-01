@@ -69,6 +69,26 @@ export async function getDefaultTableId(): Promise<string | null> {
   return (data as { id: string } | null)?.id ?? null;
 }
 
+/** All available stakes tiers, sorted from lowest blinds to highest.
+ *  The poker client's table-picker reads this so the player can hop
+ *  between The Saloon (100/200) and Tycoon (500k/1M). */
+export async function listPokerTables(): Promise<
+  Array<{ id: string; name: string; small_blind: number; big_blind: number; max_seats: number }>
+> {
+  const { data } = await supa()
+    .from("poker_tables")
+    .select("id, name, small_blind, big_blind, max_seats")
+    .order("big_blind", { ascending: true });
+  return (data ?? []) as Array<{ id: string; name: string; small_blind: number; big_blind: number; max_seats: number }>;
+}
+
+/** Quick existence check used by /state + /sit to validate a
+ *  user-supplied tableId before doing real work. */
+export async function tableExists(tableId: string): Promise<boolean> {
+  const { data } = await supa().from("poker_tables").select("id").eq("id", tableId).maybeSingle();
+  return !!data;
+}
+
 /** Lightweight count of seats currently occupied by other players,
  *  used by the lobby to flash a "someone's waiting" alert on the
  *  Poker tile. We exclude the calling user so they don't get
@@ -759,11 +779,15 @@ export async function getStateView(tableId: string, currentUserId: string): Prom
 
 // Sit / leave helpers ------------------------------------------------
 
+/** Hard cap on a poker buy-in. Set to match MAX_BET (100B) so a
+ *  whale can sit deep at any stakes. */
+export const MAX_POKER_BUYIN = 100_000_000_000;
+
 export async function sitDown(tableId: string, userId: string, buyIn: number): Promise<{ ok: true; seatNo: number } | { ok: false; error: string }> {
   const table = await getTable(tableId);
   if (!table) return { ok: false, error: "no_table" };
   if (buyIn < table.big_blind * 20) return { ok: false, error: "buyin_too_small" };
-  if (buyIn > table.big_blind * 250) return { ok: false, error: "buyin_too_large" };
+  if (buyIn > MAX_POKER_BUYIN) return { ok: false, error: "buyin_too_large" };
 
   const seats = await listSeats(tableId);
   if (seats.some((s) => s.user_id === userId)) return { ok: false, error: "already_seated" };
