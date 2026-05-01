@@ -9,8 +9,24 @@ type State = "available" | "used";
 
 const _pickaxes = new Map<string, State>();
 
-/** Probability per fresh Mines game that a Lucky Pickaxe is granted. */
-export const PICKAXE_GRANT_CHANCE = 0.30;
+/** Base probability multiplier — the chance at the lowest mine
+ *  count (1 mine, 24 safe tiles). Scales DOWN linearly as the
+ *  player picks more mines: a 23-mine board with only 2 safe
+ *  tiles grants the pickaxe at roughly base × (2/24) ≈ 3% so the
+ *  free safe reveal can no longer turn a near-impossible board
+ *  into a guaranteed cashout. */
+export const PICKAXE_BASE_CHANCE = 0.35;
+
+const GRID_TOTAL = 25;
+
+/** Mine-count-aware grant probability. Returns 0 at the 24-mine
+ *  MAX board (where one free reveal would auto-win every round). */
+export function pickaxeGrantChance(mineCount: number): number {
+  if (!Number.isFinite(mineCount) || mineCount < 1 || mineCount >= 24) return 0;
+  const safeCount = GRID_TOTAL - mineCount;
+  // Linear scale: at 24 safe (1 mine) → BASE; at 1 safe (24 mines) → BASE/24.
+  return PICKAXE_BASE_CHANCE * (safeCount / 24);
+}
 
 export function grantPickaxe(gameId: string) {
   _pickaxes.set(gameId, "available");

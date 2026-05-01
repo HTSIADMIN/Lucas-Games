@@ -5,7 +5,7 @@ import { validateBet } from "@/lib/games/common";
 import { debit, getBalance } from "@/lib/wallet";
 import { insertMinesGame } from "@/lib/db";
 import { GRID, makeLayout, multiplierFor } from "@/lib/games/mines/engine";
-import { grantPickaxe, PICKAXE_GRANT_CHANCE } from "@/lib/games/mines/pickaxe";
+import { grantPickaxe, pickaxeGrantChance } from "@/lib/games/mines/pickaxe";
 
 export const runtime = "nodejs";
 
@@ -53,11 +53,11 @@ export async function POST(req: Request) {
 
   // Random "Lucky Pickaxe" event — granted at game start. Lets the
   // player tap a button once to reveal a guaranteed-safe tile for
-  // free (still adds to the multiplier ladder). Suppressed on the
-  // 24-mine mode: the board has exactly one safe tile, so a free
-  // reveal would auto-win every round.
-  const pickaxeEligible = mineCount < 24;
-  const hasPickaxe = pickaxeEligible && Math.random() < PICKAXE_GRANT_CHANCE;
+  // free (still adds to the multiplier ladder). Probability scales
+  // linearly with the safe-tile count so a 23-mine board (2 safe
+  // tiles) can't be farmed for near-guaranteed cashouts via the
+  // free reveal. 24-mine MAX mode returns 0% from the helper.
+  const hasPickaxe = Math.random() < pickaxeGrantChance(mineCount);
   if (hasPickaxe) grantPickaxe(id);
 
   return NextResponse.json({
