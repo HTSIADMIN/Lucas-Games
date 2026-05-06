@@ -2052,7 +2052,8 @@ function peg128(x: number, y: number): Px[] {
 // designed art without touching every call site. Anything missing
 // here falls through to the hand-laid pixel sprites below.
 const LOBBY_SVG: Partial<Record<IconName, string>> = {
-  "lobby.blackjack":     "/game-icons/game-blackjack.svg",
+  // "lobby.blackjack" intentionally absent — rendered inline below
+  // so its colours can be themed via CSS custom properties.
   "lobby.coinflip":      "/game-icons/game-coinflip.svg",
   "lobby.coinflip_duel": "/game-icons/game-coinflip-duel.svg",
   "lobby.crash":         "/game-icons/game-crash.svg",
@@ -2069,6 +2070,147 @@ const LOBBY_SVG: Partial<Record<IconName, string>> = {
   "lobby.slots":         "/game-icons/game-slots.svg",
 };
 
+// 16:9 hand-crafted blackjack tile. Rendered inline (rather than as
+// a static .svg under /public) so its colours can be overridden via
+// CSS custom properties — themes can re-skin felt, bezel, gold and
+// card stock without us shipping a separate file per theme.
+//
+// Variables (with their built-in saloon-default fallbacks):
+//   --bjicon-bezel        outer + inner panel mid grey
+//   --bjicon-bezel-light  bezel top/left highlight stroke
+//   --bjicon-bezel-dark   bezel bottom/right shadow stroke
+//   --bjicon-felt         felt base green
+//   --bjicon-felt-light   felt centre highlight (radial gradient)
+//   --bjicon-card         card body cream
+//   --bjicon-card-outline card edge ink
+//   --bjicon-spade        spade pip + letter ink
+//   --bjicon-gold         "21" gold
+function BlackjackTileIcon({
+  size,
+  className,
+  style,
+}: {
+  size: number;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  // Unique gradient id so multiple instances on one page (lobby +
+  // modals + free-games montage) don't collide. Math.random() is
+  // overkill here — the id only needs to be stable per render.
+  const gradId = "bjicon-felt";
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 128 72"
+      preserveAspectRatio="xMidYMid meet"
+      shapeRendering="crispEdges"
+      className={className}
+      style={{ display: "inline-block", verticalAlign: "middle", ...style }}
+      aria-hidden
+    >
+      <defs>
+        <radialGradient id={gradId} cx="50%" cy="50%" r="65%">
+          <stop offset="0%" stopColor="var(--bjicon-felt-light, #3d8a4d)" />
+          <stop offset="100%" stopColor="var(--bjicon-felt, #28602f)" />
+        </radialGradient>
+      </defs>
+
+      {/* Outer bezel + felt */}
+      <rect x="0" y="0" width="128" height="72" rx="3" fill="var(--bjicon-bezel, #4a555f)" />
+      <rect x="3" y="3" width="122" height="66" fill={`url(#${gradId})`} />
+      <rect x="3" y="3" width="122" height="1" fill="var(--bjicon-bezel-light, #6a7580)" />
+      <rect x="3" y="3" width="1" height="66" fill="var(--bjicon-bezel-light, #6a7580)" />
+      <rect x="3" y="68" width="122" height="1" fill="var(--bjicon-bezel-dark, #2c3540)" />
+      <rect x="124" y="3" width="1" height="66" fill="var(--bjicon-bezel-dark, #2c3540)" />
+
+      {/* Inner panel bezel — a 40x40 frame centred at (64, 36) */}
+      <rect x="44" y="16" width="40" height="40" fill="var(--bjicon-bezel, #4a555f)" />
+      <rect x="44" y="16" width="40" height="1" fill="var(--bjicon-bezel-light, #6a7580)" />
+      <rect x="44" y="16" width="1" height="40" fill="var(--bjicon-bezel-light, #6a7580)" />
+      <rect x="44" y="55" width="40" height="1" fill="var(--bjicon-bezel-dark, #2c3540)" />
+      <rect x="83" y="16" width="1" height="40" fill="var(--bjicon-bezel-dark, #2c3540)" />
+      <rect x="47" y="19" width="34" height="34" fill={`url(#${gradId})`} />
+
+      {/* K♠ — back card, tilted left */}
+      <g transform="translate(50 22) rotate(-9 6 9)">
+        <rect x="1" y="1" width="12" height="18" fill="#000" opacity="0.35" />
+        <rect x="0" y="0" width="12" height="18" fill="var(--bjicon-card-outline, #0a0f1a)" />
+        <rect x="1" y="1" width="10" height="16" fill="var(--bjicon-card, #f5ebd1)" />
+        <rect x="1" y="1" width="10" height="1" fill="#fff" opacity="0.45" />
+        {/* K — 3x5 pixel letter at top-left */}
+        <g fill="var(--bjicon-spade, #1a1f2e)">
+          <rect x="2" y="3" width="1" height="5" />
+          <rect x="4" y="3" width="1" height="1" />
+          <rect x="3" y="4" width="1" height="1" />
+          <rect x="3" y="6" width="1" height="1" />
+          <rect x="4" y="7" width="1" height="1" />
+        </g>
+        {/* Tiny suit pip directly below the letter */}
+        <g fill="var(--bjicon-spade, #1a1f2e)">
+          <rect x="3" y="9" width="1" height="1" />
+          <rect x="2" y="10" width="3" height="1" />
+        </g>
+        {/* Centre spade — 5x6 */}
+        <g fill="var(--bjicon-spade, #1a1f2e)">
+          <rect x="5" y="9" width="1" height="1" />
+          <rect x="4" y="10" width="3" height="1" />
+          <rect x="3" y="11" width="5" height="2" />
+          <rect x="4" y="13" width="1" height="1" />
+          <rect x="6" y="13" width="1" height="1" />
+          <rect x="4" y="14" width="3" height="1" />
+        </g>
+      </g>
+
+      {/* J♠ — front card, tilted right */}
+      <g transform="translate(58 21) rotate(9 6 9)">
+        <rect x="1" y="1" width="12" height="18" fill="#000" opacity="0.35" />
+        <rect x="0" y="0" width="12" height="18" fill="var(--bjicon-card-outline, #0a0f1a)" />
+        <rect x="1" y="1" width="10" height="16" fill="var(--bjicon-card, #f5ebd1)" />
+        <rect x="1" y="1" width="10" height="1" fill="#fff" opacity="0.45" />
+        {/* J — 3x5 pixel letter at top-left */}
+        <g fill="var(--bjicon-spade, #1a1f2e)">
+          <rect x="2" y="3" width="3" height="1" />
+          <rect x="3" y="4" width="1" height="3" />
+          <rect x="2" y="7" width="1" height="1" />
+        </g>
+        {/* Tiny suit pip below letter */}
+        <g fill="var(--bjicon-spade, #1a1f2e)">
+          <rect x="3" y="9" width="1" height="1" />
+          <rect x="2" y="10" width="3" height="1" />
+        </g>
+        {/* Centre spade — 5x6 */}
+        <g fill="var(--bjicon-spade, #1a1f2e)">
+          <rect x="5" y="9" width="1" height="1" />
+          <rect x="4" y="10" width="3" height="1" />
+          <rect x="3" y="11" width="5" height="2" />
+          <rect x="4" y="13" width="1" height="1" />
+          <rect x="6" y="13" width="1" height="1" />
+          <rect x="4" y="14" width="3" height="1" />
+        </g>
+      </g>
+
+      {/* "21" in gold — 5x8 chunky pixel digits centred at x=64 */}
+      <g fill="var(--bjicon-gold, #d4a13a)">
+        {/* 2 */}
+        <rect x="59" y="42" width="3" height="1" />
+        <rect x="58" y="43" width="1" height="1" />
+        <rect x="62" y="43" width="1" height="1" />
+        <rect x="62" y="44" width="1" height="1" />
+        <rect x="61" y="45" width="1" height="1" />
+        <rect x="60" y="46" width="1" height="1" />
+        <rect x="59" y="47" width="1" height="1" />
+        <rect x="58" y="48" width="1" height="1" />
+        <rect x="58" y="49" width="5" height="1" />
+        {/* 1 */}
+        <rect x="65" y="43" width="2" height="1" />
+        <rect x="66" y="42" width="1" height="8" />
+        <rect x="64" y="49" width="5" height="1" />
+      </g>
+    </svg>
+  );
+}
+
 export function GameIcon({
   name,
   size = 24,
@@ -2080,6 +2222,11 @@ export function GameIcon({
   className?: string;
   style?: CSSProperties;
 }) {
+  // Inline 16:9 hand-crafted tiles take precedence over the
+  // static-SVG dispatch so their CSS-var colours can theme.
+  if (name === "lobby.blackjack") {
+    return <BlackjackTileIcon size={size} className={className} style={style} />;
+  }
   // SVG file art (lobby tiles). Rendered as <img> so the browser
   // caches and decodes them once, and pixelated rendering matches
   // the rest of the casino's vibe.
