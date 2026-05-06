@@ -14,6 +14,7 @@ export type IconName =
   | "lobby.blackjack" | "lobby.roulette" | "lobby.mines" | "lobby.plinko"
   | "lobby.crash" | "lobby.poker" | "lobby.daily_spin" | "lobby.crossy_road"
   | "lobby.flappy" | "lobby.monopoly" | "lobby.scratch" | "lobby.snake"
+  | "lobby.penny_pinchers"
   | "clan.wolf" | "clan.bear" | "clan.eagle" | "clan.snake"
   | "clan.bull" | "clan.coyote" | "clan.hawk" | "clan.stag";
 
@@ -2048,26 +2049,25 @@ function peg128(x: number, y: number): Px[] {
 }
 
 // Lobby tile artwork lives as standalone files in /public/game-icons/.
-// V2 set is hand-rendered AVIF that fills the entire tile — those
-// override the V1 pixel-art SVG fallbacks per game. Slugs without a
-// V2 entry yet (Crossy Road, Daily Spin, Flappy, Monopoly) keep
-// their V1 SVG until V2 art ships.
+// V2 set is hand-rendered AVIF that fills the entire tile.
 const LOBBY_SVG: Partial<Record<IconName, string>> = {
-  "lobby.blackjack":     "/game-icons/v2/blackjack.avif",
-  "lobby.coinflip":      "/game-icons/v2/coinflip.avif",
-  "lobby.coinflip_duel": "/game-icons/v2/coinflip-duel.avif",
-  "lobby.crash":         "/game-icons/v2/crash.avif",
-  "lobby.crossy_road":   "/game-icons/game-crossy.svg",
-  "lobby.daily_spin":    "/game-icons/game-daily-spin.svg",
-  "lobby.dice":          "/game-icons/v2/dice.avif",
-  "lobby.flappy":        "/game-icons/game-flappy.svg",
-  "lobby.mines":         "/game-icons/v2/mines.avif",
-  "lobby.monopoly":      "/game-icons/game-monopoly.svg",
-  "lobby.plinko":        "/game-icons/v2/plinko.avif",
-  "lobby.poker":         "/game-icons/v2/poker.avif",
-  "lobby.roulette":      "/game-icons/v2/roulette.avif",
-  "lobby.scratch":       "/game-icons/v2/scratch.avif",
-  "lobby.slots":         "/game-icons/v2/slots.avif",
+  "lobby.blackjack":      "/game-icons/v2/blackjack.avif",
+  "lobby.coinflip":       "/game-icons/v2/coinflip.avif",
+  "lobby.coinflip_duel":  "/game-icons/v2/coinflip-duel.avif",
+  "lobby.crash":          "/game-icons/v2/crash.avif",
+  "lobby.crossy_road":    "/game-icons/v2/crossy-road.avif",
+  "lobby.daily_spin":     "/game-icons/v2/daily-spin.avif",
+  "lobby.dice":           "/game-icons/v2/dice.avif",
+  "lobby.flappy":         "/game-icons/v2/flappy.avif",
+  "lobby.mines":          "/game-icons/v2/mines.avif",
+  "lobby.monopoly":       "/game-icons/v2/monopoly.avif",
+  "lobby.penny_pinchers": "/game-icons/v2/penny-pinchers.avif",
+  "lobby.plinko":         "/game-icons/v2/plinko.avif",
+  "lobby.poker":          "/game-icons/v2/poker.avif",
+  "lobby.roulette":       "/game-icons/v2/roulette.avif",
+  "lobby.scratch":        "/game-icons/v2/scratch.avif",
+  "lobby.slots":          "/game-icons/v2/slots.avif",
+  "lobby.snake":          "/game-icons/v2/snake.avif",
 };
 
 export function GameIcon({
