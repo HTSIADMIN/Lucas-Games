@@ -92,6 +92,13 @@ export const listMonopolyOwned       = impl.listMonopolyOwned;
 export const getMonopolyOwned        = impl.getMonopolyOwned;
 export const upsertMonopolyOwned     = impl.upsertMonopolyOwned;
 
+export const getPennyPinchersState        = impl.getPennyPinchersState;
+export const upsertPennyPinchersState     = impl.upsertPennyPinchersState;
+export const listPennyPinchersUpgrades    = impl.listPennyPinchersUpgrades;
+export const upsertPennyPinchersUpgrade   = impl.upsertPennyPinchersUpgrade;
+export const listPennyPinchersHelpers     = impl.listPennyPinchersHelpers;
+export const upsertPennyPinchersHelper    = impl.upsertPennyPinchersHelper;
+
 export const getSlotsMeter           = impl.getSlotsMeter;
 export const setSlotsMeter           = impl.setSlotsMeter;
 export const recentSlotsBetAvg       = impl.recentSlotsBetAvg;

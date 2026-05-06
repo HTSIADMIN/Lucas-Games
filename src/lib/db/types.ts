@@ -316,6 +316,30 @@ export type MonopolyOwned = {
   card_count: number;
 };
 
+export type PennyPinchersState = {
+  user_id: string;
+  cents: number;
+  lifetime_clicks: number;
+  lifetime_pc_earned: number;
+  last_tick_at: string | null;
+  last_bank_at: string | null;
+  daily_banked_cents: number;
+  daily_banked_day: string | null;
+  created_at: string;
+};
+
+export type PennyPinchersUpgrade = {
+  user_id: string;
+  upgrade_id: string;
+  level: number;
+};
+
+export type PennyPinchersHelper = {
+  user_id: string;
+  helper_id: string;
+  count: number;
+};
+
 export type CoinflipDuel = {
   id: string;
   challenger_id: string;

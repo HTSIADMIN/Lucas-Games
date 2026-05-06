@@ -36,7 +36,7 @@ export const FREE_GAMES: readonly FreeGame[] = [
   { slug: "crossy-road", name: "Crossy Road",       tag: "FREE",       icon: "lobby.crossy_road", hasTimer: false },
   { slug: "flappy",      name: "Flappy",            tag: "FREE",       icon: "lobby.flappy",      hasTimer: false },
   { slug: "snake",       name: "Snake",             tag: "FREE",       icon: "lobby.snake",          hasTimer: false },
-  { slug: "penny-pinchers", name: "Penny Pinchers",  tag: "COMING SOON", icon: "lobby.penny_pinchers", hasTimer: false },
+  { slug: "penny-pinchers", name: "Penny Pinchers",  tag: "BANK ON IT", icon: "lobby.penny_pinchers", hasTimer: false },
 ] as const;
 
 export const FREE_GAME_SLUGS: ReadonlySet<string> = new Set(FREE_GAMES.map((g) => g.slug));

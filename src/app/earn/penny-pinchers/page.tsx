@@ -11,7 +11,7 @@ export default async function PennyPinchersPage() {
     <GameShell
       title="Penny Pinchers"
       game="penny-pinchers"
-      blurb="Coming soon — a new free way to scrape together a few extra coins."
+      blurb="Click coins, buy upgrades, hire helpers. Bank It once an hour to convert Pinch Cents to wallet ¢ — up to 25k per bank, 100k per UTC day."
     >
       <PennyPinchersClient />
     </GameShell>

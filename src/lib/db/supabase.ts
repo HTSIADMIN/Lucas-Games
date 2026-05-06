@@ -17,6 +17,9 @@ import {
   MinesGame,
   MonopolyOwned,
   MonopolyState,
+  PennyPinchersHelper,
+  PennyPinchersState,
+  PennyPinchersUpgrade,
   PinAttempts,
   PlinkoDrop,
   SlotRun,
@@ -510,6 +513,67 @@ export async function upsertMonopolyOwned(row: MonopolyOwned): Promise<MonopolyO
     .single();
   if (error) throw new Error(`upsertMonopolyOwned: ${error.message}`);
   return data as MonopolyOwned;
+}
+
+// ============ PENNY PINCHERS ============
+export async function getPennyPinchersState(userId: string): Promise<PennyPinchersState | null> {
+  const { data, error } = await client().from("penny_pinchers_state").select("*").eq("user_id", userId).maybeSingle();
+  if (error) throw new Error(`getPennyPinchersState: ${error.message}`);
+  return (data as PennyPinchersState | null) ?? null;
+}
+export async function upsertPennyPinchersState(state: PennyPinchersState): Promise<PennyPinchersState> {
+  const { data, error } = await client()
+    .from("penny_pinchers_state")
+    .upsert({
+      user_id: state.user_id,
+      cents: state.cents,
+      lifetime_clicks: state.lifetime_clicks,
+      lifetime_pc_earned: state.lifetime_pc_earned,
+      last_tick_at: state.last_tick_at,
+      last_bank_at: state.last_bank_at,
+      daily_banked_cents: state.daily_banked_cents,
+      daily_banked_day: state.daily_banked_day,
+    }, { onConflict: "user_id" })
+    .select("*")
+    .single();
+  if (error) throw new Error(`upsertPennyPinchersState: ${error.message}`);
+  return data as PennyPinchersState;
+}
+export async function listPennyPinchersUpgrades(userId: string): Promise<PennyPinchersUpgrade[]> {
+  const { data, error } = await client().from("penny_pinchers_upgrades").select("*").eq("user_id", userId);
+  if (error) throw new Error(`listPennyPinchersUpgrades: ${error.message}`);
+  return (data ?? []) as PennyPinchersUpgrade[];
+}
+export async function upsertPennyPinchersUpgrade(row: PennyPinchersUpgrade): Promise<PennyPinchersUpgrade> {
+  const { data, error } = await client()
+    .from("penny_pinchers_upgrades")
+    .upsert({
+      user_id: row.user_id,
+      upgrade_id: row.upgrade_id,
+      level: row.level,
+    }, { onConflict: "user_id,upgrade_id" })
+    .select("*")
+    .single();
+  if (error) throw new Error(`upsertPennyPinchersUpgrade: ${error.message}`);
+  return data as PennyPinchersUpgrade;
+}
+export async function listPennyPinchersHelpers(userId: string): Promise<PennyPinchersHelper[]> {
+  const { data, error } = await client().from("penny_pinchers_helpers").select("*").eq("user_id", userId);
+  if (error) throw new Error(`listPennyPinchersHelpers: ${error.message}`);
+  return (data ?? []) as PennyPinchersHelper[];
+}
+export async function upsertPennyPinchersHelper(row: PennyPinchersHelper): Promise<PennyPinchersHelper> {
+  const { data, error } = await client()
+    .from("penny_pinchers_helpers")
+    .upsert({
+      user_id: row.user_id,
+      helper_id: row.helper_id,
+      count: row.count,
+    }, { onConflict: "user_id,helper_id" })
+    .select("*")
+    .single();
+  if (error) throw new Error(`upsertPennyPinchersHelper: ${error.message}`);
+  return data as PennyPinchersHelper;
 }
 
 // ============ COIN FLIP DUELS ============

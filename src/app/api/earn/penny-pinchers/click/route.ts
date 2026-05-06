@@ -1,0 +1,68 @@
+import { NextResponse } from "next/server";
+import { readSession } from "@/lib/auth/session";
+import {
+  getPennyPinchersState,
+  listPennyPinchersUpgrades,
+  upsertPennyPinchersState,
+} from "@/lib/db";
+import { COINS, MAX_CLICKS_PER_SEC, type CoinId } from "@/lib/games/penny-pinchers/catalog";
+import { coinPCValue } from "@/lib/games/penny-pinchers/engine";
+
+export const runtime = "nodejs";
+
+// In-process sliding-window rate limiter for clicks. Maps user-id →
+// timestamp queue of the most-recent ~25 click times. Cheap, lasts
+// the lifetime of the Vercel function instance, and that's fine —
+// the daily-bank cap is the load-bearing throttle for actual abuse.
+const recentClicks = new Map<string, number[]>();
+
+function noteClickAndCheck(userId: string, now: number): boolean {
+  const queue = recentClicks.get(userId) ?? [];
+  // Drop entries older than 1 second.
+  const cutoff = now - 1000;
+  while (queue.length > 0 && queue[0] < cutoff) queue.shift();
+  if (queue.length >= MAX_CLICKS_PER_SEC) {
+    recentClicks.set(userId, queue);
+    return false;
+  }
+  queue.push(now);
+  recentClicks.set(userId, queue);
+  return true;
+}
+
+// POST /api/earn/penny-pinchers/click  body: { coinType: CoinId }
+export async function POST(req: Request) {
+  const s = await readSession();
+  if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  let body: { coinType?: unknown };
+  try { body = await req.json(); }
+  catch { return NextResponse.json({ error: "bad_json" }, { status: 400 }); }
+
+  const coinType = String(body.coinType ?? "") as CoinId;
+  if (!COINS[coinType]) return NextResponse.json({ error: "bad_coin" }, { status: 400 });
+
+  const now = Date.now();
+  if (!noteClickAndCheck(s.user.id, now)) {
+    return NextResponse.json({ error: "rate_limit" }, { status: 429 });
+  }
+
+  let state = await getPennyPinchersState(s.user.id);
+  if (!state) return NextResponse.json({ error: "no_state" }, { status: 400 });
+
+  const upgrades = await listPennyPinchersUpgrades(s.user.id);
+  const upgradeLevels: Record<string, number> = {};
+  for (const u of upgrades) upgradeLevels[u.upgrade_id] = u.level;
+
+  const pc = coinPCValue(coinType, upgradeLevels);
+
+  state = await upsertPennyPinchersState({
+    ...state,
+    cents: state.cents + pc,
+    lifetime_clicks: state.lifetime_clicks + 1,
+    lifetime_pc_earned: state.lifetime_pc_earned + pc,
+    last_tick_at: new Date(now).toISOString(),
+  });
+
+  return NextResponse.json({ ok: true, cents: state.cents, pcEarned: pc });
+}
