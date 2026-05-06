@@ -45,8 +45,8 @@ export const CHEST_LOOT_PREVIEW: ChestPreviewEntry[] = [
   {
     tier: "legendary",
     rankRange: "Rank 1",
-    coinsMin: 200_000,
-    coinsMax: 250_000,
+    coinsMin: 2_500_000,
+    coinsMax: 3_000_000,
     cards: 3,
     spinTokenChance: 1,
     blurb: "The big one. Top of the standings every week.",
@@ -54,8 +54,8 @@ export const CHEST_LOOT_PREVIEW: ChestPreviewEntry[] = [
   {
     tier: "epic",
     rankRange: "Ranks 2-3",
-    coinsMin: 75_000,
-    coinsMax: 100_000,
+    coinsMin: 800_000,
+    coinsMax: 1_000_000,
     cards: 2,
     spinTokenChance: 0.3,
     blurb: "Solid haul for keeping it close.",
@@ -63,8 +63,8 @@ export const CHEST_LOOT_PREVIEW: ChestPreviewEntry[] = [
   {
     tier: "rare",
     rankRange: "Ranks 4-10",
-    coinsMin: 25_000,
-    coinsMax: 40_000,
+    coinsMin: 400_000,
+    coinsMax: 500_000,
     cards: 1,
     spinTokenChance: 0,
     blurb: "Showing up still pays.",

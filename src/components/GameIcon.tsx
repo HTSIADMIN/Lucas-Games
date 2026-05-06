@@ -2082,12 +2082,12 @@ export function GameIcon({
   style?: CSSProperties;
 }) {
   // Lobby tile artwork (V2 AVIF + V1 SVG fallback). Rendered as <img>
-  // so the browser caches each file once. We tell the image to fill
-  // its parent (object-fit: cover) so V2 art sits flush with the
-  // tile-art frame instead of being letterboxed inside an 80%-sized
-  // intrinsic box. V1 SVGs use crispEdges shape-rendering inside the
-  // file itself, so dropping imageRendering:pixelated here doesn't
-  // soften them — but it does let AVIF photos stay smooth.
+  // so the browser caches each file once. We render at the caller's
+  // requested `size` by default; the `.tile-art > img` rule in
+  // globals.css overrides to a 100%-fill object-fit: cover when the
+  // parent is an actual tile-art container, so the lobby tile + Free
+  // Games modal still get edge-to-edge art. Smaller contexts like
+  // LootBullet (size=22) keep their intrinsic sizing.
   const svgPath = LOBBY_SVG[name];
   if (svgPath) {
     const isPixelArt = svgPath.endsWith(".svg");
@@ -2100,10 +2100,8 @@ export function GameIcon({
         aria-hidden
         className={className}
         style={{
-          display: "block",
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
+          display: "inline-block",
+          verticalAlign: "middle",
           imageRendering: isPixelArt ? "pixelated" : "auto",
           ...style,
         }}

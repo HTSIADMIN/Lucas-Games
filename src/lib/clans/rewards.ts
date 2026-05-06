@@ -22,7 +22,7 @@ export function rollChestRewards(tier: ClanChestTier): ClanChestRewards {
       cards[id] = (cards[id] ?? 0) + 1;
     }
     return {
-      coins: 200_000 + randInt(0, 50_000),
+      coins: 2_500_000 + randInt(0, 500_000),
       monopolyCards: Object.entries(cards).map(([propertyId, count]) => ({ propertyId, count })),
       spinTokens: 1,
     };
@@ -34,7 +34,7 @@ export function rollChestRewards(tier: ClanChestTier): ClanChestRewards {
       cards[id] = (cards[id] ?? 0) + 1;
     }
     const r: ClanChestRewards = {
-      coins: 75_000 + randInt(0, 25_000),
+      coins: 800_000 + randInt(0, 200_000),
       monopolyCards: Object.entries(cards).map(([propertyId, count]) => ({ propertyId, count })),
     };
     if (randInt(0, 99) < 30) r.spinTokens = 1;
@@ -43,7 +43,7 @@ export function rollChestRewards(tier: ClanChestTier): ClanChestRewards {
   // rare
   const id = pickProperty();
   return {
-    coins: 25_000 + randInt(0, 15_000),
+    coins: 400_000 + randInt(0, 100_000),
     monopolyCards: [{ propertyId: id, count: 1 }],
   };
 }
