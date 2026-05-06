@@ -83,10 +83,16 @@ export function WhatsNewModal() {
           What&rsquo;s New
         </div>
         <div
-          className="text-mute"
-          style={{ fontSize: 12, textAlign: "center", marginBottom: "var(--sp-4)" }}
+          style={{
+            fontSize: 12,
+            textAlign: "center",
+            marginBottom: "var(--sp-4)",
+            color: "var(--parchment-100)",
+            letterSpacing: "var(--ls-loose)",
+            fontFamily: "var(--font-display)",
+          }}
         >
-          {formatDate(latest.date)}
+          v{latest.version} &middot; {formatDate(latest.date)}
         </div>
 
         <EntryBody entry={latest} highlight />
@@ -132,11 +138,16 @@ function EntryBody({ entry, highlight = false }: { entry: ChangelogEntry; highli
         border: `3px solid ${highlight ? "var(--gold-300)" : "var(--saddle-300)"}`,
         padding: "var(--sp-3)",
         marginBottom: "var(--sp-2)",
+        // Force ink-on-light here so notes stay readable on every theme
+        // (panel-wood flips foreground to parchment on dark themes,
+        // which would otherwise wash these bullets out on the gold/
+        // parchment backing).
+        color: "var(--ink-900)",
       }}
     >
       <div
         className="row"
-        style={{ justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}
+        style={{ justifyContent: "space-between", alignItems: "baseline", marginBottom: 4, gap: 8 }}
       >
         <div
           style={{
@@ -147,15 +158,28 @@ function EntryBody({ entry, highlight = false }: { entry: ChangelogEntry; highli
         >
           {entry.title}
         </div>
-        {!highlight && (
-          <span className="text-mute" style={{ fontSize: 11 }}>
-            {formatDate(entry.date)}
-          </span>
-        )}
+        <span
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 11,
+            color: "var(--saddle-400)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          v{entry.version} &middot; {formatDate(entry.date)}
+        </span>
       </div>
-      <ul style={{ margin: 0, paddingLeft: 20 }}>
+      <ul style={{ margin: 0, paddingLeft: 20, color: "var(--ink-900)" }}>
         {entry.notes.map((note, i) => (
-          <li key={i} style={{ fontSize: 13, lineHeight: 1.45, marginBottom: 4 }}>
+          <li
+            key={i}
+            style={{
+              fontSize: 13,
+              lineHeight: 1.45,
+              marginBottom: 4,
+              color: "var(--ink-900)",
+            }}
+          >
             {note}
           </li>
         ))}
