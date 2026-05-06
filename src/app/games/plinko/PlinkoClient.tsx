@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { bucketTable, type PlinkoRisk, type PlinkoRows } from "@/lib/games/plinko/engine";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import * as Sfx from "@/lib/sfx";
 
 // Vertical pixel height per row.
@@ -253,50 +254,46 @@ export function PlinkoClient() {
   }, []);
 
   // Poll for other players' recent drops and spawn ghost chips on our board.
-  useEffect(() => {
-    const seen = new Set<string>();
-    let cancelled = false;
-    async function poll() {
-      try {
-        const r = await fetch("/api/games/plinko/recent");
-        if (!r.ok) return;
-        const d = await r.json();
-        if (cancelled || !Array.isArray(d.drops)) return;
-        const now = Date.now();
-        for (const drop of d.drops as Array<{
-          id: string; username: string; avatarColor: string; initials: string;
-          rows: number; bucket: number; at: number;
-        }>) {
-          if (seen.has(drop.id)) continue;
-          if (now - drop.at > 5000) {
-            seen.add(drop.id);
-            continue;
-          }
+  const seenDropsRef = useRef<Set<string>>(new Set());
+  const pollDrops = useCallback(async () => {
+    try {
+      const r = await fetch("/api/games/plinko/recent");
+      if (!r.ok) return;
+      const d = await r.json();
+      if (!Array.isArray(d.drops)) return;
+      const seen = seenDropsRef.current;
+      const now = Date.now();
+      for (const drop of d.drops as Array<{
+        id: string; username: string; avatarColor: string; initials: string;
+        rows: number; bucket: number; at: number;
+      }>) {
+        if (seen.has(drop.id)) continue;
+        if (now - drop.at > 5000) {
           seen.add(drop.id);
-          const sim = simulateDrop(drop.rows, drop.bucket);
-          setGhosts((prev) => [...prev, {
-            id: drop.id,
-            username: drop.username,
-            avatarColor: drop.avatarColor,
-            initials: drop.initials,
-            rows: drop.rows as PlinkoRows,
-            bucket: drop.bucket,
-            startedAt: drop.at,
-            samples: sim.samples,
-            hits: sim.hits,
-            totalMs: sim.totalMs,
-            startedAtMs: Date.now(),
-          }]);
-          setTimeout(() => {
-            setGhosts((prev) => prev.filter((x) => x.id !== drop.id));
-          }, sim.totalMs + 300);
+          continue;
         }
-      } catch { /* ignore */ }
-    }
-    poll();
-    const t = setInterval(poll, 3000);
-    return () => { cancelled = true; clearInterval(t); };
+        seen.add(drop.id);
+        const sim = simulateDrop(drop.rows, drop.bucket);
+        setGhosts((prev) => [...prev, {
+          id: drop.id,
+          username: drop.username,
+          avatarColor: drop.avatarColor,
+          initials: drop.initials,
+          rows: drop.rows as PlinkoRows,
+          bucket: drop.bucket,
+          startedAt: drop.at,
+          samples: sim.samples,
+          hits: sim.hits,
+          totalMs: sim.totalMs,
+          startedAtMs: Date.now(),
+        }]);
+        setTimeout(() => {
+          setGhosts((prev) => prev.filter((x) => x.id !== drop.id));
+        }, sim.totalMs + 300);
+      }
+    } catch { /* ignore */ }
   }, []);
+  useVisibleInterval(pollDrops, 3000);
 
   // Drive the render off requestAnimationFrame while balls or
   // ghosts are in flight — smoother than a 50ms interval and

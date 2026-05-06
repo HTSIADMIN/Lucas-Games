@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { useCoinFace } from "@/components/CoinFaceProvider";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import * as Sfx from "@/lib/sfx";
 
 type Side = "heads" | "tails";
@@ -94,12 +95,7 @@ export function CoinflipDuelClient() {
       setRecent(newRecent);
     } catch { /* ignore */ }
   }
-  useEffect(() => {
-    refresh();
-    const t = setInterval(refresh, POLL_MS);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useVisibleInterval(refresh, POLL_MS);
 
   function showFlipOverlay(duel: DuelView, iWonLocal: boolean | null) {
     if (!duel.challenger || !duel.acceptor || !duel.result) return;

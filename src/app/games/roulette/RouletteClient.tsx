@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { colorOf, type RouletteBet, type RouletteBetType } from "@/lib/games/roulette/engine";
 import { GameEvent } from "@/components/GameEvent";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import * as Sfx from "@/lib/sfx";
 
 type Result = {
@@ -60,20 +61,15 @@ export function RouletteClient() {
   // here every 5s. The matching cell glows; a straight bet on it
   // pays 50× instead of 35× when it hits.
   const [hotNumber, setHotNumber] = useState<number | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    async function poll() {
-      try {
-        const r = await fetch("/api/games/roulette/hot");
-        if (!r.ok) return;
-        const d = await r.json();
-        if (!cancelled && typeof d.value === "number") setHotNumber(d.value);
-      } catch { /* ignore */ }
-    }
-    poll();
-    const t = setInterval(poll, 5_000);
-    return () => { cancelled = true; clearInterval(t); };
+  const pollHot = useCallback(async () => {
+    try {
+      const r = await fetch("/api/games/roulette/hot");
+      if (!r.ok) return;
+      const d = await r.json();
+      if (typeof d.value === "number") setHotNumber(d.value);
+    } catch { /* ignore */ }
   }, []);
+  useVisibleInterval(pollHot, 5_000);
   const [spinning, setSpinning] = useState(false);
   const [hoverPreview, setHoverPreview] = useState<{ label: string; payout: number } | null>(null);
   // Tile strip for the current spin. Regenerated per spin so each open is

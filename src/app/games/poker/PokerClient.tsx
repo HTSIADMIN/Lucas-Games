@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PlayingCard } from "@/components/PlayingCard";
 import type { Card, Rank, Suit } from "@/lib/games/cards";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import * as Sfx from "@/lib/sfx";
 
 const POLL_MS = 1000;
@@ -197,12 +198,12 @@ export function PokerClient() {
     } catch { /* ignore */ }
   }
 
+  useVisibleInterval(refresh, POLL_MS);
   useEffect(() => {
-    refresh();
-    const t = setInterval(refresh, POLL_MS);
+    // Local 4Hz countdown rerender — pure CPU, no server cost.
     const tick = setInterval(() => force((n) => n + 1), 250);
-    return () => { clearInterval(t); clearInterval(tick); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => clearInterval(tick);
+  }, []);
 
   // Reset the raise input to min raise on every fresh decision —
   // tracked by (handNo, currentSeat) so each new turn starts with

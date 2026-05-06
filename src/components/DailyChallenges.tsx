@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 
 // Bottom-right floating button + modal for daily challenges.
 // Renders next to the chat fab (which sits at right: 16, bottom: 16);
@@ -70,18 +71,10 @@ export function DailyChallenges() {
   useEffect(() => {
     if (open && !rows) void refresh();
   }, [open, rows, refresh]);
-  useEffect(() => {
-    if (!open) return;
-    const t = setInterval(refresh, 4000);
-    return () => clearInterval(t);
-  }, [open, refresh]);
-
-  // Background poll for the launcher badge — only when closed; cheap.
-  useEffect(() => {
-    refresh();
-    const t = setInterval(refresh, 30_000);
-    return () => clearInterval(t);
-  }, [refresh]);
+  // While open: tight 4s poll for live progress.
+  useVisibleInterval(refresh, open ? 4000 : null);
+  // While closed: background poll for the launcher badge.
+  useVisibleInterval(refresh, open ? null : 30_000);
 
   const claimable = (rows ?? []).filter((r) => r.completedAt && !r.claimedAt).length;
 

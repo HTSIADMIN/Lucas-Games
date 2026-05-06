@@ -4,6 +4,7 @@ import "./globals.css";
 import { readSession } from "@/lib/auth/session";
 import { getUserById } from "@/lib/db";
 import { findItem } from "@/lib/shop/catalog";
+import { IdleTimeout } from "@/components/IdleTimeout";
 
 export const metadata: Metadata = {
   title: "Lucas Games",
@@ -25,9 +26,11 @@ export default async function RootLayout({
   // Resolve the active theme key (e.g. "frontier") so we can paint the page
   // chrome on first render — no FOUC when switching themes.
   let themeKey = "saloon";
+  let signedIn = false;
   try {
     const s = await readSession();
     if (s) {
+      signedIn = true;
       const user = await getUserById(s.user.id);
       const itemId = user?.equipped_theme;
       if (itemId) {
@@ -44,6 +47,7 @@ export default async function RootLayout({
     <html lang="en" data-theme={themeKey}>
       <body>
         {children}
+        {signedIn ? <IdleTimeout /> : null}
         <SpeedInsights />
       </body>
     </html>

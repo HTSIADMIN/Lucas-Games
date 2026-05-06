@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatedBalance } from "@/components/AnimatedBalance";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 
 // Live balance pill. Hydrates from the server-rendered initial
 // value, then polls /api/wallet/balance every few seconds so the
@@ -23,21 +24,16 @@ export function LiveBalance({
 }) {
   const [balance, setBalance] = useState<number>(initial);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function fetchOnce() {
-      try {
-        const r = await fetch("/api/wallet/balance");
-        if (!r.ok) return;
-        const d = await r.json();
-        if (cancelled || typeof d.balance !== "number") return;
-        setBalance(d.balance);
-      } catch { /* ignore */ }
-    }
-    fetchOnce();
-    const t = setInterval(fetchOnce, pollMs);
-    return () => { cancelled = true; clearInterval(t); };
-  }, [pollMs]);
+  const fetchOnce = useCallback(async () => {
+    try {
+      const r = await fetch("/api/wallet/balance");
+      if (!r.ok) return;
+      const d = await r.json();
+      if (typeof d.balance !== "number") return;
+      setBalance(d.balance);
+    } catch { /* ignore */ }
+  }, []);
+  useVisibleInterval(fetchOnce, pollMs);
 
   // Window-level event so game clients can shove a fresh balance
   // straight in without waiting for the next poll. Dispatched via

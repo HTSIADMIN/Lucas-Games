@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import { GameIcon } from "@/components/GameIcon";
 import { Avatar } from "@/components/Avatar";
 import { ProfileModal } from "@/components/social/ProfileModal";
@@ -76,11 +77,7 @@ export function ClansClient({ meId }: { meId: string }) {
     }
   }
 
-  useEffect(() => {
-    refresh();
-    const t = setInterval(refresh, 6000);
-    return () => clearInterval(t);
-  }, []);
+  useVisibleInterval(refresh, 6000);
 
   if (!state) {
     return <p className="text-mute">Loading clans...</p>;

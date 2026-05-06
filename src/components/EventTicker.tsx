@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 
 // Slim banner that pins to the top of every authed page when a
 // global event (e.g. Lucky Hour) is active. Silent — and unmounted
@@ -18,21 +19,15 @@ export function EventTicker() {
   const [event, setEvent] = useState<ActiveEvent | null>(null);
   const [, force] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const r = await fetch("/api/events/active");
-        if (!r.ok) return;
-        const d = (await r.json()) as { event: ActiveEvent | null };
-        if (cancelled) return;
-        setEvent(d.event);
-      } catch { /* ignore */ }
-    }
-    load();
-    const t = setInterval(load, 20_000);
-    return () => { cancelled = true; clearInterval(t); };
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch("/api/events/active");
+      if (!r.ok) return;
+      const d = (await r.json()) as { event: ActiveEvent | null };
+      setEvent(d.event);
+    } catch { /* ignore */ }
   }, []);
+  useVisibleInterval(load, 20_000);
   // Tick once a second so the countdown re-renders.
   useEffect(() => {
     const t = setInterval(() => force((n) => n + 1), 1000);

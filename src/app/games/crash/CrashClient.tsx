@@ -8,6 +8,7 @@ import { GameEvent } from "@/components/GameEvent";
 import { useLive } from "@/components/social/LiveProvider";
 import { multiplierAt } from "@/lib/games/crash/engine";
 import { getBrowserClient } from "@/lib/supabase/browser";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 
 type RoundView = {
   id: string;
@@ -128,11 +129,9 @@ export function CrashClient() {
   }
 
   useEffect(() => {
-    refreshState();
     refreshHistory();
-    const t = setInterval(refreshState, POLL_MS);
-    return () => clearInterval(t);
   }, []);
+  useVisibleInterval(refreshState, POLL_MS);
 
   // Refresh history whenever a round transitions out of "crashed".
   useEffect(() => {

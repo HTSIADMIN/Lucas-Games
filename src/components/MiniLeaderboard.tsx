@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 
 type Row = {
   userId: string;
@@ -28,21 +29,16 @@ export function MiniLeaderboard({
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let alive = true;
-    async function load() {
-      try {
-        const r = await fetch(endpoint);
-        if (!r.ok) return;
-        const d = await r.json();
-        if (alive) setRows(d.rows ?? []);
-      } catch { /* ignore */ }
-      finally { if (alive) setLoading(false); }
-    }
-    load();
-    const t = setInterval(load, pollMs);
-    return () => { alive = false; clearInterval(t); };
-  }, [endpoint, pollMs]);
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch(endpoint);
+      if (!r.ok) return;
+      const d = await r.json();
+      setRows(d.rows ?? []);
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
+  }, [endpoint]);
+  useVisibleInterval(load, pollMs);
 
   return (
     <section className="panel" style={{ padding: "var(--sp-5)", marginTop: "var(--sp-6)" }}>

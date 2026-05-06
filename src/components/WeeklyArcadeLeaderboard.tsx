@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Avatar } from "@/components/Avatar";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 
 // Per-game weekly standings panel rendered inside the Flappy and
 // Crossy Road earn pages. Reads /api/games/<game>/weekly which also
@@ -45,30 +46,24 @@ export function WeeklyArcadeLeaderboard({ game }: { game: ArcadeGame }) {
   const [reward, setReward] = useState<number>(0);
   const [, force] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const path = WEEKLY_PATH[game];
-        const r = await fetch(path);
-        if (!r.ok) return;
-        const d = await r.json() as {
-          rows: LBRow[];
-          lastWeek: LastWeek;
-          weekEnd: string | null;
-          reward: number;
-        };
-        if (cancelled) return;
-        setRows(d.rows ?? []);
-        setLastWeek(d.lastWeek);
-        setWeekEnd(d.weekEnd);
-        setReward(d.reward);
-      } catch { /* ignore */ }
-    }
-    load();
-    const t = setInterval(load, 30_000);
-    return () => { cancelled = true; clearInterval(t); };
+  const load = useCallback(async () => {
+    try {
+      const path = WEEKLY_PATH[game];
+      const r = await fetch(path);
+      if (!r.ok) return;
+      const d = await r.json() as {
+        rows: LBRow[];
+        lastWeek: LastWeek;
+        weekEnd: string | null;
+        reward: number;
+      };
+      setRows(d.rows ?? []);
+      setLastWeek(d.lastWeek);
+      setWeekEnd(d.weekEnd);
+      setReward(d.reward);
+    } catch { /* ignore */ }
   }, [game]);
+  useVisibleInterval(load, 30_000);
 
   // Tick once per second so the countdown re-renders.
   useEffect(() => {

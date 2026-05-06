@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import * as Sfx from "@/lib/sfx";
 import { GameIcon, type IconName } from "@/components/GameIcon";
 import { SlotSym, BuildingSym, type SlotSymKey } from "./SlotSvg";
@@ -132,20 +133,15 @@ export function SlotsClient() {
 
   // Poll the jackpot pool every 5s while not spinning so the marquee
   // stays roughly current with other players' bets.
-  useEffect(() => {
-    let cancelled = false;
-    async function poll() {
-      try {
-        const r = await fetch("/api/games/slots/jackpot");
-        if (!r.ok) return;
-        const d = await r.json();
-        if (!cancelled && typeof d.pool === "number") setJackpotPool(d.pool);
-      } catch { /* ignore */ }
-    }
-    poll();
-    const t = setInterval(poll, 5_000);
-    return () => { cancelled = true; clearInterval(t); };
+  const pollJackpot = useCallback(async () => {
+    try {
+      const r = await fetch("/api/games/slots/jackpot");
+      if (!r.ok) return;
+      const d = await r.json();
+      if (typeof d.pool === "number") setJackpotPool(d.pool);
+    } catch { /* ignore */ }
   }, []);
+  useVisibleInterval(pollJackpot, 5_000);
 
   // Initial state load (resumes any active bonus on refresh)
   useEffect(() => {

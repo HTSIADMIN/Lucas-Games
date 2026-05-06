@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { PlayingCard } from "@/components/PlayingCard";
 import { useLive } from "@/components/social/LiveProvider";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import type { Card, Rank, Suit } from "@/lib/games/cards";
 import * as Sfx from "@/lib/sfx";
 
@@ -70,11 +71,12 @@ export function BlackjackMpClient() {
       setSeats(data.seats ?? []);
     } catch { /* ignore */ }
   }
+  useVisibleInterval(refreshState, POLL_MS);
   useEffect(() => {
-    refreshState();
-    const t = setInterval(refreshState, POLL_MS);
-    const tick = setInterval(() => force((n) => n + 1), 250); // re-render countdowns
-    return () => { clearInterval(t); clearInterval(tick); };
+    // Local 4Hz countdown rerender — pure CPU, no server cost; keep
+    // running even when hidden so we don't reset countdowns on resume.
+    const tick = setInterval(() => force((n) => n + 1), 250);
+    return () => clearInterval(tick);
   }, []);
 
   // Detect round state transitions to fire animation cues.

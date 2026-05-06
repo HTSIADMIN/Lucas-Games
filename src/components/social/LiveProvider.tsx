@@ -1,9 +1,10 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { getBrowserClient } from "@/lib/supabase/browser";
 import type { ChatMessagePublic } from "@/lib/db";
 import { qualifyBet, MAX_FEED_ROWS } from "@/lib/feed/thresholds";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 
 export type PresenceMember = {
   userId: string;
@@ -254,59 +255,50 @@ export function LiveProvider({
   // Polling fallback for chat — Realtime postgres_changes can be flaky in
   // some browsers / network conditions, so we poll every 3s and merge by id.
   // If Realtime is working, this is just redundant (idempotent merge).
-  useEffect(() => {
+  const pollChat = useCallback(async () => {
     if (!me) return;
-    let cancelled = false;
-    async function poll() {
-      try {
-        const r = await fetch("/api/chat/recent");
-        if (!r.ok) return;
-        const data = await r.json();
-        if (cancelled || !Array.isArray(data.messages)) return;
-        setChat((prev) => {
-          const byId = new Map<number, ChatMessagePublic>();
-          for (const m of prev) byId.set(m.id, m);
-          for (const m of data.messages as ChatMessagePublic[]) byId.set(m.id, m);
-          return Array.from(byId.values())
-            .sort((a, b) => a.id - b.id)
-            .slice(-MAX_CHAT);
-        });
-      } catch {
-        // ignore — best effort
-      }
+    try {
+      const r = await fetch("/api/chat/recent");
+      if (!r.ok) return;
+      const data = await r.json();
+      if (!Array.isArray(data.messages)) return;
+      setChat((prev) => {
+        const byId = new Map<number, ChatMessagePublic>();
+        for (const m of prev) byId.set(m.id, m);
+        for (const m of data.messages as ChatMessagePublic[]) byId.set(m.id, m);
+        return Array.from(byId.values())
+          .sort((a, b) => a.id - b.id)
+          .slice(-MAX_CHAT);
+      });
+    } catch {
+      // ignore — best effort
     }
-    const t = setInterval(poll, 3000);
-    return () => { cancelled = true; clearInterval(t); };
   }, [me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useVisibleInterval(pollChat, me ? 3000 : null);
 
   // Polling for the big-bets feed — same pattern as chat. Backed by
   // /api/feed/big-bets which queries settled game_sessions in the last
   // 10 minutes filtered to wins/losses ≥ 50k.
-  useEffect(() => {
+  const pollBets = useCallback(async () => {
     if (!me) return;
-    let cancelled = false;
-    async function poll() {
-      try {
-        const r = await fetch("/api/feed/big-bets");
-        if (!r.ok) return;
-        const data = await r.json();
-        if (cancelled || !Array.isArray(data.bets)) return;
-        setBets((prev) => {
-          const byId = new Map<string, LiveBet>();
-          for (const m of prev) byId.set(m.id, m);
-          for (const b of data.bets as LiveBet[]) byId.set(b.id, b);
-          return Array.from(byId.values())
-            .sort((a, b) => b.at - a.at)
-            .slice(0, MAX_BETS);
-        });
-      } catch {
-        // ignore
-      }
+    try {
+      const r = await fetch("/api/feed/big-bets");
+      if (!r.ok) return;
+      const data = await r.json();
+      if (!Array.isArray(data.bets)) return;
+      setBets((prev) => {
+        const byId = new Map<string, LiveBet>();
+        for (const m of prev) byId.set(m.id, m);
+        for (const b of data.bets as LiveBet[]) byId.set(b.id, b);
+        return Array.from(byId.values())
+          .sort((a, b) => b.at - a.at)
+          .slice(0, MAX_BETS);
+      });
+    } catch {
+      // ignore
     }
-    poll();
-    const t = setInterval(poll, 4000);
-    return () => { cancelled = true; clearInterval(t); };
   }, [me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useVisibleInterval(pollBets, me ? 4000 : null);
 
   const value = useMemo(
     () => ({ ready, presence, bets, chat, championId, pushChat }),

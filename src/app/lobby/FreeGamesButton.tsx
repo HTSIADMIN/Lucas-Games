@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import Link from "next/link";
 import { GameIcon } from "@/components/GameIcon";
 import { FREE_GAMES } from "@/lib/games/freeGames";
@@ -20,22 +21,17 @@ export function FreeGamesButton({ compact = false }: { compact?: boolean }) {
   const wasReadyRef = useRef<boolean>(false);
 
   // Poll status every 30s; refresh immediately when modal opens.
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const r = await fetch("/api/earn/status", { cache: "no-store" });
-        if (!r.ok) return;
-        const data = (await r.json()) as EarnStatus;
-        if (!cancelled) setStatus(data);
-      } catch {
-        // ignore
-      }
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch("/api/earn/status", { cache: "no-store" });
+      if (!r.ok) return;
+      const data = (await r.json()) as EarnStatus;
+      setStatus(data);
+    } catch {
+      // ignore
     }
-    load();
-    const t = setInterval(load, 30_000);
-    return () => { cancelled = true; clearInterval(t); };
   }, []);
+  useVisibleInterval(load, 30_000);
 
   // Re-render once a second so the countdown updates while the modal is open.
   useEffect(() => {
