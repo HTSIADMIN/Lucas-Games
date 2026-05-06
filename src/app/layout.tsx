@@ -6,6 +6,7 @@ import { getUserById } from "@/lib/db";
 import { findItem } from "@/lib/shop/catalog";
 import { IdleTimeout } from "@/components/IdleTimeout";
 import { BrokeModal } from "@/components/BrokeModal";
+import { WhatsNewModal } from "@/components/WhatsNewModal";
 
 export const metadata: Metadata = {
   title: "Lucas Games",
@@ -50,6 +51,7 @@ export default async function RootLayout({
         {children}
         {signedIn ? <IdleTimeout /> : null}
         {signedIn ? <BrokeModal /> : null}
+        {signedIn ? <WhatsNewModal /> : null}
         <SpeedInsights />
       </body>
     </html>
