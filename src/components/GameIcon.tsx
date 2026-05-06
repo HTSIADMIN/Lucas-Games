@@ -2047,207 +2047,28 @@ function peg128(x: number, y: number): Px[] {
   ];
 }
 
-// Lobby tile artwork lives as standalone SVGs in /public/game-icons/.
-// Mapping each `lobby.*` sprite name to its file lets us swap in
-// designed art without touching every call site. Anything missing
-// here falls through to the hand-laid pixel sprites below.
+// Lobby tile artwork lives as standalone files in /public/game-icons/.
+// V2 set is hand-rendered AVIF that fills the entire tile — those
+// override the V1 pixel-art SVG fallbacks per game. Slugs without a
+// V2 entry yet (Crossy Road, Daily Spin, Flappy, Monopoly) keep
+// their V1 SVG until V2 art ships.
 const LOBBY_SVG: Partial<Record<IconName, string>> = {
-  // "lobby.blackjack" intentionally absent — rendered inline below
-  // so its colours can be themed via CSS custom properties.
-  "lobby.coinflip":      "/game-icons/game-coinflip.svg",
-  "lobby.coinflip_duel": "/game-icons/game-coinflip-duel.svg",
-  "lobby.crash":         "/game-icons/game-crash.svg",
+  "lobby.blackjack":     "/game-icons/v2/blackjack.avif",
+  "lobby.coinflip":      "/game-icons/v2/coinflip.avif",
+  "lobby.coinflip_duel": "/game-icons/v2/coinflip-duel.avif",
+  "lobby.crash":         "/game-icons/v2/crash.avif",
   "lobby.crossy_road":   "/game-icons/game-crossy.svg",
   "lobby.daily_spin":    "/game-icons/game-daily-spin.svg",
-  "lobby.dice":          "/game-icons/game-dice.svg",
+  "lobby.dice":          "/game-icons/v2/dice.avif",
   "lobby.flappy":        "/game-icons/game-flappy.svg",
-  "lobby.mines":         "/game-icons/game-mines.svg",
+  "lobby.mines":         "/game-icons/v2/mines.avif",
   "lobby.monopoly":      "/game-icons/game-monopoly.svg",
-  "lobby.plinko":        "/game-icons/game-plinko.svg",
-  "lobby.poker":         "/game-icons/game-poker.svg",
-  "lobby.roulette":      "/game-icons/game-roulette.svg",
-  "lobby.scratch":       "/game-icons/game-scratcher.svg",
-  "lobby.slots":         "/game-icons/game-slots.svg",
+  "lobby.plinko":        "/game-icons/v2/plinko.avif",
+  "lobby.poker":         "/game-icons/v2/poker.avif",
+  "lobby.roulette":      "/game-icons/v2/roulette.avif",
+  "lobby.scratch":       "/game-icons/v2/scratch.avif",
+  "lobby.slots":         "/game-icons/v2/slots.avif",
 };
-
-// 16:9 hand-crafted blackjack tile, GBA-handheld vibe. Rendered
-// inline (rather than as a static .svg under /public) so its colours
-// can be overridden via CSS custom properties — themes can re-skin
-// felt, bezel, gold and card stock without us shipping a separate
-// file per theme.
-//
-// Layout (viewBox 128 x 72):
-//   - Full-canvas dithered green felt extends edge-to-edge
-//   - Dark grey GBA-style button (56 x 56) centred on the felt
-//   - Inset panel within the button holds the icon
-//   - Two cards (A♠ + J♠) fanned at the top, "21" in gold below
-//
-// Variables (with their built-in saloon-default fallbacks):
-//   --bjicon-bezel        outer + inner panel mid grey  (#3a4250)
-//   --bjicon-bezel-light  bezel top/left highlight       (#5a6470)
-//   --bjicon-bezel-dark   bezel bottom/right shadow      (#1c2230)
-//   --bjicon-felt         felt base green                (#2a6b35)
-//   --bjicon-felt-light   felt dither highlight          (#3d8a44)
-//   --bjicon-felt-dark    felt dither shadow             (#1f4f28)
-//   --bjicon-card         card body cream                (#f5ebd1)
-//   --bjicon-card-outline card edge ink                  (#0a0f1a)
-//   --bjicon-spade        spade pip + letter ink         (#1a1a1f)
-//   --bjicon-gold         "21" gold                      (#f0c640)
-function BlackjackTileIcon({
-  size,
-  className,
-  style,
-}: {
-  size: number;
-  className?: string;
-  style?: CSSProperties;
-}) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 128 72"
-      preserveAspectRatio="xMidYMid meet"
-      shapeRendering="crispEdges"
-      className={className}
-      style={{ display: "inline-block", verticalAlign: "middle", ...style }}
-      aria-hidden
-    >
-      <defs>
-        {/* 4x4 felt dither tile — base green + alternating darker
-            and lighter speckles for that hand-laid retro texture. */}
-        <pattern id="bjFeltDither" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
-          <rect width="4" height="4" fill="var(--bjicon-felt, #2a6b35)" />
-          <rect x="0" y="0" width="1" height="1" fill="var(--bjicon-felt-dark, #1f4f28)" />
-          <rect x="2" y="1" width="1" height="1" fill="var(--bjicon-felt-light, #3d8a44)" />
-          <rect x="1" y="3" width="1" height="1" fill="var(--bjicon-felt-dark, #1f4f28)" />
-        </pattern>
-        {/* Vignette layered on top of the dither — darkens corners,
-            keeps centre clean so the button reads as the focal point. */}
-        <radialGradient id="bjFeltVignette" cx="50%" cy="50%" r="65%">
-          <stop offset="0%" stopColor="#000" stopOpacity="0" />
-          <stop offset="100%" stopColor="#000" stopOpacity="0.32" />
-        </radialGradient>
-      </defs>
-
-      {/* === Felt background extending edge-to-edge === */}
-      <rect width="128" height="72" fill="url(#bjFeltDither)" />
-      <rect width="128" height="72" fill="url(#bjFeltVignette)" />
-
-      {/* === GBA-style button frame (56x56, centred at 64,36) === */}
-      <rect x="36" y="8" width="56" height="56" fill="var(--bjicon-bezel, #3a4250)" />
-      {/* outer bezel highlights (top + left) */}
-      <rect x="36" y="8" width="56" height="2" fill="var(--bjicon-bezel-light, #5a6470)" />
-      <rect x="36" y="8" width="2" height="56" fill="var(--bjicon-bezel-light, #5a6470)" />
-      {/* outer bezel shadows (bottom + right) */}
-      <rect x="36" y="62" width="56" height="2" fill="var(--bjicon-bezel-dark, #1c2230)" />
-      <rect x="90" y="8" width="2" height="56" fill="var(--bjicon-bezel-dark, #1c2230)" />
-
-      {/* === Inset inner panel (48x48 at 40,12) — recessed look === */}
-      <rect x="40" y="12" width="48" height="48" fill="var(--bjicon-bezel-dark, #1c2230)" />
-      {/* inset highlight (bottom + right — reverse of outer bevel) */}
-      <rect x="40" y="58" width="48" height="2" fill="var(--bjicon-bezel-light, #5a6470)" />
-      <rect x="86" y="12" width="2" height="48" fill="var(--bjicon-bezel-light, #5a6470)" />
-      {/* inner felt fill */}
-      <rect x="42" y="14" width="44" height="44" fill="url(#bjFeltDither)" />
-
-      {/* === A♠ — back card, fanned left === */}
-      <g transform="translate(50 15) rotate(-10 8 11)">
-        {/* drop shadow */}
-        <rect x="1" y="1" width="16" height="22" fill="#000" opacity="0.4" />
-        {/* card outline */}
-        <rect x="0" y="0" width="16" height="22" fill="var(--bjicon-card-outline, #0a0f1a)" />
-        {/* card body */}
-        <rect x="1" y="1" width="14" height="20" fill="var(--bjicon-card, #f5ebd1)" />
-        {/* top inner highlight stripe */}
-        <rect x="1" y="1" width="14" height="1" fill="#fff" opacity="0.5" />
-
-        {/* "A" — 5x7 chunky pixel letter at (2, 2) */}
-        <g fill="var(--bjicon-spade, #1a1a1f)">
-          <rect x="4" y="2" width="1" height="1" />
-          <rect x="3" y="3" width="1" height="1" />
-          <rect x="5" y="3" width="1" height="1" />
-          <rect x="2" y="4" width="1" height="1" />
-          <rect x="6" y="4" width="1" height="1" />
-          <rect x="2" y="5" width="1" height="1" />
-          <rect x="6" y="5" width="1" height="1" />
-          <rect x="2" y="6" width="5" height="1" />
-          <rect x="2" y="7" width="1" height="1" />
-          <rect x="6" y="7" width="1" height="1" />
-          <rect x="2" y="8" width="1" height="1" />
-          <rect x="6" y="8" width="1" height="1" />
-        </g>
-
-        {/* Centre spade — 6x8 at (4, 11) */}
-        <g fill="var(--bjicon-spade, #1a1a1f)">
-          <rect x="6" y="11" width="2" height="1" />
-          <rect x="5" y="12" width="4" height="1" />
-          <rect x="4" y="13" width="6" height="2" />
-          <rect x="6" y="15" width="2" height="1" />
-          <rect x="5" y="16" width="4" height="1" />
-          <rect x="4" y="17" width="6" height="1" />
-          <rect x="5" y="18" width="4" height="1" />
-        </g>
-      </g>
-
-      {/* === J♠ — front card, fanned right === */}
-      <g transform="translate(62 15) rotate(10 8 11)">
-        <rect x="1" y="1" width="16" height="22" fill="#000" opacity="0.4" />
-        <rect x="0" y="0" width="16" height="22" fill="var(--bjicon-card-outline, #0a0f1a)" />
-        <rect x="1" y="1" width="14" height="20" fill="var(--bjicon-card, #f5ebd1)" />
-        <rect x="1" y="1" width="14" height="1" fill="#fff" opacity="0.5" />
-
-        {/* "J" — 5x7 chunky pixel letter at (2, 2) */}
-        <g fill="var(--bjicon-spade, #1a1a1f)">
-          <rect x="4" y="2" width="3" height="1" />
-          <rect x="6" y="3" width="1" height="1" />
-          <rect x="6" y="4" width="1" height="1" />
-          <rect x="6" y="5" width="1" height="1" />
-          <rect x="6" y="6" width="1" height="1" />
-          <rect x="2" y="7" width="1" height="1" />
-          <rect x="6" y="7" width="1" height="1" />
-          <rect x="3" y="8" width="3" height="1" />
-        </g>
-
-        {/* Centre spade — 6x8 at (4, 11) */}
-        <g fill="var(--bjicon-spade, #1a1a1f)">
-          <rect x="6" y="11" width="2" height="1" />
-          <rect x="5" y="12" width="4" height="1" />
-          <rect x="4" y="13" width="6" height="2" />
-          <rect x="6" y="15" width="2" height="1" />
-          <rect x="5" y="16" width="4" height="1" />
-          <rect x="4" y="17" width="6" height="1" />
-          <rect x="5" y="18" width="4" height="1" />
-        </g>
-      </g>
-
-      {/* === "21" in gold — 6x9 chunky pixel digits centred at x=64 === */}
-      <g fill="var(--bjicon-gold, #f0c640)">
-        {/* "2" — 6x9 at left half */}
-        <rect x="58" y="42" width="4" height="1" />
-        <rect x="57" y="43" width="2" height="1" />
-        <rect x="61" y="43" width="2" height="1" />
-        <rect x="61" y="44" width="2" height="1" />
-        <rect x="60" y="45" width="2" height="1" />
-        <rect x="59" y="46" width="2" height="1" />
-        <rect x="58" y="47" width="2" height="1" />
-        <rect x="57" y="48" width="2" height="1" />
-        <rect x="57" y="49" width="2" height="1" />
-        <rect x="57" y="50" width="6" height="1" />
-        {/* "1" — 6x9 at right half (gap of 2 between digits) */}
-        <rect x="67" y="42" width="2" height="1" />
-        <rect x="66" y="43" width="3" height="1" />
-        <rect x="67" y="44" width="2" height="1" />
-        <rect x="67" y="45" width="2" height="1" />
-        <rect x="67" y="46" width="2" height="1" />
-        <rect x="67" y="47" width="2" height="1" />
-        <rect x="67" y="48" width="2" height="1" />
-        <rect x="67" y="49" width="2" height="1" />
-        <rect x="65" y="50" width="6" height="1" />
-      </g>
-    </svg>
-  );
-}
 
 export function GameIcon({
   name,
@@ -2260,16 +2081,16 @@ export function GameIcon({
   className?: string;
   style?: CSSProperties;
 }) {
-  // Inline 16:9 hand-crafted tiles take precedence over the
-  // static-SVG dispatch so their CSS-var colours can theme.
-  if (name === "lobby.blackjack") {
-    return <BlackjackTileIcon size={size} className={className} style={style} />;
-  }
-  // SVG file art (lobby tiles). Rendered as <img> so the browser
-  // caches and decodes them once, and pixelated rendering matches
-  // the rest of the casino's vibe.
+  // Lobby tile artwork (V2 AVIF + V1 SVG fallback). Rendered as <img>
+  // so the browser caches each file once. We tell the image to fill
+  // its parent (object-fit: cover) so V2 art sits flush with the
+  // tile-art frame instead of being letterboxed inside an 80%-sized
+  // intrinsic box. V1 SVGs use crispEdges shape-rendering inside the
+  // file itself, so dropping imageRendering:pixelated here doesn't
+  // soften them — but it does let AVIF photos stay smooth.
   const svgPath = LOBBY_SVG[name];
   if (svgPath) {
+    const isPixelArt = svgPath.endsWith(".svg");
     return (
       <img
         src={svgPath}
@@ -2279,9 +2100,11 @@ export function GameIcon({
         aria-hidden
         className={className}
         style={{
-          display: "inline-block",
-          verticalAlign: "middle",
-          imageRendering: "pixelated",
+          display: "block",
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          imageRendering: isPixelArt ? "pixelated" : "auto",
           ...style,
         }}
       />
