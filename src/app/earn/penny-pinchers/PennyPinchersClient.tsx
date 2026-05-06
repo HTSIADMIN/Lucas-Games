@@ -6,14 +6,21 @@ import * as Sfx from "@/lib/sfx";
 import {
   COINS,
   COIN_ORDER,
+  MERGE_MIN_AGE_MS,
+  MERGE_RULES,
+  STICKY_PICKUP_COUNT,
+  STICKY_PICKUP_RADIUS,
   type CoinId,
+  type CoinTrait,
   type HelperId,
   type UpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
 import {
   coinPCValue,
+  findMerge,
   helperRatePcPerSec,
   rollSpawn,
+  rollTrait,
   spawnIntervalMs,
   unlockedCoins,
 } from "@/lib/games/penny-pinchers/engine";
@@ -53,6 +60,7 @@ type StateResponse = {
 type SpawnedCoin = {
   id: number;
   coin: CoinId;
+  trait: CoinTrait | null;
   x: number;
   y: number;
   spawnedAt: number;
@@ -110,14 +118,46 @@ export function PennyPinchersClient() {
       const x = pad + Math.random() * Math.max(0, rect.width - pad * 2);
       const y = pad + Math.random() * Math.max(0, rect.height - pad * 2);
       const coin = rollSpawn(upgrades);
+      const trait = rollTrait(coin, upgrades);
       coinSeqRef.current += 1;
       setCoins((prev) => [
         ...prev,
-        { id: coinSeqRef.current, coin, x, y, spawnedAt: Date.now() },
+        { id: coinSeqRef.current, coin, trait, x, y, spawnedAt: Date.now() },
       ]);
     }, intervalMs);
     return () => window.clearInterval(t);
   }, [server, intervalMs, upgrades]);
+
+  // Merge proximity loop — only runs when "pile_it_up" is owned.
+  // Walks each merge rule once per tick and fuses one cluster
+  // per tick so the animation reads as a chain reaction rather
+  // than a single frame disappearance.
+  useEffect(() => {
+    if (!server) return;
+    if ((upgrades.pile_it_up ?? 0) < 1) return;
+    const t = window.setInterval(() => {
+      setCoins((prev) => {
+        const eligibleCutoff = Date.now() - MERGE_MIN_AGE_MS;
+        const eligible = prev.filter((c) => c.spawnedAt <= eligibleCutoff);
+        for (const rule of MERGE_RULES) {
+          const merge = findMerge(eligible, rule);
+          if (!merge) continue;
+          coinSeqRef.current += 1;
+          const fresh: SpawnedCoin = {
+            id: coinSeqRef.current,
+            coin: merge.to,
+            trait: null,
+            x: merge.centroid.x,
+            y: merge.centroid.y,
+            spawnedAt: Date.now(),
+          };
+          return [...prev.filter((c) => !merge.ids.includes(c.id)), fresh];
+        }
+        return prev;
+      });
+    }, 600);
+    return () => window.clearInterval(t);
+  }, [server, upgrades.pile_it_up]);
 
   // Coin reaper — drop coins that have aged out
   useEffect(() => {
@@ -139,22 +179,55 @@ export function PennyPinchersClient() {
   }, [server]);
 
   async function clickCoin(coin: SpawnedCoin) {
-    setCoins((prev) => prev.filter((c) => c.id !== coin.id));
     Sfx.play("coin.drop");
-    const optimisticPC = coinPCValue(coin.coin, upgrades);
+    const traitMul = coin.trait === "shiny" ? 5 : 1;
+    const optimisticPC = coinPCValue(coin.coin, upgrades) * traitMul;
     setLocalCents((c) => c + optimisticPC);
+
+    // Sticky-click side effect: also pick up the N nearest coins
+    // within radius. Each becomes its own server click so the rate
+    // limiter still gates real abuse.
+    const collateral: SpawnedCoin[] = [];
+    if (coin.trait === "sticky") {
+      setCoins((prev) => {
+        const others = prev.filter((c) => c.id !== coin.id);
+        const nearby = others
+          .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
+          .filter((e) => e.d2 <= STICKY_PICKUP_RADIUS * STICKY_PICKUP_RADIUS)
+          .sort((a, b) => a.d2 - b.d2)
+          .slice(0, STICKY_PICKUP_COUNT)
+          .map((e) => e.c);
+        collateral.push(...nearby);
+        const removeIds = new Set([coin.id, ...nearby.map((c) => c.id)]);
+        return prev.filter((c) => !removeIds.has(c.id));
+      });
+    } else {
+      setCoins((prev) => prev.filter((c) => c.id !== coin.id));
+    }
+
     try {
       const r = await fetch("/api/earn/penny-pinchers/click", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ coinType: coin.coin }),
+        body: JSON.stringify({ coinType: coin.coin, trait: coin.trait }),
       });
       if (r.ok) {
         const d = (await r.json()) as { cents: number };
         setLocalCents(d.cents);
       }
-      // 429 rate-limits silently roll back via the next sync.
     } catch { /* ignore */ }
+
+    // Fire-and-forget the sticky collateral pickups so each one is
+    // metered + counted toward lifetime_clicks.
+    for (const extra of collateral) {
+      const extraOptimistic = coinPCValue(extra.coin, upgrades) * (extra.trait === "shiny" ? 5 : 1);
+      setLocalCents((c) => c + extraOptimistic);
+      void fetch("/api/earn/penny-pinchers/click", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ coinType: extra.coin, trait: extra.trait }),
+      }).catch(() => { /* ignore — sync poll reconciles */ });
+    }
   }
 
   async function buyUpgrade(id: UpgradeId, cost: number) {
@@ -336,6 +409,7 @@ export function PennyPinchersClient() {
             <CoinSprite
               key={c.id}
               coin={c.coin}
+              trait={c.trait}
               x={c.x}
               y={c.y}
               spawnedAt={c.spawnedAt}

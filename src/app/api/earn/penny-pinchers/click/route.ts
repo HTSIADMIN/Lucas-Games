@@ -5,8 +5,14 @@ import {
   listPennyPinchersUpgrades,
   upsertPennyPinchersState,
 } from "@/lib/db";
-import { COINS, MAX_CLICKS_PER_SEC, type CoinId } from "@/lib/games/penny-pinchers/catalog";
-import { coinPCValue } from "@/lib/games/penny-pinchers/engine";
+import {
+  COINS,
+  MAX_CLICKS_PER_SEC,
+  TRAITS,
+  type CoinId,
+  type CoinTrait,
+} from "@/lib/games/penny-pinchers/catalog";
+import { coinPCValue, traitMultiplier } from "@/lib/games/penny-pinchers/engine";
 
 export const runtime = "nodejs";
 
@@ -30,17 +36,24 @@ function noteClickAndCheck(userId: string, now: number): boolean {
   return true;
 }
 
-// POST /api/earn/penny-pinchers/click  body: { coinType: CoinId }
+// POST /api/earn/penny-pinchers/click  body: { coinType, trait? }
 export async function POST(req: Request) {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  let body: { coinType?: unknown };
+  let body: { coinType?: unknown; trait?: unknown };
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "bad_json" }, { status: 400 }); }
 
   const coinType = String(body.coinType ?? "") as CoinId;
   if (!COINS[coinType]) return NextResponse.json({ error: "bad_coin" }, { status: 400 });
+
+  // Optional trait. The client tells us; we trust but cap via
+  // traitMultiplier so a tampered request can't claim a 1000× shiny.
+  let trait: CoinTrait | null = null;
+  if (typeof body.trait === "string" && body.trait in TRAITS) {
+    trait = body.trait as CoinTrait;
+  }
 
   const now = Date.now();
   if (!noteClickAndCheck(s.user.id, now)) {
@@ -54,7 +67,8 @@ export async function POST(req: Request) {
   const upgradeLevels: Record<string, number> = {};
   for (const u of upgrades) upgradeLevels[u.upgrade_id] = u.level;
 
-  const pc = coinPCValue(coinType, upgradeLevels);
+  const baseValue = coinPCValue(coinType, upgradeLevels);
+  const pc = Math.round(baseValue * traitMultiplier(trait));
 
   state = await upsertPennyPinchersState({
     ...state,
@@ -64,5 +78,5 @@ export async function POST(req: Request) {
     last_tick_at: new Date(now).toISOString(),
   });
 
-  return NextResponse.json({ ok: true, cents: state.cents, pcEarned: pc });
+  return NextResponse.json({ ok: true, cents: state.cents, pcEarned: pc, trait });
 }

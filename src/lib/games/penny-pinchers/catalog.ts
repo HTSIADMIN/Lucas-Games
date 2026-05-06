@@ -46,7 +46,8 @@ export type UpgradeId =
   | "laundry_day"
   | "boardwalk"
   | "grandpa_jar"
-  | "auto_picker";
+  | "auto_picker"
+  | "pile_it_up";
 
 export type UpgradeDef = {
   id: UpgradeId;
@@ -83,6 +84,10 @@ export const UPGRADES: readonly UpgradeDef[] = [
 
   // Automation foundation
   { id: "auto_picker",       label: "Auto-Picker",            description: "Auto-clicks a random coin once per second per level.", category: "automation", baseCost: 5_000, costMultiplier: 3.0, maxLevel: 5 },
+
+  // Merging — strategic-wait mechanic. Once unlocked, coins that
+  // sit too close to each other auto-fuse into the next denomination.
+  { id: "pile_it_up",        label: "Pile It Up",             description: "Coins left near each other merge into bigger ones. 5 pennies → nickel; 2 nickels → dime.", category: "automation", baseCost: 500, costMultiplier: 1.0, maxLevel: 1 },
 ];
 
 export const UPGRADES_BY_ID: Record<UpgradeId, UpgradeDef> = Object.fromEntries(
@@ -132,6 +137,63 @@ export const DAILY_BANK_CAP = 100_000;
 
 /** How much PC stays in the player's pocket after banking. */
 export const BANK_HOUSE_CUT = 0; // 0 = bank everything; raise later if we want a residual
+
+// ============================================================
+// RARE COIN TRAITS — Phase 2a
+//
+// Spawned coins occasionally roll a trait that changes how they
+// look and what they pay. Server caps apply on click (see
+// click/route.ts) so even if the client lies the player can't
+// dump unlimited PC.
+// ============================================================
+
+export type CoinTrait = "shiny" | "sticky";
+
+export type TraitDef = {
+  id: CoinTrait;
+  /** PC multiplier applied on collect. Server clamps to this max. */
+  maxMultiplier: number;
+  /** Spawn probability before any luck modifiers. */
+  baseChance: number;
+  /** Each level of `lucky_crack` adds this much to the chance. */
+  perLuckLevel: number;
+  label: string;
+};
+
+export const TRAITS: Record<CoinTrait, TraitDef> = {
+  shiny:  { id: "shiny",  maxMultiplier: 5, baseChance: 0.01, perLuckLevel: 0.01, label: "Shiny" },
+  // Sticky doesn't multiply value — it picks up nearby coins on
+  // click (handled client-side). Multiplier of 1 is the cap.
+  sticky: { id: "sticky", maxMultiplier: 1, baseChance: 0.005, perLuckLevel: 0.003, label: "Sticky" },
+};
+
+/** Number of nearby coins a sticky-click also picks up. */
+export const STICKY_PICKUP_COUNT = 2;
+/** Sticky-click radius (px in play area). */
+export const STICKY_PICKUP_RADIUS = 140;
+
+// ============================================================
+// MERGING — Phase 2a
+//
+// When the `pile_it_up` upgrade is owned, coins of the same
+// denomination that have been on screen for at least
+// MERGE_MIN_AGE_MS auto-fuse into the next tier when enough are
+// within MERGE_PROXIMITY_PX of each other. Pure client-side cosmetic
+// — server still values clicked coins normally.
+// ============================================================
+
+export const MERGE_PROXIMITY_PX = 110;
+export const MERGE_MIN_AGE_MS = 1500;
+
+export type MergeRule = { from: CoinId; count: number; to: CoinId };
+
+export const MERGE_RULES: readonly MergeRule[] = [
+  { from: "penny",   count: 5, to: "nickel"  },
+  { from: "nickel",  count: 2, to: "dime"    },
+  { from: "dime",    count: 5, to: "half"    },
+  { from: "quarter", count: 2, to: "half"    },
+  { from: "half",    count: 2, to: "dollar"  },
+];
 
 // ============================================================
 // CLICK / OFFLINE LIMITS

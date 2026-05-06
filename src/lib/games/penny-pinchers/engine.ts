@@ -8,9 +8,12 @@ import {
   DAILY_BANK_CAP,
   HELPERS_BY_ID,
   MAX_BANK_PAYOUT,
+  MERGE_PROXIMITY_PX,
   OFFLINE_CAP_HOURS,
+  TRAITS,
   UPGRADES_BY_ID,
   type CoinId,
+  type CoinTrait,
   type HelperId,
   type UpgradeId,
 } from "./catalog";
@@ -30,6 +33,18 @@ export function coinPCValue(coinType: CoinId, levels: UpgradeLevels): number {
     return base + (levels.penny_multiplier ?? 0);
   }
   return base;
+}
+
+/**
+ * Server-clamped trait multiplier. The client tells us "this was
+ * shiny", we trust it but cap at the trait's maxMultiplier so a
+ * tampered client can never dump more than the configured ceiling.
+ */
+export function traitMultiplier(trait: CoinTrait | null | undefined): number {
+  if (!trait) return 1;
+  const def = TRAITS[trait];
+  if (!def) return 1;
+  return def.maxMultiplier;
 }
 
 // ============================================================
@@ -147,6 +162,71 @@ export function bankPayoutCents(cents: number, dailyBankedSoFar: number): number
 // ============================================================
 // MISC HELPERS used by the client
 // ============================================================
+
+// ============================================================
+// TRAITS — roll on spawn
+// ============================================================
+
+/**
+ * Roll a trait for a freshly-spawned coin. Returns null when the
+ * coin is plain. Sticky is a separate roll from shiny so a coin can
+ * only be one or the other (shiny wins ties).
+ */
+export function rollTrait(
+  coinType: CoinId,
+  levels: UpgradeLevels,
+  rand: () => number = Math.random,
+): CoinTrait | null {
+  const luck = levels.lucky_crack ?? 0;
+  const shinyChance = TRAITS.shiny.baseChance + TRAITS.shiny.perLuckLevel * luck;
+  if (rand() < shinyChance) return "shiny";
+  // Sticky only on penny / nickel — feels weird on big coins.
+  if (coinType === "penny" || coinType === "nickel") {
+    const stickyChance = TRAITS.sticky.baseChance + TRAITS.sticky.perLuckLevel * luck;
+    if (rand() < stickyChance) return "sticky";
+  }
+  return null;
+}
+
+// ============================================================
+// MERGING — proximity detection
+// ============================================================
+
+export type MergePoint = { id: number; coin: CoinId; x: number; y: number; spawnedAt: number };
+
+/**
+ * Find one merge cluster among the given points, if any. Returns
+ * the ids to despawn + the new coin to spawn at the centroid.
+ *
+ * Linear scan, O(n²) — fine because the play area never holds more
+ * than ~20 coins at once. We only return one merge per call so the
+ * caller animates one fusion at a time.
+ */
+export function findMerge(
+  points: MergePoint[],
+  rule: { from: CoinId; count: number; to: CoinId },
+  proximityPx: number = MERGE_PROXIMITY_PX,
+): { ids: number[]; centroid: { x: number; y: number }; to: CoinId } | null {
+  const candidates = points.filter((p) => p.coin === rule.from);
+  if (candidates.length < rule.count) return null;
+  for (const seed of candidates) {
+    const cluster: MergePoint[] = [seed];
+    for (const other of candidates) {
+      if (other.id === seed.id) continue;
+      if (cluster.length >= rule.count) break;
+      const dx = other.x - seed.x;
+      const dy = other.y - seed.y;
+      if (dx * dx + dy * dy <= proximityPx * proximityPx) cluster.push(other);
+    }
+    if (cluster.length >= rule.count) {
+      const used = cluster.slice(0, rule.count);
+      const cx = used.reduce((s, p) => s + p.x, 0) / used.length;
+      const cy = used.reduce((s, p) => s + p.y, 0) / used.length;
+      return { ids: used.map((p) => p.id), centroid: { x: cx, y: cy }, to: rule.to };
+    }
+  }
+  return null;
+}
 
 /** Coins the player has unlocked (i.e. has at least 1 level in the unlock upgrade). */
 export function unlockedCoins(levels: UpgradeLevels): CoinId[] {
