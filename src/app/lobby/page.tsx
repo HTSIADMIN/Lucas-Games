@@ -152,7 +152,6 @@ export default async function LobbyPage() {
         </section>
 
         <div className="grid grid-4 lobby-tile-grid">
-          <FreeGamesTile />
           {CATEGORY_ORDER.flatMap(({ key }) => GAMES.filter((g) => g.category === key)).map((g) => {
             const alertCount = ALERTS[g.slug] ?? 0;
             const isAlert = g.live && alertCount > 0;
@@ -196,6 +195,7 @@ export default async function LobbyPage() {
               </Link>
             );
           })}
+          <FreeGamesTile />
         </div>
 
       </main>
