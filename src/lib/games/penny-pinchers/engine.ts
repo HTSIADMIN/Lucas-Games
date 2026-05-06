@@ -3,6 +3,7 @@
 
 import {
   BANK_PC_PER_WALLET_CENT,
+  BANK_TOKEN_DIVISOR,
   COINS,
   COIN_ORDER,
   DAILY_BANK_CAP,
@@ -10,27 +11,36 @@ import {
   MAX_BANK_PAYOUT,
   MERGE_PROXIMITY_PX,
   OFFLINE_CAP_HOURS,
+  PERM_UPGRADES_BY_ID,
+  PRESTIGE_THRESHOLD_PC,
   TRAITS,
   UPGRADES_BY_ID,
   type CoinId,
   type CoinTrait,
   type HelperId,
+  type PermUpgradeId,
   type UpgradeId,
 } from "./catalog";
 
 export type UpgradeLevels = Partial<Record<UpgradeId, number>>;
 export type HelperCounts = Partial<Record<HelperId, number>>;
+export type PermLevels = Partial<Record<PermUpgradeId, number>>;
 
 // ============================================================
 // COIN VALUE
 // ============================================================
 
-/** PC paid for clicking one coin of `coinType`, given current upgrades. */
-export function coinPCValue(coinType: CoinId, levels: UpgradeLevels): number {
+/** PC paid for clicking one coin of `coinType`, given current upgrades + perm bonuses. */
+export function coinPCValue(
+  coinType: CoinId,
+  levels: UpgradeLevels,
+  perm: PermLevels = {},
+): number {
   const base = COINS[coinType].basePC;
   if (coinType === "penny") {
-    // Penny Multiplier adds +1 PC per level on top of the base 1 PC.
-    return base + (levels.penny_multiplier ?? 0);
+    // Practice Eyes (perm) gives +5 PC permanently; Penny Multiplier (run) gives +1 per level.
+    const permBonus = (perm.practice_eyes ?? 0) * 5;
+    return base + permBonus + (levels.penny_multiplier ?? 0);
   }
   return base;
 }
@@ -95,31 +105,38 @@ export function spawnIntervalMs(levels: UpgradeLevels): number {
 // HELPERS
 // ============================================================
 
-/** Total PC produced per second across all owned helpers. */
-export function helperRatePcPerSec(helpers: HelperCounts): number {
+/** Total PC produced per second across all owned helpers, with the Generous Helpers perm bonus applied. */
+export function helperRatePcPerSec(helpers: HelperCounts, perm: PermLevels = {}): number {
   let rate = 0;
   for (const [id, count] of Object.entries(helpers) as [HelperId, number][]) {
     const def = HELPERS_BY_ID[id];
     if (!def) continue;
     rate += def.pcPerSec * count;
   }
-  return rate;
+  const permBonus = 1 + 0.25 * (perm.generous_helpers ?? 0);
+  return rate * permBonus;
+}
+
+/** Effective offline accrual cap given the Old Hand permanent upgrade. */
+export function offlineCapHours(perm: PermLevels = {}): number {
+  return OFFLINE_CAP_HOURS + (perm.old_hand ?? 0);
 }
 
 /**
  * Compute PC accrued by helpers between `lastTickAt` and `now`,
- * capped at OFFLINE_CAP_HOURS of gap so a player who comes back
- * after a week doesn't get a free trillion.
+ * capped at the offline window (extended by Old Hand) so a player
+ * who comes back after a week doesn't get a free trillion.
  */
 export function offlinePCAccrued(
   rate: number,
   lastTickAt: Date | null,
+  perm: PermLevels = {},
   now: Date = new Date(),
 ): number {
   if (!lastTickAt || rate <= 0) return 0;
   const elapsedMs = now.getTime() - lastTickAt.getTime();
   if (elapsedMs <= 0) return 0;
-  const cappedMs = Math.min(elapsedMs, OFFLINE_CAP_HOURS * 60 * 60 * 1000);
+  const cappedMs = Math.min(elapsedMs, offlineCapHours(perm) * 60 * 60 * 1000);
   return Math.floor((cappedMs / 1000) * rate);
 }
 
@@ -175,10 +192,13 @@ export function bankPayoutCents(cents: number, dailyBankedSoFar: number): number
 export function rollTrait(
   coinType: CoinId,
   levels: UpgradeLevels,
+  perm: PermLevels = {},
   rand: () => number = Math.random,
 ): CoinTrait | null {
   const luck = levels.lucky_crack ?? 0;
-  const shinyChance = TRAITS.shiny.baseChance + TRAITS.shiny.perLuckLevel * luck;
+  const permLuck = perm.lucky_streak ?? 0;
+  const shinyChance =
+    TRAITS.shiny.baseChance + TRAITS.shiny.perLuckLevel * luck + 0.01 * permLuck;
   if (rand() < shinyChance) return "shiny";
   // Sticky only on penny / nickel — feels weird on big coins.
   if (coinType === "penny" || coinType === "nickel") {
@@ -226,6 +246,37 @@ export function findMerge(
     }
   }
   return null;
+}
+
+// ============================================================
+// PRESTIGE
+// ============================================================
+
+/** Bank Tokens awarded for a Roll-It-Up at this lifetime PC. */
+export function bankTokensFromPrestige(lifetimePCEarned: number): number {
+  if (lifetimePCEarned < PRESTIGE_THRESHOLD_PC) return 0;
+  return Math.floor(Math.sqrt(lifetimePCEarned / BANK_TOKEN_DIVISOR));
+}
+
+/** Whether the player has hit the threshold to prestige. */
+export function canPrestige(lifetimePCEarned: number): boolean {
+  return lifetimePCEarned >= PRESTIGE_THRESHOLD_PC;
+}
+
+/** Bank Token cost to take a perm upgrade from `currentLevel` to `currentLevel + 1`. */
+export function nextPermUpgradeCost(upgradeId: PermUpgradeId, currentLevel: number): number | null {
+  const def = PERM_UPGRADES_BY_ID[upgradeId];
+  if (!def) return null;
+  if (currentLevel >= def.maxLevel) return null;
+  return Math.ceil(def.baseCost * Math.pow(def.costMultiplier, currentLevel));
+}
+
+/**
+ * Starting cents for a fresh Roll-Up cycle, given perm upgrades.
+ * Bigger Pockets puts +1k PC in the player's pocket per level.
+ */
+export function prestigeStartingCents(perm: PermLevels): number {
+  return (perm.bigger_pockets ?? 0) * 1_000;
 }
 
 /** Coins the player has unlocked (i.e. has at least 1 level in the unlock upgrade). */

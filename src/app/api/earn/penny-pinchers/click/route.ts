@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
 import {
   getPennyPinchersState,
+  listPennyPinchersPermUpgrades,
   listPennyPinchersUpgrades,
   upsertPennyPinchersState,
 } from "@/lib/db";
@@ -11,6 +12,7 @@ import {
   TRAITS,
   type CoinId,
   type CoinTrait,
+  type PermUpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
 import { coinPCValue, traitMultiplier } from "@/lib/games/penny-pinchers/engine";
 
@@ -67,7 +69,11 @@ export async function POST(req: Request) {
   const upgradeLevels: Record<string, number> = {};
   for (const u of upgrades) upgradeLevels[u.upgrade_id] = u.level;
 
-  const baseValue = coinPCValue(coinType, upgradeLevels);
+  const permRows = await listPennyPinchersPermUpgrades(s.user.id);
+  const permLevels: Partial<Record<PermUpgradeId, number>> = {};
+  for (const u of permRows) permLevels[u.upgrade_id as PermUpgradeId] = u.level;
+
+  const baseValue = coinPCValue(coinType, upgradeLevels, permLevels);
   const pc = Math.round(baseValue * traitMultiplier(trait));
 
   state = await upsertPennyPinchersState({

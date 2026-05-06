@@ -325,6 +325,10 @@ export type PennyPinchersState = {
   last_bank_at: string | null;
   daily_banked_cents: number;
   daily_banked_day: string | null;
+  prestige_count: number;
+  bank_tokens: number;
+  lifetime_banked_cents: number;
+  last_prestige_at: string | null;
   created_at: string;
 };
 
@@ -338,6 +342,12 @@ export type PennyPinchersHelper = {
   user_id: string;
   helper_id: string;
   count: number;
+};
+
+export type PennyPinchersPermUpgrade = {
+  user_id: string;
+  upgrade_id: string;
+  level: number;
 };
 
 export type CoinflipDuel = {

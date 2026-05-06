@@ -18,6 +18,7 @@ import {
   MonopolyOwned,
   MonopolyState,
   PennyPinchersHelper,
+  PennyPinchersPermUpgrade,
   PennyPinchersState,
   PennyPinchersUpgrade,
   PinAttempts,
@@ -52,6 +53,7 @@ type Schema = {
   penny_pinchers_state: PennyPinchersState[];
   penny_pinchers_upgrades: PennyPinchersUpgrade[];
   penny_pinchers_helpers: PennyPinchersHelper[];
+  penny_pinchers_perm_upgrades: PennyPinchersPermUpgrade[];
   slot_runs: SlotRun[];
   daily_challenges: DailyChallenge[];
   _walletSeq: number;
@@ -70,6 +72,7 @@ const EMPTY: Schema = {
   blackjack_rounds: [], blackjack_seats: [], coinflip_duels: [],
   monopoly_states: [], monopoly_owned: [],
   penny_pinchers_state: [], penny_pinchers_upgrades: [], penny_pinchers_helpers: [],
+  penny_pinchers_perm_upgrades: [],
   slot_runs: [],
   daily_challenges: [],
   _walletSeq: 0, _crashBetSeq: 0, _chatSeq: 0, _bjSeatSeq: 0,
@@ -424,6 +427,22 @@ export async function upsertPennyPinchersHelper(row: PennyPinchersHelper): Promi
   else db().penny_pinchers_helpers.push(row);
   commit();
   return row;
+}
+export async function listPennyPinchersPermUpgrades(userId: string): Promise<PennyPinchersPermUpgrade[]> {
+  return db().penny_pinchers_perm_upgrades.filter((u) => u.user_id === userId);
+}
+export async function upsertPennyPinchersPermUpgrade(row: PennyPinchersPermUpgrade): Promise<PennyPinchersPermUpgrade> {
+  const idx = db().penny_pinchers_perm_upgrades.findIndex((u) => u.user_id === row.user_id && u.upgrade_id === row.upgrade_id);
+  if (idx >= 0) db().penny_pinchers_perm_upgrades[idx] = row;
+  else db().penny_pinchers_perm_upgrades.push(row);
+  commit();
+  return row;
+}
+export async function clearPennyPinchersRun(userId: string): Promise<void> {
+  const d = db();
+  d.penny_pinchers_upgrades = d.penny_pinchers_upgrades.filter((u) => u.user_id !== userId);
+  d.penny_pinchers_helpers = d.penny_pinchers_helpers.filter((h) => h.user_id !== userId);
+  commit();
 }
 
 // ============ COIN FLIP DUELS ============

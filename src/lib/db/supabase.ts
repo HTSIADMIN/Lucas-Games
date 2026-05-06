@@ -18,6 +18,7 @@ import {
   MonopolyOwned,
   MonopolyState,
   PennyPinchersHelper,
+  PennyPinchersPermUpgrade,
   PennyPinchersState,
   PennyPinchersUpgrade,
   PinAttempts,
@@ -533,11 +534,38 @@ export async function upsertPennyPinchersState(state: PennyPinchersState): Promi
       last_bank_at: state.last_bank_at,
       daily_banked_cents: state.daily_banked_cents,
       daily_banked_day: state.daily_banked_day,
+      prestige_count: state.prestige_count,
+      bank_tokens: state.bank_tokens,
+      lifetime_banked_cents: state.lifetime_banked_cents,
+      last_prestige_at: state.last_prestige_at,
     }, { onConflict: "user_id" })
     .select("*")
     .single();
   if (error) throw new Error(`upsertPennyPinchersState: ${error.message}`);
   return data as PennyPinchersState;
+}
+export async function listPennyPinchersPermUpgrades(userId: string): Promise<PennyPinchersPermUpgrade[]> {
+  const { data, error } = await client().from("penny_pinchers_perm_upgrades").select("*").eq("user_id", userId);
+  if (error) throw new Error(`listPennyPinchersPermUpgrades: ${error.message}`);
+  return (data ?? []) as PennyPinchersPermUpgrade[];
+}
+export async function upsertPennyPinchersPermUpgrade(row: PennyPinchersPermUpgrade): Promise<PennyPinchersPermUpgrade> {
+  const { data, error } = await client()
+    .from("penny_pinchers_perm_upgrades")
+    .upsert({
+      user_id: row.user_id,
+      upgrade_id: row.upgrade_id,
+      level: row.level,
+    }, { onConflict: "user_id,upgrade_id" })
+    .select("*")
+    .single();
+  if (error) throw new Error(`upsertPennyPinchersPermUpgrade: ${error.message}`);
+  return data as PennyPinchersPermUpgrade;
+}
+/** Wipe per-run state — used by the prestige endpoint after computing tokens. */
+export async function clearPennyPinchersRun(userId: string): Promise<void> {
+  await client().from("penny_pinchers_upgrades").delete().eq("user_id", userId);
+  await client().from("penny_pinchers_helpers").delete().eq("user_id", userId);
 }
 export async function listPennyPinchersUpgrades(userId: string): Promise<PennyPinchersUpgrade[]> {
   const { data, error } = await client().from("penny_pinchers_upgrades").select("*").eq("user_id", userId);

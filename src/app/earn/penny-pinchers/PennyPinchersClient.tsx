@@ -8,11 +8,13 @@ import {
   COIN_ORDER,
   MERGE_MIN_AGE_MS,
   MERGE_RULES,
+  PRESTIGE_THRESHOLD_PC,
   STICKY_PICKUP_COUNT,
   STICKY_PICKUP_RADIUS,
   type CoinId,
   type CoinTrait,
   type HelperId,
+  type PermUpgradeId,
   type UpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
 import {
@@ -27,6 +29,7 @@ import {
 import { CoinSprite } from "./CoinSprite";
 import { UpgradeShop } from "./UpgradeShop";
 import { HelperRoster } from "./HelperRoster";
+import { BankTokenShop } from "./BankTokenShop";
 
 // Penny Pinchers — main client. Coins spawn as absolutely-positioned
 // DOM elements inside a play area; clicking them dispatches a server
@@ -44,8 +47,10 @@ type StateResponse = {
   lifetimePCEarned: number;
   upgrades: Record<string, number>;
   helpers: Record<string, number>;
+  perm: Partial<Record<PermUpgradeId, number>>;
   helperRatePerSec: number;
   offlineAccruedJustNow: number;
+  offlineCapHours: number;
   bank: {
     pcPerWalletCent: number;
     cooldownMs: number;
@@ -53,6 +58,13 @@ type StateResponse = {
     maxPerBank: number;
     dailyCap: number;
     dailyBanked: number;
+  };
+  prestige: {
+    count: number;
+    bankTokens: number;
+    thresholdPC: number;
+    tokensIfRolled: number;
+    lifetimeBanked: number;
   };
   walletBalance: number;
 };
@@ -73,8 +85,9 @@ export function PennyPinchersClient() {
   const [server, setServer] = useState<StateResponse | null>(null);
   const [localCents, setLocalCents] = useState<number>(0);
   const [coins, setCoins] = useState<SpawnedCoin[]>([]);
-  const [tab, setTab] = useState<"upgrades" | "helpers">("upgrades");
+  const [tab, setTab] = useState<"upgrades" | "helpers" | "tokens">("upgrades");
   const [welcomeBack, setWelcomeBack] = useState<number | null>(null);
+  const [prestigeOpen, setPrestigeOpen] = useState(false);
 
   const playRef = useRef<HTMLDivElement | null>(null);
   const coinSeqRef = useRef(0);
@@ -260,6 +273,32 @@ export function PennyPinchersClient() {
     } catch { await loadState(); }
   }
 
+  async function buyPermUpgrade(id: PermUpgradeId, cost: number) {
+    if (!server || server.prestige.bankTokens < cost) return;
+    Sfx.play("ui.click");
+    try {
+      const r = await fetch("/api/earn/penny-pinchers/perm-upgrade", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ upgradeId: id }),
+      });
+      if (r.ok) await loadState();
+    } catch { await loadState(); }
+  }
+
+  async function rollItUp() {
+    Sfx.play("chips.stack");
+    try {
+      const r = await fetch("/api/earn/penny-pinchers/prestige", { method: "POST" });
+      if (r.ok) {
+        setPrestigeOpen(false);
+        // Wipe local coin state too — fresh play area, fresh PC.
+        setCoins([]);
+        await loadState();
+      }
+    } catch { await loadState(); }
+  }
+
   async function bank() {
     Sfx.play("chips.stack");
     try {
@@ -281,8 +320,10 @@ export function PennyPinchersClient() {
   }
 
   const unlocked = unlockedCoins(upgrades);
-  const ratePcPerSec = helperRatePcPerSec(server.helpers);
+  const ratePcPerSec = helperRatePcPerSec(server.helpers, server.perm);
   const now = Date.now();
+  const canRoll = server.lifetimePCEarned >= server.prestige.thresholdPC && server.prestige.tokensIfRolled > 0;
+  const lifetimeProgress = Math.min(1, server.lifetimePCEarned / server.prestige.thresholdPC);
   const bankReady = server.bank.readyAt === 0 || now >= server.bank.readyAt;
   const dailyRoom = Math.max(0, server.bank.dailyCap - server.bank.dailyBanked);
   const projectedPayout = Math.min(
@@ -380,6 +421,58 @@ export function PennyPinchersClient() {
               : `Cooldown ${formatHMS(cooldownLeftMs)}`}
           </button>
         </div>
+        <div
+          className="panel"
+          style={{
+            padding: "var(--sp-3) var(--sp-4)",
+            flex: "1 1 240px",
+            minWidth: 240,
+            background: canRoll ? "var(--gold-100)" : undefined,
+            border: canRoll ? "3px solid var(--gold-300)" : undefined,
+          }}
+        >
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+            <div className="text-mute" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              Roll It Up
+            </div>
+            <div className="text-mute" style={{ fontSize: 11 }}>
+              ×{server.prestige.count} · {server.prestige.bankTokens.toLocaleString()} ★
+            </div>
+          </div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "var(--ink-900)" }}>
+            {canRoll
+              ? `+${server.prestige.tokensIfRolled.toLocaleString()} ★ Tokens`
+              : `${Math.round(lifetimeProgress * 100)}% to next prestige`}
+          </div>
+          <div
+            style={{
+              height: 6,
+              background: "var(--parchment-200)",
+              border: "2px solid var(--ink-900)",
+              marginTop: 4,
+              marginBottom: 6,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                width: `${Math.round(lifetimeProgress * 100)}%`,
+                height: "100%",
+                background: canRoll ? "var(--gold-500)" : "var(--cactus-300)",
+                transition: "width 400ms var(--ease-out)",
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={!canRoll}
+            onClick={() => setPrestigeOpen(true)}
+            style={{ width: "100%" }}
+          >
+            {canRoll ? "Roll It Up →" : `${(server.lifetimePCEarned / 1000).toFixed(0)}k / ${(PRESTIGE_THRESHOLD_PC / 1000).toFixed(0)}k PC`}
+          </button>
+        </div>
       </div>
 
       <div
@@ -447,11 +540,11 @@ export function PennyPinchersClient() {
             gap: "var(--sp-2)",
           }}
         >
-          <div className="row" style={{ gap: 6 }}>
+          <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
             <button
               type="button"
               className={`btn btn-sm${tab === "upgrades" ? "" : " btn-ghost"}`}
-              style={{ flex: 1 }}
+              style={{ flex: 1, minWidth: 80 }}
               onClick={() => setTab("upgrades")}
             >
               Upgrades
@@ -459,10 +552,18 @@ export function PennyPinchersClient() {
             <button
               type="button"
               className={`btn btn-sm${tab === "helpers" ? "" : " btn-ghost"}`}
-              style={{ flex: 1 }}
+              style={{ flex: 1, minWidth: 80 }}
               onClick={() => setTab("helpers")}
             >
               Helpers
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm${tab === "tokens" ? "" : " btn-ghost"}`}
+              style={{ flex: 1, minWidth: 80 }}
+              onClick={() => setTab("tokens")}
+            >
+              ★ Tokens
             </button>
           </div>
           {tab === "upgrades" ? (
@@ -471,11 +572,17 @@ export function PennyPinchersClient() {
               cents={localCents}
               onBuy={buyUpgrade}
             />
-          ) : (
+          ) : tab === "helpers" ? (
             <HelperRoster
               counts={server.helpers as Record<HelperId, number>}
               cents={localCents}
               onHire={hireHelper}
+            />
+          ) : (
+            <BankTokenShop
+              levels={server.perm}
+              bankTokens={server.prestige.bankTokens}
+              onBuy={buyPermUpgrade}
             />
           )}
         </div>
@@ -529,6 +636,85 @@ export function PennyPinchersClient() {
           );
         })}
       </div>
+
+      {prestigeOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Roll It Up"
+          onClick={() => setPrestigeOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9_500,
+            background: "rgba(26,15,8,0.7)",
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+            backdropFilter: "blur(2px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="panel-wood"
+            style={{
+              width: "min(480px, 100%)",
+              padding: "var(--sp-5)",
+              border: "4px solid var(--ink-900)",
+              boxShadow: "var(--sh-popover), var(--glow-gold)",
+            }}
+          >
+            <div
+              className="uppercase"
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "var(--fs-h3)",
+                color: "var(--gold-300)",
+                letterSpacing: "var(--ls-loose)",
+                textShadow: "2px 2px 0 var(--ink-900)",
+                marginBottom: "var(--sp-3)",
+                textAlign: "center",
+              }}
+            >
+              Roll It Up?
+            </div>
+            <p style={{ marginBottom: "var(--sp-3)", color: "var(--ink-900)" }}>
+              Cash in your career and start fresh. You&rsquo;ll lose:
+            </p>
+            <ul style={{ margin: "0 0 var(--sp-3) 16px", color: "var(--ink-900)" }}>
+              <li>{Math.floor(localCents).toLocaleString()} unbanked Pinch Cents</li>
+              <li>Every run upgrade you&rsquo;ve bought this cycle</li>
+              <li>Every helper you&rsquo;ve hired this cycle</li>
+            </ul>
+            <p style={{ marginBottom: "var(--sp-3)", color: "var(--ink-900)" }}>
+              You&rsquo;ll keep:
+            </p>
+            <ul style={{ margin: "0 0 var(--sp-3) 16px", color: "var(--ink-900)" }}>
+              <li>Wallet balance + lifetime banked</li>
+              <li>Every Permanent upgrade in the Tokens shop</li>
+              <li>
+                <b>+{server.prestige.tokensIfRolled.toLocaleString()} ★ Bank Tokens</b> to spend on Permanents
+              </li>
+            </ul>
+            <div className="row" style={{ gap: 8, justifyContent: "center" }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setPrestigeOpen(false)}
+              >
+                Not yet
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={rollItUp}
+              >
+                Roll It Up
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

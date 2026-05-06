@@ -203,3 +203,58 @@ export const MERGE_RULES: readonly MergeRule[] = [
 export const MAX_CLICKS_PER_SEC = 25;
 /** Helper offline accrual is capped at this many hours of last-tick gap. */
 export const OFFLINE_CAP_HOURS = 8;
+
+// ============================================================
+// PRESTIGE — Phase 3a
+//
+// "Roll It Up" wipes session state (cents + helpers + run upgrades)
+// and awards Bank Tokens proportional to lifetime PC earned. Tokens
+// buy entries in PERM_UPGRADES below — those survive every reset.
+// ============================================================
+
+/** Minimum lifetime PC earned before the prestige button unlocks. */
+export const PRESTIGE_THRESHOLD_PC = 1_000_000;
+
+/**
+ * Soft-curve token formula. We want a casual player who reaches the
+ * 1M threshold to get a couple of tokens (motivation), and a
+ * dedicated player at 100M to get ~30 — enough to make perm upgrades
+ * meaningful without trivialising them.
+ *
+ *   tokens = floor(sqrt(lifetimePC / 10_000))
+ *
+ *   1M     →  10 tokens
+ *   10M    →  31 tokens
+ *   100M   →  100 tokens
+ */
+export const BANK_TOKEN_DIVISOR = 10_000;
+
+export type PermUpgradeId =
+  | "bigger_pockets"
+  | "practice_eyes"
+  | "vending_lifer"
+  | "old_hand"
+  | "lucky_streak"
+  | "generous_helpers";
+
+export type PermUpgradeDef = {
+  id: PermUpgradeId;
+  label: string;
+  description: string;
+  baseCost: number;
+  costMultiplier: number;
+  maxLevel: number;
+};
+
+export const PERM_UPGRADES: readonly PermUpgradeDef[] = [
+  { id: "bigger_pockets",   label: "Bigger Pockets",   description: "Start each Roll-Up with +1,000 PC already in your pocket per level.",   baseCost: 1, costMultiplier: 1.6, maxLevel: 10 },
+  { id: "practice_eyes",    label: "Practice Eyes",    description: "Pennies are worth +5 PC permanently — applies before Penny Multiplier scaling.", baseCost: 3, costMultiplier: 1, maxLevel: 1 },
+  { id: "vending_lifer",    label: "Vending Lifer",    description: "Start each Roll-Up with Check Vending Machines already at level 1 (nickels unlocked).", baseCost: 5, costMultiplier: 1, maxLevel: 1 },
+  { id: "old_hand",         label: "Old Hand",         description: "Helpers keep generating PC for an extra hour while you're away per level.",        baseCost: 2, costMultiplier: 1.6, maxLevel: 8 },
+  { id: "lucky_streak",     label: "Lucky Streak",     description: "+1% permanent shiny-coin chance per level. Stacks with Lucky Sidewalk Crack.",     baseCost: 5, costMultiplier: 1.7, maxLevel: 5 },
+  { id: "generous_helpers", label: "Generous Helpers", description: "+25% PC/sec from all helpers per level.",                                          baseCost: 8, costMultiplier: 1.8, maxLevel: 4 },
+];
+
+export const PERM_UPGRADES_BY_ID: Record<PermUpgradeId, PermUpgradeDef> = Object.fromEntries(
+  PERM_UPGRADES.map((u) => [u.id, u]),
+) as Record<PermUpgradeId, PermUpgradeDef>;

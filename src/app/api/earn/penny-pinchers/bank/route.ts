@@ -75,6 +75,7 @@ export async function POST() {
     last_bank_at: new Date(now).toISOString(),
     daily_banked_cents: dailyBankedSoFar + payoutCents,
     daily_banked_day: todayUtc,
+    lifetime_banked_cents: state.lifetime_banked_cents + payoutCents,
   });
 
   return NextResponse.json({

@@ -4,6 +4,7 @@ import { getBalance } from "@/lib/wallet";
 import {
   getPennyPinchersState,
   listPennyPinchersHelpers,
+  listPennyPinchersPermUpgrades,
   listPennyPinchersUpgrades,
   upsertPennyPinchersState,
 } from "@/lib/db";
@@ -12,8 +13,15 @@ import {
   BANK_PC_PER_WALLET_CENT,
   DAILY_BANK_CAP,
   MAX_BANK_PAYOUT,
+  PRESTIGE_THRESHOLD_PC,
+  type PermUpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
-import { helperRatePcPerSec, offlinePCAccrued } from "@/lib/games/penny-pinchers/engine";
+import {
+  bankTokensFromPrestige,
+  helperRatePcPerSec,
+  offlineCapHours,
+  offlinePCAccrued,
+} from "@/lib/games/penny-pinchers/engine";
 
 export const runtime = "nodejs";
 
@@ -41,6 +49,10 @@ export async function GET() {
       last_bank_at: null,
       daily_banked_cents: 0,
       daily_banked_day: todayUtc,
+      prestige_count: 0,
+      bank_tokens: 0,
+      lifetime_banked_cents: 0,
+      last_prestige_at: null,
       created_at: now.toISOString(),
     });
   }
@@ -49,11 +61,16 @@ export async function GET() {
   const helperCounts: Record<string, number> = {};
   for (const h of helpers) helperCounts[h.helper_id] = h.count;
 
+  const permRows = await listPennyPinchersPermUpgrades(s.user.id);
+  const permLevels: Partial<Record<PermUpgradeId, number>> = {};
+  for (const u of permRows) permLevels[u.upgrade_id as PermUpgradeId] = u.level;
+
   // Offline accrual — only credit if we actually owe something.
-  const rate = helperRatePcPerSec(helperCounts);
+  const rate = helperRatePcPerSec(helperCounts, permLevels);
   const accrued = offlinePCAccrued(
     rate,
     state.last_tick_at ? new Date(state.last_tick_at) : null,
+    permLevels,
     now,
   );
 
@@ -86,8 +103,10 @@ export async function GET() {
     lifetimePCEarned: state.lifetime_pc_earned,
     upgrades: upgradeLevels,
     helpers: helperCounts,
+    perm: permLevels,
     helperRatePerSec: rate,
     offlineAccruedJustNow: accrued,
+    offlineCapHours: offlineCapHours(permLevels),
     bank: {
       pcPerWalletCent: BANK_PC_PER_WALLET_CENT,
       cooldownMs: BANK_COOLDOWN_MS,
@@ -95,6 +114,13 @@ export async function GET() {
       maxPerBank: MAX_BANK_PAYOUT,
       dailyCap: DAILY_BANK_CAP,
       dailyBanked: state.daily_banked_cents,
+    },
+    prestige: {
+      count: state.prestige_count,
+      bankTokens: state.bank_tokens,
+      thresholdPC: PRESTIGE_THRESHOLD_PC,
+      tokensIfRolled: bankTokensFromPrestige(state.lifetime_pc_earned),
+      lifetimeBanked: state.lifetime_banked_cents,
     },
     walletBalance: await getBalance(s.user.id),
   });
