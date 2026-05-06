@@ -31,6 +31,10 @@ export function LiveBalance({
       const d = await r.json();
       if (typeof d.balance !== "number") return;
       setBalance(d.balance);
+      // Re-broadcast so other listeners (BrokeModal, etc.) can react
+      // to balance changes without needing to poll the same endpoint
+      // themselves.
+      window.dispatchEvent(new CustomEvent("lg:balance", { detail: d.balance }));
     } catch { /* ignore */ }
   }, []);
   useVisibleInterval(fetchOnce, pollMs);

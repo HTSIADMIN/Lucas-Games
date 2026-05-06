@@ -22,6 +22,7 @@ import { LiveBalance } from "@/components/LiveBalance";
 import { WelcomeModal } from "@/components/WelcomeModal";
 import { SignOutButton } from "./SignOutButton";
 import { FreeGamesButton } from "./FreeGamesButton";
+import { FreeGamesTile } from "./FreeGamesTile";
 
 type GameCategory = "cards" | "coins" | "dice" | "other";
 
@@ -151,6 +152,7 @@ export default async function LobbyPage() {
         </section>
 
         <div className="grid grid-4 lobby-tile-grid">
+          <FreeGamesTile />
           {CATEGORY_ORDER.flatMap(({ key }) => GAMES.filter((g) => g.category === key)).map((g) => {
             const alertCount = ALERTS[g.slug] ?? 0;
             const isAlert = g.live && alertCount > 0;

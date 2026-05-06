@@ -40,6 +40,14 @@ export function FreeGamesButton({ compact = false }: { compact?: boolean }) {
     return () => clearInterval(t);
   }, [open]);
 
+  // Allow other UI (the lobby Free Games tile, BrokeModal, etc.) to
+  // open this modal without us having to refactor it into a context.
+  useEffect(() => {
+    function onOpen() { setOpen(true); }
+    window.addEventListener("lg:open-free-games", onOpen);
+    return () => window.removeEventListener("lg:open-free-games", onOpen);
+  }, []);
+
   const anyReady = !!status && (status.dailySpin.ready || status.monopoly.ready);
 
   // Chime once when readiness flips on (cooldown finished while the
