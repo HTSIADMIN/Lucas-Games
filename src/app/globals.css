@@ -851,6 +851,20 @@ img, svg, canvas {
   50%      { transform: scale(1.18); }
 }
 
+/* Calm gold pulse for the Daily Challenges fab when today's dailies
+   haven't been opened yet. Softer than tile-alert-pulse — the point
+   is "hey, new content" not "claim your reward right now". */
+@keyframes daily-fresh-pulse {
+  0%, 100% {
+    transform: translateY(0);
+    box-shadow: var(--sh-card-rest), 0 0 0 2px var(--gold-300), 0 0 12px rgba(255, 196, 64, 0.45);
+  }
+  50% {
+    transform: translateY(-1px);
+    box-shadow: var(--sh-card-rest), 0 0 0 3px var(--gold-300), 0 0 22px rgba(255, 196, 64, 0.85);
+  }
+}
+
 /* Per-tile ready state in the Free Games modal: gold border + same shine. */
 .free-games-tile { position: relative; transition: box-shadow 200ms; }
 .free-games-tile.is-ready {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
 import { ensureTodayChallenges } from "@/lib/challenges/record";
 import { findChallenge, renderDescription } from "@/lib/challenges/catalog";
+import { getMyClan } from "@/lib/clans/db";
 
 export const runtime = "nodejs";
 
@@ -56,5 +57,14 @@ export async function GET() {
       claimedAt: row.claimed_at,
     };
   });
-  return NextResponse.json({ ok: true, day: rows[0]?.day ?? null, challenges });
+  // Cheap two-row lookup so the modal can render a "View clan" vs
+  // "Find a clan" CTA without hitting the heavy /api/clans payload.
+  const { clan } = await getMyClan(s.user.id).catch(() => ({ clan: null }));
+  return NextResponse.json({
+    ok: true,
+    day: rows[0]?.day ?? null,
+    challenges,
+    inClan: clan != null,
+    clanName: clan?.name ?? null,
+  });
 }

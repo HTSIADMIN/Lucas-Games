@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+
+// localStorage key + helper for the "fresh since today's daily reset"
+// glow on the launcher fab. We compare YYYY-MM-DD UTC strings — the
+// challenge backend rolls at UTC midnight too, so this stays in sync
+// without needing the actual reset timestamp from the server.
+const FRESH_KEY = "lg-daily-challenges-last-seen";
+const todayUtc = () => new Date().toISOString().slice(0, 10);
 
 // Bottom-right floating button + modal for daily challenges.
 // Renders next to the chat fab (which sits at right: 16, bottom: 16);
@@ -36,6 +44,27 @@ export function DailyChallenges() {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [inClan, setInClan] = useState<boolean | null>(null);
+  const [clanName, setClanName] = useState<string | null>(null);
+  const [freshDaily, setFreshDaily] = useState(false);
+
+  // Fresh-glow state: read once on mount. If the stored "last seen"
+  // date doesn't match today's UTC date, the dailies have rolled
+  // since the player last opened the modal — pulse the launcher.
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem(FRESH_KEY);
+      if (seen !== todayUtc()) setFreshDaily(true);
+    } catch { /* private mode */ }
+  }, []);
+
+  // Once the modal opens, mark today as seen and clear the glow so
+  // it doesn't keep pulsing while the player is interacting.
+  useEffect(() => {
+    if (!open) return;
+    try { localStorage.setItem(FRESH_KEY, todayUtc()); } catch { /* ignore */ }
+    setFreshDaily(false);
+  }, [open]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -47,6 +76,8 @@ export function DailyChallenges() {
         challenges?: ChallengeRow[];
         message?: string;
         error?: string;
+        inClan?: boolean;
+        clanName?: string | null;
       };
       if (!r.ok) {
         setErrMsg(d.message ?? `Couldn't load (${r.status}).`);
@@ -57,6 +88,8 @@ export function DailyChallenges() {
         return;
       }
       setRows(d.challenges ?? []);
+      setInClan(d.inClan ?? false);
+      setClanName(d.clanName ?? null);
     } catch (err) {
       setErrMsg(err instanceof Error ? err.message : "Couldn't load challenges.");
       setRows([]);
@@ -104,12 +137,13 @@ export function DailyChallenges() {
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          aria-label={open ? "Close daily challenges" : "Open daily challenges"}
-          title={open ? "Close daily challenges" : "Daily Challenges"}
+          aria-label="Daily Challenges"
+          aria-expanded={open}
+          title="Daily Challenges"
           style={{
             position: "relative",
-            width: 56,
             height: 56,
+            paddingInline: 14,
             background: "var(--cactus-500)",
             border: "4px solid var(--ink-900)",
             color: "var(--parchment-50)",
@@ -119,20 +153,31 @@ export function DailyChallenges() {
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
+            gap: 8,
             fontFamily: "var(--font-display)",
-            fontSize: 26,
-            animation: claimable > 0 ? "tile-alert-pulse 1.4s ease-in-out infinite" : undefined,
+            fontSize: 13,
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            textShadow: "1px 1px 0 rgba(0,0,0,0.35)",
+            whiteSpace: "nowrap",
+            // Animation precedence: claimable (most urgent) > fresh
+            // (today's dailies haven't been opened yet) > none.
+            animation: claimable > 0
+              ? "tile-alert-pulse 1.4s ease-in-out infinite"
+              : freshDaily
+              ? "daily-fresh-pulse 2.2s ease-in-out infinite"
+              : undefined,
           }}
         >
-          <span aria-hidden style={{ lineHeight: 1, marginTop: -2 }}>★</span>
+          <span aria-hidden style={{ fontSize: 22, lineHeight: 1, marginTop: -1 }}>★</span>
+          <span>Daily</span>
           {claimable > 0 && (
             <span
               aria-hidden
               style={{
                 position: "absolute",
-                top: -6,
-                right: -6,
+                top: -8,
+                right: -8,
                 minWidth: 22,
                 height: 22,
                 padding: "0 6px",
@@ -309,6 +354,46 @@ export function DailyChallenges() {
                 </div>
               );
             })}
+
+            {/* Clan CTA — sits at the bottom of the modal because
+                challenge points feed your clan's weekly ranking, so
+                the action of "and then... look at clan standings" is
+                a natural follow-on. Copy adapts to whether the player
+                is already in a clan or still needs to find one. */}
+            {!loading && !errMsg && rows && rows.length > 0 && inClan != null && (
+              <Link
+                href="/clans"
+                onClick={() => setOpen(false)}
+                className="btn btn-wood"
+                style={{
+                  marginTop: "var(--sp-3)",
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  textDecoration: "none",
+                  fontFamily: "var(--font-display)",
+                  fontSize: 13,
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {inClan ? (
+                  <>
+                    <span aria-hidden>⚐</span>
+                    <span>{clanName ? `View ${clanName}` : "View your clan"}</span>
+                    <span aria-hidden style={{ opacity: 0.7 }}>→</span>
+                  </>
+                ) : (
+                  <>
+                    <span aria-hidden>★</span>
+                    <span>Join a clan to bank these points</span>
+                    <span aria-hidden style={{ opacity: 0.7 }}>→</span>
+                  </>
+                )}
+              </Link>
+            )}
           </div>
         </div>
       )}
