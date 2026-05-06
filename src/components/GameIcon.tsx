@@ -2070,21 +2070,29 @@ const LOBBY_SVG: Partial<Record<IconName, string>> = {
   "lobby.slots":         "/game-icons/game-slots.svg",
 };
 
-// 16:9 hand-crafted blackjack tile. Rendered inline (rather than as
-// a static .svg under /public) so its colours can be overridden via
-// CSS custom properties — themes can re-skin felt, bezel, gold and
-// card stock without us shipping a separate file per theme.
+// 16:9 hand-crafted blackjack tile, GBA-handheld vibe. Rendered
+// inline (rather than as a static .svg under /public) so its colours
+// can be overridden via CSS custom properties — themes can re-skin
+// felt, bezel, gold and card stock without us shipping a separate
+// file per theme.
+//
+// Layout (viewBox 128 x 72):
+//   - Full-canvas dithered green felt extends edge-to-edge
+//   - Dark grey GBA-style button (56 x 56) centred on the felt
+//   - Inset panel within the button holds the icon
+//   - Two cards (A♠ + J♠) fanned at the top, "21" in gold below
 //
 // Variables (with their built-in saloon-default fallbacks):
-//   --bjicon-bezel        outer + inner panel mid grey
-//   --bjicon-bezel-light  bezel top/left highlight stroke
-//   --bjicon-bezel-dark   bezel bottom/right shadow stroke
-//   --bjicon-felt         felt base green
-//   --bjicon-felt-light   felt centre highlight (radial gradient)
-//   --bjicon-card         card body cream
-//   --bjicon-card-outline card edge ink
-//   --bjicon-spade        spade pip + letter ink
-//   --bjicon-gold         "21" gold
+//   --bjicon-bezel        outer + inner panel mid grey  (#3a4250)
+//   --bjicon-bezel-light  bezel top/left highlight       (#5a6470)
+//   --bjicon-bezel-dark   bezel bottom/right shadow      (#1c2230)
+//   --bjicon-felt         felt base green                (#2a6b35)
+//   --bjicon-felt-light   felt dither highlight          (#3d8a44)
+//   --bjicon-felt-dark    felt dither shadow             (#1f4f28)
+//   --bjicon-card         card body cream                (#f5ebd1)
+//   --bjicon-card-outline card edge ink                  (#0a0f1a)
+//   --bjicon-spade        spade pip + letter ink         (#1a1a1f)
+//   --bjicon-gold         "21" gold                      (#f0c640)
 function BlackjackTileIcon({
   size,
   className,
@@ -2094,10 +2102,6 @@ function BlackjackTileIcon({
   className?: string;
   style?: CSSProperties;
 }) {
-  // Unique gradient id so multiple instances on one page (lobby +
-  // modals + free-games montage) don't collide. Math.random() is
-  // overkill here — the id only needs to be stable per render.
-  const gradId = "bjicon-felt";
   return (
     <svg
       width={size}
@@ -2110,102 +2114,136 @@ function BlackjackTileIcon({
       aria-hidden
     >
       <defs>
-        <radialGradient id={gradId} cx="50%" cy="50%" r="65%">
-          <stop offset="0%" stopColor="var(--bjicon-felt-light, #3d8a4d)" />
-          <stop offset="100%" stopColor="var(--bjicon-felt, #28602f)" />
+        {/* 4x4 felt dither tile — base green + alternating darker
+            and lighter speckles for that hand-laid retro texture. */}
+        <pattern id="bjFeltDither" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+          <rect width="4" height="4" fill="var(--bjicon-felt, #2a6b35)" />
+          <rect x="0" y="0" width="1" height="1" fill="var(--bjicon-felt-dark, #1f4f28)" />
+          <rect x="2" y="1" width="1" height="1" fill="var(--bjicon-felt-light, #3d8a44)" />
+          <rect x="1" y="3" width="1" height="1" fill="var(--bjicon-felt-dark, #1f4f28)" />
+        </pattern>
+        {/* Vignette layered on top of the dither — darkens corners,
+            keeps centre clean so the button reads as the focal point. */}
+        <radialGradient id="bjFeltVignette" cx="50%" cy="50%" r="65%">
+          <stop offset="0%" stopColor="#000" stopOpacity="0" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0.32" />
         </radialGradient>
       </defs>
 
-      {/* Outer bezel + felt */}
-      <rect x="0" y="0" width="128" height="72" rx="3" fill="var(--bjicon-bezel, #4a555f)" />
-      <rect x="3" y="3" width="122" height="66" fill={`url(#${gradId})`} />
-      <rect x="3" y="3" width="122" height="1" fill="var(--bjicon-bezel-light, #6a7580)" />
-      <rect x="3" y="3" width="1" height="66" fill="var(--bjicon-bezel-light, #6a7580)" />
-      <rect x="3" y="68" width="122" height="1" fill="var(--bjicon-bezel-dark, #2c3540)" />
-      <rect x="124" y="3" width="1" height="66" fill="var(--bjicon-bezel-dark, #2c3540)" />
+      {/* === Felt background extending edge-to-edge === */}
+      <rect width="128" height="72" fill="url(#bjFeltDither)" />
+      <rect width="128" height="72" fill="url(#bjFeltVignette)" />
 
-      {/* Inner panel bezel — a 40x40 frame centred at (64, 36) */}
-      <rect x="44" y="16" width="40" height="40" fill="var(--bjicon-bezel, #4a555f)" />
-      <rect x="44" y="16" width="40" height="1" fill="var(--bjicon-bezel-light, #6a7580)" />
-      <rect x="44" y="16" width="1" height="40" fill="var(--bjicon-bezel-light, #6a7580)" />
-      <rect x="44" y="55" width="40" height="1" fill="var(--bjicon-bezel-dark, #2c3540)" />
-      <rect x="83" y="16" width="1" height="40" fill="var(--bjicon-bezel-dark, #2c3540)" />
-      <rect x="47" y="19" width="34" height="34" fill={`url(#${gradId})`} />
+      {/* === GBA-style button frame (56x56, centred at 64,36) === */}
+      <rect x="36" y="8" width="56" height="56" fill="var(--bjicon-bezel, #3a4250)" />
+      {/* outer bezel highlights (top + left) */}
+      <rect x="36" y="8" width="56" height="2" fill="var(--bjicon-bezel-light, #5a6470)" />
+      <rect x="36" y="8" width="2" height="56" fill="var(--bjicon-bezel-light, #5a6470)" />
+      {/* outer bezel shadows (bottom + right) */}
+      <rect x="36" y="62" width="56" height="2" fill="var(--bjicon-bezel-dark, #1c2230)" />
+      <rect x="90" y="8" width="2" height="56" fill="var(--bjicon-bezel-dark, #1c2230)" />
 
-      {/* K♠ — back card, tilted left */}
-      <g transform="translate(50 22) rotate(-9 6 9)">
-        <rect x="1" y="1" width="12" height="18" fill="#000" opacity="0.35" />
-        <rect x="0" y="0" width="12" height="18" fill="var(--bjicon-card-outline, #0a0f1a)" />
-        <rect x="1" y="1" width="10" height="16" fill="var(--bjicon-card, #f5ebd1)" />
-        <rect x="1" y="1" width="10" height="1" fill="#fff" opacity="0.45" />
-        {/* K — 3x5 pixel letter at top-left */}
-        <g fill="var(--bjicon-spade, #1a1f2e)">
-          <rect x="2" y="3" width="1" height="5" />
-          <rect x="4" y="3" width="1" height="1" />
-          <rect x="3" y="4" width="1" height="1" />
-          <rect x="3" y="6" width="1" height="1" />
-          <rect x="4" y="7" width="1" height="1" />
-        </g>
-        {/* Tiny suit pip directly below the letter */}
-        <g fill="var(--bjicon-spade, #1a1f2e)">
-          <rect x="3" y="9" width="1" height="1" />
-          <rect x="2" y="10" width="3" height="1" />
-        </g>
-        {/* Centre spade — 5x6 */}
-        <g fill="var(--bjicon-spade, #1a1f2e)">
-          <rect x="5" y="9" width="1" height="1" />
-          <rect x="4" y="10" width="3" height="1" />
-          <rect x="3" y="11" width="5" height="2" />
-          <rect x="4" y="13" width="1" height="1" />
-          <rect x="6" y="13" width="1" height="1" />
-          <rect x="4" y="14" width="3" height="1" />
-        </g>
-      </g>
+      {/* === Inset inner panel (48x48 at 40,12) — recessed look === */}
+      <rect x="40" y="12" width="48" height="48" fill="var(--bjicon-bezel-dark, #1c2230)" />
+      {/* inset highlight (bottom + right — reverse of outer bevel) */}
+      <rect x="40" y="58" width="48" height="2" fill="var(--bjicon-bezel-light, #5a6470)" />
+      <rect x="86" y="12" width="2" height="48" fill="var(--bjicon-bezel-light, #5a6470)" />
+      {/* inner felt fill */}
+      <rect x="42" y="14" width="44" height="44" fill="url(#bjFeltDither)" />
 
-      {/* J♠ — front card, tilted right */}
-      <g transform="translate(58 21) rotate(9 6 9)">
-        <rect x="1" y="1" width="12" height="18" fill="#000" opacity="0.35" />
-        <rect x="0" y="0" width="12" height="18" fill="var(--bjicon-card-outline, #0a0f1a)" />
-        <rect x="1" y="1" width="10" height="16" fill="var(--bjicon-card, #f5ebd1)" />
-        <rect x="1" y="1" width="10" height="1" fill="#fff" opacity="0.45" />
-        {/* J — 3x5 pixel letter at top-left */}
-        <g fill="var(--bjicon-spade, #1a1f2e)">
-          <rect x="2" y="3" width="3" height="1" />
-          <rect x="3" y="4" width="1" height="3" />
+      {/* === A♠ — back card, fanned left === */}
+      <g transform="translate(50 15) rotate(-10 8 11)">
+        {/* drop shadow */}
+        <rect x="1" y="1" width="16" height="22" fill="#000" opacity="0.4" />
+        {/* card outline */}
+        <rect x="0" y="0" width="16" height="22" fill="var(--bjicon-card-outline, #0a0f1a)" />
+        {/* card body */}
+        <rect x="1" y="1" width="14" height="20" fill="var(--bjicon-card, #f5ebd1)" />
+        {/* top inner highlight stripe */}
+        <rect x="1" y="1" width="14" height="1" fill="#fff" opacity="0.5" />
+
+        {/* "A" — 5x7 chunky pixel letter at (2, 2) */}
+        <g fill="var(--bjicon-spade, #1a1a1f)">
+          <rect x="4" y="2" width="1" height="1" />
+          <rect x="3" y="3" width="1" height="1" />
+          <rect x="5" y="3" width="1" height="1" />
+          <rect x="2" y="4" width="1" height="1" />
+          <rect x="6" y="4" width="1" height="1" />
+          <rect x="2" y="5" width="1" height="1" />
+          <rect x="6" y="5" width="1" height="1" />
+          <rect x="2" y="6" width="5" height="1" />
           <rect x="2" y="7" width="1" height="1" />
+          <rect x="6" y="7" width="1" height="1" />
+          <rect x="2" y="8" width="1" height="1" />
+          <rect x="6" y="8" width="1" height="1" />
         </g>
-        {/* Tiny suit pip below letter */}
-        <g fill="var(--bjicon-spade, #1a1f2e)">
-          <rect x="3" y="9" width="1" height="1" />
-          <rect x="2" y="10" width="3" height="1" />
-        </g>
-        {/* Centre spade — 5x6 */}
-        <g fill="var(--bjicon-spade, #1a1f2e)">
-          <rect x="5" y="9" width="1" height="1" />
-          <rect x="4" y="10" width="3" height="1" />
-          <rect x="3" y="11" width="5" height="2" />
-          <rect x="4" y="13" width="1" height="1" />
-          <rect x="6" y="13" width="1" height="1" />
-          <rect x="4" y="14" width="3" height="1" />
+
+        {/* Centre spade — 6x8 at (4, 11) */}
+        <g fill="var(--bjicon-spade, #1a1a1f)">
+          <rect x="6" y="11" width="2" height="1" />
+          <rect x="5" y="12" width="4" height="1" />
+          <rect x="4" y="13" width="6" height="2" />
+          <rect x="6" y="15" width="2" height="1" />
+          <rect x="5" y="16" width="4" height="1" />
+          <rect x="4" y="17" width="6" height="1" />
+          <rect x="5" y="18" width="4" height="1" />
         </g>
       </g>
 
-      {/* "21" in gold — 5x8 chunky pixel digits centred at x=64 */}
-      <g fill="var(--bjicon-gold, #d4a13a)">
-        {/* 2 */}
-        <rect x="59" y="42" width="3" height="1" />
-        <rect x="58" y="43" width="1" height="1" />
-        <rect x="62" y="43" width="1" height="1" />
-        <rect x="62" y="44" width="1" height="1" />
-        <rect x="61" y="45" width="1" height="1" />
-        <rect x="60" y="46" width="1" height="1" />
-        <rect x="59" y="47" width="1" height="1" />
-        <rect x="58" y="48" width="1" height="1" />
-        <rect x="58" y="49" width="5" height="1" />
-        {/* 1 */}
-        <rect x="65" y="43" width="2" height="1" />
-        <rect x="66" y="42" width="1" height="8" />
-        <rect x="64" y="49" width="5" height="1" />
+      {/* === J♠ — front card, fanned right === */}
+      <g transform="translate(62 15) rotate(10 8 11)">
+        <rect x="1" y="1" width="16" height="22" fill="#000" opacity="0.4" />
+        <rect x="0" y="0" width="16" height="22" fill="var(--bjicon-card-outline, #0a0f1a)" />
+        <rect x="1" y="1" width="14" height="20" fill="var(--bjicon-card, #f5ebd1)" />
+        <rect x="1" y="1" width="14" height="1" fill="#fff" opacity="0.5" />
+
+        {/* "J" — 5x7 chunky pixel letter at (2, 2) */}
+        <g fill="var(--bjicon-spade, #1a1a1f)">
+          <rect x="4" y="2" width="3" height="1" />
+          <rect x="6" y="3" width="1" height="1" />
+          <rect x="6" y="4" width="1" height="1" />
+          <rect x="6" y="5" width="1" height="1" />
+          <rect x="6" y="6" width="1" height="1" />
+          <rect x="2" y="7" width="1" height="1" />
+          <rect x="6" y="7" width="1" height="1" />
+          <rect x="3" y="8" width="3" height="1" />
+        </g>
+
+        {/* Centre spade — 6x8 at (4, 11) */}
+        <g fill="var(--bjicon-spade, #1a1a1f)">
+          <rect x="6" y="11" width="2" height="1" />
+          <rect x="5" y="12" width="4" height="1" />
+          <rect x="4" y="13" width="6" height="2" />
+          <rect x="6" y="15" width="2" height="1" />
+          <rect x="5" y="16" width="4" height="1" />
+          <rect x="4" y="17" width="6" height="1" />
+          <rect x="5" y="18" width="4" height="1" />
+        </g>
+      </g>
+
+      {/* === "21" in gold — 6x9 chunky pixel digits centred at x=64 === */}
+      <g fill="var(--bjicon-gold, #f0c640)">
+        {/* "2" — 6x9 at left half */}
+        <rect x="58" y="42" width="4" height="1" />
+        <rect x="57" y="43" width="2" height="1" />
+        <rect x="61" y="43" width="2" height="1" />
+        <rect x="61" y="44" width="2" height="1" />
+        <rect x="60" y="45" width="2" height="1" />
+        <rect x="59" y="46" width="2" height="1" />
+        <rect x="58" y="47" width="2" height="1" />
+        <rect x="57" y="48" width="2" height="1" />
+        <rect x="57" y="49" width="2" height="1" />
+        <rect x="57" y="50" width="6" height="1" />
+        {/* "1" — 6x9 at right half (gap of 2 between digits) */}
+        <rect x="67" y="42" width="2" height="1" />
+        <rect x="66" y="43" width="3" height="1" />
+        <rect x="67" y="44" width="2" height="1" />
+        <rect x="67" y="45" width="2" height="1" />
+        <rect x="67" y="46" width="2" height="1" />
+        <rect x="67" y="47" width="2" height="1" />
+        <rect x="67" y="48" width="2" height="1" />
+        <rect x="67" y="49" width="2" height="1" />
+        <rect x="65" y="50" width="6" height="1" />
       </g>
     </svg>
   );
