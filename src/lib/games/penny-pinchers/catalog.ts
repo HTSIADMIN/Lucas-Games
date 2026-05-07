@@ -153,7 +153,7 @@ export const BANK_HOUSE_CUT = 0; // 0 = bank everything; raise later if we want 
 // dump unlimited PC.
 // ============================================================
 
-export type CoinTrait = "shiny" | "sticky";
+export type CoinTrait = "shiny" | "sticky" | "bent" | "foreign" | "ancient" | "cursed";
 
 export type TraitDef = {
   id: CoinTrait;
@@ -167,11 +167,28 @@ export type TraitDef = {
 };
 
 export const TRAITS: Record<CoinTrait, TraitDef> = {
-  shiny:  { id: "shiny",  maxMultiplier: 5, baseChance: 0.01, perLuckLevel: 0.01, label: "Shiny" },
+  shiny:   { id: "shiny",   maxMultiplier: 5,  baseChance: 0.012, perLuckLevel: 0.01,  label: "Shiny"   },
   // Sticky doesn't multiply value — it picks up nearby coins on
   // click (handled client-side). Multiplier of 1 is the cap.
-  sticky: { id: "sticky", maxMultiplier: 1, baseChance: 0.005, perLuckLevel: 0.003, label: "Sticky" },
+  sticky:  { id: "sticky",  maxMultiplier: 1,  baseChance: 0.005, perLuckLevel: 0.003, label: "Sticky"  },
+  // Bent: half value but lights a 5s "Lucky Window" client-side
+  // that boosts the next spawn rolls' shiny chance by +10%.
+  bent:    { id: "bent",    maxMultiplier: 1,  baseChance: 0.012, perLuckLevel: 0.005, label: "Bent"    },
+  // Foreign: normal value, but each pickup goes into the Foreign
+  // album page for a permanent PC bonus when filled.
+  foreign: { id: "foreign", maxMultiplier: 1,  baseChance: 0.006, perLuckLevel: 0.003, label: "Foreign" },
+  // Ancient: extremely rare, 50× payout, no other effect.
+  ancient: { id: "ancient", maxMultiplier: 50, baseChance: 0.0005, perLuckLevel: 0.0003, label: "Ancient" },
+  // Cursed: 3× value but pauses spawns for 5s after collecting.
+  cursed:  { id: "cursed",  maxMultiplier: 3,  baseChance: 0.004, perLuckLevel: 0.001, label: "Cursed"  },
 };
+
+/** Bent's lucky-window duration after click. */
+export const BENT_LUCKY_MS = 5_000;
+/** Bent's flat shiny boost during the lucky window. */
+export const BENT_LUCKY_SHINY_BOOST = 0.10;
+/** Cursed's spawn-pause duration after click. */
+export const CURSED_PAUSE_MS = 5_000;
 
 /** Number of nearby coins a sticky-click also picks up. */
 export const STICKY_PICKUP_COUNT = 2;

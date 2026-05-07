@@ -15,10 +15,13 @@ import {
   MERGE_MIN_AGE_MS,
   PRESTIGE_THRESHOLD_PC,
   AUTO_PICKER_PER_SEC,
+  BENT_LUCKY_MS,
+  BENT_LUCKY_SHINY_BOOST,
   BLESSINGS,
   COUCH_CHANCE_PER_POLL,
   COUCH_CUSHIONS,
   COUCH_LIFETIME_MS,
+  CURSED_PAUSE_MS,
   FOUNTAIN_CHANCE_PER_POLL,
   FOUNTAIN_LIFETIME_MS,
   FRENZY_BURST_SIZE,
@@ -147,6 +150,10 @@ export function PennyPinchersClient() {
   const streakClicksRef = useRef<number[]>([]);
   const [streakCount, setStreakCount] = useState(0);
   const [frenzyEndsAt, setFrenzyEndsAt] = useState<number | null>(null);
+  /** Bent's lucky-window timer — boosts shiny chance for BENT_LUCKY_MS. */
+  const [bentLuckyUntil, setBentLuckyUntil] = useState<number | null>(null);
+  /** Cursed's spawn-pause timer — pauses spawns for CURSED_PAUSE_MS. */
+  const [cursedPauseUntil, setCursedPauseUntil] = useState<number | null>(null);
   const popSeqRef = useRef(0);
   const lostWalletSeqRef = useRef(0);
   const fountainSeqRef = useRef(0);
@@ -307,6 +314,8 @@ export function PennyPinchersClient() {
   const hasLucky = activeBlessings.some((b) => b.id === "lucky_streak");
   const hasGreedy = activeBlessings.some((b) => b.id === "greedy_spawns");
   const frenzyActive = frenzyEndsAt != null && frenzyEndsAt > Date.now();
+  const bentLucky = bentLuckyUntil != null && bentLuckyUntil > Date.now();
+  const cursedPause = cursedPauseUntil != null && cursedPauseUntil > Date.now();
   const eventInterval = eventDef ? baseIntervalMs * eventDef.spawnMultiplier : baseIntervalMs;
   const intervalMs = Math.max(
     100,
@@ -315,10 +324,16 @@ export function PennyPinchersClient() {
   const burstSize =
     ((eventDef?.extraConcurrent ?? 0) > 0 ? 1 + eventDef!.extraConcurrent : 1) +
     (frenzyActive ? FRENZY_BURST_SIZE : 0);
-  const bonusShiny = (eventDef?.bonusShinyChance ?? 0) + (hasLucky ? 0.1 : 0);
+  const bonusShiny =
+    (eventDef?.bonusShinyChance ?? 0) +
+    (hasLucky ? 0.1 : 0) +
+    (bentLucky ? BENT_LUCKY_SHINY_BOOST : 0);
   useEffect(() => {
     if (!server) return;
     const t = window.setInterval(() => {
+      // Cursed coin pause — skip spawn ticks entirely. The play
+      // area sits silent for 5s after collecting one.
+      if (cursedPauseUntil != null && cursedPauseUntil > Date.now()) return;
       const playEl = playRef.current;
       if (!playEl) return;
       const rect = playEl.getBoundingClientRect();
@@ -361,7 +376,7 @@ export function PennyPinchersClient() {
       setCoins((prev) => [...prev, ...newSpawns]);
     }, intervalMs);
     return () => window.clearInterval(t);
-  }, [server, intervalMs, upgrades, burstSize, bonusShiny, hasGreedy]);
+  }, [server, intervalMs, upgrades, burstSize, bonusShiny, hasGreedy, cursedPauseUntil]);
 
   // Auto-Picker — picks a random coin off the play area every
   // `1000/level` ms. Routes through the same click flow (so PC
@@ -428,15 +443,18 @@ export function PennyPinchersClient() {
     return () => window.clearInterval(t);
   }, [server, upgrades.pile_it_up]);
 
-  // Streak-window pruner — trims expired clicks + clears Frenzy
-  // when its 5s window runs out. Drives the meter shrinking
-  // visually even when the player isn't clicking.
+  // Streak-window pruner — trims expired clicks + clears
+  // expired client-side timers (Frenzy, Bent's lucky window,
+  // Cursed's spawn pause). Drives meters shrinking even when
+  // the player isn't clicking.
   useEffect(() => {
     const t = window.setInterval(() => {
       const nowMs = Date.now();
       streakClicksRef.current = pruneStreakWindow(streakClicksRef.current, nowMs);
       setStreakCount(streakClicksRef.current.length);
       setFrenzyEndsAt((cur) => (cur != null && cur < nowMs ? null : cur));
+      setBentLuckyUntil((cur) => (cur != null && cur < nowMs ? null : cur));
+      setCursedPauseUntil((cur) => (cur != null && cur < nowMs ? null : cur));
     }, 250);
     return () => window.clearInterval(t);
   }, []);
@@ -477,7 +495,30 @@ export function PennyPinchersClient() {
       setFrenzyEndsAt(nowClick + FRENZY_DURATION_MS);
     }
 
-    const traitMul = coin.trait === "shiny" ? 5 : 1;
+    // Trait side-effects fire on click. Bent kicks off a 5s
+    // lucky window that boosts spawn shiny rolls; Cursed pauses
+    // spawns for 5s as the price of its 3× payout.
+    if (coin.trait === "bent") {
+      Sfx.play("ui.confirm");
+      setBentLuckyUntil(Date.now() + BENT_LUCKY_MS);
+    }
+    if (coin.trait === "cursed") {
+      Sfx.play("ui.bomb");
+      setCursedPauseUntil(Date.now() + CURSED_PAUSE_MS);
+    }
+    if (coin.trait === "ancient") {
+      Sfx.play("win.big");
+    }
+    if (coin.trait === "foreign") {
+      Sfx.play("win.notify");
+    }
+
+    const traitMul =
+      coin.trait === "shiny" ? 5
+      : coin.trait === "ancient" ? 50
+      : coin.trait === "cursed" ? 3
+      : coin.trait === "bent" ? 0.5
+      : 1;
     const optimisticPC = Math.round(coin.mergedPC * traitMul * tier.multiplier);
     setLocalCents((c) => c + optimisticPC);
     spawnPop(coin.x, coin.y, optimisticPC, coin.trait === "shiny");

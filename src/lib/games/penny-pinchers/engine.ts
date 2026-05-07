@@ -55,9 +55,12 @@ export function coinPCValue(
  * Server-clamped trait multiplier. The client tells us "this was
  * shiny", we trust it but cap at the trait's maxMultiplier so a
  * tampered client can never dump more than the configured ceiling.
+ * Bent is special-cased to 0.5× — it pays *less* by design, the
+ * tradeoff for the lucky-window buff it gives the client.
  */
 export function traitMultiplier(trait: CoinTrait | null | undefined): number {
   if (!trait) return 1;
+  if (trait === "bent") return 0.5;
   const def = TRAITS[trait];
   if (!def) return 1;
   return def.maxMultiplier;
@@ -76,25 +79,28 @@ export function frugalityPCMultiplier(frugality: number): number {
 // COIN ALBUM — Phase 2d
 // ============================================================
 
-export type AlbumPage = "shiny" | "sticky";
+export type AlbumPage = "shiny" | "sticky" | "foreign";
 export type AlbumState = Partial<Record<AlbumPage, Partial<Record<CoinId, number>>>>;
 
 /** Coin denominations that participate in each page. */
 export const ALBUM_PAGE_COINS: Record<AlbumPage, readonly CoinId[]> = {
-  shiny:  ["penny", "nickel", "dime", "quarter", "half", "dollar"],
-  sticky: ["penny", "nickel"],
+  shiny:   ["penny", "nickel", "dime", "quarter", "half", "dollar"],
+  sticky:  ["penny", "nickel"],
+  foreign: ["penny", "nickel", "dime", "quarter", "half", "dollar"],
 };
 
 /** Per-slot bonus added to the relevant trait chance. */
 const ALBUM_SLOT_BONUS: Record<AlbumPage, number> = {
-  shiny:  0.005,  // +0.5% per shiny coin you've collected
-  sticky: 0.01,   // +1%   per sticky coin
+  shiny:   0.005,  // +0.5% per shiny coin you've collected
+  sticky:  0.01,   // +1%   per sticky coin
+  foreign: 0.005,  // +0.5% PC per foreign coin (consumed by albumPCBonus, not rollTrait)
 };
 
 /** Bonus added when a page is fully complete (every coin collected at least once). */
 const ALBUM_PAGE_COMPLETE_BONUS: Record<AlbumPage, number> = {
-  shiny:  0.05,
-  sticky: 0.03,
+  shiny:   0.05,
+  sticky:  0.03,
+  foreign: 0.05,
 };
 
 /** Number of distinct coin slots filled on a page (0..page length). */
@@ -117,6 +123,15 @@ export function albumTraitBonus(album: AlbumState, page: AlbumPage): number {
   const slots = albumSlotsFilled(album, page);
   const complete = albumPageComplete(album, page);
   return slots * ALBUM_SLOT_BONUS[page] + (complete ? ALBUM_PAGE_COMPLETE_BONUS[page] : 0);
+}
+
+/**
+ * Multiplier on every PC payout from completing the Foreign album.
+ * This lives here so the click endpoint and the cushion endpoint can
+ * both apply it without duplicating the slot/complete arithmetic.
+ */
+export function albumPCBonus(album: AlbumState): number {
+  return 1 + albumTraitBonus(album, "foreign");
 }
 
 // ============================================================
@@ -260,10 +275,32 @@ export function rollTrait(
 ): CoinTrait | null {
   const luck = levels.lucky_crack ?? 0;
   const permLuck = perm.lucky_streak ?? 0;
+
+  // Roll order matters when multiple traits could land — earlier
+  // roll wins. We sort by descending value-impact so the rare
+  // big-payout traits (Ancient, Cursed) get first dibs even when
+  // the cheaper traits would also have fired.
+  const ancientChance =
+    TRAITS.ancient.baseChance + TRAITS.ancient.perLuckLevel * luck;
+  if (rand() < ancientChance) return "ancient";
+
+  const cursedChance =
+    TRAITS.cursed.baseChance + TRAITS.cursed.perLuckLevel * luck;
+  if (rand() < cursedChance) return "cursed";
+
   const shinyChance =
     TRAITS.shiny.baseChance + TRAITS.shiny.perLuckLevel * luck +
     0.01 * permLuck + albumTraitBonus(album, "shiny");
   if (rand() < shinyChance) return "shiny";
+
+  const foreignChance =
+    TRAITS.foreign.baseChance + TRAITS.foreign.perLuckLevel * luck;
+  if (rand() < foreignChance) return "foreign";
+
+  const bentChance =
+    TRAITS.bent.baseChance + TRAITS.bent.perLuckLevel * luck;
+  if (rand() < bentChance) return "bent";
+
   // Sticky only on penny / nickel — feels weird on big coins.
   if (coinType === "penny" || coinType === "nickel") {
     const stickyChance = TRAITS.sticky.baseChance + TRAITS.sticky.perLuckLevel * luck +

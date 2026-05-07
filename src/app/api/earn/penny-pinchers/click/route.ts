@@ -15,7 +15,7 @@ import {
   type CoinTrait,
   type PermUpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
-import { coinPCValue, frugalityPCMultiplier, traitMultiplier } from "@/lib/games/penny-pinchers/engine";
+import { albumPCBonus, coinPCValue, frugalityPCMultiplier, traitMultiplier } from "@/lib/games/penny-pinchers/engine";
 
 export const runtime = "nodejs";
 
@@ -84,16 +84,20 @@ export async function POST(req: Request) {
 
   // Use the client's merged PC if provided (clamped server-side),
   // otherwise compute from the coin's intrinsic value + upgrades.
-  // Trait + Frugality multipliers stack on top of either source.
+  // Trait, Frugality, and the Foreign album bonus all stack on
+  // top of either source.
   const baseValue = mergedPC ?? coinPCValue(coinType, upgradeLevels, permLevels);
   const pc = Math.round(
-    baseValue * traitMultiplier(trait) * frugalityPCMultiplier(state.frugality),
+    baseValue *
+      traitMultiplier(trait) *
+      frugalityPCMultiplier(state.frugality) *
+      albumPCBonus(state.album ?? {}),
   );
 
   // Trait pickups go into the Coin Album. We deep-clone the
   // existing album object so the upsert sees a fresh shape.
   let album = state.album ?? {};
-  if (trait === "shiny" || trait === "sticky") {
+  if (trait === "shiny" || trait === "sticky" || trait === "foreign") {
     const page = trait;
     const before = album[page] ?? {};
     album = { ...album, [page]: { ...before, [coinType]: (before[coinType] ?? 0) + 1 } };

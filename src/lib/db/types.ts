@@ -319,6 +319,7 @@ export type MonopolyOwned = {
 export type PennyPinchersAlbum = {
   shiny?: Record<string, number>;
   sticky?: Record<string, number>;
+  foreign?: Record<string, number>;
 };
 
 export type PennyPinchersState = {

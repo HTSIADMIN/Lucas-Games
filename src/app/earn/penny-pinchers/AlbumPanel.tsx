@@ -11,13 +11,15 @@ import {
 } from "@/lib/games/penny-pinchers/engine";
 
 const PAGE_LABEL: Record<AlbumPage, string> = {
-  shiny:  "Shiny",
-  sticky: "Sticky",
+  shiny:   "Shiny",
+  sticky:  "Sticky",
+  foreign: "Foreign",
 };
 
 const PAGE_BLURB: Record<AlbumPage, string> = {
-  shiny:  "Each filled slot adds +0.5% shiny chance. Complete the page for an extra +5%.",
-  sticky: "Each filled slot adds +1% sticky chance. Complete the page for an extra +3%.",
+  shiny:   "Each filled slot adds +0.5% shiny chance. Complete the page for an extra +5%.",
+  sticky:  "Each filled slot adds +1% sticky chance. Complete the page for an extra +3%.",
+  foreign: "Each filled slot adds +0.5% PC on every click. Complete the page for an extra +5%.",
 };
 
 export function AlbumPanel({ album }: { album: AlbumState }) {
@@ -73,7 +75,7 @@ function Page({ page, album }: { page: AlbumPage; album: AlbumState }) {
 function Slot({ page, coin, count }: { page: AlbumPage; coin: CoinId; count: number }) {
   const got = count > 0;
   const def = COINS[coin];
-  const ringColor = page === "shiny" ? "#f5c842" : "#78dcff";
+  const ringColor = page === "shiny" ? "#f5c842" : page === "sticky" ? "#78dcff" : "#a8d4ff";
   return (
     <div
       title={`${def.label} · ${count}`}
@@ -97,7 +99,7 @@ function Slot({ page, coin, count }: { page: AlbumPage; coin: CoinId; count: num
           display: "block",
           boxShadow: got && page === "shiny"
             ? `0 0 0 2px ${ringColor}, 0 0 8px ${ringColor}`
-            : got && page === "sticky"
+            : got && (page === "sticky" || page === "foreign")
             ? `0 0 0 2px ${ringColor}`
             : undefined,
         }}

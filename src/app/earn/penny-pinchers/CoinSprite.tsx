@@ -52,13 +52,36 @@ export function CoinSprite({
   const mergeBoost = Math.min(48, Math.round(Math.log2(Math.max(1, pc)) * 5));
   const size = baseSize + sizeBoost + mergeBoost;
 
-  // Trait visuals
+  // Trait visuals — six total now. Shiny is the marquee one,
+  // gets the rotating conic-gradient halo + sparkle particles.
+  // Ancient is even rarer and reuses Shiny's animation rig with
+  // a green-patina palette so it reads "even rarer than gold".
   const isShiny = trait === "shiny";
+  const isAncient = trait === "ancient";
+  const isCursed = trait === "cursed";
+  const isForeign = trait === "foreign";
+  const isBent = trait === "bent";
   const isSticky = trait === "sticky";
-  const auraColor = isShiny ? "rgba(255, 220, 90, 0.95)" : isSticky ? "rgba(120, 220, 255, 0.75)" : null;
-  // Box bigger for shiny so the rotating halo + sparkle particles
-  // have room to live outside the coin disc itself.
-  const halo = isShiny ? 28 : isSticky ? 18 : 0;
+
+  const auraColor =
+    isShiny   ? "rgba(255, 220, 90, 0.95)" :
+    isAncient ? "rgba(120, 220, 160, 0.95)" :
+    isCursed  ? "rgba(220, 90, 90, 0.95)" :
+    isForeign ? "rgba(140, 200, 255, 0.85)" :
+    isBent    ? "rgba(180, 180, 180, 0.65)" :
+    isSticky  ? "rgba(120, 220, 255, 0.75)" :
+    null;
+
+  // Halo room for big-aura traits.
+  const halo =
+    isShiny || isAncient ? 32 :
+    isCursed              ? 22 :
+    isForeign             ? 18 :
+    isSticky              ? 18 :
+    0;
+
+  // Bent tilts the disc instead of orbiting it.
+  const bentRotate = isBent ? -14 : 0;
 
   return (
     <button
@@ -81,8 +104,39 @@ export function CoinSprite({
         animation: "pp-coin-spawn 240ms var(--ease-out, ease-out)",
       }}
     >
-      {/* Shiny halo — slow rotating conic gradient behind the coin disc */}
-      {isShiny && (
+      {/* Rotating halo — Shiny is gold, Ancient is jade-green. */}
+      {(isShiny || isAncient) && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            background: isShiny
+              ? "conic-gradient(from 0deg, rgba(255,250,180,1), rgba(255,200,60,0.0) 30%, rgba(255,250,180,1) 50%, rgba(255,200,60,0.0) 80%, rgba(255,250,180,1))"
+              : "conic-gradient(from 0deg, rgba(180,255,210,1), rgba(80,200,140,0.0) 30%, rgba(180,255,210,1) 50%, rgba(80,200,140,0.0) 80%, rgba(180,255,210,1))",
+            filter: "blur(7px)",
+            animation: `pp-coin-halo-spin ${isAncient ? "3.6s" : "2.4s"} linear infinite`,
+          }}
+        />
+      )}
+      {/* Cursed pulse — angry red ring throbbing outward. */}
+      {isCursed && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 4,
+            borderRadius: "50%",
+            background:
+              "radial-gradient(circle, rgba(220,80,80,0.6) 0%, rgba(220,80,80,0.0) 70%)",
+            filter: "blur(4px)",
+            animation: "pp-coin-cursed-pulse 0.9s ease-in-out infinite",
+          }}
+        />
+      )}
+      {/* Foreign passport-stamp swirl — softer animation than shiny. */}
+      {isForeign && (
         <span
           aria-hidden
           style={{
@@ -90,9 +144,9 @@ export function CoinSprite({
             inset: 0,
             borderRadius: "50%",
             background:
-              "conic-gradient(from 0deg, rgba(255,250,180,0.95), rgba(255,200,60,0.0) 30%, rgba(255,250,180,0.95) 50%, rgba(255,200,60,0.0) 80%, rgba(255,250,180,0.95))",
-            filter: "blur(6px)",
-            animation: "pp-coin-halo-spin 2.4s linear infinite",
+              "conic-gradient(from 0deg, rgba(140,200,255,0.8), rgba(60,140,220,0.0) 50%, rgba(140,200,255,0.8))",
+            filter: "blur(5px)",
+            animation: "pp-coin-halo-spin 4s linear infinite",
           }}
         />
       )}
@@ -105,30 +159,44 @@ export function CoinSprite({
           top: halo / 2,
           width: size,
           height: size,
-          background: `radial-gradient(circle at 35% 30%, ${lighten(def.color, tarnish)} 0%, ${tarnishHex(def.color, tarnish)} 55%, ${def.edge} 100%)`,
-          border: `3px solid ${isShiny ? "#f5c842" : def.edge}`,
+          background: isAncient
+            ? "radial-gradient(circle at 35% 30%, #b9e5c4 0%, #5fa17a 55%, #2d6240 100%)"
+            : isCursed
+            ? "radial-gradient(circle at 35% 30%, #e0a0a0 0%, #a04040 55%, #4a0a0a 100%)"
+            : `radial-gradient(circle at 35% 30%, ${lighten(def.color, tarnish)} 0%, ${tarnishHex(def.color, tarnish)} 55%, ${def.edge} 100%)`,
+          border: `3px solid ${
+            isShiny   ? "#f5c842" :
+            isAncient ? "#3d8a4d" :
+            isCursed  ? "#7a1a1a" :
+            isForeign ? "#3d6f9a" :
+            isBent    ? "#7a7a7a" :
+            def.edge
+          }`,
           borderRadius: "50%",
-          color: def.edge,
+          color: isCursed ? "#fef6e4" : def.edge,
           fontFamily: "var(--font-display)",
           fontSize: Math.round(size * 0.42),
           lineHeight: `${size}px`,
           textAlign: "center",
+          transform: bentRotate ? `rotate(${bentRotate}deg)` : undefined,
           boxShadow: auraColor
-            ? isShiny
-              ? `0 0 0 3px ${auraColor}, 0 0 22px ${auraColor}, inset 0 0 12px rgba(255,250,180,0.55), 2px 2px 0 rgba(0,0,0,0.4)`
+            ? isShiny || isAncient
+              ? `0 0 0 3px ${auraColor}, 0 0 26px ${auraColor}, inset 0 0 14px rgba(255,250,180,0.55), 2px 2px 0 rgba(0,0,0,0.4)`
               : `0 0 0 3px ${auraColor}, 0 0 18px ${auraColor}, 2px 2px 0 rgba(0,0,0,0.4)`
             : "2px 2px 0 rgba(0,0,0,0.4)",
-          animation: isShiny ? "pp-coin-shiny-pulse 1.3s ease-in-out infinite" : undefined,
+          animation: isShiny || isAncient
+            ? "pp-coin-shiny-pulse 1.3s ease-in-out infinite"
+            : undefined,
         }}
       >
         {formatPcLabel(pc)}
       </span>
       {/* Sparkle particles — three asterisks orbiting the disc */}
-      {isShiny && (
+      {(isShiny || isAncient) && (
         <>
-          <span aria-hidden style={sparkleStyle(0,    halo, size)}>✦</span>
-          <span aria-hidden style={sparkleStyle(0.33, halo, size)}>✧</span>
-          <span aria-hidden style={sparkleStyle(0.66, halo, size)}>✦</span>
+          <span aria-hidden style={sparkleStyle(0,    halo, size, isAncient)}>✦</span>
+          <span aria-hidden style={sparkleStyle(0.33, halo, size, isAncient)}>✧</span>
+          <span aria-hidden style={sparkleStyle(0.66, halo, size, isAncient)}>✦</span>
         </>
       )}
       <style>{`
@@ -148,16 +216,16 @@ export function CoinSprite({
           0%, 100% { opacity: 0.2; transform: translate(-50%, -50%) scale(0.7) rotate(0deg); }
           50%      { opacity: 1;   transform: translate(-50%, -50%) scale(1.2) rotate(180deg); }
         }
+        @keyframes pp-coin-cursed-pulse {
+          0%, 100% { transform: scale(0.85); opacity: 0.55; }
+          50%      { transform: scale(1.18); opacity: 0.95; }
+        }
       `}</style>
     </button>
   );
 }
 
-function sparkleStyle(phase: number, halo: number, size: number): CSSProperties {
-  // Position three sparkles at evenly-spaced angles around the disc
-  // edge; each gets a different animation-delay so they twinkle out
-  // of phase. Halo + 4px gives just enough breathing room outside
-  // the gold ring for the asterisks to read clearly.
+function sparkleStyle(phase: number, halo: number, size: number, ancient = false): CSSProperties {
   const angle = phase * Math.PI * 2;
   const r = size / 2 + halo / 2 - 2;
   const cx = halo / 2 + size / 2 + Math.cos(angle) * r;
@@ -166,11 +234,13 @@ function sparkleStyle(phase: number, halo: number, size: number): CSSProperties 
     position: "absolute",
     left: cx,
     top: cy,
-    color: "#fff8c2",
+    color: ancient ? "#c8ffd8" : "#fff8c2",
     fontSize: 14,
     fontFamily: "var(--font-display)",
     pointerEvents: "none",
-    textShadow: "0 0 6px rgba(255,220,90,0.95)",
+    textShadow: ancient
+      ? "0 0 7px rgba(120,220,160,0.95)"
+      : "0 0 6px rgba(255,220,90,0.95)",
     transform: "translate(-50%, -50%)",
     animation: `pp-coin-sparkle 1.3s ease-in-out ${phase * 1.3}s infinite`,
   };
