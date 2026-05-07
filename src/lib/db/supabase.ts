@@ -539,6 +539,7 @@ export async function upsertPennyPinchersState(state: PennyPinchersState): Promi
       bank_tokens: state.bank_tokens,
       lifetime_banked_cents: state.lifetime_banked_cents,
       last_prestige_at: state.last_prestige_at,
+      frugality: state.frugality,
     }, { onConflict: "user_id" })
     .select("*")
     .single();

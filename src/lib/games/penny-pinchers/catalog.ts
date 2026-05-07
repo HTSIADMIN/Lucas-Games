@@ -205,6 +205,70 @@ export const MAX_CLICKS_PER_SEC = 25;
 export const OFFLINE_CAP_HOURS = 8;
 
 // ============================================================
+// EVENTS — Phase 2b
+//
+// Random events spice up the otherwise-steady spawn loop. Each
+// /state poll the client rolls START_CHANCE_PER_POLL for an
+// inactive event; if it lands, the event runs for DURATION_MS
+// and applies its visual + spawn modifiers locally. The wallet
+// endpoint persists Frugality changes from the moral-choice
+// Lost Wallet event server-side.
+// ============================================================
+
+export type EventId = "coin_storm" | "rainy_day";
+
+export type EventDef = {
+  id: EventId;
+  label: string;
+  blurb: string;
+  durationMs: number;
+  /** Spawn rate multiplier while active (e.g. 0.5 = twice as fast). */
+  spawnMultiplier: number;
+  /** Extra simultaneous coins allowed during the event. */
+  extraConcurrent: number;
+  /** Additive shiny chance during the event (0-1 absolute). */
+  bonusShinyChance: number;
+};
+
+export const EVENTS: Record<EventId, EventDef> = {
+  coin_storm: {
+    id: "coin_storm",
+    label: "Coin Storm",
+    blurb: "Coins are pouring down — click as many as you can!",
+    durationMs: 20_000,
+    spawnMultiplier: 0.4,
+    extraConcurrent: 6,
+    bonusShinyChance: 0,
+  },
+  rainy_day: {
+    id: "rainy_day",
+    label: "Rainy Day",
+    blurb: "Wet sidewalk, slow spawns — but the puddles glint with shinies.",
+    durationMs: 30_000,
+    spawnMultiplier: 1.5,
+    extraConcurrent: 0,
+    bonusShinyChance: 0.05,
+  },
+};
+
+/** Per-poll chance the client tries to roll a new event when none active. */
+export const EVENT_START_CHANCE_PER_POLL = 0.025;
+
+// Lost Wallet — single-shot spawn, separate from passive events.
+/** Per-poll chance a Lost Wallet sprite spawns when none on screen. */
+export const LOST_WALLET_CHANCE_PER_POLL = 0.012;
+/** How long a Lost Wallet sits on screen before it despawns. */
+export const LOST_WALLET_LIFETIME_MS = 18_000;
+/** PC awarded for "Keep the Change" (the morally-questionable choice). */
+export const LOST_WALLET_KEEP_PC = 500;
+/** Frugality delta on each choice. */
+export const LOST_WALLET_RETURN_FRUGALITY = 1;
+export const LOST_WALLET_KEEP_FRUGALITY = -1;
+/** Bounds applied server-side after each adjustment. */
+export const FRUGALITY_MIN = -50;
+export const FRUGALITY_MAX = 50;
+
+// ============================================================
 // PRESTIGE — Phase 3a
 //
 // "Roll It Up" wipes session state (cents + helpers + run upgrades)

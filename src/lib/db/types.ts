@@ -329,6 +329,7 @@ export type PennyPinchersState = {
   bank_tokens: number;
   lifetime_banked_cents: number;
   last_prestige_at: string | null;
+  frugality: number;
   created_at: string;
 };
 

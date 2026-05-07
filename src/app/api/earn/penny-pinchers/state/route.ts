@@ -60,6 +60,7 @@ export async function GET() {
       bank_tokens: 0,
       lifetime_banked_cents: 0,
       last_prestige_at: null,
+      frugality: 0,
       created_at: now.toISOString(),
     });
   }
@@ -164,6 +165,7 @@ export async function GET() {
       unlocked: [...alreadyUnlocked, ...newlyUnlocked],
       newlyUnlocked,
     },
+    frugality: state.frugality,
     walletBalance: await getBalance(s.user.id),
   });
 }

@@ -7,14 +7,21 @@ import {
   ACHIEVEMENTS_BY_ID,
   COINS,
   COIN_ORDER,
+  EVENTS,
+  EVENT_START_CHANCE_PER_POLL,
+  LOST_WALLET_CHANCE_PER_POLL,
+  LOST_WALLET_KEEP_PC,
+  LOST_WALLET_LIFETIME_MS,
   MERGE_MIN_AGE_MS,
   MERGE_RULES,
   PRESTIGE_THRESHOLD_PC,
   STICKY_PICKUP_COUNT,
   STICKY_PICKUP_RADIUS,
+  TRAITS,
   type AchievementId,
   type CoinId,
   type CoinTrait,
+  type EventId,
   type HelperId,
   type PermUpgradeId,
   type UpgradeId,
@@ -74,8 +81,12 @@ type StateResponse = {
     unlocked: AchievementId[];
     newlyUnlocked: AchievementId[];
   };
+  frugality: number;
   walletBalance: number;
 };
+
+type ActiveEvent = { id: EventId; endsAt: number };
+type LostWallet = { id: number; x: number; y: number; spawnedAt: number };
 
 type SpawnedCoin = {
   id: number;
@@ -97,6 +108,10 @@ export function PennyPinchersClient() {
   const [welcomeBack, setWelcomeBack] = useState<number | null>(null);
   const [prestigeOpen, setPrestigeOpen] = useState(false);
   const [achievementToasts, setAchievementToasts] = useState<AchievementId[]>([]);
+  const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
+  const [lostWallet, setLostWallet] = useState<LostWallet | null>(null);
+  const [walletModalChoice, setWalletModalChoice] = useState<null | "open" | "submitting">(null);
+  const lostWalletSeqRef = useRef(0);
 
   const playRef = useRef<HTMLDivElement | null>(null);
   const coinSeqRef = useRef(0);
@@ -124,6 +139,38 @@ export function PennyPinchersClient() {
       // Achievement unlock toasts — chime + show one card per unlock.
       // Toasts auto-dismiss after 6s. Tokens are already credited
       // server-side (state.prestige.bankTokens reflects the bonus).
+      // Event roll — only when nothing's already running. Lost
+      // Wallet rolls separately so a Coin Storm and a wallet can
+      // coexist (one's an event, one's a sprite).
+      const nowMs = Date.now();
+      setActiveEvent((current) => {
+        if (current && current.endsAt > nowMs) return current;
+        if (Math.random() < EVENT_START_CHANCE_PER_POLL) {
+          const ids = Object.keys(EVENTS) as EventId[];
+          const id = ids[Math.floor(Math.random() * ids.length)];
+          const def = EVENTS[id];
+          Sfx.play("ui.confirm");
+          return { id, endsAt: nowMs + def.durationMs };
+        }
+        return null;
+      });
+      setLostWallet((current) => {
+        if (current && nowMs - current.spawnedAt < LOST_WALLET_LIFETIME_MS) return current;
+        if (Math.random() < LOST_WALLET_CHANCE_PER_POLL) {
+          const playEl = playRef.current;
+          if (!playEl) return null;
+          const rect = playEl.getBoundingClientRect();
+          const pad = 60;
+          lostWalletSeqRef.current += 1;
+          return {
+            id: lostWalletSeqRef.current,
+            x: pad + Math.random() * Math.max(0, rect.width - pad * 2),
+            y: pad + Math.random() * Math.max(0, rect.height - pad * 2),
+            spawnedAt: nowMs,
+          };
+        }
+        return null;
+      });
       if (d.achievements.newlyUnlocked.length > 0) {
         Sfx.play("win.levelup");
         const ids = d.achievements.newlyUnlocked;
@@ -140,30 +187,42 @@ export function PennyPinchersClient() {
   }, []);
   useVisibleInterval(loadState, SYNC_POLL_MS);
 
-  // Coin spawner
+  // Coin spawner — applies the active event's spawn-rate multiplier
+  // and bonus shiny chance so Coin Storm rains coins and Rainy Day
+  // glints with shinies.
   const upgrades = (server?.upgrades ?? {}) as Record<UpgradeId, number>;
-  const intervalMs = useMemo(() => spawnIntervalMs(upgrades), [upgrades]);
+  const baseIntervalMs = useMemo(() => spawnIntervalMs(upgrades), [upgrades]);
+  const eventDef = activeEvent ? EVENTS[activeEvent.id] : null;
+  const intervalMs = eventDef ? Math.max(120, Math.round(baseIntervalMs * eventDef.spawnMultiplier)) : baseIntervalMs;
+  const burstSize = (eventDef?.extraConcurrent ?? 0) > 0 ? 1 + eventDef!.extraConcurrent : 1;
+  const bonusShiny = eventDef?.bonusShinyChance ?? 0;
   useEffect(() => {
     if (!server) return;
     const t = window.setInterval(() => {
       const playEl = playRef.current;
       if (!playEl) return;
       const rect = playEl.getBoundingClientRect();
-      // Pick a random spawn coordinate inside the play area, with
-      // padding so the coin is fully visible.
       const pad = 40;
-      const x = pad + Math.random() * Math.max(0, rect.width - pad * 2);
-      const y = pad + Math.random() * Math.max(0, rect.height - pad * 2);
-      const coin = rollSpawn(upgrades);
-      const trait = rollTrait(coin, upgrades);
-      coinSeqRef.current += 1;
-      setCoins((prev) => [
-        ...prev,
-        { id: coinSeqRef.current, coin, trait, x, y, spawnedAt: Date.now() },
-      ]);
+      const newSpawns: SpawnedCoin[] = [];
+      // Coin Storm spawns a small burst per tick instead of one
+      // coin — feels much rainier without halving the interval to
+      // sub-100ms territory.
+      const count = burstSize;
+      for (let i = 0; i < count; i++) {
+        const x = pad + Math.random() * Math.max(0, rect.width - pad * 2);
+        const y = pad + Math.random() * Math.max(0, rect.height - pad * 2);
+        const coin = rollSpawn(upgrades);
+        let trait = rollTrait(coin, upgrades);
+        // Rainy Day's bonus shiny — secondary roll only when the
+        // base trait roll didn't already land something.
+        if (!trait && bonusShiny > 0 && Math.random() < bonusShiny) trait = "shiny";
+        coinSeqRef.current += 1;
+        newSpawns.push({ id: coinSeqRef.current, coin, trait, x, y, spawnedAt: Date.now() });
+      }
+      setCoins((prev) => [...prev, ...newSpawns]);
     }, intervalMs);
     return () => window.clearInterval(t);
-  }, [server, intervalMs, upgrades]);
+  }, [server, intervalMs, upgrades, burstSize, bonusShiny]);
 
   // Merge proximity loop — only runs when "pile_it_up" is owned.
   // Walks each merge rule once per tick and fuses one cluster
@@ -312,6 +371,28 @@ export function PennyPinchersClient() {
     } catch { await loadState(); }
   }
 
+  async function resolveLostWallet(choice: "return" | "keep") {
+    if (walletModalChoice === "submitting") return;
+    setWalletModalChoice("submitting");
+    if (choice === "keep") {
+      // Optimistic — server will reconcile on next sync.
+      setLocalCents((c) => c + LOST_WALLET_KEEP_PC);
+      Sfx.play("coins.shower");
+    } else {
+      Sfx.play("ui.confirm");
+    }
+    try {
+      await fetch("/api/earn/penny-pinchers/wallet", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ choice }),
+      });
+    } catch { /* swallow — sync poll reconciles */ }
+    setWalletModalChoice(null);
+    setLostWallet(null);
+    await loadState();
+  }
+
   async function rollItUp() {
     Sfx.play("chips.stack");
     try {
@@ -377,6 +458,26 @@ export function PennyPinchersClient() {
         </div>
       )}
 
+      {activeEvent && (
+        <div
+          style={{
+            background: activeEvent.id === "coin_storm" ? "var(--gold-300)" : "var(--sky-300)",
+            border: "3px solid var(--ink-900)",
+            padding: "var(--sp-2) var(--sp-3)",
+            fontFamily: "var(--font-display)",
+            fontSize: 13,
+            color: "var(--ink-900)",
+            textAlign: "center",
+            letterSpacing: "0.06em",
+            textTransform: "uppercase",
+            animation: "game-event-pulse 1.6s ease-in-out infinite",
+          }}
+        >
+          {EVENTS[activeEvent.id].label} · {EVENTS[activeEvent.id].blurb} ·{" "}
+          {Math.max(0, Math.ceil((activeEvent.endsAt - now) / 1000))}s
+        </div>
+      )}
+
       <div
         className="row"
         style={{
@@ -409,6 +510,20 @@ export function PennyPinchersClient() {
           </div>
           <div className="text-mute" style={{ fontSize: 11 }}>
             Helpers: {ratePcPerSec.toLocaleString()} PC/sec · Lifetime clicks {server.lifetimeClicks.toLocaleString()}
+          </div>
+          <div
+            style={{
+              marginTop: 4,
+              fontFamily: "var(--font-display)",
+              fontSize: 11,
+              color: server.frugality > 0
+                ? "var(--cactus-500)"
+                : server.frugality < 0
+                ? "var(--crimson-500)"
+                : "var(--saddle-400)",
+            }}
+          >
+            {server.frugality > 0 ? "✓" : server.frugality < 0 ? "✗" : "·"} Frugality {server.frugality > 0 ? `+${server.frugality}` : server.frugality}
           </div>
         </div>
         <div
@@ -536,6 +651,39 @@ export function PennyPinchersClient() {
               onClick={() => clickCoin(c)}
             />
           ))}
+          {lostWallet && (
+            <button
+              type="button"
+              onClick={() => setWalletModalChoice("open")}
+              aria-label="Lost wallet"
+              style={{
+                position: "absolute",
+                left: lostWallet.x - 32,
+                top: lostWallet.y - 24,
+                width: 64,
+                height: 48,
+                padding: 0,
+                background: "linear-gradient(180deg, #6b3f24 0%, #4a2818 70%, #1a0f08 100%)",
+                border: "3px solid #1a0f08",
+                borderRadius: 4,
+                cursor: "pointer",
+                color: "var(--gold-300)",
+                fontFamily: "var(--font-display)",
+                fontSize: 18,
+                lineHeight: 1,
+                boxShadow: "0 0 0 3px rgba(255,196,64,0.45), 0 0 22px rgba(255,196,64,0.6), 2px 2px 0 rgba(0,0,0,0.4)",
+                animation: "pp-wallet-bob 1.4s ease-in-out infinite",
+              }}
+            >
+              <span aria-hidden style={{ fontFamily: "var(--font-display)", fontSize: 22 }}>⛛</span>
+              <style>{`
+                @keyframes pp-wallet-bob {
+                  0%, 100% { transform: translateY(0); }
+                  50%      { transform: translateY(-2px); }
+                }
+              `}</style>
+            </button>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -701,6 +849,76 @@ export function PennyPinchersClient() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {walletModalChoice != null && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Lost wallet"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9_500,
+            background: "rgba(26,15,8,0.7)",
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+            backdropFilter: "blur(2px)",
+          }}
+        >
+          <div
+            className="panel-wood"
+            style={{
+              width: "min(440px, 100%)",
+              padding: "var(--sp-5)",
+              border: "4px solid var(--ink-900)",
+              boxShadow: "var(--sh-popover), var(--glow-gold)",
+            }}
+          >
+            <div
+              className="uppercase"
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "var(--fs-h3)",
+                color: "var(--gold-300)",
+                letterSpacing: "var(--ls-loose)",
+                textShadow: "2px 2px 0 var(--ink-900)",
+                marginBottom: "var(--sp-3)",
+                textAlign: "center",
+              }}
+            >
+              You Found a Wallet
+            </div>
+            <p style={{ color: "var(--ink-900)", marginBottom: "var(--sp-2)" }}>
+              Lost on the sidewalk, fat with cash. There&rsquo;s an ID inside —
+              someone&rsquo;s missing this.
+            </p>
+            <p className="text-mute" style={{ fontSize: 12, marginBottom: "var(--sp-4)" }}>
+              Returning it raises Frugality (unlocks future perks). Keeping the
+              change pays {LOST_WALLET_KEEP_PC} PC right now but takes a Frugality
+              point with it.
+            </p>
+            <div className="row" style={{ gap: 8, justifyContent: "center" }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={walletModalChoice === "submitting"}
+                onClick={() => resolveLostWallet("return")}
+              >
+                Return It
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={walletModalChoice === "submitting"}
+                onClick={() => resolveLostWallet("keep")}
+              >
+                Keep the Change · +{LOST_WALLET_KEEP_PC} PC
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
