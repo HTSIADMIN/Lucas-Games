@@ -81,6 +81,24 @@ export function frugalityPCMultiplier(frugality: number): number {
   return 1 + frugality * FRUGALITY_PC_PER_POINT;
 }
 
+/**
+ * Permanent PC multiplier from completed Roll-Ups. The first
+ * prestige yields +300% (×4 PC on every coin pickup); each
+ * subsequent prestige adds another +100%. Stacks multiplicatively
+ * with trait, frugality, album, and relic multipliers.
+ *
+ *   prestiges  multiplier  bonus
+ *   0          1×          +0%
+ *   1          4×          +300%
+ *   2          5×          +400%
+ *   3          6×          +500%
+ *   ...
+ */
+export function prestigePCMultiplier(prestigeCount: number): number {
+  if (prestigeCount <= 0) return 1;
+  return 3 + prestigeCount;
+}
+
 // ============================================================
 // COIN ALBUM — Phase 2d
 // ============================================================

@@ -22,6 +22,12 @@ export function PennyLeaderboard({ rows }: { rows: Row[] | null }) {
       <p className="text-mute" style={{ fontSize: 11, margin: "0 0 var(--sp-2) 0" }}>
         Sorted by lifetime PC earned. Refreshes with the game state.
       </p>
+      <style>{`
+        @keyframes pp-rollup-tag-shine {
+          0%   { background-position: 0% 50%; }
+          100% { background-position: 200% 50%; }
+        }
+      `}</style>
       {rows.length === 0 ? (
         <p className="text-mute">No one&apos;s earned anything yet — be the first.</p>
       ) : (
@@ -64,6 +70,27 @@ export function PennyLeaderboard({ rows }: { rows: Row[] | null }) {
                       </div>
                       <span>{r.username}</span>
                       {r.isMe && <span className="tag-new">YOU</span>}
+                      {r.prestigeCount > 0 && (
+                        <span
+                          title={`${r.prestigeCount} Roll-Up${r.prestigeCount === 1 ? "" : "s"}`}
+                          aria-label={`Roll-Up Club member, ${r.prestigeCount} Roll-Ups`}
+                          style={{
+                            fontFamily: "var(--font-display)",
+                            fontSize: 9,
+                            letterSpacing: "0.06em",
+                            textTransform: "uppercase",
+                            color: "var(--ink-900)",
+                            background: "linear-gradient(90deg, var(--gold-300), var(--gold-500), var(--gold-300))",
+                            backgroundSize: "200% 100%",
+                            border: "2px solid var(--ink-900)",
+                            padding: "1px 5px",
+                            boxShadow: "0 0 8px rgba(255,196,64,0.55)",
+                            animation: "pp-rollup-tag-shine 3s linear infinite",
+                          }}
+                        >
+                          ★ Roll-Up Club
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td style={{ padding: "4px 6px", textAlign: "right" }}>{r.lifetimePCEarned.toLocaleString()}</td>

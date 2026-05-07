@@ -19,6 +19,7 @@ import {
   albumPCBonus,
   coinPCValue,
   frugalityPCMultiplier,
+  prestigePCMultiplier,
   relicEffects,
   traitMultiplier,
 } from "@/lib/games/penny-pinchers/engine";
@@ -122,6 +123,7 @@ export async function POST(req: Request) {
   const relicE = relicEffects(state.relics as Parameters<typeof relicEffects>[0]);
   const frugMul = frugalityPCMultiplier(state.frugality);
   const albumMul = albumPCBonus(state.album ?? {});
+  const prestigeMul = prestigePCMultiplier(state.prestige_count);
 
   // Compute total PC + per-(page,coin) album increments. The same
   // PC math as the old single-click endpoint, applied to each item.
@@ -134,6 +136,7 @@ export async function POST(req: Request) {
         traitMultiplier(inp.trait) *
         frugMul *
         albumMul *
+        prestigeMul *
         relicE.clickPCMul,
     );
     totalPC += pc;

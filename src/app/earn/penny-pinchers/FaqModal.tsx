@@ -72,6 +72,8 @@ const SECTIONS: { title: string; lines: string[] }[] = [
       "Once you've earned 1M lifetime PC, you can Roll It Up. This wipes your run-state cents, upgrades, and helpers.",
       "In return you get ★ Bank Tokens (a soft sqrt curve — 1M earns 10, 10M earns 31, 100M earns 100).",
       "Spend Tokens in the ★ Tokens tab on permanent upgrades that survive every future Roll-Up.",
+      "Each Roll-Up adds a permanent PC multiplier on every coin pickup: first one is +300% (×4), and each subsequent +100% (×5, ×6, ...).",
+      "First Roll-Up earns you the ★ Roll-Up Club badge next to your name on the leaderboard at the bottom of the game.",
     ],
   },
   {

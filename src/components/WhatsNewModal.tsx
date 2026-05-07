@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { CHANGELOG, type ChangelogEntry } from "@/lib/changelog";
 
 // One-time release-notes modal. Pops the first time a player sees a
@@ -119,9 +120,17 @@ export function WhatsNewModal() {
 
         <div
           className="row"
-          style={{ justifyContent: "center", marginTop: "var(--sp-4)" }}
+          style={{ justifyContent: "center", marginTop: "var(--sp-4)", gap: "var(--sp-2)", flexWrap: "wrap" }}
         >
-          <button type="button" className="btn btn-primary" onClick={dismiss}>
+          <Link
+            href="/earn/penny-pinchers"
+            onClick={dismiss}
+            className="btn btn-primary"
+            style={{ textDecoration: "none" }}
+          >
+            ✦ Play Penny Pinchers
+          </Link>
+          <button type="button" className="btn btn-ghost" onClick={dismiss}>
             Got it
           </button>
         </div>

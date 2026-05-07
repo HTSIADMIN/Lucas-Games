@@ -745,9 +745,11 @@ export function PennyPinchersClient() {
       : 1;
     // Mirror the server's click-side multiplier stack so the
     // optimistic counter doesn't undercount what the server is
-    // about to credit.
+    // about to credit. prestigeMul is the +300%/+100% bonus you
+    // earn on every click after Roll-Up.
     const clickMul = server?.relicEffects.clickPCMul ?? 1;
-    const optimisticPC = Math.round(coin.mergedPC * traitMul * tier.multiplier * clickMul);
+    const prestigeMul = server && server.prestige.count > 0 ? 3 + server.prestige.count : 1;
+    const optimisticPC = Math.round(coin.mergedPC * traitMul * tier.multiplier * clickMul * prestigeMul);
     setLocalCents((c) => c + optimisticPC);
     spawnPop(coin.x, coin.y, optimisticPC, coin.trait === "shiny", coin.trait);
     // Pulse the PC counter only on manual / auto-picker clicks —
@@ -826,7 +828,7 @@ export function PennyPinchersClient() {
     // Queue collateral pickups too — each one is metered + counted
     // toward lifetime_clicks server-side via the same batch flush.
     for (const extra of collateral) {
-      const extraOptimistic = Math.round(extra.mergedPC * (extra.trait === "shiny" ? 5 : 1) * tier.multiplier * clickMul);
+      const extraOptimistic = Math.round(extra.mergedPC * (extra.trait === "shiny" ? 5 : 1) * tier.multiplier * clickMul * prestigeMul);
       setLocalCents((c) => c + extraOptimistic);
       spawnPop(extra.x, extra.y, extraOptimistic, extra.trait === "shiny", extra.trait);
       enqueueClick({

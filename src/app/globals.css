@@ -1012,8 +1012,31 @@ img, svg, canvas {
   padding: 2px 8px 2px 2px;
   background: var(--saddle-500);
   border: 2px solid var(--ink-900);
+  transition: transform 120ms var(--ease-out, ease-out),
+              box-shadow 160ms var(--ease-out, ease-out),
+              background-color 160ms var(--ease-out, ease-out),
+              border-color 160ms var(--ease-out, ease-out);
 }
 .header-presence-pill.is-me { border-color: var(--gold-300); }
+/* Click affordance — only the link variant glows on hover so plain
+   pills (unmapped routes) don't pretend to be interactive. */
+.header-presence-pill.is-link {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+.header-presence-pill.is-link:hover,
+.header-presence-pill.is-link:focus-visible {
+  transform: translateY(-1px);
+  background: var(--saddle-400);
+  border-color: var(--gold-300);
+  box-shadow: 0 0 0 2px var(--gold-300), 0 0 12px rgba(255,196,64,0.5);
+  outline: none;
+}
+.header-presence-pill.is-link:active {
+  transform: translateY(0);
+  box-shadow: 0 0 0 2px var(--gold-500), 0 0 8px rgba(255,196,64,0.4);
+}
 .header-presence-pill-label {
   font-family: var(--font-display);
   font-size: 10px;
