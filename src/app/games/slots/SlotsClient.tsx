@@ -426,6 +426,7 @@ export function SlotsClient() {
             onChange={setBet}
             max={Math.max(100, balance ?? 100)}
             disabled={busy || !!bonus}
+            defaultBet={1_000}
           />
           <div className="row" style={{ gap: "var(--sp-2)", justifyContent: "center" }}>
             <button

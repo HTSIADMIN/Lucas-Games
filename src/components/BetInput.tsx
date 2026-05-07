@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 
-const DEFAULT_BET = 100;
 const PRESETS = [100, 1_000, 10_000, 100_000];
 
 function formatPreset(n: number): string {
@@ -16,15 +15,20 @@ export function BetInput({
   onChange,
   max,
   disabled,
+  defaultBet = 100,
 }: {
   value: number;
   onChange: (v: number) => void;
   max: number;
   disabled?: boolean;
+  /** Parent's resting/default stake. Drives the Clear button target
+   *  AND the first-press replace logic — tapping +1k from a fresh
+   *  control whose default is 1,000 stays at 1,000, not 2,000. */
+  defaultBet?: number;
 }) {
-  // Track whether the player has interacted yet. The first preset press
-  // replaces the default 100 stake instead of stacking on top of it, so
-  // tapping +1k from a fresh control yields 1,000 (not 1,100).
+  // Track whether the player has interacted yet. The first preset
+  // press replaces the resting stake instead of stacking on top, so
+  // tapping +1k from a fresh control yields 1,000 (not value+1k).
   const touchedRef = useRef(false);
 
   function setSafe(n: number) {
@@ -32,7 +36,7 @@ export function BetInput({
     onChange(Math.max(0, Math.min(max, Math.floor(n))));
   }
   function addPreset(delta: number) {
-    if (!touchedRef.current && value === DEFAULT_BET) {
+    if (!touchedRef.current && value === defaultBet) {
       touchedRef.current = true;
       setSafe(delta);
       return;
@@ -42,7 +46,7 @@ export function BetInput({
   }
   function clear() {
     touchedRef.current = false;
-    setSafe(DEFAULT_BET);
+    setSafe(defaultBet);
   }
   function halve() {
     touchedRef.current = true;
@@ -110,8 +114,9 @@ export function BetInput({
         />
       </div>
 
-      {/* Quick-add presets — first press replaces the default 100 stake;
-          after that they stack (tap +1k three times = +3,000). */}
+      {/* Quick-add presets — first press from the resting default
+          replaces it; after that they stack (tap +1k three times
+          from default = default + 2k after the replace). */}
       <div className="row" style={{ flexWrap: "wrap", justifyContent: "center" }}>
         {PRESETS.map((p) => (
           <button
