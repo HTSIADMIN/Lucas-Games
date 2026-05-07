@@ -1117,7 +1117,9 @@ export function PennyPinchersClient() {
           flexWrap: "wrap",
         }}
       >
-        {/* Play area */}
+        {/* Play area — sidewalk concrete texture: a faint diagonal
+            tile-crack grid + speckled aggregate dots, layered over
+            a gentle warm gradient so coins still pop against it. */}
         <div
           ref={playRef}
           className="panel"
@@ -1125,8 +1127,24 @@ export function PennyPinchersClient() {
             position: "relative",
             flex: "2 1 360px",
             minHeight: 420,
-            background:
-              "radial-gradient(ellipse at center, var(--saddle-200) 0%, var(--saddle-300) 100%)",
+            backgroundColor: "var(--saddle-200)",
+            backgroundImage: `
+              radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.18) 100%),
+              repeating-linear-gradient(135deg,
+                transparent 0,
+                transparent 56px,
+                rgba(0,0,0,0.06) 56px,
+                rgba(0,0,0,0.06) 60px),
+              repeating-linear-gradient(45deg,
+                transparent 0,
+                transparent 56px,
+                rgba(0,0,0,0.06) 56px,
+                rgba(0,0,0,0.06) 60px),
+              radial-gradient(circle at 25% 25%, rgba(0,0,0,0.08) 1px, transparent 2px),
+              radial-gradient(circle at 75% 60%, rgba(0,0,0,0.06) 1px, transparent 2px),
+              radial-gradient(circle at 40% 80%, rgba(255,255,255,0.05) 1px, transparent 2px)
+            `,
+            backgroundSize: "100% 100%, 60px 60px, 60px 60px, 8px 8px, 12px 12px, 10px 10px",
             overflow: "hidden",
             border: "3px solid var(--ink-900)",
             cursor: "crosshair",

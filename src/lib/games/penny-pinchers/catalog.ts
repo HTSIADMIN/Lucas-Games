@@ -565,7 +565,13 @@ export type AchievementId =
   | "bank_tellers_nightmare"
   | "bigger_boat"
   | "frequent_flyer"
-  | "first_million";
+  | "first_million"
+  | "treasure_hunter"
+  | "relic_hoarder"
+  | "page_turner"
+  | "album_curator"
+  | "frugal_saver"
+  | "saint";
 
 export type AchievementDef = {
   id: AchievementId;
@@ -590,6 +596,14 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   { id: "bigger_boat",           label: "Bigger Boat",           description: "Roll It Up a second time. We're gonna need it.",    reward: 0 },
   { id: "frequent_flyer",        label: "Frequent Flyer",        description: "Roll It Up ten times.",                             reward: 2 },
   { id: "first_million",         label: "First Million",         description: "Bank 1,000,000 ¢ to your wallet across all sessions.", reward: 1 },
+
+  // New systems
+  { id: "treasure_hunter",       label: "Treasure Hunter",       description: "Open your first relic chest.",                      reward: 0 },
+  { id: "relic_hoarder",         label: "Relic Hoarder",         description: "Own at least one of every relic.",                  reward: 2 },
+  { id: "page_turner",           label: "Page Turner",           description: "Complete any one album page.",                       reward: 1 },
+  { id: "album_curator",         label: "Album Curator",         description: "Complete every album page.",                         reward: 3 },
+  { id: "frugal_saver",          label: "Frugal Saver",          description: "Hit +25 Frugality.",                                 reward: 0 },
+  { id: "saint",                 label: "Saint",                 description: "Max out Frugality at +50.",                          reward: 1 },
 ];
 
 export const ACHIEVEMENTS_BY_ID: Record<AchievementId, AchievementDef> = Object.fromEntries(

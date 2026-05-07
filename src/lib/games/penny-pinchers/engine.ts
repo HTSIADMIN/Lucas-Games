@@ -525,8 +525,11 @@ export type AchievementSnapshot = {
   lifetimeClicks: number;
   prestigeCount: number;
   lifetimeBankedCents: number;
+  frugality: number;
   helpers: HelperCounts;
   upgrades: UpgradeLevels;
+  album: AlbumState;
+  relics: RelicLevels;
 };
 
 const CONDITIONS: Record<AchievementId, (s: AchievementSnapshot) => boolean> = {
@@ -540,6 +543,12 @@ const CONDITIONS: Record<AchievementId, (s: AchievementSnapshot) => boolean> = {
   bigger_boat:            (s) => s.prestigeCount >= 2,
   frequent_flyer:         (s) => s.prestigeCount >= 10,
   first_million:          (s) => s.lifetimeBankedCents >= 1_000_000,
+  treasure_hunter:        (s) => Object.keys(s.relics).length >= 1,
+  relic_hoarder:          (s) => Object.keys(s.relics).length >= RELICS.length,
+  page_turner:            (s) => (Object.keys(ALBUM_PAGE_COINS) as AlbumPage[]).some((p) => albumPageComplete(s.album, p)),
+  album_curator:          (s) => (Object.keys(ALBUM_PAGE_COINS) as AlbumPage[]).every((p) => albumPageComplete(s.album, p)),
+  frugal_saver:           (s) => s.frugality >= 25,
+  saint:                  (s) => s.frugality >= 50,
 };
 
 /**

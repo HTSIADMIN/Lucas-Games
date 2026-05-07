@@ -117,8 +117,11 @@ export async function GET() {
       lifetimeClicks: state.lifetime_clicks,
       prestigeCount: state.prestige_count,
       lifetimeBankedCents: state.lifetime_banked_cents,
+      frugality: state.frugality,
       helpers: helperCounts as Partial<Record<HelperId, number>>,
       upgrades: upgradeLevels as Partial<Record<UpgradeId, number>>,
+      album: state.album ?? {},
+      relics,
     },
     alreadyUnlocked,
   );
