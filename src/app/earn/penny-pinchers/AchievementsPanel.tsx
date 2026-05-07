@@ -46,15 +46,17 @@ export function AchievementsPanel({
                 {got ? "✓ " : ""}
                 {a.label}
               </span>
-              <span
-                style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: 11,
-                  color: got ? "var(--gold-500)" : "var(--saddle-400)",
-                }}
-              >
-                {a.reward} ★
-              </span>
+              {a.reward > 0 ? (
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 11,
+                    color: got ? "var(--gold-500)" : "var(--saddle-400)",
+                  }}
+                >
+                  {a.reward} ★
+                </span>
+              ) : null}
             </div>
             <div className="text-mute" style={{ fontSize: 11 }}>
               {a.description}

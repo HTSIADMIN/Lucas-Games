@@ -353,17 +353,21 @@ export type AchievementDef = {
   reward: number;
 };
 
+// Trophy stars are intentionally chump change — Bank Tokens
+// should mostly come from prestiging, not from grinding through
+// the milestone list. Most achievements pay 0 (pure bragging
+// rights), and even the headline ones top out at 2 stars.
 export const ACHIEVEMENTS: readonly AchievementDef[] = [
-  { id: "a_penny_saved",         label: "A Penny Saved",         description: "Pick up your first coin.",                          reward: 1  },
-  { id: "sidewalk_scholar",      label: "Sidewalk Scholar",      description: "Pick up 1,000 coins in your career.",               reward: 2  },
-  { id: "coin_connoisseur",      label: "Coin Connoisseur",      description: "Pick up 10,000 coins in your career.",              reward: 5  },
-  { id: "basically_mining",      label: "This Is Basically Mining", description: "Pick up 100,000 coins in your career.",          reward: 15 },
-  { id: "goblin_mode",           label: "Goblin Mode",           description: "Hire the Laundromat Goblin.",                       reward: 3  },
-  { id: "pile_it_up",            label: "Pile It Up",            description: "Buy the merging upgrade. Stack 'em.",               reward: 2  },
-  { id: "bank_tellers_nightmare",label: "Bank Teller's Nightmare", description: "Roll It Up for the first time.",                 reward: 5  },
-  { id: "bigger_boat",           label: "Bigger Boat",           description: "Roll It Up a second time. We're gonna need it.",    reward: 5  },
-  { id: "frequent_flyer",        label: "Frequent Flyer",        description: "Roll It Up ten times.",                             reward: 25 },
-  { id: "first_million",         label: "First Million",         description: "Bank 1,000,000 ¢ to your wallet across all sessions.", reward: 10 },
+  { id: "a_penny_saved",         label: "A Penny Saved",         description: "Pick up your first coin.",                          reward: 0 },
+  { id: "sidewalk_scholar",      label: "Sidewalk Scholar",      description: "Pick up 1,000 coins in your career.",               reward: 0 },
+  { id: "coin_connoisseur",      label: "Coin Connoisseur",      description: "Pick up 10,000 coins in your career.",              reward: 0 },
+  { id: "basically_mining",      label: "This Is Basically Mining", description: "Pick up 100,000 coins in your career.",          reward: 1 },
+  { id: "goblin_mode",           label: "Goblin Mode",           description: "Hire the Laundromat Goblin.",                       reward: 0 },
+  { id: "pile_it_up",            label: "Pile It Up",            description: "Buy the merging upgrade. Stack 'em.",               reward: 0 },
+  { id: "bank_tellers_nightmare",label: "Bank Teller's Nightmare", description: "Roll It Up for the first time.",                 reward: 1 },
+  { id: "bigger_boat",           label: "Bigger Boat",           description: "Roll It Up a second time. We're gonna need it.",    reward: 0 },
+  { id: "frequent_flyer",        label: "Frequent Flyer",        description: "Roll It Up ten times.",                             reward: 2 },
+  { id: "first_million",         label: "First Million",         description: "Bank 1,000,000 ¢ to your wallet across all sessions.", reward: 1 },
 ];
 
 export const ACHIEVEMENTS_BY_ID: Record<AchievementId, AchievementDef> = Object.fromEntries(

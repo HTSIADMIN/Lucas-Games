@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { COINS, type CoinId, type CoinTrait } from "@/lib/games/penny-pinchers/catalog";
 
 // Single spawned coin in the play area. Renders a chunky pixel-style
@@ -48,7 +48,10 @@ export function CoinSprite({
   // Trait visuals
   const isShiny = trait === "shiny";
   const isSticky = trait === "sticky";
-  const auraColor = isShiny ? "rgba(255, 220, 90, 0.85)" : isSticky ? "rgba(120, 220, 255, 0.7)" : null;
+  const auraColor = isShiny ? "rgba(255, 220, 90, 0.95)" : isSticky ? "rgba(120, 220, 255, 0.75)" : null;
+  // Box bigger for shiny so the rotating halo + sparkle particles
+  // have room to live outside the coin disc itself.
+  const halo = isShiny ? 28 : isSticky ? 18 : 0;
 
   return (
     <button
@@ -57,43 +60,113 @@ export function CoinSprite({
       aria-label={`Pick up ${def.label}${trait ? ` (${trait})` : ""}`}
       style={{
         position: "absolute",
-        left: x - size / 2,
-        top: y - size / 2,
-        width: size,
-        height: size,
+        left: x - (size + halo) / 2,
+        top: y - (size + halo) / 2,
+        width: size + halo,
+        height: size + halo,
         padding: 0,
-        background: `radial-gradient(circle at 35% 30%, ${lighten(def.color, tarnish)} 0%, ${tarnishHex(def.color, tarnish)} 55%, ${def.edge} 100%)`,
-        border: `3px solid ${isShiny ? "#f5c842" : def.edge}`,
+        background: "transparent",
+        border: "none",
         borderRadius: "50%",
-        color: def.edge,
-        fontFamily: "var(--font-display)",
-        fontSize: Math.round(size * 0.42),
-        lineHeight: 1,
         cursor: "pointer",
         opacity: fade,
         transform: "translateZ(0)",
-        boxShadow: auraColor
-          ? `0 0 0 3px ${auraColor}, 0 0 18px ${auraColor}, 2px 2px 0 rgba(0,0,0,0.4)`
-          : "2px 2px 0 rgba(0,0,0,0.4)",
-        animation: isShiny
-          ? "pp-coin-spawn 240ms var(--ease-out, ease-out), pp-coin-shiny 1.3s ease-in-out infinite"
-          : "pp-coin-spawn 240ms var(--ease-out, ease-out)",
+        animation: "pp-coin-spawn 240ms var(--ease-out, ease-out)",
       }}
     >
-      <span aria-hidden>{coinGlyph(coin)}</span>
+      {/* Shiny halo — slow rotating conic gradient behind the coin disc */}
+      {isShiny && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            background:
+              "conic-gradient(from 0deg, rgba(255,250,180,0.95), rgba(255,200,60,0.0) 30%, rgba(255,250,180,0.95) 50%, rgba(255,200,60,0.0) 80%, rgba(255,250,180,0.95))",
+            filter: "blur(6px)",
+            animation: "pp-coin-halo-spin 2.4s linear infinite",
+          }}
+        />
+      )}
+      {/* Coin disc */}
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: halo / 2,
+          top: halo / 2,
+          width: size,
+          height: size,
+          background: `radial-gradient(circle at 35% 30%, ${lighten(def.color, tarnish)} 0%, ${tarnishHex(def.color, tarnish)} 55%, ${def.edge} 100%)`,
+          border: `3px solid ${isShiny ? "#f5c842" : def.edge}`,
+          borderRadius: "50%",
+          color: def.edge,
+          fontFamily: "var(--font-display)",
+          fontSize: Math.round(size * 0.42),
+          lineHeight: `${size}px`,
+          textAlign: "center",
+          boxShadow: auraColor
+            ? isShiny
+              ? `0 0 0 3px ${auraColor}, 0 0 22px ${auraColor}, inset 0 0 12px rgba(255,250,180,0.55), 2px 2px 0 rgba(0,0,0,0.4)`
+              : `0 0 0 3px ${auraColor}, 0 0 18px ${auraColor}, 2px 2px 0 rgba(0,0,0,0.4)`
+            : "2px 2px 0 rgba(0,0,0,0.4)",
+          animation: isShiny ? "pp-coin-shiny-pulse 1.3s ease-in-out infinite" : undefined,
+        }}
+      >
+        {coinGlyph(coin)}
+      </span>
+      {/* Sparkle particles — three asterisks orbiting the disc */}
+      {isShiny && (
+        <>
+          <span aria-hidden style={sparkleStyle(0,    halo, size)}>✦</span>
+          <span aria-hidden style={sparkleStyle(0.33, halo, size)}>✧</span>
+          <span aria-hidden style={sparkleStyle(0.66, halo, size)}>✦</span>
+        </>
+      )}
       <style>{`
         @keyframes pp-coin-spawn {
           0% { transform: scale(0.4) rotate(-12deg); opacity: 0; }
           70% { transform: scale(1.08) rotate(2deg); opacity: 1; }
           100% { transform: scale(1) rotate(0); opacity: 1; }
         }
-        @keyframes pp-coin-shiny {
-          0%, 100% { box-shadow: 0 0 0 3px rgba(255,220,90,0.6), 0 0 14px rgba(255,220,90,0.5), 2px 2px 0 rgba(0,0,0,0.4); }
-          50%      { box-shadow: 0 0 0 4px rgba(255,220,90,0.95), 0 0 26px rgba(255,220,90,0.95), 2px 2px 0 rgba(0,0,0,0.4); }
+        @keyframes pp-coin-shiny-pulse {
+          0%, 100% { transform: scale(1); }
+          50%      { transform: scale(1.06); }
+        }
+        @keyframes pp-coin-halo-spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes pp-coin-sparkle {
+          0%, 100% { opacity: 0.2; transform: translate(-50%, -50%) scale(0.7) rotate(0deg); }
+          50%      { opacity: 1;   transform: translate(-50%, -50%) scale(1.2) rotate(180deg); }
         }
       `}</style>
     </button>
   );
+}
+
+function sparkleStyle(phase: number, halo: number, size: number): CSSProperties {
+  // Position three sparkles at evenly-spaced angles around the disc
+  // edge; each gets a different animation-delay so they twinkle out
+  // of phase. Halo + 4px gives just enough breathing room outside
+  // the gold ring for the asterisks to read clearly.
+  const angle = phase * Math.PI * 2;
+  const r = size / 2 + halo / 2 - 2;
+  const cx = halo / 2 + size / 2 + Math.cos(angle) * r;
+  const cy = halo / 2 + size / 2 + Math.sin(angle) * r;
+  return {
+    position: "absolute",
+    left: cx,
+    top: cy,
+    color: "#fff8c2",
+    fontSize: 14,
+    fontFamily: "var(--font-display)",
+    pointerEvents: "none",
+    textShadow: "0 0 6px rgba(255,220,90,0.95)",
+    transform: "translate(-50%, -50%)",
+    animation: `pp-coin-sparkle 1.3s ease-in-out ${phase * 1.3}s infinite`,
+  };
 }
 
 function coinGlyph(coin: CoinId): string {

@@ -87,6 +87,7 @@ type StateResponse = {
 
 type ActiveEvent = { id: EventId; endsAt: number };
 type LostWallet = { id: number; x: number; y: number; spawnedAt: number };
+type FloatPop = { id: number; x: number; y: number; pc: number; shiny: boolean };
 
 type SpawnedCoin = {
   id: number;
@@ -97,7 +98,7 @@ type SpawnedCoin = {
   spawnedAt: number;
 };
 
-const COIN_LIFETIME_MS = 5500;
+const COIN_LIFETIME_MS = 11_000;
 const SYNC_POLL_MS = 6000;
 
 export function PennyPinchersClient() {
@@ -111,7 +112,22 @@ export function PennyPinchersClient() {
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
   const [lostWallet, setLostWallet] = useState<LostWallet | null>(null);
   const [walletModalChoice, setWalletModalChoice] = useState<null | "open" | "submitting">(null);
+  const [pops, setPops] = useState<FloatPop[]>([]);
+  const popSeqRef = useRef(0);
   const lostWalletSeqRef = useRef(0);
+
+  const spawnPop = useCallback((x: number, y: number, pc: number, shiny: boolean) => {
+    popSeqRef.current += 1;
+    const id = popSeqRef.current;
+    setPops((prev) => [...prev, { id, x, y, pc, shiny }]);
+    window.setTimeout(() => {
+      setPops((prev) => prev.filter((p) => p.id !== id));
+    }, 800);
+  }, []);
+  /** True until the first /state load resolves — keeps the
+   *  welcome-back banner restricted to "you just opened the page"
+   *  rather than firing every 60s+ poll. */
+  const firstLoadRef = useRef(true);
 
   const playRef = useRef<HTMLDivElement | null>(null);
   const coinSeqRef = useRef(0);
@@ -130,11 +146,15 @@ export function PennyPinchersClient() {
         if (Math.abs(prev - d.cents) <= Math.max(5, d.cents * 0.05)) return prev;
         return d.cents;
       });
-      // Server only sets welcomeBackPC when the gap was meaningful
-      // (≥60s) — keeps the toast quiet during the 5s sync polls.
-      if (d.welcomeBackPC > 0) {
-        setWelcomeBack(d.welcomeBackPC);
-        window.setTimeout(() => setWelcomeBack(null), 6000);
+      // Welcome-back banner fires once on page entry only. The
+      // server still flags any meaningful gap, but we ignore the
+      // flag after the first load so background polls don't pop it.
+      if (firstLoadRef.current) {
+        firstLoadRef.current = false;
+        if (d.welcomeBackPC > 0) {
+          setWelcomeBack(d.welcomeBackPC);
+          window.setTimeout(() => setWelcomeBack(null), 6000);
+        }
       }
       // Achievement unlock toasts — chime + show one card per unlock.
       // Toasts auto-dismiss after 6s. Tokens are already credited
@@ -186,6 +206,22 @@ export function PennyPinchersClient() {
     }
   }, []);
   useVisibleInterval(loadState, SYNC_POLL_MS);
+
+  // Real-time helper accrual. The server is the source of truth on
+  // each /state poll, but in between polls we drip the rate locally
+  // so the PC counter visibly ticks instead of jumping every 5s.
+  // The next poll's reconcile in `loadState` snaps anything that
+  // drifted more than ~5%.
+  const helperRate = server?.helperRatePerSec ?? 0;
+  useEffect(() => {
+    if (helperRate <= 0) return;
+    const tickMs = 100;
+    const perTick = (helperRate * tickMs) / 1000;
+    const t = window.setInterval(() => {
+      setLocalCents((c) => c + perTick);
+    }, tickMs);
+    return () => window.clearInterval(t);
+  }, [helperRate]);
 
   // Coin spawner — applies the active event's spawn-rate multiplier
   // and bonus shiny chance so Coin Storm rains coins and Rainy Day
@@ -281,6 +317,7 @@ export function PennyPinchersClient() {
     const traitMul = coin.trait === "shiny" ? 5 : 1;
     const optimisticPC = coinPCValue(coin.coin, upgrades) * traitMul;
     setLocalCents((c) => c + optimisticPC);
+    spawnPop(coin.x, coin.y, optimisticPC, coin.trait === "shiny");
 
     // Sticky-click side effect: also pick up the N nearest coins
     // within radius. Each becomes its own server click so the rate
@@ -320,6 +357,7 @@ export function PennyPinchersClient() {
     for (const extra of collateral) {
       const extraOptimistic = coinPCValue(extra.coin, upgrades) * (extra.trait === "shiny" ? 5 : 1);
       setLocalCents((c) => c + extraOptimistic);
+      spawnPop(extra.x, extra.y, extraOptimistic, extra.trait === "shiny");
       void fetch("/api/earn/penny-pinchers/click", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -651,6 +689,37 @@ export function PennyPinchersClient() {
               onClick={() => clickCoin(c)}
             />
           ))}
+          {pops.map((p) => (
+            <div
+              key={p.id}
+              aria-hidden
+              style={{
+                position: "absolute",
+                left: p.x,
+                top: p.y,
+                transform: "translate(-50%, -50%)",
+                fontFamily: "var(--font-display)",
+                fontSize: p.shiny ? 22 : 16,
+                color: p.shiny ? "var(--gold-300)" : "var(--gold-500)",
+                textShadow: p.shiny
+                  ? "0 0 6px rgba(255,220,90,0.95), 1px 1px 0 rgba(0,0,0,0.6)"
+                  : "1px 1px 0 rgba(0,0,0,0.55)",
+                pointerEvents: "none",
+                animation: "pp-pop-rise 800ms ease-out forwards",
+                whiteSpace: "nowrap",
+                zIndex: 10,
+              }}
+            >
+              +{p.pc.toLocaleString()}
+            </div>
+          ))}
+          <style>{`
+            @keyframes pp-pop-rise {
+              0%   { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
+              20%  { transform: translate(-50%, -60%) scale(1.15); opacity: 1; }
+              100% { transform: translate(-50%, -160%) scale(1); opacity: 0; }
+            }
+          `}</style>
           {lostWallet && (
             <button
               type="button"
@@ -838,7 +907,7 @@ export function PennyPinchersClient() {
                 }}
               >
                 <div style={{ fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--saddle-400)" }}>
-                  Achievement Unlocked · +{def.reward} ★
+                  Achievement Unlocked{def.reward > 0 ? ` · +${def.reward} ★` : ""}
                 </div>
                 <div style={{ fontSize: 14, color: "var(--ink-900)" }}>
                   {def.label}
