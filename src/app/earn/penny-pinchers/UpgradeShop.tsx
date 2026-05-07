@@ -26,6 +26,12 @@ export function UpgradeShop({
 }) {
   return (
     <div className="stack" style={{ gap: "var(--sp-2)", overflowY: "auto", maxHeight: 480 }}>
+      <style>{`
+        @keyframes pp-shop-affordable {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(255,196,64,0); }
+          50%      { box-shadow: 0 0 0 2px rgba(255,196,64,0.45), 0 0 12px rgba(255,196,64,0.5); }
+        }
+      `}</style>
       {CATEGORY_ORDER.map((cat) => {
         const list = UPGRADES.filter((u) => u.category === cat);
         if (list.length === 0) return null;
@@ -55,11 +61,17 @@ export function UpgradeShop({
                       : affordable
                       ? "var(--parchment-100)"
                       : "var(--parchment-200)",
-                    border: "2px solid var(--saddle-300)",
+                    border: `2px solid ${affordable ? "var(--gold-300)" : "var(--saddle-300)"}`,
                     padding: "8px 10px",
                     cursor: maxed || !affordable ? "default" : "pointer",
                     color: "var(--ink-900)",
                     opacity: maxed ? 0.55 : 1,
+                    // Subtle gold glow on affordable cards so the
+                    // player has a visible nudge to spend.
+                    animation: affordable
+                      ? "pp-shop-affordable 1.6s ease-in-out infinite"
+                      : undefined,
+                    transition: "background 200ms, transform 120ms",
                   }}
                 >
                   <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>

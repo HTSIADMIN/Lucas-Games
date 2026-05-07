@@ -130,6 +130,7 @@ type Couch     = { id: number; x: number; y: number; spawnedAt: number };
 type ActiveBlessing = { id: BlessingId; endsAt: number };
 type CushionReveal = { idx: number; lootId: string; label: string; pcGain: number };
 type FloatPop = { id: number; x: number; y: number; pc: number; shiny: boolean };
+type ClickBurst = { id: number; x: number; y: number; shiny: boolean };
 
 type SpawnedCoin = {
   id: number;
@@ -141,9 +142,13 @@ type SpawnedCoin = {
   x: number;
   y: number;
   spawnedAt: number;
+  /** When set, the coin is sliding toward this point to merge. */
+  mergingTo?: { x: number; y: number };
 };
 
 const COIN_LIFETIME_MS = 11_000;
+/** How long two coins slide toward each other before fusing. */
+const MERGE_SLIDE_MS = 280;
 const SYNC_POLL_MS = 6000;
 
 export function PennyPinchersClient() {
@@ -161,6 +166,8 @@ export function PennyPinchersClient() {
   const [lostWallet, setLostWallet] = useState<LostWallet | null>(null);
   const [walletModalChoice, setWalletModalChoice] = useState<null | "open" | "submitting">(null);
   const [pops, setPops] = useState<FloatPop[]>([]);
+  const [bursts, setBursts] = useState<ClickBurst[]>([]);
+  const burstSeqRef = useRef(0);
   const [fountain, setFountain] = useState<Fountain | null>(null);
   const [couch, setCouch] = useState<Couch | null>(null);
   const [fountainModalOpen, setFountainModalOpen] = useState(false);
@@ -186,6 +193,13 @@ export function PennyPinchersClient() {
     window.setTimeout(() => {
       setPops((prev) => prev.filter((p) => p.id !== id));
     }, 800);
+    // Click burst — radial particle ring at the pickup point.
+    burstSeqRef.current += 1;
+    const burstId = burstSeqRef.current;
+    setBursts((prev) => [...prev, { id: burstId, x, y, shiny }]);
+    window.setTimeout(() => {
+      setBursts((prev) => prev.filter((b) => b.id !== burstId));
+    }, 480);
   }, []);
   /** True until the first /state load resolves — keeps the
    *  welcome-back banner restricted to "you just opened the page"
@@ -435,10 +449,11 @@ export function PennyPinchersClient() {
 
   // Merge proximity loop — only runs when "pile_it_up" is owned.
   // Any two coins within MERGE_PROXIMITY_PX fuse into a single
-  // coin whose PC value is the sum of both inputs. The fused coin
-  // gets a fresh spawnedAt so chains can keep growing — watch a
-  // 1¢ + 1¢ become 2¢, then meet a fresh 1¢ to become 3¢, etc.
-  // One pair per tick reads as a chain reaction.
+  // coin whose PC value is the sum. We mark both as `mergingTo`
+  // the centroid first; CSS transitions slide them together over
+  // MERGE_SLIDE_MS, then a setTimeout swaps them for the fused
+  // coin. Watching pennies physically pull toward each other
+  // before fusing reads way better than them just blinking out.
   useEffect(() => {
     if (!server) return;
     if ((upgrades.pile_it_up ?? 0) < 1) return;
@@ -446,7 +461,8 @@ export function PennyPinchersClient() {
       setCoins((prev) => {
         const eligibleCutoff = Date.now() - MERGE_MIN_AGE_MS;
         const eligible = prev
-          .filter((c) => c.spawnedAt <= eligibleCutoff)
+          // Skip already-merging coins so a pair can't get re-recruited mid-slide.
+          .filter((c) => c.spawnedAt <= eligibleCutoff && !c.mergingTo)
           .map((c) => ({ id: c.id, pc: c.mergedPC, x: c.x, y: c.y, spawnedAt: c.spawnedAt }));
         const pair = findMergePair(eligible);
         if (!pair) return prev;
@@ -454,23 +470,39 @@ export function PennyPinchersClient() {
         const a = prev.find((c) => c.id === aId);
         const b = prev.find((c) => c.id === bId);
         if (!a || !b) return prev;
-        coinSeqRef.current += 1;
-        // Pick whichever input had the bigger denom — keeps the
-        // sprite size scaling in step with PC growth. Trait is
-        // preserved if either input had one (shiny wins).
-        const baseCoin = a.mergedPC >= b.mergedPC ? a.coin : b.coin;
-        const trait = a.trait === "shiny" || b.trait === "shiny" ? "shiny"
-          : a.trait ?? b.trait;
-        const fresh: SpawnedCoin = {
-          id: coinSeqRef.current,
-          coin: baseCoin,
-          mergedPC: pair.pc,
-          trait,
-          x: pair.centroid.x,
-          y: pair.centroid.y,
-          spawnedAt: Date.now(),
-        };
-        return [...prev.filter((c) => c.id !== aId && c.id !== bId), fresh];
+        const fusionId = ++coinSeqRef.current;
+        // Schedule the actual fusion after the slide completes.
+        // We re-read state at fuse time in case the player clicked
+        // one mid-slide — only fuse if both halves are still here.
+        window.setTimeout(() => {
+          setCoins((cur) => {
+            const ax = cur.find((c) => c.id === aId);
+            const bx = cur.find((c) => c.id === bId);
+            if (!ax || !bx) return cur.filter((c) => c.id !== aId && c.id !== bId);
+            const baseCoin = ax.mergedPC >= bx.mergedPC ? ax.coin : bx.coin;
+            const trait =
+              ax.trait === "shiny" || bx.trait === "shiny"
+                ? "shiny"
+                : ax.trait ?? bx.trait;
+            return [
+              ...cur.filter((c) => c.id !== aId && c.id !== bId),
+              {
+                id: fusionId,
+                coin: baseCoin,
+                mergedPC: ax.mergedPC + bx.mergedPC,
+                trait,
+                x: pair.centroid.x,
+                y: pair.centroid.y,
+                spawnedAt: Date.now(),
+              },
+            ];
+          });
+        }, MERGE_SLIDE_MS);
+        return prev.map((c) =>
+          c.id === aId || c.id === bId
+            ? { ...c, mergingTo: pair.centroid }
+            : c,
+        );
       });
     }, 350);
     return () => window.clearInterval(t);
@@ -1160,8 +1192,51 @@ export function PennyPinchersClient() {
               y={c.y}
               spawnedAt={c.spawnedAt}
               lifetimeMs={COIN_LIFETIME_MS}
+              mergingTo={c.mergingTo}
               onClick={() => clickCoin(c)}
             />
+          ))}
+          {bursts.map((b) => (
+            <div
+              key={b.id}
+              aria-hidden
+              style={{
+                position: "absolute",
+                left: b.x,
+                top: b.y,
+                width: 0,
+                height: 0,
+                pointerEvents: "none",
+                zIndex: 9,
+              }}
+            >
+              {Array.from({ length: 6 }).map((_, i) => {
+                const angle = (i / 6) * Math.PI * 2;
+                const dx = Math.cos(angle) * 28;
+                const dy = Math.sin(angle) * 28;
+                return (
+                  <span
+                    key={i}
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: 0,
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: b.shiny ? "var(--gold-300)" : "var(--gold-500)",
+                      boxShadow: b.shiny
+                        ? "0 0 6px rgba(255,220,90,0.95)"
+                        : "0 0 3px rgba(255,196,64,0.7)",
+                      transform: "translate(-50%, -50%)",
+                      ["--dx" as string]: `${dx}px`,
+                      ["--dy" as string]: `${dy}px`,
+                      animation: "pp-burst-fly 480ms ease-out forwards",
+                    }}
+                  />
+                );
+              })}
+            </div>
           ))}
           {pops.map((p) => (
             <div
@@ -1192,6 +1267,10 @@ export function PennyPinchersClient() {
               0%   { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
               20%  { transform: translate(-50%, -60%) scale(1.15); opacity: 1; }
               100% { transform: translate(-50%, -160%) scale(1); opacity: 0; }
+            }
+            @keyframes pp-burst-fly {
+              0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+              100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.3); opacity: 0; }
             }
           `}</style>
           {fountain && (

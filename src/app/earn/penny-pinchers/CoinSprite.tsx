@@ -17,6 +17,7 @@ export function CoinSprite({
   y,
   spawnedAt,
   lifetimeMs,
+  mergingTo,
   onClick,
 }: {
   coin: CoinId;
@@ -27,8 +28,12 @@ export function CoinSprite({
   y: number;
   spawnedAt: number;
   lifetimeMs: number;
+  /** When set, the coin is sliding toward this point to fuse with another. */
+  mergingTo?: { x: number; y: number };
   onClick: () => void;
 }) {
+  const renderX = mergingTo?.x ?? x;
+  const renderY = mergingTo?.y ?? y;
   const def = COINS[coin];
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -90,8 +95,8 @@ export function CoinSprite({
       aria-label={`Pick up ${def.label}${trait ? ` (${trait})` : ""}`}
       style={{
         position: "absolute",
-        left: x - (size + halo) / 2,
-        top: y - (size + halo) / 2,
+        left: renderX - (size + halo) / 2,
+        top: renderY - (size + halo) / 2,
         width: size + halo,
         height: size + halo,
         padding: 0,
@@ -99,9 +104,17 @@ export function CoinSprite({
         border: "none",
         borderRadius: "50%",
         cursor: "pointer",
-        opacity: fade,
+        opacity: mergingTo ? 0.65 : fade,
         transform: "translateZ(0)",
-        animation: "pp-coin-spawn 240ms var(--ease-out, ease-out)",
+        // While merging, smooth-slide via CSS transitions instead
+        // of the spawn-pop animation so the player tracks each
+        // coin physically moving toward its partner.
+        transition: mergingTo
+          ? `left 280ms cubic-bezier(.55, 0, .45, 1), top 280ms cubic-bezier(.55, 0, .45, 1), opacity 280ms`
+          : undefined,
+        animation: mergingTo
+          ? undefined
+          : "pp-coin-spawn 240ms var(--ease-out, ease-out)",
       }}
     >
       {/* Rotating halo — Shiny is gold, Ancient is jade-green. */}
