@@ -398,8 +398,12 @@ export const FRUGALITY_PC_PER_POINT = 0.005;
 export const LOST_WALLET_CHANCE_PER_POLL = 0.012;
 /** How long a Lost Wallet sits on screen before it despawns. */
 export const LOST_WALLET_LIFETIME_MS = 18_000;
-/** PC awarded for "Keep the Change" (the morally-questionable choice). */
+/** Floor PC awarded for "Keep the Change" (the morally-questionable choice). */
 export const LOST_WALLET_KEEP_PC = 500;
+/** Wealth-scaled bonus: % of current cents added on top of the floor. */
+export const LOST_WALLET_KEEP_WEALTH_PCT = 0.15;
+/** Hard ceiling on the keep-payout so a maxed merge stack doesn't dump infinity. */
+export const LOST_WALLET_KEEP_MAX_PC = 50_000;
 /** Frugality delta on each choice. */
 export const LOST_WALLET_RETURN_FRUGALITY = 1;
 export const LOST_WALLET_KEEP_FRUGALITY = -1;

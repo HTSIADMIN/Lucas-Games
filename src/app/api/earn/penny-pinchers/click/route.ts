@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { readSession } from "@/lib/auth/session";
 import {
   getPennyPinchersState,
   listPennyPinchersPermUpgrades,
   listPennyPinchersUpgrades,
-  upsertPennyPinchersState,
 } from "@/lib/db";
 import {
   COINS,
@@ -94,23 +94,23 @@ export async function POST(req: Request) {
       albumPCBonus(state.album ?? {}),
   );
 
-  // Trait pickups go into the Coin Album. We deep-clone the
-  // existing album object so the upsert sees a fresh shape.
-  let album = state.album ?? {};
-  if (trait === "shiny" || trait === "sticky" || trait === "foreign") {
-    const page = trait;
-    const before = album[page] ?? {};
-    album = { ...album, [page]: { ...before, [coinType]: (before[coinType] ?? 0) + 1 } };
+  // Atomic write — pp_record_click does the cents/lifetime/album
+  // increments in a single SQL statement so concurrent in-flight
+  // clicks (Auto-Picker bursts, Pinch Streak frenzies) all add
+  // up instead of clobbering each other's album updates.
+  const albumPage = trait === "shiny" || trait === "sticky" || trait === "foreign" ? trait : null;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (url && key) {
+    const sb = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+    await sb.rpc("pp_record_click", {
+      p_user_id: s.user.id,
+      p_pc: pc,
+      p_album_page: albumPage,
+      p_album_coin: albumPage ? coinType : null,
+      p_tick_at: new Date(now).toISOString(),
+    });
   }
 
-  state = await upsertPennyPinchersState({
-    ...state,
-    cents: state.cents + pc,
-    lifetime_clicks: state.lifetime_clicks + 1,
-    lifetime_pc_earned: state.lifetime_pc_earned + pc,
-    album,
-    last_tick_at: new Date(now).toISOString(),
-  });
-
-  return NextResponse.json({ ok: true, cents: state.cents, pcEarned: pc, trait });
+  return NextResponse.json({ ok: true, pcEarned: pc, trait });
 }

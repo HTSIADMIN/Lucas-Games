@@ -10,7 +10,9 @@ import {
   EVENTS,
   EVENT_START_CHANCE_PER_POLL,
   LOST_WALLET_CHANCE_PER_POLL,
+  LOST_WALLET_KEEP_MAX_PC,
   LOST_WALLET_KEEP_PC,
+  LOST_WALLET_KEEP_WEALTH_PCT,
   LOST_WALLET_LIFETIME_MS,
   MERGE_MIN_AGE_MS,
   PRESTIGE_THRESHOLD_PC,
@@ -498,23 +500,19 @@ export function PennyPinchersClient() {
       setFrenzyEndsAt(nowClick + FRENZY_DURATION_MS);
     }
 
-    // Trait side-effects fire on click. Bent kicks off a 5s
-    // lucky window that boosts spawn shiny rolls; Cursed pauses
-    // spawns for 5s as the price of its 3× payout.
-    if (coin.trait === "bent") {
-      Sfx.play("ui.confirm");
-      setBentLuckyUntil(Date.now() + BENT_LUCKY_MS);
-    }
-    if (coin.trait === "cursed") {
-      Sfx.play("ui.bomb");
-      setCursedPauseUntil(Date.now() + CURSED_PAUSE_MS);
-    }
-    if (coin.trait === "ancient") {
-      Sfx.play("win.big");
-    }
-    if (coin.trait === "foreign") {
+    // Rare-coin pickups all share one understated chime — the
+    // halo / sparkle / colour animations carry the standout
+    // weight, sound just punctuates. Bent's lucky window and
+    // Cursed's spawn pause still fire on click.
+    if (
+      coin.trait === "bent"   || coin.trait === "cursed" ||
+      coin.trait === "ancient" || coin.trait === "foreign" ||
+      coin.trait === "shiny"
+    ) {
       Sfx.play("win.notify");
     }
+    if (coin.trait === "bent") setBentLuckyUntil(Date.now() + BENT_LUCKY_MS);
+    if (coin.trait === "cursed") setCursedPauseUntil(Date.now() + CURSED_PAUSE_MS);
 
     const traitMul =
       coin.trait === "shiny" ? 5
@@ -694,7 +692,10 @@ export function PennyPinchersClient() {
     setWalletModalChoice("submitting");
     if (choice === "keep") {
       // Optimistic — server will reconcile on next sync.
-      setLocalCents((c) => c + LOST_WALLET_KEEP_PC);
+      setLocalCents((c) => c + Math.min(
+        LOST_WALLET_KEEP_MAX_PC,
+        LOST_WALLET_KEEP_PC + Math.floor(c * LOST_WALLET_KEEP_WEALTH_PCT),
+      ));
       Sfx.play("coins.shower");
     } else {
       Sfx.play("ui.confirm");
@@ -1605,7 +1606,7 @@ export function PennyPinchersClient() {
             </p>
             <p className="text-mute" style={{ fontSize: 12, marginBottom: "var(--sp-4)" }}>
               Returning it raises Frugality (unlocks future perks). Keeping the
-              change pays {LOST_WALLET_KEEP_PC} PC right now but takes a Frugality
+              change pays {Math.min(LOST_WALLET_KEEP_MAX_PC, LOST_WALLET_KEEP_PC + Math.floor(localCents * LOST_WALLET_KEEP_WEALTH_PCT)).toLocaleString()} PC right now (15% of your stack on top of a 500 PC floor) but takes a Frugality
               point with it.
             </p>
             <div className="row" style={{ gap: 8, justifyContent: "center" }}>
@@ -1623,7 +1624,7 @@ export function PennyPinchersClient() {
                 disabled={walletModalChoice === "submitting"}
                 onClick={() => resolveLostWallet("keep")}
               >
-                Keep the Change · +{LOST_WALLET_KEEP_PC} PC
+                Keep the Change · +{Math.min(LOST_WALLET_KEEP_MAX_PC, LOST_WALLET_KEEP_PC + Math.floor(localCents * LOST_WALLET_KEEP_WEALTH_PCT)).toLocaleString()} PC
               </button>
             </div>
           </div>

@@ -5,7 +5,9 @@ import {
   FRUGALITY_MAX,
   FRUGALITY_MIN,
   LOST_WALLET_KEEP_FRUGALITY,
+  LOST_WALLET_KEEP_MAX_PC,
   LOST_WALLET_KEEP_PC,
+  LOST_WALLET_KEEP_WEALTH_PCT,
   LOST_WALLET_RETURN_FRUGALITY,
 } from "@/lib/games/penny-pinchers/catalog";
 
@@ -35,7 +37,16 @@ export async function POST(req: Request) {
   if (!state) return NextResponse.json({ error: "no_state" }, { status: 400 });
 
   const delta = choice === "return" ? LOST_WALLET_RETURN_FRUGALITY : LOST_WALLET_KEEP_FRUGALITY;
-  const pcGain = choice === "keep" ? LOST_WALLET_KEEP_PC : 0;
+  // Keep-the-Change scales with current wealth — finding a fat
+  // wallet on the late-game sidewalk should pay better than one
+  // by a broke beginner. Floor + 15% of cents, capped 50k PC.
+  const pcGain =
+    choice === "keep"
+      ? Math.min(
+          LOST_WALLET_KEEP_MAX_PC,
+          LOST_WALLET_KEEP_PC + Math.floor(state.cents * LOST_WALLET_KEEP_WEALTH_PCT),
+        )
+      : 0;
   const nextFrugality = Math.min(FRUGALITY_MAX, Math.max(FRUGALITY_MIN, state.frugality + delta));
 
   const updated = await upsertPennyPinchersState({
