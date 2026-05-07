@@ -316,6 +316,11 @@ export type MonopolyOwned = {
   card_count: number;
 };
 
+export type PennyPinchersAlbum = {
+  shiny?: Record<string, number>;
+  sticky?: Record<string, number>;
+};
+
 export type PennyPinchersState = {
   user_id: string;
   cents: number;
@@ -330,6 +335,7 @@ export type PennyPinchersState = {
   lifetime_banked_cents: number;
   last_prestige_at: string | null;
   frugality: number;
+  album: PennyPinchersAlbum;
   created_at: string;
 };
 

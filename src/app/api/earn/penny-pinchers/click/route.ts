@@ -78,11 +78,21 @@ export async function POST(req: Request) {
     baseValue * traitMultiplier(trait) * frugalityPCMultiplier(state.frugality),
   );
 
+  // Trait pickups go into the Coin Album. We deep-clone the
+  // existing album object so the upsert sees a fresh shape.
+  let album = state.album ?? {};
+  if (trait === "shiny" || trait === "sticky") {
+    const page = trait;
+    const before = album[page] ?? {};
+    album = { ...album, [page]: { ...before, [coinType]: (before[coinType] ?? 0) + 1 } };
+  }
+
   state = await upsertPennyPinchersState({
     ...state,
     cents: state.cents + pc,
     lifetime_clicks: state.lifetime_clicks + 1,
     lifetime_pc_earned: state.lifetime_pc_earned + pc,
+    album,
     last_tick_at: new Date(now).toISOString(),
   });
 

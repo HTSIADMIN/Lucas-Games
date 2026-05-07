@@ -49,6 +49,8 @@ import { UpgradeShop } from "./UpgradeShop";
 import { HelperRoster } from "./HelperRoster";
 import { BankTokenShop } from "./BankTokenShop";
 import { AchievementsPanel } from "./AchievementsPanel";
+import { AlbumPanel } from "./AlbumPanel";
+import type { AlbumState } from "@/lib/games/penny-pinchers/engine";
 
 // Penny Pinchers — main client. Coins spawn as absolutely-positioned
 // DOM elements inside a play area; clicking them dispatches a server
@@ -91,6 +93,7 @@ type StateResponse = {
     newlyUnlocked: AchievementId[];
   };
   frugality: number;
+  album: AlbumState;
   walletBalance: number;
 };
 
@@ -118,7 +121,7 @@ export function PennyPinchersClient() {
   const [server, setServer] = useState<StateResponse | null>(null);
   const [localCents, setLocalCents] = useState<number>(0);
   const [coins, setCoins] = useState<SpawnedCoin[]>([]);
-  const [tab, setTab] = useState<"upgrades" | "helpers" | "tokens" | "achievements">("upgrades");
+  const [tab, setTab] = useState<"upgrades" | "helpers" | "tokens" | "achievements" | "album">("upgrades");
   const [welcomeBack, setWelcomeBack] = useState<number | null>(null);
   const [prestigeOpen, setPrestigeOpen] = useState(false);
   const [achievementToasts, setAchievementToasts] = useState<AchievementId[]>([]);
@@ -317,7 +320,7 @@ export function PennyPinchersClient() {
           const list = unlockedCoins(upgrades);
           coin = list[list.length - 1];
         }
-        let trait = rollTrait(coin, upgrades);
+        let trait = rollTrait(coin, upgrades, server.perm, server.album);
         // Rainy Day's bonus shiny — secondary roll only when the
         // base trait roll didn't already land something.
         if (!trait && bonusShiny > 0 && Math.random() < bonusShiny) trait = "shiny";
@@ -1017,6 +1020,14 @@ export function PennyPinchersClient() {
             >
               Trophies
             </button>
+            <button
+              type="button"
+              className={`btn btn-sm${tab === "album" ? "" : " btn-ghost"}`}
+              style={{ flex: 1, minWidth: 80 }}
+              onClick={() => setTab("album")}
+            >
+              Album
+            </button>
           </div>
           {tab === "upgrades" ? (
             <UpgradeShop
@@ -1036,10 +1047,12 @@ export function PennyPinchersClient() {
               bankTokens={server.prestige.bankTokens}
               onBuy={buyPermUpgrade}
             />
-          ) : (
+          ) : tab === "achievements" ? (
             <AchievementsPanel
               unlocked={new Set(server.achievements.unlocked)}
             />
+          ) : (
+            <AlbumPanel album={server.album} />
           )}
         </div>
       </div>

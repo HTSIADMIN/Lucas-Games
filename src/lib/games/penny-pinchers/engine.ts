@@ -73,6 +73,53 @@ export function frugalityPCMultiplier(frugality: number): number {
 }
 
 // ============================================================
+// COIN ALBUM — Phase 2d
+// ============================================================
+
+export type AlbumPage = "shiny" | "sticky";
+export type AlbumState = Partial<Record<AlbumPage, Partial<Record<CoinId, number>>>>;
+
+/** Coin denominations that participate in each page. */
+export const ALBUM_PAGE_COINS: Record<AlbumPage, readonly CoinId[]> = {
+  shiny:  ["penny", "nickel", "dime", "quarter", "half", "dollar"],
+  sticky: ["penny", "nickel"],
+};
+
+/** Per-slot bonus added to the relevant trait chance. */
+const ALBUM_SLOT_BONUS: Record<AlbumPage, number> = {
+  shiny:  0.005,  // +0.5% per shiny coin you've collected
+  sticky: 0.01,   // +1%   per sticky coin
+};
+
+/** Bonus added when a page is fully complete (every coin collected at least once). */
+const ALBUM_PAGE_COMPLETE_BONUS: Record<AlbumPage, number> = {
+  shiny:  0.05,
+  sticky: 0.03,
+};
+
+/** Number of distinct coin slots filled on a page (0..page length). */
+export function albumSlotsFilled(album: AlbumState, page: AlbumPage): number {
+  const rows = album[page] ?? {};
+  let count = 0;
+  for (const coin of ALBUM_PAGE_COINS[page]) {
+    if ((rows[coin] ?? 0) > 0) count++;
+  }
+  return count;
+}
+
+/** Whether every slot on a page has been filled at least once. */
+export function albumPageComplete(album: AlbumState, page: AlbumPage): boolean {
+  return albumSlotsFilled(album, page) >= ALBUM_PAGE_COINS[page].length;
+}
+
+/** Trait-spawn-chance bonus from the album for a given page. */
+export function albumTraitBonus(album: AlbumState, page: AlbumPage): number {
+  const slots = albumSlotsFilled(album, page);
+  const complete = albumPageComplete(album, page);
+  return slots * ALBUM_SLOT_BONUS[page] + (complete ? ALBUM_PAGE_COMPLETE_BONUS[page] : 0);
+}
+
+// ============================================================
 // SPAWN POOL
 // ============================================================
 
@@ -208,16 +255,19 @@ export function rollTrait(
   coinType: CoinId,
   levels: UpgradeLevels,
   perm: PermLevels = {},
+  album: AlbumState = {},
   rand: () => number = Math.random,
 ): CoinTrait | null {
   const luck = levels.lucky_crack ?? 0;
   const permLuck = perm.lucky_streak ?? 0;
   const shinyChance =
-    TRAITS.shiny.baseChance + TRAITS.shiny.perLuckLevel * luck + 0.01 * permLuck;
+    TRAITS.shiny.baseChance + TRAITS.shiny.perLuckLevel * luck +
+    0.01 * permLuck + albumTraitBonus(album, "shiny");
   if (rand() < shinyChance) return "shiny";
   // Sticky only on penny / nickel — feels weird on big coins.
   if (coinType === "penny" || coinType === "nickel") {
-    const stickyChance = TRAITS.sticky.baseChance + TRAITS.sticky.perLuckLevel * luck;
+    const stickyChance = TRAITS.sticky.baseChance + TRAITS.sticky.perLuckLevel * luck +
+      albumTraitBonus(album, "sticky");
     if (rand() < stickyChance) return "sticky";
   }
   return null;

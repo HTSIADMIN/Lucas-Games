@@ -540,6 +540,7 @@ export async function upsertPennyPinchersState(state: PennyPinchersState): Promi
       lifetime_banked_cents: state.lifetime_banked_cents,
       last_prestige_at: state.last_prestige_at,
       frugality: state.frugality,
+      album: state.album,
     }, { onConflict: "user_id" })
     .select("*")
     .single();
