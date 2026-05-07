@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as Sfx from "@/lib/sfx";
 import {
   CHESTS,
   RELICS,
   RELICS_BY_ID,
   type ChestTier,
+  type RelicDef,
   type RelicId,
   type RelicRarity,
 } from "@/lib/games/penny-pinchers/catalog";
@@ -169,15 +170,61 @@ function summariseWeights(weights: Record<string, number | undefined>): string {
     .join(" · ");
 }
 
+// Spin layout — keep these in lock-step with the CSS calc below.
+const STRIP_CARD_W = 96;        // px per card on the strip
+const STRIP_LENGTH = 32;        // total cards on the strip
+const STRIP_WINNER_INDEX = 26;  // where the rolled relic lands
+const STRIP_VIEWPORT_W = 320;   // px wide reveal viewport
+const SPIN_DURATION_MS = 2800;
+const SPIN_REVEAL_DELAY_MS = SPIN_DURATION_MS + 200;
+
 function RevealModal({ result, onClose }: { result: RollResult; onClose: () => void }) {
   const tone = RARITY_COLOR[result.rarity];
   const def = RELICS_BY_ID[result.relicId];
+  const [revealed, setRevealed] = useState(false);
+
+  // Pre-build the strip once per roll. The roll lands on
+  // STRIP_WINNER_INDEX; the rest are random catalog entries with a
+  // bias toward common-and-uncommon so the strip feels like real
+  // chest filler rather than a parade of legendaries.
+  const strip = useMemo<RelicDef[]>(() => {
+    const winner = RELICS_BY_ID[result.relicId] ?? RELICS[0];
+    const filler = RELICS.flatMap((r) => {
+      const w = r.rarity === "common" ? 4 : r.rarity === "uncommon" ? 3 : r.rarity === "rare" ? 2 : 1;
+      return Array<RelicDef>(w).fill(r);
+    });
+    const out: RelicDef[] = [];
+    for (let i = 0; i < STRIP_LENGTH; i++) {
+      if (i === STRIP_WINNER_INDEX) {
+        out.push(winner);
+      } else {
+        out.push(filler[Math.floor(Math.random() * filler.length)]);
+      }
+    }
+    return out;
+  }, [result.relicId]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setRevealed(true), SPIN_REVEAL_DELAY_MS);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  // Stopping offset: line up the winner card's centre with the
+  // viewport's centre. translate-X is negative because the strip
+  // moves left to scroll forward.
+  const winnerCenter = STRIP_WINNER_INDEX * STRIP_CARD_W + STRIP_CARD_W / 2;
+  const viewportCenter = STRIP_VIEWPORT_W / 2;
+  // Slight per-roll jitter so the stop position varies a few px —
+  // less robotic.
+  const jitter = (((result.relicId.length * 17) % 9) - 4);
+  const stopX = -(winnerCenter - viewportCenter) + jitter;
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label={`Relic chest result: ${result.label}`}
-      onClick={onClose}
+      onClick={revealed ? onClose : undefined}
       style={{
         position: "fixed",
         inset: 0,
@@ -193,7 +240,7 @@ function RevealModal({ result, onClose }: { result: RollResult; onClose: () => v
         onClick={(e) => e.stopPropagation()}
         className="panel-wood"
         style={{
-          width: "min(420px, 100%)",
+          width: "min(440px, 100%)",
           padding: "var(--sp-5)",
           border: "4px solid var(--ink-900)",
           boxShadow: "var(--sh-popover), var(--glow-gold)",
@@ -211,8 +258,95 @@ function RevealModal({ result, onClose }: { result: RollResult; onClose: () => v
             marginBottom: "var(--sp-3)",
           }}
         >
-          Relic!
+          {revealed ? "Relic!" : "Spinning…"}
         </div>
+
+        {/* Spin viewport */}
+        <div
+          style={{
+            position: "relative",
+            width: STRIP_VIEWPORT_W,
+            maxWidth: "100%",
+            height: 96,
+            margin: "0 auto var(--sp-3)",
+            border: "3px solid var(--ink-900)",
+            background: "var(--saddle-200)",
+            overflow: "hidden",
+            boxShadow: "inset 0 0 16px rgba(0,0,0,0.45)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              gap: 0,
+              animation: `pp-relic-spin ${SPIN_DURATION_MS}ms cubic-bezier(.18, .82, .25, 1) forwards`,
+              ["--spin-stop" as string]: `${stopX}px`,
+            }}
+          >
+            {strip.map((r, i) => {
+              const t = RARITY_COLOR[r.rarity];
+              return (
+                <div
+                  key={i}
+                  style={{
+                    flex: `0 0 ${STRIP_CARD_W}px`,
+                    height: 96,
+                    padding: 6,
+                    background: t.bg,
+                    borderRight: "2px solid rgba(0,0,0,0.25)",
+                    color: t.fg,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    fontFamily: "var(--font-display)",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 9,
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      opacity: 0.8,
+                    }}
+                  >
+                    {r.rarity}
+                  </div>
+                  <div style={{ fontSize: 12, marginTop: 4, textAlign: "center", lineHeight: 1.1 }}>
+                    {r.label}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Centre marker */}
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: 0,
+              bottom: 0,
+              left: "50%",
+              width: 0,
+              borderLeft: "3px solid var(--gold-300)",
+              boxShadow: "0 0 8px rgba(255,200,60,0.75)",
+              pointerEvents: "none",
+            }}
+          />
+          {/* Edge fades to suggest infinite strip */}
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+              background:
+                "linear-gradient(90deg, var(--saddle-200), transparent 12%, transparent 88%, var(--saddle-200))",
+            }}
+          />
+        </div>
+
+        {/* Result card — fades in after the spin lands. */}
         <div
           style={{
             background: tone.bg,
@@ -220,8 +354,10 @@ function RevealModal({ result, onClose }: { result: RollResult; onClose: () => v
             padding: "var(--sp-4)",
             marginBottom: "var(--sp-3)",
             color: tone.fg,
-            boxShadow: `0 0 24px ${tone.ring}`,
-            animation: "pp-relic-reveal 480ms cubic-bezier(.2, 1, .25, 1)",
+            boxShadow: revealed ? `0 0 24px ${tone.ring}` : "none",
+            opacity: revealed ? 1 : 0.25,
+            transform: revealed ? "scale(1)" : "scale(0.96)",
+            transition: "opacity 320ms, transform 320ms, box-shadow 320ms",
           }}
         >
           <div
@@ -254,14 +390,19 @@ function RevealModal({ result, onClose }: { result: RollResult; onClose: () => v
             {result.duplicateAtMax && " · already maxed"}
           </div>
         </div>
-        <button type="button" className="btn btn-primary" onClick={onClose}>
-          Sweet
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={!revealed}
+          onClick={onClose}
+          style={{ opacity: revealed ? 1 : 0.45 }}
+        >
+          {revealed ? "Sweet" : "…"}
         </button>
         <style>{`
-          @keyframes pp-relic-reveal {
-            0%   { transform: scale(0.5) rotate(-8deg); opacity: 0; }
-            70%  { transform: scale(1.08) rotate(2deg); opacity: 1; }
-            100% { transform: scale(1) rotate(0); opacity: 1; }
+          @keyframes pp-relic-spin {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(var(--spin-stop)); }
           }
         `}</style>
       </div>

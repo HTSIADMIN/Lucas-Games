@@ -7,10 +7,13 @@ export function HelperRoster({
   counts,
   cents,
   onHire,
+  recentlyHiredId,
 }: {
   counts: Record<HelperId, number> | Partial<Record<HelperId, number>>;
   cents: number;
   onHire: (id: HelperId, cost: number) => void;
+  /** When set, that helper's row briefly flashes gold after a successful hire. */
+  recentlyHiredId?: HelperId | null;
 }) {
   return (
     <div className="stack" style={{ gap: "var(--sp-2)", overflowY: "auto", maxHeight: 480 }}>
@@ -18,6 +21,11 @@ export function HelperRoster({
         @keyframes pp-shop-affordable {
           0%, 100% { box-shadow: 0 0 0 0 rgba(255,196,64,0); }
           50%      { box-shadow: 0 0 0 2px rgba(255,196,64,0.45), 0 0 12px rgba(255,196,64,0.5); }
+        }
+        @keyframes pp-helper-hired {
+          0%   { box-shadow: 0 0 0 0 rgba(255,196,64,0); transform: scale(1); }
+          30%  { box-shadow: 0 0 0 4px rgba(255,196,64,0.95), 0 0 22px rgba(255,196,64,0.95); transform: scale(1.02); }
+          100% { box-shadow: 0 0 0 0 rgba(255,196,64,0); transform: scale(1); }
         }
       `}</style>
       {HELPERS.map((h) => {
@@ -43,7 +51,9 @@ export function HelperRoster({
               cursor: maxed || !affordable ? "default" : "pointer",
               color: "var(--ink-900)",
               opacity: maxed ? 0.55 : 1,
-              animation: affordable
+              animation: recentlyHiredId === h.id
+                ? "pp-helper-hired 700ms ease-out"
+                : affordable
                 ? "pp-shop-affordable 1.6s ease-in-out infinite"
                 : undefined,
               transition: "background 200ms",

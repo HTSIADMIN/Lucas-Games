@@ -161,6 +161,10 @@ export function PennyPinchersClient() {
   const [faqOpen, setFaqOpen] = useState(false);
   /** When set, shows the celebratory full-screen flash for ~2.5s after a Roll-Up succeeds. */
   const [prestigeCelebration, setPrestigeCelebration] = useState<number | null>(null);
+  /** Bumps each manual click so the PC counter can pulse. Helper drips don't bump it. */
+  const [pcPulseKey, setPcPulseKey] = useState(0);
+  /** Most-recently hired helper id — drives a brief celebratory flash on its row. */
+  const [recentlyHiredId, setRecentlyHiredId] = useState<HelperId | null>(null);
   const [achievementToasts, setAchievementToasts] = useState<AchievementId[]>([]);
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
   const [lostWallet, setLostWallet] = useState<LostWallet | null>(null);
@@ -587,6 +591,10 @@ export function PennyPinchersClient() {
     const optimisticPC = Math.round(coin.mergedPC * traitMul * tier.multiplier * clickMul);
     setLocalCents((c) => c + optimisticPC);
     spawnPop(coin.x, coin.y, optimisticPC, coin.trait === "shiny");
+    // Pulse the PC counter only on manual / auto-picker clicks —
+    // helper drips already update the value smoothly and don't
+    // need a visible jolt.
+    setPcPulseKey((k) => k + 1);
 
     // Two-Finger Pickup + Sticky both add "collateral" pickups —
     // extra coins this single click is going to grab. They share the
@@ -681,15 +689,23 @@ export function PennyPinchersClient() {
   async function hireHelper(id: HelperId, cost: number) {
     if (localCents < cost) return;
     setLocalCents((c) => c - cost);
-    Sfx.play("ui.click");
+    Sfx.play("chips.handle");
     try {
       const r = await fetch("/api/earn/penny-pinchers/hire", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ helperId: id }),
       });
-      if (r.ok) await loadState();
-      else await loadState();
+      if (r.ok) {
+        // Brief celebratory flash on the just-hired row.
+        setRecentlyHiredId(id);
+        window.setTimeout(() => {
+          setRecentlyHiredId((cur) => (cur === id ? null : cur));
+        }, 700);
+        await loadState();
+      } else {
+        await loadState();
+      }
     } catch { await loadState(); }
   }
 
@@ -973,15 +989,25 @@ export function PennyPinchersClient() {
             </button>
           </div>
           <div
+            key={pcPulseKey}
             style={{
               fontFamily: "var(--font-display)",
               fontSize: 28,
               color: "var(--gold-500)",
               textShadow: "1px 1px 0 var(--gold-100)",
+              animation: "pp-pc-pulse 220ms ease-out",
+              transformOrigin: "left center",
             }}
           >
             {Math.floor(localCents).toLocaleString()} PC
           </div>
+          <style>{`
+            @keyframes pp-pc-pulse {
+              0%   { transform: scale(1); }
+              35%  { transform: scale(1.12); text-shadow: 1px 1px 0 var(--gold-100), 0 0 14px rgba(255,196,64,0.85); }
+              100% { transform: scale(1); }
+            }
+          `}</style>
           <div className="text-mute" style={{ fontSize: 11 }}>
             Helpers: {ratePcPerSec.toLocaleString()} PC/sec · Lifetime clicks {server.lifetimeClicks.toLocaleString()}
           </div>
@@ -1403,54 +1429,37 @@ export function PennyPinchersClient() {
           }}
         >
           <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className={`btn btn-sm${tab === "upgrades" ? "" : " btn-ghost"}`}
-              style={{ flex: 1, minWidth: 80 }}
-              onClick={() => setTab("upgrades")}
-            >
-              Upgrades
-            </button>
-            <button
-              type="button"
-              className={`btn btn-sm${tab === "helpers" ? "" : " btn-ghost"}`}
-              style={{ flex: 1, minWidth: 80 }}
-              onClick={() => setTab("helpers")}
-            >
-              Helpers
-            </button>
-            <button
-              type="button"
-              className={`btn btn-sm${tab === "tokens" ? "" : " btn-ghost"}`}
-              style={{ flex: 1, minWidth: 80 }}
-              onClick={() => setTab("tokens")}
-            >
-              ★ Tokens
-            </button>
-            <button
-              type="button"
-              className={`btn btn-sm${tab === "achievements" ? "" : " btn-ghost"}`}
-              style={{ flex: 1, minWidth: 80 }}
-              onClick={() => setTab("achievements")}
-            >
-              Trophies
-            </button>
-            <button
-              type="button"
-              className={`btn btn-sm${tab === "album" ? "" : " btn-ghost"}`}
-              style={{ flex: 1, minWidth: 80 }}
-              onClick={() => setTab("album")}
-            >
-              Album
-            </button>
-            <button
-              type="button"
-              className={`btn btn-sm${tab === "relics" ? "" : " btn-ghost"}`}
-              style={{ flex: 1, minWidth: 80 }}
-              onClick={() => setTab("relics")}
-            >
-              Relics
-            </button>
+            {([
+              ["upgrades",     "Upgrades",     "✦"],
+              ["helpers",      "Helpers",      "⚒"],
+              ["tokens",       "Tokens",       "★"],
+              ["achievements", "Trophies",     "♛"],
+              ["album",        "Album",        "❒"],
+              ["relics",       "Relics",       "◇"],
+            ] as const).map(([id, label, icon]) => {
+              const active = tab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  className={`btn btn-sm${active ? "" : " btn-ghost"}`}
+                  style={{
+                    flex: 1,
+                    minWidth: 80,
+                    position: "relative",
+                    transform: active ? "translateY(-1px)" : undefined,
+                    boxShadow: active
+                      ? "0 0 0 2px var(--gold-300), 0 0 14px rgba(255,196,64,0.45)"
+                      : undefined,
+                    transition: "transform 120ms, box-shadow 200ms",
+                  }}
+                  onClick={() => setTab(id)}
+                >
+                  <span aria-hidden style={{ marginRight: 4 }}>{icon}</span>
+                  {label}
+                </button>
+              );
+            })}
           </div>
           {tab === "upgrades" ? (
             <UpgradeShop
@@ -1463,6 +1472,7 @@ export function PennyPinchersClient() {
               counts={server.helpers as Record<HelperId, number>}
               cents={localCents}
               onHire={hireHelper}
+              recentlyHiredId={recentlyHiredId}
             />
           ) : tab === "tokens" ? (
             <BankTokenShop
