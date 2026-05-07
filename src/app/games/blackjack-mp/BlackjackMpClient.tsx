@@ -47,10 +47,11 @@ export function BlackjackMpClient() {
   const meRef = useRef<string | null>(null);
   const [_, force] = useState(0);
 
-  // Animation cues — keyed re-mounts for the result stamp / confetti / shake.
+  // Animation cues — keyed re-mounts for the result stamp / shake.
+  // Confetti was retired when the win banner was simplified to a
+  // pure +N numeric slam; SFX still play on settle.
   const [revealHole, setRevealHole] = useState(0);
   const [stampKey, setStampKey] = useState(0);
-  const [confettiKey, setConfettiKey] = useState(0);
   const [shakeKey, setShakeKey] = useState(0);
   const prevRoundStatusRef = useRef<RoundView["status"] | null>(null);
   const prevSeatStatusRef = useRef<SeatView["status"] | null>(null);
@@ -116,7 +117,6 @@ export function BlackjackMpClient() {
       const net = totalPayout - totalStake;
       const blackjacked = mine.some((s) => s.status === "blackjack");
       if (net > 0) {
-        setConfettiKey((k) => k + 1);
         if (blackjacked) Sfx.play("win.levelup");
         else if (net >= totalStake * 2) Sfx.play("win.big");
         else Sfx.play("chips.stack");
@@ -372,7 +372,7 @@ export function BlackjackMpClient() {
               })}
             </div>
 
-            {/* Result stamp + confetti, anchored to the felt */}
+            {/* Lean numeric slam — no confetti, no banner. */}
             {allMineDone && stampStatus !== "pending" && (
               <ResultStamp
                 key={stampKey}
@@ -381,13 +381,10 @@ export function BlackjackMpClient() {
                   stampStatus === "win" || stampStatus === "blackjack"
                     ? `+${net.toLocaleString()} ¢`
                     : stampStatus === "push"
-                    ? "Stake returned"
+                    ? "PUSH"
                     : `${net.toLocaleString()} ¢`
                 }
               />
-            )}
-            {allMineDone && (stampStatus === "win" || stampStatus === "blackjack") && (
-              <Confetti key={`confetti-${confettiKey}`} />
             )}
           </div>
 
@@ -411,14 +408,12 @@ export function BlackjackMpClient() {
                 <BjActionButton
                   kind="hit"
                   label="Hit"
-                  icon="+"
                   onClick={() => action("hit")}
                   busy={busy}
                 />
                 <BjActionButton
                   kind="stand"
                   label="Stand"
-                  icon="✋"
                   onClick={() => action("stand")}
                   busy={busy}
                 />
@@ -429,7 +424,6 @@ export function BlackjackMpClient() {
                     <BjActionButton
                       kind="double"
                       label="Double"
-                      icon="×2"
                       sub={`+${mySeat.bet.toLocaleString()} ¢`}
                       onClick={() => action("double")}
                       busy={busy}
@@ -439,7 +433,6 @@ export function BlackjackMpClient() {
                     <BjActionButton
                       kind="split"
                       label="Split"
-                      icon="⫼"
                       sub={`+${mySeat.bet.toLocaleString()} ¢`}
                       onClick={() => action("split")}
                       busy={busy}
@@ -505,30 +498,31 @@ export function BlackjackMpClient() {
 }
 
 // ============================================================
-// Big chunky action button — colour-coded per move so Hit/Stand/
-// Double/Split each read at a glance instead of a row of look-alikes.
+// Action button — casino-sign aesthetic. Cream face, thick ink
+// border, an accent stripe on top in the action's signature
+// colour. No gradients, no inset bevels, no neon glow — reads
+// cleaner against the felt and lets the cards stay the visual
+// star of the panel.
 // ============================================================
 type BjActionKind = "hit" | "stand" | "double" | "split";
 const BJ_ACTION_THEME: Record<
   BjActionKind,
-  { bg: string; bgEnd: string; fg: string; border: string; glow: string }
+  { stripe: string; suit: string; suitColor: string }
 > = {
-  hit:    { bg: "#3a8c2a", bgEnd: "#1f4f17", fg: "#fef6e4", border: "#0b1e08", glow: "rgba(110, 220, 100, 0.55)" },
-  stand:  { bg: "#a85b1f", bgEnd: "#5a2e0c", fg: "#fef6e4", border: "#1a0f08", glow: "rgba(255, 168, 90, 0.5)" },
-  double: { bg: "#e0a830", bgEnd: "#8a6210", fg: "#1a0f08", border: "#1a0f08", glow: "rgba(255, 220, 90, 0.7)" },
-  split:  { bg: "#5a4cc0", bgEnd: "#2c2470", fg: "#fef6e4", border: "#1a0f08", glow: "rgba(160, 140, 255, 0.55)" },
+  hit:    { stripe: "var(--cactus-500)",  suit: "♣", suitColor: "var(--cactus-500)" },
+  stand:  { stripe: "var(--crimson-500)", suit: "♥", suitColor: "var(--crimson-500)" },
+  double: { stripe: "var(--gold-300)",    suit: "♦", suitColor: "var(--gold-500)" },
+  split:  { stripe: "#5a4cc0",            suit: "♠", suitColor: "#3d2c8f" },
 };
 function BjActionButton({
   kind,
   label,
-  icon,
   sub,
   onClick,
   busy,
 }: {
   kind: BjActionKind;
   label: string;
-  icon: string;
   sub?: string;
   onClick: () => void;
   busy: boolean;
@@ -543,33 +537,60 @@ function BjActionButton({
       style={{
         flex: 1,
         minWidth: 110,
-        padding: "10px 14px 12px",
-        background: `linear-gradient(180deg, ${theme.bg} 0%, ${theme.bgEnd} 100%)`,
-        color: theme.fg,
-        border: `3px solid ${theme.border}`,
-        boxShadow: `inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.35), 0 4px 0 ${theme.border}, 0 0 14px ${theme.glow}`,
+        padding: 0,
+        background: "var(--parchment-50)",
+        color: "var(--ink-900)",
+        border: "3px solid var(--ink-900)",
+        boxShadow: "0 3px 0 var(--ink-900)",
         fontFamily: "var(--font-display)",
         letterSpacing: "var(--ls-loose)",
         textTransform: "uppercase",
         cursor: busy ? "not-allowed" : "pointer",
         opacity: busy ? 0.55 : 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 2,
-        transition: "transform 90ms ease, box-shadow 160ms ease, filter 160ms ease",
+        overflow: "hidden",
+        transition: "transform 90ms ease, box-shadow 160ms ease, background-color 160ms ease",
       }}
     >
-      <span style={{ display: "inline-flex", gap: 6, alignItems: "baseline", fontSize: 18 }}>
-        <span aria-hidden style={{ fontSize: 16 }}>{icon}</span>
-        <span>{label}</span>
-      </span>
-      {sub && (
-        <span style={{ fontSize: 10, opacity: 0.85, letterSpacing: "var(--ls-tight)", textTransform: "none" }}>
-          {sub}
+      {/* Top accent stripe — the only colour cue per action. */}
+      <span
+        aria-hidden
+        style={{
+          display: "block",
+          height: 6,
+          background: theme.stripe,
+          borderBottom: "2px solid var(--ink-900)",
+        }}
+      />
+      <span
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "10px 12px 12px",
+          gap: 2,
+        }}
+      >
+        <span style={{ display: "inline-flex", gap: 8, alignItems: "baseline", fontSize: 17 }}>
+          <span aria-hidden style={{ color: theme.suitColor, fontSize: 18 }}>
+            {theme.suit}
+          </span>
+          <span>{label}</span>
         </span>
-      )}
+        {sub && (
+          <span
+            style={{
+              fontSize: 10,
+              opacity: 0.7,
+              letterSpacing: "var(--ls-tight)",
+              textTransform: "none",
+              color: "var(--saddle-400)",
+            }}
+          >
+            {sub}
+          </span>
+        )}
+      </span>
     </button>
   );
 }
@@ -658,124 +679,41 @@ function TotalBadge({ value }: { value: number | null }) {
 type ResultKind = "win" | "loss" | "push" | "blackjack" | "pending";
 function ResultStamp({ kind, netLabel }: { kind: ResultKind; netLabel: string }) {
   if (kind === "pending") return null;
-  const cfg = {
-    win:       { bg: "var(--cactus-500)", fg: "var(--parchment-50)", label: "YOU WIN" },
-    blackjack: { bg: "var(--gold-300)",   fg: "var(--ink-900)",      label: "BLACKJACK!" },
-    push:      { bg: "var(--saddle-300)", fg: "var(--ink-900)",      label: "PUSH" },
-    loss:      { bg: "var(--crimson-500)", fg: "var(--parchment-50)", label: "HOUSE WINS" },
-  }[kind];
-  const big = kind === "win" || kind === "blackjack";
-  const isBlackjack = kind === "blackjack";
-  return (
-    <>
-      {/* Starburst — radial gold rays behind a winning stamp so the
-          blackjack moment of truth actually pops. */}
-      {big && (
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            width: 460,
-            height: 460,
-            transform: "translate(-50%, -50%)",
-            background: isBlackjack
-              ? "conic-gradient(from 0deg, rgba(255,232,160,0.85), rgba(255,200,60,0) 18%, rgba(255,232,160,0.85) 36%, rgba(255,200,60,0) 54%, rgba(255,232,160,0.85) 72%, rgba(255,200,60,0) 90%, rgba(255,232,160,0.85))"
-              : "conic-gradient(from 0deg, rgba(180,255,150,0.7), rgba(80,200,80,0) 25%, rgba(180,255,150,0.7) 50%, rgba(80,200,80,0) 75%, rgba(180,255,150,0.7))",
-            filter: "blur(6px)",
-            animation: "bj-stamp-burst 1.6s ease-out 0.95s backwards",
-            zIndex: 9,
-            pointerEvents: "none",
-          }}
-        />
-      )}
-      <div
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%) rotate(-12deg)",
-          background: cfg.bg,
-          color: cfg.fg,
-          border: "6px solid var(--ink-900)",
-          padding: "var(--sp-5) var(--sp-7)",
-          fontFamily: "var(--font-display)",
-          fontSize: big ? 56 : 40,
-          letterSpacing: "var(--ls-loose)",
-          textTransform: "uppercase",
-          lineHeight: 1.05,
-          boxShadow: big
-            ? "var(--glow-gold), 10px 10px 0 var(--ink-900), 0 0 60px rgba(255,200,60,0.45)"
-            : "10px 10px 0 var(--ink-900)",
-          textShadow: isBlackjack ? "2px 2px 0 var(--gold-100), 0 0 16px rgba(255,200,60,0.6)" : "3px 3px 0 var(--ink-900)",
-          animation: "bj-stamp 0.7s var(--ease-snap) backwards",
-          animationDelay: "1s",
-          zIndex: 10,
-          pointerEvents: "none",
-          textAlign: "center",
-        }}
-      >
-        {cfg.label}
-        <div style={{ fontSize: big ? 22 : 16, marginTop: 6, letterSpacing: "var(--ls-tight)" }}>
-          {netLabel}
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ============================================================
-// Confetti burst — coins fall from the top after a win
-// ============================================================
-function Confetti() {
-  // 60 mixed coin sprites + ribbon flecks falling from above the
-  // felt. More density + mixed sizes reads as "loot" instead of
-  // "a few pixels" once the result stamp lands.
-  const pieces = Array.from({ length: 60 }, (_, i) => {
-    const isRibbon = i % 5 === 0;
-    return {
-      id: i,
-      left: Math.random() * 100,
-      delay: 1.0 + Math.random() * 0.7,
-      duration: 1.5 + Math.random() * 1.1,
-      rotate: Math.random() * 360,
-      size: isRibbon ? 6 + Math.random() * 6 : 12 + Math.random() * 14,
-      isRibbon,
-      color: isRibbon
-        ? (i % 2 === 0 ? "#fef6e4" : "#a8d4ff")
-        : (i % 3 === 0 ? "#f5c842" : i % 3 === 1 ? "#ffd84d" : "#c8941d"),
-    };
-  });
+  // Lean numeric slam — no banner text, no starburst, no border
+  // pill. Just the +N or -N (or PUSH) in the table's centre,
+  // colour-keyed by outcome, slamming in once the dealer settles.
+  // Reads as "the moment of truth" without dominating the felt.
+  const fg =
+    kind === "blackjack" || kind === "win" ? "var(--cactus-500)"
+    : kind === "loss"                       ? "var(--crimson-500)"
+    : "var(--parchment-100)";
+  const stroke = "var(--ink-900)";
+  const display =
+    kind === "push"
+      ? "PUSH"
+      : netLabel; // already prefixed with + or - by the caller
   return (
     <div
-      aria-hidden
       style={{
         position: "absolute",
-        inset: 0,
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        fontFamily: "var(--font-display)",
+        fontSize: 88,
+        lineHeight: 1,
+        color: fg,
+        WebkitTextStroke: `4px ${stroke}`,
+        textShadow: `5px 5px 0 ${stroke}`,
+        letterSpacing: "0.02em",
+        animation: "bj-numslam 0.65s var(--ease-snap) backwards",
+        animationDelay: "0.95s",
+        zIndex: 10,
         pointerEvents: "none",
-        overflow: "hidden",
-        zIndex: 9,
+        whiteSpace: "nowrap",
       }}
     >
-      {pieces.map((p) => (
-        <span
-          key={p.id}
-          style={{
-            position: "absolute",
-            left: `${p.left}%`,
-            top: -20,
-            width: p.isRibbon ? p.size : p.size,
-            height: p.isRibbon ? p.size * 0.4 : p.size,
-            background: p.color,
-            border: p.isRibbon ? "1px solid rgba(0,0,0,0.4)" : "2px solid var(--ink-900)",
-            borderRadius: p.isRibbon ? 2 : 999,
-            boxShadow: p.isRibbon ? undefined : "inset 0 -3px 0 rgba(0,0,0,0.3), 0 0 6px rgba(255,200,60,0.4)",
-            animation: `bj-coin-fall ${p.duration}s linear ${p.delay}s 1 forwards`,
-            transform: `rotate(${p.rotate}deg)`,
-          }}
-        />
-      ))}
+      {display}
     </div>
   );
 }
@@ -818,20 +756,14 @@ const BJ_KEYFRAMES = `
   18%, 62% { transform: translateX(-10px); }
   38%, 82% { transform: translateX(10px); }
 }
-@keyframes bj-stamp {
-  0%   { transform: translate(-50%, -50%) rotate(-30deg) scale(3); opacity: 0; }
-  55%  { transform: translate(-50%, -50%) rotate(-8deg)  scale(0.88); opacity: 1; }
-  80%  { transform: translate(-50%, -50%) rotate(-16deg) scale(1.1); }
-  100% { transform: translate(-50%, -50%) rotate(-12deg) scale(1); opacity: 1; }
-}
-@keyframes bj-coin-fall {
-  0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(560px) rotate(720deg); opacity: 0; }
-}
-@keyframes bj-stamp-burst {
-  0%   { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
-  60%  { transform: translate(-50%, -50%) scale(1.4);  opacity: 0.85; }
-  100% { transform: translate(-50%, -50%) scale(1.9);  opacity: 0; }
+@keyframes bj-numslam {
+  /* Numeric slam — drops in fast from above, overshoots, settles.
+     Used by the +N / -N / PUSH result label so the moment of truth
+     reads as a punch instead of a bulky banner. */
+  0%   { transform: translate(-50%, -120%) scale(2.2); opacity: 0; }
+  55%  { transform: translate(-50%, -45%)  scale(1.08); opacity: 1; }
+  80%  { transform: translate(-50%, -52%)  scale(0.96); }
+  100% { transform: translate(-50%, -50%)  scale(1);   opacity: 1; }
 }
 .bj-action:not(:disabled):hover,
 .bj-action:not(:disabled):focus-visible {
