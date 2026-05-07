@@ -193,7 +193,9 @@ export function PennyPinchersClient() {
           const ids = Object.keys(EVENTS) as EventId[];
           const id = ids[Math.floor(Math.random() * ids.length)];
           const def = EVENTS[id];
-          Sfx.play("ui.confirm");
+          // Distinct stinger so events feel like a Thing — different
+          // SFX per event keeps Coin Storm and Rainy Day audibly apart.
+          Sfx.play(id === "coin_storm" ? "win.levelup" : "win.notify");
           return { id, endsAt: nowMs + def.durationMs };
         }
         return null;
@@ -728,7 +730,8 @@ export function PennyPinchersClient() {
             padding: "var(--sp-3) var(--sp-4)",
             flex: "1 1 260px",
             minWidth: 260,
-            background: bankReady ? "var(--gold-100)" : undefined,
+            background: bankReady && projectedPayout > 0 ? "var(--gold-100)" : undefined,
+            animation: bankReady && projectedPayout > 0 ? "pp-bank-ready 1.6s ease-in-out infinite" : undefined,
           }}
         >
           <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
@@ -757,6 +760,12 @@ export function PennyPinchersClient() {
                 : "Need more PC"
               : `Cooldown ${formatHMS(cooldownLeftMs)}`}
           </button>
+          <style>{`
+            @keyframes pp-bank-ready {
+              0%, 100% { box-shadow: var(--sh-card-rest, 0 0 0 0 transparent); }
+              50%      { box-shadow: 0 0 0 4px rgba(255,196,64,0.55), 0 0 22px rgba(255,196,64,0.7); }
+            }
+          `}</style>
         </div>
         <div
           className="panel"
@@ -947,28 +956,48 @@ export function PennyPinchersClient() {
               aria-label="Lost wallet"
               style={{
                 position: "absolute",
-                left: lostWallet.x - 32,
-                top: lostWallet.y - 24,
-                width: 64,
-                height: 48,
+                left: lostWallet.x - 36,
+                top: lostWallet.y - 26,
+                width: 72,
+                height: 52,
                 padding: 0,
-                background: "linear-gradient(180deg, #6b3f24 0%, #4a2818 70%, #1a0f08 100%)",
-                border: "3px solid #1a0f08",
-                borderRadius: 4,
+                background: "transparent",
+                border: "none",
                 cursor: "pointer",
-                color: "var(--gold-300)",
-                fontFamily: "var(--font-display)",
-                fontSize: 18,
-                lineHeight: 1,
-                boxShadow: "0 0 0 3px rgba(255,196,64,0.45), 0 0 22px rgba(255,196,64,0.6), 2px 2px 0 rgba(0,0,0,0.4)",
                 animation: "pp-wallet-bob 1.4s ease-in-out infinite",
               }}
             >
-              <span aria-hidden style={{ fontFamily: "var(--font-display)", fontSize: 22 }}>⛛</span>
+              <svg
+                viewBox="0 0 36 26"
+                width={72}
+                height={52}
+                shapeRendering="crispEdges"
+                style={{
+                  display: "block",
+                  filter: "drop-shadow(0 0 8px rgba(255,196,64,0.85)) drop-shadow(2px 2px 0 rgba(0,0,0,0.4))",
+                }}
+              >
+                {/* Outer leather body */}
+                <rect x="2"  y="6"  width="32" height="18" fill="#1a0f08" />
+                <rect x="3"  y="7"  width="30" height="16" fill="#6b3f24" />
+                <rect x="3"  y="7"  width="30" height="2"  fill="#8b5a2b" />
+                <rect x="3"  y="21" width="30" height="2"  fill="#3d2418" />
+                {/* Top flap fold */}
+                <rect x="6"  y="2"  width="24" height="6"  fill="#1a0f08" />
+                <rect x="7"  y="3"  width="22" height="4"  fill="#8b5a2b" />
+                <rect x="7"  y="3"  width="22" height="1"  fill="#a87545" />
+                {/* Cash poking out — gold + green peeks */}
+                <rect x="10" y="10" width="16" height="3"  fill="#f5c842" />
+                <rect x="10" y="10" width="16" height="1"  fill="#fff8c2" />
+                <rect x="11" y="13" width="14" height="2"  fill="#3d8a4d" />
+                {/* Center clasp */}
+                <rect x="16" y="15" width="4"  height="4"  fill="#1a0f08" />
+                <rect x="17" y="16" width="2"  height="2"  fill="#f5c842" />
+              </svg>
               <style>{`
                 @keyframes pp-wallet-bob {
                   0%, 100% { transform: translateY(0); }
-                  50%      { transform: translateY(-2px); }
+                  50%      { transform: translateY(-3px); }
                 }
               `}</style>
             </button>
