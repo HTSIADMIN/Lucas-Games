@@ -8,6 +8,7 @@ import {
   COINS,
   COIN_ORDER,
   DAILY_BANK_CAP,
+  FRUGALITY_PC_PER_POINT,
   HELPERS_BY_ID,
   MAX_BANK_PAYOUT,
   MERGE_PROXIMITY_PX,
@@ -60,6 +61,15 @@ export function traitMultiplier(trait: CoinTrait | null | undefined): number {
   const def = TRAITS[trait];
   if (!def) return 1;
   return def.maxMultiplier;
+}
+
+/**
+ * PC multiplier from positive Frugality. Negative Frugality is a
+ * no-op for v1 (no penalty); v2 will add cursed-coin chance.
+ */
+export function frugalityPCMultiplier(frugality: number): number {
+  if (frugality <= 0) return 1;
+  return 1 + frugality * FRUGALITY_PC_PER_POINT;
 }
 
 // ============================================================

@@ -16,10 +16,17 @@ import {
   MERGE_RULES,
   PRESTIGE_THRESHOLD_PC,
   AUTO_PICKER_PER_SEC,
+  BLESSINGS,
+  COUCH_CHANCE_PER_POLL,
+  COUCH_CUSHIONS,
+  COUCH_LIFETIME_MS,
+  FOUNTAIN_CHANCE_PER_POLL,
+  FOUNTAIN_LIFETIME_MS,
   STICKY_PICKUP_COUNT,
   STICKY_PICKUP_RADIUS,
   TRAITS,
   TWO_FINGER_RADIUS,
+  type BlessingId,
   type AchievementId,
   type CoinId,
   type CoinTrait,
@@ -89,6 +96,10 @@ type StateResponse = {
 
 type ActiveEvent = { id: EventId; endsAt: number };
 type LostWallet = { id: number; x: number; y: number; spawnedAt: number };
+type Fountain  = { id: number; x: number; y: number; spawnedAt: number };
+type Couch     = { id: number; x: number; y: number; spawnedAt: number };
+type ActiveBlessing = { id: BlessingId; endsAt: number };
+type CushionReveal = { idx: number; lootId: string; label: string; pcGain: number };
 type FloatPop = { id: number; x: number; y: number; pc: number; shiny: boolean };
 
 type SpawnedCoin = {
@@ -115,8 +126,16 @@ export function PennyPinchersClient() {
   const [lostWallet, setLostWallet] = useState<LostWallet | null>(null);
   const [walletModalChoice, setWalletModalChoice] = useState<null | "open" | "submitting">(null);
   const [pops, setPops] = useState<FloatPop[]>([]);
+  const [fountain, setFountain] = useState<Fountain | null>(null);
+  const [couch, setCouch] = useState<Couch | null>(null);
+  const [fountainModalOpen, setFountainModalOpen] = useState(false);
+  const [couchModalOpen, setCouchModalOpen] = useState(false);
+  const [cushionReveals, setCushionReveals] = useState<CushionReveal[]>([]);
+  const [activeBlessings, setActiveBlessings] = useState<ActiveBlessing[]>([]);
   const popSeqRef = useRef(0);
   const lostWalletSeqRef = useRef(0);
+  const fountainSeqRef = useRef(0);
+  const couchSeqRef = useRef(0);
 
   const spawnPop = useCallback((x: number, y: number, pc: number, shiny: boolean) => {
     popSeqRef.current += 1;
@@ -176,6 +195,42 @@ export function PennyPinchersClient() {
         }
         return null;
       });
+      // Prune blessings that have expired since last poll.
+      setActiveBlessings((bs) => bs.filter((b) => b.endsAt > nowMs));
+      setFountain((current) => {
+        if (current && nowMs - current.spawnedAt < FOUNTAIN_LIFETIME_MS) return current;
+        if (Math.random() < FOUNTAIN_CHANCE_PER_POLL) {
+          const playEl = playRef.current;
+          if (!playEl) return null;
+          const rect = playEl.getBoundingClientRect();
+          const pad = 70;
+          fountainSeqRef.current += 1;
+          return {
+            id: fountainSeqRef.current,
+            x: pad + Math.random() * Math.max(0, rect.width - pad * 2),
+            y: pad + Math.random() * Math.max(0, rect.height - pad * 2),
+            spawnedAt: nowMs,
+          };
+        }
+        return null;
+      });
+      setCouch((current) => {
+        if (current && nowMs - current.spawnedAt < COUCH_LIFETIME_MS) return current;
+        if (Math.random() < COUCH_CHANCE_PER_POLL) {
+          const playEl = playRef.current;
+          if (!playEl) return null;
+          const rect = playEl.getBoundingClientRect();
+          const pad = 80;
+          couchSeqRef.current += 1;
+          return {
+            id: couchSeqRef.current,
+            x: pad + Math.random() * Math.max(0, rect.width - pad * 2),
+            y: pad + Math.random() * Math.max(0, rect.height - pad * 2),
+            spawnedAt: nowMs,
+          };
+        }
+        return null;
+      });
       setLostWallet((current) => {
         if (current && nowMs - current.spawnedAt < LOST_WALLET_LIFETIME_MS) return current;
         if (Math.random() < LOST_WALLET_CHANCE_PER_POLL) {
@@ -227,13 +282,17 @@ export function PennyPinchersClient() {
 
   // Coin spawner — applies the active event's spawn-rate multiplier
   // and bonus shiny chance so Coin Storm rains coins and Rainy Day
-  // glints with shinies.
+  // glints with shinies. Wishing Fountain blessings stack on top.
   const upgrades = (server?.upgrades ?? {}) as Record<UpgradeId, number>;
   const baseIntervalMs = useMemo(() => spawnIntervalMs(upgrades), [upgrades]);
   const eventDef = activeEvent ? EVENTS[activeEvent.id] : null;
-  const intervalMs = eventDef ? Math.max(120, Math.round(baseIntervalMs * eventDef.spawnMultiplier)) : baseIntervalMs;
+  const hasSharpEyes = activeBlessings.some((b) => b.id === "sharp_eyes");
+  const hasLucky = activeBlessings.some((b) => b.id === "lucky_streak");
+  const hasGreedy = activeBlessings.some((b) => b.id === "greedy_spawns");
+  const eventInterval = eventDef ? baseIntervalMs * eventDef.spawnMultiplier : baseIntervalMs;
+  const intervalMs = Math.max(120, Math.round(eventInterval * (hasSharpEyes ? 0.5 : 1)));
   const burstSize = (eventDef?.extraConcurrent ?? 0) > 0 ? 1 + eventDef!.extraConcurrent : 1;
-  const bonusShiny = eventDef?.bonusShinyChance ?? 0;
+  const bonusShiny = (eventDef?.bonusShinyChance ?? 0) + (hasLucky ? 0.1 : 0);
   useEffect(() => {
     if (!server) return;
     const t = window.setInterval(() => {
@@ -249,7 +308,15 @@ export function PennyPinchersClient() {
       for (let i = 0; i < count; i++) {
         const x = pad + Math.random() * Math.max(0, rect.width - pad * 2);
         const y = pad + Math.random() * Math.max(0, rect.height - pad * 2);
-        const coin = rollSpawn(upgrades);
+        // Greedy Spawns blessing: half the time, force the highest
+        // unlocked coin instead of rolling the spawn pool. The
+        // other half stays the regular distribution so we don't
+        // completely starve out pennies.
+        let coin = rollSpawn(upgrades);
+        if (hasGreedy && Math.random() < 0.5) {
+          const list = unlockedCoins(upgrades);
+          coin = list[list.length - 1];
+        }
         let trait = rollTrait(coin, upgrades);
         // Rainy Day's bonus shiny — secondary roll only when the
         // base trait roll didn't already land something.
@@ -260,7 +327,7 @@ export function PennyPinchersClient() {
       setCoins((prev) => [...prev, ...newSpawns]);
     }, intervalMs);
     return () => window.clearInterval(t);
-  }, [server, intervalMs, upgrades, burstSize, bonusShiny]);
+  }, [server, intervalMs, upgrades, burstSize, bonusShiny, hasGreedy]);
 
   // Auto-Picker — picks a random coin off the play area every
   // `1000/level` ms. Routes through the same click flow (so PC
@@ -450,6 +517,51 @@ export function PennyPinchersClient() {
       });
       if (r.ok) await loadState();
     } catch { await loadState(); }
+  }
+
+  async function buyBlessing(id: BlessingId) {
+    const def = BLESSINGS[id];
+    if (!def || localCents < def.cost) return;
+    setLocalCents((c) => c - def.cost);
+    Sfx.play("ui.confirm");
+    try {
+      const r = await fetch("/api/earn/penny-pinchers/blessing", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ blessingId: id }),
+      });
+      if (r.ok) {
+        const d = (await r.json()) as { durationMs: number; cents: number };
+        setLocalCents(d.cents);
+        setActiveBlessings((bs) => [...bs, { id, endsAt: Date.now() + d.durationMs }]);
+        setFountain(null);
+        setFountainModalOpen(false);
+      } else {
+        // Refund optimistic on rejection.
+        setLocalCents((c) => c + def.cost);
+      }
+    } catch {
+      setLocalCents((c) => c + def.cost);
+    }
+  }
+
+  async function flipCushion(idx: number) {
+    if (cushionReveals.some((c) => c.idx === idx)) return;
+    Sfx.play("ui.wood");
+    try {
+      const r = await fetch("/api/earn/penny-pinchers/cushion", { method: "POST" });
+      if (!r.ok) return;
+      const d = (await r.json()) as { loot: string; label: string; pcGain: number; cents: number };
+      setLocalCents(d.cents);
+      setCushionReveals((prev) => [...prev, { idx, lootId: d.loot, label: d.label, pcGain: d.pcGain }]);
+      if (d.pcGain > 0) Sfx.play("coin.drop");
+    } catch { /* ignore */ }
+  }
+
+  function closeCouch() {
+    setCouchModalOpen(false);
+    setCouch(null);
+    setCushionReveals([]);
   }
 
   async function resolveLostWallet(choice: "return" | "keep") {
@@ -763,6 +875,68 @@ export function PennyPinchersClient() {
               100% { transform: translate(-50%, -160%) scale(1); opacity: 0; }
             }
           `}</style>
+          {fountain && (
+            <button
+              type="button"
+              onClick={() => setFountainModalOpen(true)}
+              aria-label="Wishing fountain"
+              style={{
+                position: "absolute",
+                left: fountain.x - 36,
+                top: fountain.y - 36,
+                width: 72,
+                height: 72,
+                padding: 0,
+                background: "radial-gradient(circle at 50% 35%, #c8e0f5 0%, #6aa3d4 55%, #1f4f88 100%)",
+                border: "3px solid #1a0f08",
+                borderRadius: "50%",
+                cursor: "pointer",
+                color: "#fff",
+                fontFamily: "var(--font-display)",
+                fontSize: 28,
+                lineHeight: 1,
+                boxShadow: "0 0 0 3px rgba(120,200,255,0.55), 0 0 24px rgba(120,200,255,0.7), 2px 2px 0 rgba(0,0,0,0.4)",
+                animation: "pp-coin-spawn 240ms var(--ease-out, ease-out), pp-fountain-bob 1.6s ease-in-out infinite",
+              }}
+            >
+              <span aria-hidden>⛲</span>
+              <style>{`
+                @keyframes pp-fountain-bob {
+                  0%, 100% { transform: translateY(0); }
+                  50%      { transform: translateY(-3px); }
+                }
+              `}</style>
+            </button>
+          )}
+          {couch && (
+            <button
+              type="button"
+              onClick={() => setCouchModalOpen(true)}
+              aria-label="Couch"
+              style={{
+                position: "absolute",
+                left: couch.x - 48,
+                top: couch.y - 28,
+                width: 96,
+                height: 56,
+                padding: 0,
+                background: "linear-gradient(180deg, #8b5a2b 0%, #6b3f24 60%, #3d2418 100%)",
+                border: "3px solid #1a0f08",
+                borderRadius: "10px 10px 6px 6px",
+                cursor: "pointer",
+                color: "var(--gold-300)",
+                fontFamily: "var(--font-display)",
+                fontSize: 14,
+                lineHeight: 1,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                boxShadow: "0 0 0 3px rgba(212,165,116,0.45), 0 0 22px rgba(212,165,116,0.55), 2px 2px 0 rgba(0,0,0,0.4)",
+                animation: "pp-coin-spawn 240ms var(--ease-out, ease-out)",
+              }}
+            >
+              Dive!
+            </button>
+          )}
           {lostWallet && (
             <button
               type="button"
@@ -961,6 +1135,194 @@ export function PennyPinchersClient() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {fountainModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Wishing fountain"
+          onClick={() => setFountainModalOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9_500,
+            background: "rgba(26,15,8,0.7)",
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+            backdropFilter: "blur(2px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="panel-wood"
+            style={{
+              width: "min(480px, 100%)",
+              padding: "var(--sp-5)",
+              border: "4px solid var(--ink-900)",
+              boxShadow: "var(--sh-popover), var(--glow-gold)",
+            }}
+          >
+            <div
+              className="uppercase"
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "var(--fs-h3)",
+                color: "var(--gold-300)",
+                letterSpacing: "var(--ls-loose)",
+                textShadow: "2px 2px 0 var(--ink-900)",
+                marginBottom: "var(--sp-3)",
+                textAlign: "center",
+              }}
+            >
+              Wishing Fountain
+            </div>
+            <p style={{ marginBottom: "var(--sp-3)", color: "var(--ink-900)" }}>
+              Toss in some Pinch Cents — pick your blessing.
+            </p>
+            <div className="stack" style={{ gap: 8 }}>
+              {Object.values(BLESSINGS).map((b) => {
+                const affordable = localCents >= b.cost;
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    disabled={!affordable}
+                    onClick={() => buyBlessing(b.id)}
+                    style={{
+                      textAlign: "left",
+                      background: affordable ? "var(--gold-100)" : "var(--parchment-200)",
+                      border: `2px solid ${affordable ? "var(--gold-300)" : "var(--saddle-300)"}`,
+                      padding: "10px 12px",
+                      cursor: affordable ? "pointer" : "default",
+                      color: "var(--ink-900)",
+                    }}
+                  >
+                    <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+                      <span style={{ fontFamily: "var(--font-display)", fontSize: 13 }}>{b.label}</span>
+                      <span style={{ fontFamily: "var(--font-display)", fontSize: 12, color: "var(--gold-500)" }}>
+                        {b.cost.toLocaleString()} PC
+                      </span>
+                    </div>
+                    <div className="text-mute" style={{ fontSize: 11 }}>{b.blurb}</div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="row" style={{ gap: 8, justifyContent: "center", marginTop: "var(--sp-3)" }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setFountainModalOpen(false)}
+              >
+                Walk away
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {couchModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Couch cushion dive"
+          onClick={() => closeCouch()}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9_500,
+            background: "rgba(26,15,8,0.7)",
+            display: "grid",
+            placeItems: "center",
+            padding: 16,
+            backdropFilter: "blur(2px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="panel-wood"
+            style={{
+              width: "min(440px, 100%)",
+              padding: "var(--sp-5)",
+              border: "4px solid var(--ink-900)",
+              boxShadow: "var(--sh-popover), var(--glow-gold)",
+            }}
+          >
+            <div
+              className="uppercase"
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "var(--fs-h3)",
+                color: "var(--gold-300)",
+                letterSpacing: "var(--ls-loose)",
+                textShadow: "2px 2px 0 var(--ink-900)",
+                marginBottom: "var(--sp-2)",
+                textAlign: "center",
+              }}
+            >
+              Couch Cushion Dive
+            </div>
+            <p className="text-mute" style={{ fontSize: 12, textAlign: "center", marginBottom: "var(--sp-3)" }}>
+              Flip {COUCH_CUSHIONS} cushions — keep what you find.
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+                marginBottom: "var(--sp-3)",
+              }}
+            >
+              {Array.from({ length: COUCH_CUSHIONS }).map((_, idx) => {
+                const reveal = cushionReveals.find((r) => r.idx === idx);
+                const flipped = !!reveal;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => flipCushion(idx)}
+                    disabled={flipped}
+                    style={{
+                      aspectRatio: "1.6 / 1",
+                      background: flipped
+                        ? reveal!.pcGain === 0
+                          ? "var(--saddle-200)"
+                          : "var(--gold-100)"
+                        : "linear-gradient(180deg, #b07a4a 0%, #6b3f24 100%)",
+                      border: `3px solid ${flipped ? "var(--gold-300)" : "#1a0f08"}`,
+                      borderRadius: 8,
+                      color: "var(--ink-900)",
+                      fontFamily: "var(--font-display)",
+                      cursor: flipped ? "default" : "pointer",
+                      padding: 8,
+                      textAlign: "center",
+                    }}
+                  >
+                    {flipped ? (
+                      <div>
+                        <div style={{ fontSize: 13, marginBottom: 2 }}>{reveal!.label}</div>
+                        {reveal!.pcGain > 0 ? (
+                          <div style={{ fontSize: 12, color: "var(--gold-500)" }}>+{reveal!.pcGain} PC</div>
+                        ) : (
+                          <div style={{ fontSize: 11, color: "var(--saddle-400)" }}>nothing</div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 22, color: "var(--gold-300)" }}>?</div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="row" style={{ gap: 8, justifyContent: "center" }}>
+              <button type="button" className="btn btn-ghost" onClick={closeCouch}>
+                {cushionReveals.length >= COUCH_CUSHIONS ? "Done" : "Walk away"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

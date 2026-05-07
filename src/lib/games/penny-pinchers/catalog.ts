@@ -259,6 +259,86 @@ export const EVENTS: Record<EventId, EventDef> = {
 /** Per-poll chance the client tries to roll a new event when none active. */
 export const EVENT_START_CHANCE_PER_POLL = 0.025;
 
+// ============================================================
+// WISHING FOUNTAIN — Phase 2c
+//
+// Rare sprite. Click to open a modal where the player can toss
+// PC into the fountain in exchange for a temporary client-side
+// blessing. Server validates only the cent debit; the buff window
+// lives on the client (server-trustless because it only modifies
+// spawn behaviour, not click payouts).
+// ============================================================
+
+export type BlessingId = "lucky_streak" | "sharp_eyes" | "greedy_spawns";
+
+export type BlessingDef = {
+  id: BlessingId;
+  label: string;
+  blurb: string;
+  /** PC cost paid when the blessing is selected. */
+  cost: number;
+  durationMs: number;
+};
+
+export const BLESSINGS: Record<BlessingId, BlessingDef> = {
+  lucky_streak:  { id: "lucky_streak",  label: "Lucky Streak",  blurb: "+10% shiny chance for 30s.",                    cost: 250,  durationMs: 30_000 },
+  sharp_eyes:    { id: "sharp_eyes",    label: "Sharp Eyes",    blurb: "Spawns twice as fast for 30s.",                  cost: 400,  durationMs: 30_000 },
+  greedy_spawns: { id: "greedy_spawns", label: "Greedy Spawns", blurb: "+50% chance to spawn the highest unlocked coin for 30s.", cost: 600, durationMs: 30_000 },
+};
+
+/** Per-poll chance a Wishing Fountain spawns when none on screen. */
+export const FOUNTAIN_CHANCE_PER_POLL = 0.008;
+/** Lifetime of the fountain sprite before it despawns unclicked. */
+export const FOUNTAIN_LIFETIME_MS = 25_000;
+
+// ============================================================
+// COUCH CUSHION DIVE — Phase 2c
+//
+// Rare sprite. Click to open a modal with 4 cushions; each
+// cushion-click rolls one of the items below server-side
+// (/cushion endpoint). All cents are credited to the per-run PC
+// pool; lifetime_clicks ticks per cushion. Closes after all 4
+// reveals or after a 15s timeout.
+// ============================================================
+
+export type CushionLootId = "lint" | "penny_pile" | "nickel_pile" | "dime_pile" | "quarter_pile" | "jackpot";
+
+export type CushionLoot = {
+  id: CushionLootId;
+  label: string;
+  /** PC paid when this cushion is revealed. */
+  pc: number;
+  /** Relative weight in the loot roll. */
+  weight: number;
+};
+
+export const CUSHION_LOOT: readonly CushionLoot[] = [
+  { id: "lint",         label: "Lint",      pc: 0,    weight: 8  },
+  { id: "penny_pile",   label: "Pennies",   pc: 5,    weight: 28 },
+  { id: "nickel_pile",  label: "Nickels",   pc: 25,   weight: 22 },
+  { id: "dime_pile",    label: "Dimes",     pc: 60,   weight: 14 },
+  { id: "quarter_pile", label: "Quarters",  pc: 150,  weight: 6  },
+  { id: "jackpot",      label: "Jackpot!",  pc: 1500, weight: 1  },
+];
+
+/** Per-poll chance a Couch sprite spawns when none on screen. */
+export const COUCH_CHANCE_PER_POLL = 0.006;
+/** Lifetime of the couch sprite before it despawns unclicked. */
+export const COUCH_LIFETIME_MS = 30_000;
+/** Cushions revealed per couch session. */
+export const COUCH_CUSHIONS = 4;
+
+// ============================================================
+// FRUGALITY — Phase 2c consumer
+//
+// Each positive Frugality point grants a flat PC multiplier on
+// every click. Negative Frugality has no penalty for v1; future
+// phases can introduce cursed-coin chance / risky variants.
+// ============================================================
+
+/** PC multiplier per positive Frugality point (e.g. 0.005 → +0.5%/pt). */
+export const FRUGALITY_PC_PER_POINT = 0.005;
+
 // Lost Wallet — single-shot spawn, separate from passive events.
 /** Per-poll chance a Lost Wallet sprite spawns when none on screen. */
 export const LOST_WALLET_CHANCE_PER_POLL = 0.012;

@@ -14,7 +14,7 @@ import {
   type CoinTrait,
   type PermUpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
-import { coinPCValue, traitMultiplier } from "@/lib/games/penny-pinchers/engine";
+import { coinPCValue, frugalityPCMultiplier, traitMultiplier } from "@/lib/games/penny-pinchers/engine";
 
 export const runtime = "nodejs";
 
@@ -74,7 +74,9 @@ export async function POST(req: Request) {
   for (const u of permRows) permLevels[u.upgrade_id as PermUpgradeId] = u.level;
 
   const baseValue = coinPCValue(coinType, upgradeLevels, permLevels);
-  const pc = Math.round(baseValue * traitMultiplier(trait));
+  const pc = Math.round(
+    baseValue * traitMultiplier(trait) * frugalityPCMultiplier(state.frugality),
+  );
 
   state = await upsertPennyPinchersState({
     ...state,
