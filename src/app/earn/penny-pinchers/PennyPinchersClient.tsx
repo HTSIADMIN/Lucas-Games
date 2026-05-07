@@ -1012,17 +1012,27 @@ export function PennyPinchersClient() {
     } catch { await loadState(); }
   }
 
+  // Smooth-tween the HUD numbers so they count up instead of
+  // snapping on each state poll. Lifetime clicks tweens at 0.6s
+  // (small step-by-step deltas read fine), helper rate at 0.5s.
+  // IMPORTANT: these hooks must run on every render, including
+  // the loading-state pass below where we early-return — calling
+  // them inside an `if (server)` branch produces React error #310
+  // (hook count mismatch between renders).
+  const tweenedRateLive = useTween(
+    server ? helperRatePcPerSec(server.helpers, server.perm) : 0,
+    500,
+  );
+  const tweenedClicksLive = useTween(server?.lifetimeClicks ?? 0, 600);
+
   if (!server) {
     return <p className="text-mute" style={{ padding: "var(--sp-5)" }}>Loading…</p>;
   }
 
   const unlocked = unlockedCoins(upgrades);
   const ratePcPerSec = helperRatePcPerSec(server.helpers, server.perm);
-  // Smooth-tween the HUD numbers so they count up instead of
-  // snapping on each state poll. Lifetime clicks tweens at 0.6s
-  // (small step-by-step deltas read fine), helper rate at 0.5s.
-  const tweenedRate = useTween(ratePcPerSec, 500);
-  const tweenedClicks = useTween(server.lifetimeClicks, 600);
+  const tweenedRate = tweenedRateLive;
+  const tweenedClicks = tweenedClicksLive;
   const now = Date.now();
   const canRoll = server.lifetimePCEarned >= server.prestige.thresholdPC && server.prestige.tokensIfRolled > 0;
   const lifetimeProgress = Math.min(1, server.lifetimePCEarned / server.prestige.thresholdPC);
