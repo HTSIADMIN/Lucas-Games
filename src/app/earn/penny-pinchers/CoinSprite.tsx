@@ -191,7 +191,9 @@ export function CoinSprite({
           fontSize: Math.round(size * 0.42),
           lineHeight: `${size}px`,
           textAlign: "center",
-          transform: bentRotate ? `rotate(${bentRotate}deg)` : undefined,
+          // Bent's tilt is now part of the wobble animation; non-bent
+          // ambient animations handle their own transforms too.
+          transform: undefined,
           boxShadow: auraColor
             ? isShiny || isAncient
               ? `0 0 0 3px ${auraColor}, 0 0 26px ${auraColor}, inset 0 0 14px rgba(255,250,180,0.55), 2px 2px 0 rgba(0,0,0,0.4)`
@@ -199,6 +201,14 @@ export function CoinSprite({
             : "2px 2px 0 rgba(0,0,0,0.4)",
           animation: isShiny || isAncient
             ? "pp-coin-shiny-pulse 1.3s ease-in-out infinite"
+            : isCursed
+            ? "pp-coin-cursed-shake 2.8s ease-in-out infinite"
+            : isForeign
+            ? "pp-coin-foreign-rotate 3.2s ease-in-out infinite"
+            : isSticky
+            ? "pp-coin-sticky-wobble 2.5s ease-in-out infinite"
+            : isBent
+            ? "pp-coin-bent-tilt 2.2s ease-in-out infinite"
             : undefined,
         }}
       >
@@ -232,6 +242,28 @@ export function CoinSprite({
         @keyframes pp-coin-cursed-pulse {
           0%, 100% { transform: scale(0.85); opacity: 0.55; }
           50%      { transform: scale(1.18); opacity: 0.95; }
+        }
+        @keyframes pp-coin-cursed-shake {
+          0%, 88%, 100% { transform: translateX(0) rotate(0); }
+          90% { transform: translateX(-2px) rotate(-3deg); }
+          92% { transform: translateX(2px)  rotate(3deg); }
+          94% { transform: translateX(-2px) rotate(-3deg); }
+          96% { transform: translateX(2px)  rotate(3deg); }
+          98% { transform: translateX(-1px) rotate(-1deg); }
+        }
+        @keyframes pp-coin-foreign-rotate {
+          0%, 100% { transform: rotate(-3deg); }
+          50%      { transform: rotate(3deg); }
+        }
+        @keyframes pp-coin-sticky-wobble {
+          0%, 80%, 100% { transform: translateX(0) scale(1); }
+          85%           { transform: translateX(-1px) scale(1.04); }
+          90%           { transform: translateX(1px)  scale(0.98); }
+          95%           { transform: translateX(-1px) scale(1.02); }
+        }
+        @keyframes pp-coin-bent-tilt {
+          0%, 100% { transform: rotate(-14deg); }
+          50%      { transform: rotate(-9deg); }
         }
       `}</style>
     </button>

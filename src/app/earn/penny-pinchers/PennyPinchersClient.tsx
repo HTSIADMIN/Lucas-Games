@@ -152,6 +152,36 @@ type SpawnedCoin = {
   mergingTo?: { x: number; y: number };
 };
 
+/**
+ * Smoothly tweens a numeric `target` whenever it changes — used for
+ * the HUD's helper-rate / lifetime-clicks readouts so they count up
+ * instead of snapping every state poll. Cancels any in-flight tween
+ * on each new target so we don't stack rAF callbacks.
+ */
+function useTween(target: number, durationMs = 700): number {
+  const [display, setDisplay] = useState(target);
+  const fromRef = useRef(target);
+  const targetRef = useRef(target);
+  useEffect(() => {
+    if (target === targetRef.current) return;
+    fromRef.current = display;
+    targetRef.current = target;
+    const start = performance.now();
+    const from = fromRef.current;
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - (1 - t) * (1 - t);
+      setDisplay(from + (target - from) * eased);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, durationMs]);
+  return display;
+}
+
 const COIN_LIFETIME_MS = 11_000;
 /** How long two coins slide toward each other before fusing. */
 const MERGE_SLIDE_MS = 280;
@@ -173,6 +203,8 @@ export function PennyPinchersClient() {
   const [recentlyHiredId, setRecentlyHiredId] = useState<HelperId | null>(null);
   /** Wallet ¢ payout from the most recent bank — shows the coin-shower for ~1.6s. */
   const [bankCelebration, setBankCelebration] = useState<number | null>(null);
+  /** Blessing id mid-celebration — keeps the fountain modal open for ~800ms with a Granted! flash. */
+  const [grantedBlessing, setGrantedBlessing] = useState<BlessingId | null>(null);
   const [achievementToasts, setAchievementToasts] = useState<AchievementId[]>([]);
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
   const [lostWallet, setLostWallet] = useState<LostWallet | null>(null);
@@ -760,8 +792,15 @@ export function PennyPinchersClient() {
         const d = (await r.json()) as { durationMs: number; cents: number };
         setLocalCents(d.cents);
         setActiveBlessings((bs) => [...bs, { id, endsAt: Date.now() + d.durationMs }]);
-        setFountain(null);
-        setFountainModalOpen(false);
+        // Hold the modal open with a "Granted!" flash on the chosen
+        // blessing button before closing — dramatises the buy.
+        setGrantedBlessing(id);
+        Sfx.play("win.notify");
+        window.setTimeout(() => {
+          setGrantedBlessing(null);
+          setFountain(null);
+          setFountainModalOpen(false);
+        }, 850);
       } else {
         // Refund optimistic on rejection.
         setLocalCents((c) => c + def.cost);
@@ -863,6 +902,11 @@ export function PennyPinchersClient() {
 
   const unlocked = unlockedCoins(upgrades);
   const ratePcPerSec = helperRatePcPerSec(server.helpers, server.perm);
+  // Smooth-tween the HUD numbers so they count up instead of
+  // snapping on each state poll. Lifetime clicks tweens at 0.6s
+  // (small step-by-step deltas read fine), helper rate at 0.5s.
+  const tweenedRate = useTween(ratePcPerSec, 500);
+  const tweenedClicks = useTween(server.lifetimeClicks, 600);
   const now = Date.now();
   const canRoll = server.lifetimePCEarned >= server.prestige.thresholdPC && server.prestige.tokensIfRolled > 0;
   const lifetimeProgress = Math.min(1, server.lifetimePCEarned / server.prestige.thresholdPC);
@@ -1046,7 +1090,7 @@ export function PennyPinchersClient() {
             }
           `}</style>
           <div className="text-mute" style={{ fontSize: 11 }}>
-            Helpers: {ratePcPerSec.toLocaleString()} PC/sec · Lifetime clicks {server.lifetimeClicks.toLocaleString()}
+            Helpers: {Math.round(tweenedRate).toLocaleString()} PC/sec · Lifetime clicks {Math.round(tweenedClicks).toLocaleString()}
           </div>
           <div
             style={{
@@ -1962,25 +2006,41 @@ export function PennyPinchersClient() {
               Toss in some Pinch Cents — pick your blessing.
             </p>
             <div className="stack" style={{ gap: 8 }}>
+              <style>{`
+                @keyframes pp-blessing-granted {
+                  0%   { transform: scale(1);   box-shadow: 0 0 0 0 rgba(255,200,60,0); }
+                  35%  { transform: scale(1.06); box-shadow: 0 0 0 4px rgba(255,200,60,0.95), 0 0 28px rgba(255,200,60,0.95); }
+                  100% { transform: scale(1);   box-shadow: 0 0 0 4px rgba(255,200,60,0), 0 0 28px rgba(255,200,60,0); }
+                }
+              `}</style>
               {Object.values(BLESSINGS).map((b) => {
                 const affordable = localCents >= b.cost;
+                const granted = grantedBlessing === b.id;
+                const dimByGrant = grantedBlessing != null && !granted;
                 return (
                   <button
                     key={b.id}
                     type="button"
-                    disabled={!affordable}
+                    disabled={!affordable || grantedBlessing != null}
                     onClick={() => buyBlessing(b.id)}
                     style={{
                       textAlign: "left",
-                      background: affordable ? "var(--gold-100)" : "var(--parchment-200)",
-                      border: `2px solid ${affordable ? "var(--gold-300)" : "var(--saddle-300)"}`,
+                      background: granted
+                        ? "var(--gold-300)"
+                        : affordable ? "var(--gold-100)" : "var(--parchment-200)",
+                      border: `2px solid ${granted ? "var(--gold-500)" : affordable ? "var(--gold-300)" : "var(--saddle-300)"}`,
                       padding: "10px 12px",
-                      cursor: affordable ? "pointer" : "default",
+                      cursor: affordable && !grantedBlessing ? "pointer" : "default",
                       color: "var(--ink-900)",
+                      opacity: dimByGrant ? 0.4 : 1,
+                      animation: granted ? "pp-blessing-granted 800ms ease-out forwards" : undefined,
+                      transition: "opacity 200ms",
                     }}
                   >
                     <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-                      <span style={{ fontFamily: "var(--font-display)", fontSize: 13 }}>{b.label}</span>
+                      <span style={{ fontFamily: "var(--font-display)", fontSize: 13 }}>
+                        {granted ? "✓ Granted!" : b.label}
+                      </span>
                       <span style={{ fontFamily: "var(--font-display)", fontSize: 12, color: "var(--gold-500)" }}>
                         {b.cost.toLocaleString()} PC
                       </span>

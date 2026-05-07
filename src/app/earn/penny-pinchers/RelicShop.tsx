@@ -67,6 +67,20 @@ export function RelicShop({
 
   return (
     <div className="stack" style={{ gap: "var(--sp-2)", overflowY: "auto", maxHeight: 480 }}>
+      <style>{`
+        .pp-chest-card, .pp-relic-card {
+          transition: transform 160ms, box-shadow 200ms, border-color 200ms;
+        }
+        .pp-chest-card:hover:not(:disabled),
+        .pp-relic-card:hover:not(.is-locked) {
+          transform: translateY(-2px);
+          box-shadow: 0 0 0 2px var(--gold-300), 0 6px 18px rgba(0,0,0,0.25);
+        }
+        .pp-chest-card:active:not(:disabled) {
+          transform: translateY(0);
+          box-shadow: 0 0 0 2px var(--gold-300), 0 2px 6px rgba(0,0,0,0.2);
+        }
+      `}</style>
       <div
         className="text-mute"
         style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", paddingLeft: 4 }}
@@ -84,6 +98,7 @@ export function RelicShop({
             type="button"
             disabled={!affordable || busy != null}
             onClick={() => buyChest(tier)}
+            className="pp-chest-card"
             style={{
               textAlign: "left",
               background: affordable
@@ -131,6 +146,7 @@ export function RelicShop({
         return (
           <div
             key={r.id}
+            className={`pp-relic-card${owned ? "" : " is-locked"}`}
             style={{
               padding: "8px 10px",
               background: owned ? tone.bg : "var(--parchment-200)",
