@@ -59,6 +59,8 @@ import { HelperRoster } from "./HelperRoster";
 import { BankTokenShop } from "./BankTokenShop";
 import { AchievementsPanel } from "./AchievementsPanel";
 import { AlbumPanel } from "./AlbumPanel";
+import { FaqModal } from "./FaqModal";
+import { PennyLeaderboard } from "./PennyLeaderboard";
 import type { AlbumState } from "@/lib/games/penny-pinchers/engine";
 
 // Penny Pinchers — main client. Coins spawn as absolutely-positioned
@@ -136,6 +138,7 @@ export function PennyPinchersClient() {
   const [tab, setTab] = useState<"upgrades" | "helpers" | "tokens" | "achievements" | "album">("upgrades");
   const [welcomeBack, setWelcomeBack] = useState<number | null>(null);
   const [prestigeOpen, setPrestigeOpen] = useState(false);
+  const [faqOpen, setFaqOpen] = useState(false);
   const [achievementToasts, setAchievementToasts] = useState<AchievementId[]>([]);
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
   const [lostWallet, setLostWallet] = useState<LostWallet | null>(null);
@@ -566,18 +569,19 @@ export function PennyPinchersClient() {
     // We send the *streak-multiplied merged PC* as the `pc` field;
     // server clamps to MAX_CLICK_PC and stacks trait + frugality
     // on top so a tampered client can't cheese the cap.
+    //
+    // Important: we do NOT snap localCents to the server response
+    // on click. The local helper-tick interval is moving forward
+    // every 100ms, so snapping would visibly bounce the counter
+    // backwards (helpers had already credited PC the server hadn't
+    // seen yet). The /state poll reconciles drift on its own
+    // schedule, with the >5% threshold guard in loadState().
     const sentPC = Math.round(coin.mergedPC * tier.multiplier);
-    try {
-      const r = await fetch("/api/earn/penny-pinchers/click", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ coinType: coin.coin, trait: coin.trait, pc: sentPC }),
-      });
-      if (r.ok) {
-        const d = (await r.json()) as { cents: number };
-        setLocalCents(d.cents);
-      }
-    } catch { /* ignore */ }
+    void fetch("/api/earn/penny-pinchers/click", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ coinType: coin.coin, trait: coin.trait, pc: sentPC }),
+    }).catch(() => { /* ignore — sync poll reconciles */ });
 
     // Fire-and-forget the collateral pickups so each one is
     // metered + counted toward lifetime_clicks.
@@ -809,8 +813,31 @@ export function PennyPinchersClient() {
             minWidth: 220,
           }}
         >
-          <div className="text-mute" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-            Pinch Cents
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+            <div className="text-mute" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              Pinch Cents
+            </div>
+            <button
+              type="button"
+              onClick={() => setFaqOpen(true)}
+              aria-label="How to play"
+              title="How to play"
+              style={{
+                width: 22,
+                height: 22,
+                padding: 0,
+                background: "var(--saddle-200)",
+                border: "2px solid var(--ink-900)",
+                borderRadius: "50%",
+                fontFamily: "var(--font-display)",
+                fontSize: 12,
+                color: "var(--ink-900)",
+                cursor: "pointer",
+                lineHeight: "18px",
+              }}
+            >
+              ?
+            </button>
           </div>
           <div
             style={{
@@ -1296,6 +1323,8 @@ export function PennyPinchersClient() {
         })}
       </div>
 
+      <PennyLeaderboard />
+
       {achievementToasts.length > 0 && (
         <div
           aria-live="polite"
@@ -1340,6 +1369,8 @@ export function PennyPinchersClient() {
           })}
         </div>
       )}
+
+      {faqOpen && <FaqModal onClose={() => setFaqOpen(false)} />}
 
       {fountainModalOpen && (
         <div
