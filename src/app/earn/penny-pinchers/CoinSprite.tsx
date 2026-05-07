@@ -18,6 +18,7 @@ export function CoinSprite({
   spawnedAt,
   lifetimeMs,
   mergingTo,
+  firstTapAt,
   onClick,
 }: {
   coin: CoinId;
@@ -30,6 +31,10 @@ export function CoinSprite({
   lifetimeMs: number;
   /** When set, the coin is sliding toward this point to fuse with another. */
   mergingTo?: { x: number; y: number };
+  /** Sticky-only: stamped on the first of its required two taps. The
+   *  disc skews and locks into a tilted "still stuck" pose until the
+   *  second tap dislodges it. */
+  firstTapAt?: number;
   onClick: () => void;
 }) {
   const renderX = mergingTo?.x ?? x;
@@ -199,7 +204,9 @@ export function CoinSprite({
               ? `0 0 0 3px ${auraColor}, 0 0 26px ${auraColor}, inset 0 0 14px rgba(255,250,180,0.55), 2px 2px 0 rgba(0,0,0,0.4)`
               : `0 0 0 3px ${auraColor}, 0 0 18px ${auraColor}, 2px 2px 0 rgba(0,0,0,0.4)`
             : "2px 2px 0 rgba(0,0,0,0.4)",
-          animation: isShiny || isAncient
+          animation: isSticky && firstTapAt
+            ? "pp-coin-sticky-skew 360ms cubic-bezier(.2,.8,.3,1.4) forwards"
+            : isShiny || isAncient
             ? "pp-coin-shiny-pulse 1.3s ease-in-out infinite"
             : isCursed
             ? "pp-coin-cursed-shake 2.8s ease-in-out infinite"
@@ -264,6 +271,11 @@ export function CoinSprite({
         @keyframes pp-coin-bent-tilt {
           0%, 100% { transform: rotate(-14deg); }
           50%      { transform: rotate(-9deg); }
+        }
+        @keyframes pp-coin-sticky-skew {
+          0%   { transform: skewX(0)   rotate(0)    translateY(0); }
+          40%  { transform: skewX(-18deg) rotate(-6deg) translateY(2px); }
+          100% { transform: skewX(-12deg) rotate(-4deg) translateY(1px); }
         }
       `}</style>
     </button>

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { readSession } from "@/lib/auth/session";
 import { getBalance } from "@/lib/wallet";
 import {
@@ -32,6 +33,77 @@ import {
 } from "@/lib/games/penny-pinchers/engine";
 
 export const runtime = "nodejs";
+
+type LeaderboardRow = {
+  userId: string;
+  username: string;
+  avatarColor: string;
+  initials: string;
+  lifetimePCEarned: number;
+  lifetimeClicks: number;
+  frugality: number;
+  prestigeCount: number;
+  walletBalance: number;
+  isMe: boolean;
+};
+
+// Pulls the top 10 Penny Pinchers — folded into /state so the client
+// only makes one round-trip per poll instead of two. Returns [] if
+// service-role creds aren't configured (mock-DB / preview envs).
+async function fetchLeaderboard(meId: string): Promise<LeaderboardRow[]> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return [];
+
+  const sb = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data: pp, error } = await sb
+    .from("penny_pinchers_state")
+    .select(
+      "user_id, lifetime_pc_earned, lifetime_clicks, frugality, prestige_count, users:users!inner(username, avatar_color, initials)",
+    )
+    .order("lifetime_pc_earned", { ascending: false })
+    .limit(10);
+  if (error || !pp) return [];
+
+  const userIds = (pp as Array<{ user_id: string }>).map((r) => r.user_id);
+  const balanceById: Record<string, number> = {};
+  if (userIds.length > 0) {
+    const { data: balances } = await sb
+      .from("wallet_balances")
+      .select("user_id, balance")
+      .in("user_id", userIds);
+    for (const row of (balances ?? []) as Array<{ user_id: string; balance: number | string }>) {
+      balanceById[row.user_id] = Number(row.balance);
+    }
+  }
+
+  type UserBlob = { username: string; avatar_color: string; initials: string };
+  type Row = {
+    user_id: string;
+    lifetime_pc_earned: number;
+    lifetime_clicks: number;
+    frugality: number;
+    prestige_count: number;
+    users: UserBlob | UserBlob[] | null;
+  };
+  return (pp as unknown as Row[]).map((r) => {
+    const u = Array.isArray(r.users) ? r.users[0] : r.users;
+    return {
+      userId: r.user_id,
+      username: u?.username ?? "?",
+      avatarColor: u?.avatar_color ?? "var(--gold-300)",
+      initials: u?.initials ?? "??",
+      lifetimePCEarned: r.lifetime_pc_earned,
+      lifetimeClicks: r.lifetime_clicks,
+      frugality: r.frugality,
+      prestigeCount: r.prestige_count,
+      walletBalance: balanceById[r.user_id] ?? 0,
+      isMe: r.user_id === meId,
+    };
+  });
+}
 
 // GET /api/earn/penny-pinchers/state
 //
@@ -143,6 +215,11 @@ export async function GET() {
   const lastBankMs = state.last_bank_at ? new Date(state.last_bank_at).getTime() : 0;
   const bankReadyAt = lastBankMs > 0 ? lastBankMs + BANK_COOLDOWN_MS : 0;
 
+  // Leaderboard piggy-backs on the same poll so the player isn't
+  // making a separate /leaderboard request every 30s. Failure is
+  // non-fatal — empty array degrades gracefully in the UI.
+  const leaderboard = await fetchLeaderboard(s.user.id).catch(() => [] as LeaderboardRow[]);
+
   return NextResponse.json({
     serverNow: now.getTime(),
     cents: state.cents,
@@ -179,5 +256,6 @@ export async function GET() {
     relics,
     relicEffects: relicE,
     walletBalance: await getBalance(s.user.id),
+    leaderboard,
   });
 }

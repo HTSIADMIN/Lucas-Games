@@ -14,12 +14,19 @@ import { useRouter } from "next/navigation";
 // a 5s tick compares `Date.now() - lastActivity` against thresholds.
 // Timer runs independent of visibility — a hidden, idle tab is the
 // scenario we most want to cull.
+//
+// `mousemove` is intentionally NOT in the activity list. It's far too
+// sensitive — a stationary cursor + browser-driven micro-events keep
+// the timer fresh forever, which is exactly how a real player's tab
+// stayed "active" for a full day. Real engagement produces keydown/
+// touchstart/click; a player who hasn't done one of those in 10 min
+// has stepped away.
 
-const IDLE_BEFORE_WARN_MS = 20 * 60_000; // 20 min of no activity → warn
+const IDLE_BEFORE_WARN_MS = 10 * 60_000; // 10 min of no activity → warn
 const WARN_DURATION_MS = 5 * 60_000;     // 5 more min → auto sign-out
 const CHECK_INTERVAL_MS = 5_000;
 
-const ACTIVITY_EVENTS = ["mousemove", "keydown", "touchstart", "click"] as const;
+const ACTIVITY_EVENTS = ["keydown", "touchstart", "click"] as const;
 
 type Phase = "active" | "warning" | "logging-out";
 
@@ -119,7 +126,7 @@ export function IdleTimeout() {
           <strong>{countdown}</strong> to free up server resources.
         </p>
         <p style={{ margin: 0, marginBottom: 20, fontSize: 13, opacity: 0.75 }}>
-          {phase === "logging-out" ? "Signing you out…" : "Move your mouse or press any key to stay signed in."}
+          {phase === "logging-out" ? "Signing you out…" : "Press any key or click anywhere to stay signed in."}
         </p>
         <button
           className="btn btn-primary"

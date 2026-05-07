@@ -27,6 +27,7 @@ export const touchUserLastSeen     = impl.touchUserLastSeen;
 export const insertSession         = impl.insertSession;
 export const getSession            = impl.getSession;
 export const revokeSession         = impl.revokeSession;
+export const touchSessionLastActive = impl.touchSessionLastActive;
 
 export const getPinAttempts        = impl.getPinAttempts;
 export const bumpPinAttempts       = impl.bumpPinAttempts;

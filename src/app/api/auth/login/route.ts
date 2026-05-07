@@ -49,12 +49,14 @@ export async function POST(req: Request) {
 
   const jti = randomUUID();
   const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const nowIso = new Date().toISOString();
   await insertSession({
     jti,
     user_id: user.id,
-    issued_at: new Date().toISOString(),
+    issued_at: nowIso,
     expires_at: expiresAt.toISOString(),
     revoked: false,
+    last_active_at: nowIso,
   });
   await touchUserLastSeen(user.id);
 

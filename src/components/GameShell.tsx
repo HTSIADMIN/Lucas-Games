@@ -52,7 +52,7 @@ export async function GameShell({
   };
 
   return (
-    <AppLive me={me} initialChat={initialChat} game={game} championId={championId}>
+    <AppLive me={me} initialBalance={balance} initialChat={initialChat} game={game} championId={championId}>
       <SiteHeader
         current="lobby"
         compact

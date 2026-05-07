@@ -108,6 +108,13 @@ export async function revokeSession(jti: string): Promise<void> {
   const { error } = await client().from("user_sessions").update({ revoked: true }).eq("jti", jti);
   if (error) throw new Error(`revokeSession: ${error.message}`);
 }
+export async function touchSessionLastActive(jti: string): Promise<void> {
+  const { error } = await client()
+    .from("user_sessions")
+    .update({ last_active_at: new Date().toISOString() })
+    .eq("jti", jti);
+  if (error) throw new Error(`touchSessionLastActive: ${error.message}`);
+}
 
 // ============ PIN ATTEMPTS ============
 export async function getPinAttempts(userId: string): Promise<PinAttempts | null> {

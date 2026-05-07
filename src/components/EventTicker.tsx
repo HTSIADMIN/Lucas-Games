@@ -1,38 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+import { useEffect, useState } from "react";
+import { useAppSnapshot } from "@/components/AppSnapshotProvider";
 
 // Slim banner that pins to the top of every authed page when a
 // global event (e.g. Lucky Hour) is active. Silent — and unmounted
-// — when no event is running.
-
-type ActiveEvent = {
-  kind: "lucky_hour";
-  multiplier: number;
-  endsAt: number;
-  title: string;
-  blurb: string;
-};
+// — when no event is running. Reads the active event from
+// AppSnapshotProvider's combined 10s poll, no own fetch.
 
 export function EventTicker() {
-  const [event, setEvent] = useState<ActiveEvent | null>(null);
+  const { snapshot } = useAppSnapshot();
+  const event = snapshot?.event ?? null;
   const [, force] = useState(0);
 
-  const load = useCallback(async () => {
-    try {
-      const r = await fetch("/api/events/active");
-      if (!r.ok) return;
-      const d = (await r.json()) as { event: ActiveEvent | null };
-      setEvent(d.event);
-    } catch { /* ignore */ }
-  }, []);
-  useVisibleInterval(load, 20_000);
-  // Tick once a second so the countdown re-renders.
+  // Tick once a second so the countdown re-renders while the event
+  // is active. Cheap (just bumps a counter) and no-ops when there's
+  // no event to render.
   useEffect(() => {
+    if (!event) return;
     const t = setInterval(() => force((n) => n + 1), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [event]);
 
   if (!event) return null;
   const remaining = event.endsAt - Date.now();

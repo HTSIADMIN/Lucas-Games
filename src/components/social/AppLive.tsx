@@ -6,6 +6,7 @@ import { ChatDrawer } from "./ChatDrawer";
 import { DailyChallenges } from "@/components/DailyChallenges";
 import { EventTicker } from "@/components/EventTicker";
 import { BigEventToast } from "@/components/BigEventToast";
+import { AppSnapshotProvider } from "@/components/AppSnapshotProvider";
 import type { ChatMessagePublic } from "@/lib/db";
 
 export type Me = {
@@ -21,17 +22,23 @@ export type Me = {
 //   - Realtime presence (who's online + which game)
 //   - Global chat (history + live)
 //   - Big-bets feed (postgres_changes on game_sessions settle)
+//   - The combined per-user app snapshot (balance, active event,
+//     free-games readiness, daily-challenge claimable count) — single
+//     poll feeds the header balance, event ticker, and Daily fab.
 // Wraps the entire page (header + main) so the site header can read
 // presence via useLive() and render the active-players strip.
 
 export function AppLive({
   me,
+  initialBalance = 0,
   initialChat,
   game,
   championId = null,
   children,
 }: {
   me: Me | null;
+  /** Server-rendered balance so the header doesn't flash on first paint. */
+  initialBalance?: number;
   initialChat: ChatMessagePublic[];
   game: string;
   championId?: string | null;
@@ -39,11 +46,13 @@ export function AppLive({
 }) {
   return (
     <LiveProvider me={me} initialChat={initialChat} game={game} championId={championId}>
-      {me && <EventTicker />}
-      {children}
-      {me && <ChatDrawer currentUserId={me.id} />}
-      {me && <DailyChallenges />}
-      {me && <BigEventToast />}
+      <AppSnapshotProvider initialBalance={initialBalance} enabled={!!me}>
+        {me && <EventTicker />}
+        {children}
+        {me && <ChatDrawer currentUserId={me.id} />}
+        {me && <DailyChallenges />}
+        {me && <BigEventToast />}
+      </AppSnapshotProvider>
     </LiveProvider>
   );
 }

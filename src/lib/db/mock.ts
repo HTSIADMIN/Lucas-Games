@@ -146,6 +146,10 @@ export async function revokeSession(jti: string): Promise<void> {
   const s = db().user_sessions.find((x) => x.jti === jti);
   if (s) { s.revoked = true; commit(); }
 }
+export async function touchSessionLastActive(jti: string): Promise<void> {
+  const s = db().user_sessions.find((x) => x.jti === jti);
+  if (s) { s.last_active_at = new Date().toISOString(); commit(); }
+}
 
 // ============ PIN ATTEMPTS ============
 export async function getPinAttempts(userId: string): Promise<PinAttempts | null> {

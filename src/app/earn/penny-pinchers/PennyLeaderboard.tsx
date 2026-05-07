@@ -1,34 +1,11 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+import type { LeaderboardRow as Row } from "./PennyPinchersClient";
 
-type Row = {
-  userId: string;
-  username: string;
-  avatarColor: string;
-  initials: string;
-  lifetimePCEarned: number;
-  lifetimeClicks: number;
-  frugality: number;
-  prestigeCount: number;
-  walletBalance: number;
-  isMe: boolean;
-};
-
-export function PennyLeaderboard() {
-  const [rows, setRows] = useState<Row[] | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const r = await fetch("/api/earn/penny-pinchers/leaderboard");
-      if (!r.ok) return;
-      const d = (await r.json()) as { rows?: Row[] };
-      setRows(d.rows ?? []);
-    } catch { /* ignore */ }
-  }, []);
-  useVisibleInterval(load, 30_000);
-
+// Top-10 panel rendered at the bottom of Penny Pinchers. Rows are
+// passed in from the parent's /state poll — no separate fetch — so
+// the page only makes one request per sync cycle.
+export function PennyLeaderboard({ rows }: { rows: Row[] | null }) {
   if (rows == null) return null;
 
   return (
@@ -43,10 +20,10 @@ export function PennyLeaderboard() {
         Top Penny Pinchers
       </div>
       <p className="text-mute" style={{ fontSize: 11, margin: "0 0 var(--sp-2) 0" }}>
-        Sorted by lifetime PC earned. Refreshes every 30s.
+        Sorted by lifetime PC earned. Refreshes with the game state.
       </p>
       {rows.length === 0 ? (
-        <p className="text-mute">No one's earned anything yet — be the first.</p>
+        <p className="text-mute">No one&apos;s earned anything yet — be the first.</p>
       ) : (
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", fontFamily: "var(--font-display)", fontSize: 12, borderCollapse: "collapse" }}>

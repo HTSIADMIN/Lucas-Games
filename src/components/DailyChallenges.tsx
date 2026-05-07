@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+import { useAppSnapshot } from "@/components/AppSnapshotProvider";
 
 // localStorage key + helper for the "fresh since today's daily reset"
 // glow on the launcher fab. We compare YYYY-MM-DD UTC strings — the
@@ -106,10 +107,17 @@ export function DailyChallenges() {
   }, [open, rows, refresh]);
   // While open: tight 4s poll for live progress.
   useVisibleInterval(refresh, open ? 4000 : null);
-  // While closed: background poll for the launcher badge.
-  useVisibleInterval(refresh, open ? null : 30_000);
+  // While closed: the launcher badge count comes from the shared
+  // AppSnapshot poll — no per-page fetch here.
 
-  const claimable = (rows ?? []).filter((r) => r.completedAt && !r.claimedAt).length;
+  const { snapshot, refresh: refreshSnapshot } = useAppSnapshot();
+  // Prefer the live `rows` count whenever the modal has loaded them
+  // (so the badge updates immediately after a claim); fall back to
+  // the shared snapshot's `dailyClaimable` for the default closed
+  // state where no rows have been fetched yet.
+  const claimable = rows
+    ? rows.filter((r) => r.completedAt && !r.claimedAt).length
+    : snapshot?.dailyClaimable ?? 0;
 
   async function claim(slot: number) {
     if (busy) return;
@@ -122,6 +130,9 @@ export function DailyChallenges() {
       });
       if (!r.ok) return;
       await refresh();
+      // Wallet got credited for the claim — pull a fresh snapshot so
+      // the header balance reflects it without waiting for the 10s tick.
+      refreshSnapshot();
     } finally {
       setBusy(false);
     }

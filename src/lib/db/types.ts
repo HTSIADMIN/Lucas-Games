@@ -203,6 +203,9 @@ export type UserSession = {
   issued_at: string;
   expires_at: string;
   revoked: boolean;
+  /** Bumped (rate-limited) by readSession; sessions idle past the
+   *  threshold are revoked instead of being trusted. */
+  last_active_at: string | null;
 };
 
 export type PinAttempts = {
@@ -320,6 +323,9 @@ export type PennyPinchersAlbum = {
   shiny?: Record<string, number>;
   sticky?: Record<string, number>;
   foreign?: Record<string, number>;
+  bent?: Record<string, number>;
+  cursed?: Record<string, number>;
+  ancient?: Record<string, number>;
 };
 
 export type PennyPinchersState = {

@@ -121,6 +121,20 @@ type StateResponse = {
     coinBaseBonus: number;
   };
   walletBalance: number;
+  leaderboard: LeaderboardRow[];
+};
+
+export type LeaderboardRow = {
+  userId: string;
+  username: string;
+  avatarColor: string;
+  initials: string;
+  lifetimePCEarned: number;
+  lifetimeClicks: number;
+  frugality: number;
+  prestigeCount: number;
+  walletBalance: number;
+  isMe: boolean;
 };
 
 type ActiveEvent = { id: EventId; endsAt: number };
@@ -138,6 +152,17 @@ type ClickBurst = {
   flavour: "default" | "shiny" | "ancient" | "cursed";
 };
 
+/** Brief contracting-ring marker at a coin position. Used to make
+ *  Auto-Picker's automated picks visible (so the player sees what
+ *  just happened) and to flag a Two-Finger Pickup activation on the
+ *  primary + the collateral coin in one frame. */
+type GrabRing = {
+  id: number;
+  x: number;
+  y: number;
+  kind: "auto" | "twofinger";
+};
+
 type SpawnedCoin = {
   id: number;
   /** Original spawn denomination — drives the sprite's base colour. */
@@ -150,6 +175,10 @@ type SpawnedCoin = {
   spawnedAt: number;
   /** When set, the coin is sliding toward this point to merge. */
   mergingTo?: { x: number; y: number };
+  /** Sticky coins demand two taps. The first tap stamps this so the
+   *  sprite plays a skew animation; the second tap actually picks up.
+   *  Auto-Picker bypasses this gate (treated as second-tap pickup). */
+  firstTapAt?: number;
 };
 
 /**
@@ -185,7 +214,7 @@ function useTween(target: number, durationMs = 700): number {
 const COIN_LIFETIME_MS = 11_000;
 /** How long two coins slide toward each other before fusing. */
 const MERGE_SLIDE_MS = 280;
-const SYNC_POLL_MS = 6000;
+const SYNC_POLL_MS = 10_000;
 
 export function PennyPinchersClient() {
   const [server, setServer] = useState<StateResponse | null>(null);
@@ -212,6 +241,8 @@ export function PennyPinchersClient() {
   const [pops, setPops] = useState<FloatPop[]>([]);
   const [bursts, setBursts] = useState<ClickBurst[]>([]);
   const burstSeqRef = useRef(0);
+  const [grabs, setGrabs] = useState<GrabRing[]>([]);
+  const grabSeqRef = useRef(0);
   const [fountain, setFountain] = useState<Fountain | null>(null);
   const [couch, setCouch] = useState<Couch | null>(null);
   const [fountainModalOpen, setFountainModalOpen] = useState(false);
@@ -260,6 +291,18 @@ export function PennyPinchersClient() {
       setBursts((prev) => prev.filter((b) => b.id !== burstId));
     }, lifeMs);
   }, []);
+
+  /** Spawn a brief contracting-ring marker at the given coords.
+   *  "auto" is the green Auto-Picker pinch; "twofinger" is the cyan
+   *  Two-Finger Pickup ring (we drop one on each end of the catch). */
+  const spawnGrab = useCallback((x: number, y: number, kind: GrabRing["kind"]) => {
+    grabSeqRef.current += 1;
+    const id = grabSeqRef.current;
+    setGrabs((prev) => [...prev, { id, x, y, kind }]);
+    window.setTimeout(() => {
+      setGrabs((prev) => prev.filter((g) => g.id !== id));
+    }, 480);
+  }, []);
   /** True until the first /state load resolves — keeps the
    *  welcome-back banner restricted to "you just opened the page"
    *  rather than firing every 60s+ poll. */
@@ -267,6 +310,57 @@ export function PennyPinchersClient() {
 
   const playRef = useRef<HTMLDivElement | null>(null);
   const coinSeqRef = useRef(0);
+
+  // Click batching — queue every pickup for ~400ms then send the
+  // whole batch in one POST. Cuts request volume from ~25/sec
+  // during Auto-Picker bursts down to ~2-3/sec. The server still
+  // applies its sliding-window rate limit on the *count* of
+  // batched clicks, and the periodic /state poll reconciles any
+  // drift if a batch fails or partially drops.
+  const clickQueueRef = useRef<Array<{ coinType: CoinId; trait: CoinTrait | null; pc: number }>>([]);
+  const flushTimerRef = useRef<number | null>(null);
+  const FLUSH_INTERVAL_MS = 400;
+  const FLUSH_AT_SIZE = 12;
+
+  const flushClicks = useCallback(() => {
+    if (flushTimerRef.current != null) {
+      window.clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
+    const queue = clickQueueRef.current;
+    if (queue.length === 0) return;
+    const clicks = queue.splice(0, queue.length);
+    void fetch("/api/earn/penny-pinchers/click", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ clicks }),
+    }).catch(() => { /* ignore — /state poll reconciles */ });
+  }, []);
+
+  const enqueueClick = useCallback((click: { coinType: CoinId; trait: CoinTrait | null; pc: number }) => {
+    clickQueueRef.current.push(click);
+    if (clickQueueRef.current.length >= FLUSH_AT_SIZE) {
+      flushClicks();
+      return;
+    }
+    if (flushTimerRef.current == null) {
+      flushTimerRef.current = window.setTimeout(() => {
+        flushTimerRef.current = null;
+        flushClicks();
+      }, FLUSH_INTERVAL_MS);
+    }
+  }, [flushClicks]);
+
+  // Flush on unmount + when the tab is hidden so we don't lose
+  // pending PC if the user navigates away mid-batch.
+  useEffect(() => {
+    const onHide = () => { if (document.hidden) flushClicks(); };
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      flushClicks();
+    };
+  }, [flushClicks]);
 
   // Pull initial state + sync poll
   const loadState = useCallback(async () => {
@@ -501,10 +595,18 @@ export function PennyPinchersClient() {
         if (prev.length > 0) target = prev[Math.floor(Math.random() * prev.length)];
         return prev;
       });
-      if (target) void clickCoinRef.current(target, { silent: true });
+      if (target) {
+        // Visual marker so the player can see what Auto-Picker just
+        // grabbed (otherwise pickups feel ghostly under "silent").
+        // The setCoins closure mutates `target` but TS's flow
+        // analysis doesn't see it, so we re-narrow via local const.
+        const t2 = target as SpawnedCoin;
+        spawnGrab(t2.x, t2.y, "auto");
+        void clickCoinRef.current(t2, { silent: true });
+      }
     }, intervalMs);
     return () => window.clearInterval(t);
-  }, [server, autoPickerLevel]);
+  }, [server, autoPickerLevel, spawnGrab]);
 
   // Merge proximity loop — only runs when "pile_it_up" is owned.
   // Any two coins within MERGE_PROXIMITY_PX fuse into a single
@@ -603,6 +705,20 @@ export function PennyPinchersClient() {
   }, [server]);
 
   async function clickCoin(coin: SpawnedCoin, opts: { silent?: boolean } = {}) {
+    // Sticky-coin two-tap gate. First tap on a sticky coin stamps
+    // firstTapAt so the sprite skews + plays a "stuck" sound; the
+    // pickup itself waits for a second tap. Auto-Picker passes
+    // silent=true and is allowed to bypass the gate (otherwise it
+    // would just keep poking the same stuck coin forever).
+    if (coin.trait === "sticky" && !coin.firstTapAt && !opts.silent) {
+      Sfx.play("ui.wood");
+      const stampedAt = Date.now();
+      setCoins((prev) =>
+        prev.map((c) => (c.id === coin.id ? { ...c, firstTapAt: stampedAt } : c)),
+      );
+      return;
+    }
+
     // Slots reel-stop tick — chunky wood click that reads as
     // "the coin landed" without the long melodic tail of coin.drop.
     if (!opts.silent) Sfx.play("ui.wood");
@@ -619,17 +735,10 @@ export function PennyPinchersClient() {
       setFrenzyEndsAt(nowClick + FRENZY_DURATION_MS);
     }
 
-    // Rare-coin pickups all share one understated chime — the
-    // halo / sparkle / colour animations carry the standout
-    // weight, sound just punctuates. Bent's lucky window and
-    // Cursed's spawn pause still fire on click.
-    if (
-      coin.trait === "bent"   || coin.trait === "cursed" ||
-      coin.trait === "ancient" || coin.trait === "foreign" ||
-      coin.trait === "shiny"
-    ) {
-      Sfx.play("win.notify");
-    }
+    // Rare-coin pickups deliberately stay quiet — the halo /
+    // sparkle / colour animations carry the standout weight and
+    // the loud chime drowned the regular click cadence. Bent's
+    // lucky window and Cursed's spawn pause still fire here.
     if (coin.trait === "bent") setBentLuckyUntil(Date.now() + BENT_LUCKY_MS);
     if (coin.trait === "cursed") setCursedPauseUntil(Date.now() + CURSED_PAUSE_MS);
 
@@ -656,6 +765,10 @@ export function PennyPinchersClient() {
     // same downstream code path (optimistic PC + pop + server click)
     // so adding a second source is just adding to the list.
     const collateral: SpawnedCoin[] = [];
+    /** When set, Two-Finger fired and grabbed this coin alongside
+     *  the primary — used to drop a cyan pinch ring on both ends
+     *  after the state update settles. */
+    let twoFingerExtra: SpawnedCoin | null = null;
     setCoins((prev) => {
       const others = prev.filter((c) => c.id !== coin.id);
 
@@ -683,13 +796,24 @@ export function PennyPinchersClient() {
             .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
             .filter((e) => e.d2 <= TWO_FINGER_RADIUS * TWO_FINGER_RADIUS)
             .sort((a, b) => a.d2 - b.d2)[0];
-          if (extra) collateral.push(extra.c);
+          if (extra) {
+            collateral.push(extra.c);
+            twoFingerExtra = extra.c;
+          }
         }
       }
 
       const removeIds = new Set([coin.id, ...collateral.map((c) => c.id)]);
       return prev.filter((c) => !removeIds.has(c.id));
     });
+    // Visual feedback for Two-Finger: drop a cyan pinch ring on the
+    // primary and the swept-in extra so the player can see exactly
+    // which two coins the upgrade just caught.
+    if (twoFingerExtra) {
+      spawnGrab(coin.x, coin.y, "twofinger");
+      const tfx = twoFingerExtra as SpawnedCoin;
+      spawnGrab(tfx.x, tfx.y, "twofinger");
+    }
 
     // We send the *streak-multiplied merged PC* as the `pc` field;
     // server clamps to MAX_CLICK_PC and stacks trait + frugality
@@ -702,27 +826,19 @@ export function PennyPinchersClient() {
     // seen yet). The /state poll reconciles drift on its own
     // schedule, with the >5% threshold guard in loadState().
     const sentPC = Math.round(coin.mergedPC * tier.multiplier);
-    void fetch("/api/earn/penny-pinchers/click", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ coinType: coin.coin, trait: coin.trait, pc: sentPC }),
-    }).catch(() => { /* ignore — sync poll reconciles */ });
+    enqueueClick({ coinType: coin.coin, trait: coin.trait, pc: sentPC });
 
-    // Fire-and-forget the collateral pickups so each one is
-    // metered + counted toward lifetime_clicks.
+    // Queue collateral pickups too — each one is metered + counted
+    // toward lifetime_clicks server-side via the same batch flush.
     for (const extra of collateral) {
       const extraOptimistic = Math.round(extra.mergedPC * (extra.trait === "shiny" ? 5 : 1) * tier.multiplier * clickMul);
       setLocalCents((c) => c + extraOptimistic);
       spawnPop(extra.x, extra.y, extraOptimistic, extra.trait === "shiny", extra.trait);
-      void fetch("/api/earn/penny-pinchers/click", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          coinType: extra.coin,
-          trait: extra.trait,
-          pc: Math.round(extra.mergedPC * tier.multiplier),
-        }),
-      }).catch(() => { /* ignore — sync poll reconciles */ });
+      enqueueClick({
+        coinType: extra.coin,
+        trait: extra.trait,
+        pc: Math.round(extra.mergedPC * tier.multiplier),
+      });
     }
   }
 
@@ -1414,9 +1530,82 @@ export function PennyPinchersClient() {
               spawnedAt={c.spawnedAt}
               lifetimeMs={COIN_LIFETIME_MS}
               mergingTo={c.mergingTo}
+              firstTapAt={c.firstTapAt}
               onClick={() => clickCoin(c)}
             />
           ))}
+          {grabs.map((g) => {
+            const isAuto = g.kind === "auto";
+            const ringColor = isAuto ? "var(--cactus-300)" : "#7adcff";
+            const glow = isAuto ? "rgba(120,220,160,0.85)" : "rgba(122,220,255,0.85)";
+            return (
+              <span
+                key={g.id}
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  left: g.x,
+                  top: g.y,
+                  width: 0,
+                  height: 0,
+                  pointerEvents: "none",
+                  zIndex: 9,
+                }}
+              >
+                <span
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    transform: "translate(-50%, -50%)",
+                    width: isAuto ? 64 : 80,
+                    height: isAuto ? 64 : 80,
+                    borderRadius: "50%",
+                    border: `3px ${isAuto ? "dashed" : "solid"} ${ringColor}`,
+                    boxShadow: `0 0 14px ${glow}, inset 0 0 10px ${glow}`,
+                    animation: "pp-grab-ring 480ms ease-out forwards",
+                  }}
+                />
+                {!isAuto && (
+                  <>
+                    {/* Two small "pincher" dots that pinch inward —
+                        reads as a two-finger pinch from the side.
+                        --dx/--dy carry the start offset (left + right). */}
+                    <span
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: ringColor,
+                        boxShadow: `0 0 8px ${glow}`,
+                        ["--dx" as string]: "-32px",
+                        ["--dy" as string]: "0px",
+                        animation: "pp-grab-pinch 480ms ease-out forwards",
+                      }}
+                    />
+                    <span
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: ringColor,
+                        boxShadow: `0 0 8px ${glow}`,
+                        ["--dx" as string]: "32px",
+                        ["--dy" as string]: "0px",
+                        animation: "pp-grab-pinch 480ms ease-out forwards",
+                      }}
+                    />
+                  </>
+                )}
+              </span>
+            );
+          })}
           {bursts.map((b) => {
             const cfg =
               b.flavour === "ancient"
@@ -1500,6 +1689,20 @@ export function PennyPinchersClient() {
             @keyframes pp-burst-fly {
               0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
               100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.3); opacity: 0; }
+            }
+            /* Auto-Picker / Two-Finger grab ring — quick contracting
+               flash so the player can SEE the catch happen. */
+            @keyframes pp-grab-ring {
+              0%   { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+              25%  { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+              100% { transform: translate(-50%, -50%) scale(0.55); opacity: 0; }
+            }
+            /* Two-Finger pinch dots — pair of dots travelling from
+               (--dx, --dy) inward to the center, fading on arrival. */
+            @keyframes pp-grab-pinch {
+              0%   { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.6); opacity: 0; }
+              35%  { transform: translate(calc(-50% + var(--dx) * 0.7), calc(-50% + var(--dy) * 0.7)) scale(1);   opacity: 1; }
+              100% { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
             }
           `}</style>
           {fountain && (
@@ -1632,18 +1835,20 @@ export function PennyPinchersClient() {
           }}
         >
           <div
-            className="row pp-tab-row"
+            className="pp-tab-row"
             style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
               gap: 6,
-              flexWrap: "wrap",
-              // On narrow viewports the row falls back to horizontal
-              // scroll so all six tabs stay on one swipeable line
-              // instead of stacking 3+3 (see media query in style block).
+              // 3×2 grid is intentional — six tabs split evenly into
+              // two rows of three so the layout stays balanced and
+              // the active button never lands alone on its own row.
             }}
           >
             <style>{`
               @media (max-width: 480px) {
                 .pp-tab-row {
+                  display: flex !important;
                   flex-wrap: nowrap !important;
                   overflow-x: auto;
                   -webkit-overflow-scrolling: touch;
@@ -1652,6 +1857,7 @@ export function PennyPinchersClient() {
                 }
                 .pp-tab-row > button {
                   flex: 0 0 auto !important;
+                  min-width: 92px;
                 }
               }
             `}</style>
@@ -1670,14 +1876,18 @@ export function PennyPinchersClient() {
                   type="button"
                   className={`btn btn-sm${active ? "" : " btn-ghost"}`}
                   style={{
-                    flex: 1,
-                    minWidth: 80,
+                    width: "100%",
+                    minWidth: 0,
+                    paddingInline: 8,
                     position: "relative",
                     transform: active ? "translateY(-1px)" : undefined,
                     boxShadow: active
                       ? "0 0 0 2px var(--gold-300), 0 0 14px rgba(255,196,64,0.45)"
                       : undefined,
                     transition: "transform 120ms, box-shadow 200ms",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                   onClick={() => setTab(id)}
                 >
@@ -1771,7 +1981,7 @@ export function PennyPinchersClient() {
         })}
       </div>
 
-      <PennyLeaderboard />
+      <PennyLeaderboard rows={server?.leaderboard ?? null} />
 
       {achievementToasts.length > 0 && (
         <div

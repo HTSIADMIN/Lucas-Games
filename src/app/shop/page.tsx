@@ -27,7 +27,7 @@ export default async function ShopPage() {
   };
 
   return (
-    <AppLive me={me} initialChat={initialChat} game="shop" championId={championId}>
+    <AppLive me={me} initialBalance={balance} initialChat={initialChat} game="shop" championId={championId}>
       <SiteHeader current="shop" centerSlot={<HeaderPresence currentUserId={user.id} />} />
       <main className="page">
         <h1 style={{ fontSize: "var(--fs-h1)", marginBottom: "var(--sp-2)" }}>The General Store</h1>

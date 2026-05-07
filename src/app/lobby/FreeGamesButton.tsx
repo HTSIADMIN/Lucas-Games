@@ -1,37 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { GameIcon } from "@/components/GameIcon";
 import { FREE_GAMES } from "@/lib/games/freeGames";
 import { ModalShell, ModalCloseButton } from "@/components/ModalShell";
+import { useAppSnapshot, type EarnStatus } from "@/components/AppSnapshotProvider";
 import * as Sfx from "@/lib/sfx";
-
-type EarnStatus = {
-  serverNow: number;
-  dailySpin: { ready: boolean; nextAt: number | null; bonusTokens: number };
-  monopoly:  { ready: boolean; nextAt: number | null };
-};
 
 export function FreeGamesButton({ compact = false }: { compact?: boolean }) {
   const [open, setOpen] = useState(false);
-  const [status, setStatus] = useState<EarnStatus | null>(null);
+  const { snapshot, refresh } = useAppSnapshot();
+  const status: EarnStatus | null = snapshot?.earn ?? null;
   const [tick, setTick] = useState(0);
   const wasReadyRef = useRef<boolean>(false);
 
-  // Poll status every 30s; refresh immediately when modal opens.
-  const load = useCallback(async () => {
-    try {
-      const r = await fetch("/api/earn/status", { cache: "no-store" });
-      if (!r.ok) return;
-      const data = (await r.json()) as EarnStatus;
-      setStatus(data);
-    } catch {
-      // ignore
-    }
-  }, []);
-  useVisibleInterval(load, 30_000);
+  // Force a snapshot refresh on first open so the modal doesn't
+  // stale-render last-known readiness if the player just claimed a
+  // spin in another tab.
+  useEffect(() => {
+    if (open) refresh();
+  }, [open, refresh]);
 
   // Re-render once a second so the countdown updates while the modal is open.
   useEffect(() => {

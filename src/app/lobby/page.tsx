@@ -112,7 +112,7 @@ export default async function LobbyPage() {
   };
 
   return (
-    <AppLive me={me} initialChat={initialChat} game="lobby" championId={championId}>
+    <AppLive me={me} initialBalance={balance} initialChat={initialChat} game="lobby" championId={championId}>
       <SiteHeader current="lobby" centerSlot={<HeaderPresence currentUserId={user.id} />} />
       <main className="page">
         <section className="row-lg" style={{ marginBottom: "var(--sp-7)", flexWrap: "wrap" }}>
