@@ -55,6 +55,11 @@ export function ArcadeUpgradePanel({ game }: { game: ArcadeGame }) {
         if (d.balance != null) {
           window.dispatchEvent(new CustomEvent("lg:balance", { detail: d.balance }));
         }
+        // Notify the active arcade client (Crossy uses this to
+        // refresh its in-game coin spawn rate without a reload).
+        window.dispatchEvent(new CustomEvent("lg:arcade-upgrade", {
+          detail: { game, level: d.level },
+        }));
         await refresh();
       }
     } catch {
@@ -97,7 +102,8 @@ export function ArcadeUpgradePanel({ game }: { game: ArcadeGame }) {
       </div>
       <p className="text-mute" style={{ fontSize: 12, margin: "0 0 var(--sp-3)" }}>
         Spend wallet ¢ to permanently boost the coins you earn from{" "}
-        <b>{ARCADE_GAME_LABEL[game]}</b>. Five tiers — each adds +25% on every payout.
+        <b>{ARCADE_GAME_LABEL[game]}</b>. Five tiers — each adds +25% on every payout
+        {game === "crossy_road" ? " AND +15% to coin pickups spawning on grass rows" : ""}.
       </p>
 
       {/* Level pip strip */}

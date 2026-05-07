@@ -21,6 +21,16 @@ export function arcadeMultiplier(level: number): number {
   return 1 + 0.25 * lvl;
 }
 
+/** Crossy-Road-only: coin pickup spawn-rate multiplier. Each level
+ *  adds +15% to the base 6% per-grass-row spawn chance, so a maxed
+ *  player sees ~10.5% (vs 6% for a base player) — meaningful uplift
+ *  without trivialising the runs. Stacks with arcadeMultiplier on
+ *  payout, giving maxed players ~3.94× total coin earnings vs base. */
+export function coinSpawnMultiplier(level: number): number {
+  const lvl = Math.max(0, Math.min(ARCADE_MAX_LEVEL, Math.floor(level)));
+  return 1 + 0.15 * lvl;
+}
+
 export const ARCADE_GAME_LABEL: Record<ArcadeGame, string> = {
   crossy_road: "Crossy Road",
   flappy: "Flappy",

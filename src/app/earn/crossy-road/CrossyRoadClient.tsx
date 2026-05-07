@@ -3,6 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WeeklyArcadeLeaderboard } from "@/components/WeeklyArcadeLeaderboard";
+import { coinSpawnMultiplier } from "@/lib/games/arcade/upgrades";
+
+/** Base per-grass-row coin spawn probability before any upgrade. */
+const BASE_COIN_CHANCE = 0.06;
 
 const COLS = 9;
 const ROWS_VISIBLE = 11;
@@ -60,17 +64,21 @@ function difficultyAt(y: number) {
 // `prevGrassRun` is the count of consecutive grass lanes immediately before
 // this one. Each one ratchets the road probability up by 18 percentage points,
 // so a stretch of 6 grasses in a row is essentially impossible.
-function makeLane(y: number, prevGrassRun: number): Lane {
+//
+// `coinChance` is the per-grass-row probability of spawning a coin pickup.
+// Defaults to the base 0.06; the earn-rate upgrade level scales it via
+// coinSpawnMultiplier so a maxed player sees ~10.5%.
+function makeLane(y: number, prevGrassRun: number, coinChance = 0.06): Lane {
   // First strip is the safe spawn zone.
   if (y === 0 || y < 3) {
-    return { y, kind: "grass", decorations: makeGrassDecorations(y, true) };
+    return { y, kind: "grass", decorations: makeGrassDecorations(y, true, coinChance) };
   }
   const d = difficultyAt(y);
   const grassPenalty = prevGrassRun * 0.18;
   const effectiveRoadProb = Math.min(0.97, d.roadProb + grassPenalty);
   const isRoad = Math.random() < effectiveRoadProb;
   if (!isRoad) {
-    return { y, kind: "grass", decorations: makeGrassDecorations(y, false) };
+    return { y, kind: "grass", decorations: makeGrassDecorations(y, false, coinChance) };
   }
   const reverse = Math.random() < 0.5;
   const speed = d.speedMin + Math.random() * (d.speedMax - d.speedMin);
@@ -89,12 +97,12 @@ function makeLane(y: number, prevGrassRun: number): Lane {
   };
 }
 
-function makeGrassDecorations(y: number, safeZone: boolean): Map<number, "tree" | "coin"> {
+function makeGrassDecorations(y: number, safeZone: boolean, coinChance = 0.06): Map<number, "tree" | "coin"> {
   const out = new Map<number, "tree" | "coin">();
   if (safeZone) return out;
-  // Coins are rare — only ~6% of grass rows spawn one, and at most a single
-  // coin per row.
-  if (Math.random() < 0.06) {
+  // Coin chance is set per-run from the player's earn-rate upgrade level
+  // (base 6%, up to ~10.5% at max). At most a single coin per row either way.
+  if (Math.random() < coinChance) {
     const cx = 1 + Math.floor(Math.random() * (COLS - 2));
     out.set(cx, "coin");
   }
@@ -121,6 +129,39 @@ export function CrossyRoadClient() {
   const moveFnRef = useRef<(dx: number, dy: number) => void>(() => {});
   const coinsRef = useRef(0);
   const scoreRef = useRef(0);
+  /** Per-grass-row coin spawn probability — set on mount from the
+   *  player's current upgrade level via /api/earn/arcade/state.
+   *  Read by ensureLane() each time it generates a new row, so an
+   *  upgrade purchased mid-run takes effect on subsequent rows. */
+  const coinChanceRef = useRef<number>(BASE_COIN_CHANCE);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/earn/arcade/state")
+      .then((r) => r.json())
+      .then((d: { games?: Array<{ game: string; level: number }> }) => {
+        if (cancelled) return;
+        const row = d.games?.find((g) => g.game === "crossy_road");
+        const level = row?.level ?? 0;
+        coinChanceRef.current = BASE_COIN_CHANCE * coinSpawnMultiplier(level);
+      })
+      .catch(() => { /* leave at base chance */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Listen for upgrade purchases mid-run — ArcadeUpgradePanel
+  // dispatches lg:arcade-upgrade with the new level. Updating the
+  // ref takes effect on the next ensureLane() call (next row of
+  // generated terrain).
+  useEffect(() => {
+    function onUpgrade(e: Event) {
+      const ce = e as CustomEvent<{ game: string; level: number }>;
+      if (ce.detail?.game !== "crossy_road") return;
+      coinChanceRef.current = BASE_COIN_CHANCE * coinSpawnMultiplier(ce.detail.level);
+    }
+    window.addEventListener("lg:arcade-upgrade", onUpgrade as EventListener);
+    return () => window.removeEventListener("lg:arcade-upgrade", onUpgrade as EventListener);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -161,7 +202,7 @@ export function CrossyRoadClient() {
           if (!lane || lane.kind !== "grass") break;
           run++;
         }
-        lanes.set(y, makeLane(y, run));
+        lanes.set(y, makeLane(y, run, coinChanceRef.current));
       }
     }
 
