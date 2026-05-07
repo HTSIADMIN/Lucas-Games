@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { readSession } from "@/lib/auth/session";
 import { getUserById } from "@/lib/db";
@@ -53,6 +54,7 @@ export default async function RootLayout({
         {signedIn ? <BrokeModal /> : null}
         {signedIn ? <WhatsNewModal /> : null}
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
