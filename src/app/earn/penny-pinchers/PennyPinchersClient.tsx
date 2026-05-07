@@ -53,6 +53,7 @@ type StateResponse = {
   perm: Partial<Record<PermUpgradeId, number>>;
   helperRatePerSec: number;
   offlineAccruedJustNow: number;
+  welcomeBackPC: number;
   offlineCapHours: number;
   bank: {
     pcPerWalletCent: number;
@@ -114,8 +115,10 @@ export function PennyPinchersClient() {
         if (Math.abs(prev - d.cents) <= Math.max(5, d.cents * 0.05)) return prev;
         return d.cents;
       });
-      if (d.offlineAccruedJustNow > 0) {
-        setWelcomeBack(d.offlineAccruedJustNow);
+      // Server only sets welcomeBackPC when the gap was meaningful
+      // (≥60s) — keeps the toast quiet during the 5s sync polls.
+      if (d.welcomeBackPC > 0) {
+        setWelcomeBack(d.welcomeBackPC);
         window.setTimeout(() => setWelcomeBack(null), 6000);
       }
       // Achievement unlock toasts — chime + show one card per unlock.
@@ -533,22 +536,6 @@ export function PennyPinchersClient() {
               onClick={() => clickCoin(c)}
             />
           ))}
-          {coins.length === 0 && (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "grid",
-                placeItems: "center",
-                color: "var(--parchment-100)",
-                fontFamily: "var(--font-display)",
-                opacity: 0.7,
-                fontSize: 14,
-              }}
-            >
-              waiting for coins…
-            </div>
-          )}
         </div>
 
         {/* Sidebar */}

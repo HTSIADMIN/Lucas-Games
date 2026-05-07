@@ -39,12 +39,15 @@ export function coinPCValue(
   perm: PermLevels = {},
 ): number {
   const base = COINS[coinType].basePC;
+  // Penny Multiplier — adds +1 PC per level to *every* coin so it
+  // stays useful end-to-end. Practice Eyes (perm) is penny-only
+  // because that's the only denom 5 PC actually moves the needle on.
+  const pennyBoost = levels.penny_multiplier ?? 0;
   if (coinType === "penny") {
-    // Practice Eyes (perm) gives +5 PC permanently; Penny Multiplier (run) gives +1 per level.
     const permBonus = (perm.practice_eyes ?? 0) * 5;
-    return base + permBonus + (levels.penny_multiplier ?? 0);
+    return base + permBonus + pennyBoost;
   }
-  return base;
+  return base + pennyBoost;
 }
 
 /**

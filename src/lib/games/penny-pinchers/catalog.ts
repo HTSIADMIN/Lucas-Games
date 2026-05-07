@@ -72,7 +72,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
   { id: "two_finger_pickup", label: "Two-Finger Pickup",   description: "Each click has a +5% chance to grab a nearby coin.", category: "click",   baseCost: 200,   costMultiplier: 1.65, maxLevel: 10 },
 
   // Value — make coins worth more
-  { id: "penny_multiplier",  label: "Penny Multiplier",    description: "+1 PC on every penny per level.",                  category: "value",      baseCost: 50,    costMultiplier: 1.45, maxLevel: 20 },
+  { id: "penny_multiplier",  label: "Penny Multiplier",    description: "+1 PC on every coin per level — pennies, nickels, dimes, the lot.", category: "value", baseCost: 50, costMultiplier: 1.45, maxLevel: 20 },
   { id: "lucky_crack",       label: "Lucky Sidewalk Crack", description: "+1% chance per level for a coin to spawn shiny (5×).", category: "value",  baseCost: 500,   costMultiplier: 1.7,  maxLevel: 10 },
 
   // Spawn — unlock new coin tiers, then pump their weight

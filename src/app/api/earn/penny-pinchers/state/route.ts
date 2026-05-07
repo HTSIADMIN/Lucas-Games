@@ -74,12 +74,12 @@ export async function GET() {
 
   // Offline accrual — only credit if we actually owe something.
   const rate = helperRatePcPerSec(helperCounts, permLevels);
-  const accrued = offlinePCAccrued(
-    rate,
-    state.last_tick_at ? new Date(state.last_tick_at) : null,
-    permLevels,
-    now,
-  );
+  const lastTickDate = state.last_tick_at ? new Date(state.last_tick_at) : null;
+  const accrued = offlinePCAccrued(rate, lastTickDate, permLevels, now);
+  // Welcome-back UI only fires when the player was meaningfully
+  // away — not every 5s sync poll. 60s gap is the floor.
+  const gapSeconds = lastTickDate ? (now.getTime() - lastTickDate.getTime()) / 1000 : 0;
+  const welcomeBackPC = gapSeconds >= 60 ? accrued : 0;
 
   // Daily-banked rollover
   const needsDayReset = state.daily_banked_day !== todayUtc;
@@ -143,6 +143,7 @@ export async function GET() {
     perm: permLevels,
     helperRatePerSec: rate,
     offlineAccruedJustNow: accrued,
+    welcomeBackPC,
     offlineCapHours: offlineCapHours(permLevels),
     bank: {
       pcPerWalletCent: BANK_PC_PER_WALLET_CENT,
