@@ -5,7 +5,7 @@ export default function BlackjackMpPage() {
   return (
     <GameShell
       title="Blackjack Table"
-      game="blackjack"
+      game="blackjack-mp"
       blurb="15s to buy in. 15s per action. Beat the dealer with everyone watching."
     >
       <BlackjackMpClient />

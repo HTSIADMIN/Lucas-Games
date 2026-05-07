@@ -26,9 +26,14 @@ export function BetInput({
    *  control whose default is 1,000 stays at 1,000, not 2,000. */
   defaultBet?: number;
 }) {
-  // Track whether the player has interacted yet. The first preset
-  // press replaces the resting stake instead of stacking on top, so
-  // tapping +1k from a fresh control yields 1,000 (not value+1k).
+  // Track whether the player has interacted yet. The very first
+  // preset press from an untouched control always REPLACES the
+  // resting stake (no matter what that resting value is) instead of
+  // stacking. Means a fresh 1,000-default control + tap +100k lands
+  // on 100,000, not 101,000 — matches every game in the casino
+  // regardless of whether it boots at $100 or $1,000. After any
+  // interaction (manual edit, Clear, halve/double, prior preset) the
+  // touchedRef flips and presets stack normally.
   const touchedRef = useRef(false);
 
   function setSafe(n: number) {
@@ -36,12 +41,11 @@ export function BetInput({
     onChange(Math.max(0, Math.min(max, Math.floor(n))));
   }
   function addPreset(delta: number) {
-    if (!touchedRef.current && value === defaultBet) {
+    if (!touchedRef.current) {
       touchedRef.current = true;
       setSafe(delta);
       return;
     }
-    touchedRef.current = true;
     setSafe(value + delta);
   }
   function clear() {

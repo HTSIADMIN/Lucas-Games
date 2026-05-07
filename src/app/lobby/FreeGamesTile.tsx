@@ -26,8 +26,20 @@ export function FreeGamesTile() {
         font: "inherit",
       }}
     >
+      {/* CSS rule scoped to the 2×2 collage so each grandchild
+          <img> fills its quadrant, mirroring how the regular tiles
+          handle .tile-art > img. The rule lives inline because it
+          applies only here. */}
+      <style>{`
+        .free-games-collage > div { overflow: hidden; }
+        .free-games-collage > div > img {
+          width: 100%; height: 100%;
+          object-fit: cover;
+          display: block;
+        }
+      `}</style>
       <div
-        className="tile-art"
+        className="tile-art free-games-collage"
         style={{
           background: "var(--gold-200)",
           display: "grid",
@@ -42,29 +54,11 @@ export function FreeGamesTile() {
             key={g.slug}
             style={{
               border: "2px solid var(--ink-900)",
-              overflow: "hidden",
               minWidth: 0,
               minHeight: 0,
-              position: "relative",
             }}
           >
-            {/* Force the icon to fill the quadrant — GameIcon's
-                default <img width=size> attributes get overridden
-                by style:100% so the art reads at the full cell
-                size instead of looking like a 48px chip floating
-                in cream space. */}
-            <GameIcon
-              name={g.icon}
-              size={128}
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                display: "block",
-              }}
-            />
+            <GameIcon name={g.icon} size={128} />
           </div>
         ))}
       </div>
