@@ -435,7 +435,13 @@ export function SlotsClient() {
             <button
               className={`btn btn-sm ${autoOn ? "" : "btn-ghost"}`}
               onClick={() => setAutoOn((v) => !v)}
-              disabled={busy || !!bonus}
+              // Stop must stay clickable mid-spin: turning autoplay
+              // off is just a flag flip, the in-flight spin still
+              // settles fine. Disabling on `busy` made it impossible
+              // to halt autoplay between settles. Auto-START still
+              // gates on busy/bonus — can't kick off a fresh run
+              // while one's already underway.
+              disabled={autoOn ? !!bonus : busy || !!bonus}
               title={autoOn ? "Stop autoplay" : "Auto-spin until stopped"}
               style={{ whiteSpace: "nowrap", flex: "0 0 auto" }}
             >
@@ -900,29 +906,45 @@ function ResultSign({ result, bet }: { result: SpinResponse; bet: number }) {
   const big = result.linePayout >= bet * 5;
   const positive = result.linePayout > 0;
   return (
+    // Outer wrapper holds a fixed height regardless of win state so
+    // the action bar below never shifts position. The inner pill
+    // does all the colour / size / border switching, but it's
+    // centred inside the reserved slot — wins land "in place"
+    // instead of shoving the Spin/Stop row down a few pixels every
+    // settle. Previously a missed Stop click landed on the air the
+    // button used to occupy.
     <div
       style={{
-        background: positive ? (big ? "var(--gold-300)" : "var(--cactus-500)") : "transparent",
-        color: positive ? "var(--ink-900)" : "var(--parchment-200)",
-        fontFamily: "var(--font-display)",
-        fontSize: positive ? 20 : 13,
-        textAlign: "center",
-        padding: positive ? "6px 12px" : "4px 8px",
-        textTransform: "uppercase",
-        letterSpacing: "var(--ls-loose)",
-        textShadow: positive ? "1px 1px 0 var(--gold-100)" : undefined,
-        animation: big ? "lg-cell-pop 0.5s var(--ease-snap)" : undefined,
         marginTop: "var(--sp-3)",
-        border: positive ? "3px solid var(--ink-900)" : undefined,
+        minHeight: 44,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
       }}
     >
-      {positive
-        ? big
-          ? `BIG WIN! +${result.linePayout.toLocaleString()} ¢`
-          : `+${result.linePayout.toLocaleString()} ¢ on ${result.lineWins.length} line${result.lineWins.length === 1 ? "" : "s"}`
-        : result.coinCount >= 4
-        ? `${result.coinCount} coins — so close...`
-        : "Spin again."}
+      <div
+        style={{
+          background: positive ? (big ? "var(--gold-300)" : "var(--cactus-500)") : "transparent",
+          color: positive ? "var(--ink-900)" : "var(--parchment-200)",
+          fontFamily: "var(--font-display)",
+          fontSize: positive ? 20 : 13,
+          textAlign: "center",
+          padding: positive ? "6px 12px" : "4px 8px",
+          textTransform: "uppercase",
+          letterSpacing: "var(--ls-loose)",
+          textShadow: positive ? "1px 1px 0 var(--gold-100)" : undefined,
+          animation: big ? "lg-cell-pop 0.5s var(--ease-snap)" : undefined,
+          border: positive ? "3px solid var(--ink-900)" : undefined,
+        }}
+      >
+        {positive
+          ? big
+            ? `BIG WIN! +${result.linePayout.toLocaleString()} ¢`
+            : `+${result.linePayout.toLocaleString()} ¢ on ${result.lineWins.length} line${result.lineWins.length === 1 ? "" : "s"}`
+          : result.coinCount >= 4
+          ? `${result.coinCount} coins — so close...`
+          : "Spin again."}
+      </div>
     </div>
   );
 }
