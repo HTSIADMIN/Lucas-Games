@@ -171,6 +171,8 @@ export function PennyPinchersClient() {
   const [pcPulseKey, setPcPulseKey] = useState(0);
   /** Most-recently hired helper id — drives a brief celebratory flash on its row. */
   const [recentlyHiredId, setRecentlyHiredId] = useState<HelperId | null>(null);
+  /** Wallet ¢ payout from the most recent bank — shows the coin-shower for ~1.6s. */
+  const [bankCelebration, setBankCelebration] = useState<number | null>(null);
   const [achievementToasts, setAchievementToasts] = useState<AchievementId[]>([]);
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
   const [lostWallet, setLostWallet] = useState<LostWallet | null>(null);
@@ -841,6 +843,10 @@ export function PennyPinchersClient() {
         // Tell the global LiveBalance to refresh
         window.dispatchEvent(new CustomEvent("lg:balance", { detail: undefined }));
         setLocalCents(d.remainingPC);
+        // Fire a small coin-shower celebration so the moment lands.
+        Sfx.play("coins.shower");
+        setBankCelebration(d.payoutCents);
+        window.setTimeout(() => setBankCelebration(null), 1600);
         await loadState();
       } else {
         await loadState();
@@ -1718,6 +1724,7 @@ export function PennyPinchersClient() {
                   minWidth: 240,
                   boxShadow: "var(--sh-card-rest), var(--glow-gold)",
                   color: "var(--ink-900)",
+                  animation: "pp-trophy-slide 6s cubic-bezier(.25, 1, .35, 1) forwards",
                 }}
               >
                 <div style={{ fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--saddle-400)" }}>
@@ -1732,10 +1739,80 @@ export function PennyPinchersClient() {
               </div>
             );
           })}
+          <style>{`
+            @keyframes pp-trophy-slide {
+              0%   { transform: translateX(120%); opacity: 0; }
+              8%   { transform: translateX(-6px);  opacity: 1; }
+              14%  { transform: translateX(0);     opacity: 1; }
+              92%  { transform: translateX(0);     opacity: 1; }
+              100% { transform: translateX(120%); opacity: 0; }
+            }
+          `}</style>
         </div>
       )}
 
       {faqOpen && <FaqModal onClose={() => setFaqOpen(false)} />}
+
+      {bankCelebration != null && (
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9_700,
+            pointerEvents: "none",
+            display: "grid",
+            placeItems: "center",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 32,
+              color: "var(--gold-300)",
+              letterSpacing: "0.06em",
+              textShadow: "3px 3px 0 var(--ink-900), 0 0 18px rgba(255,196,64,0.85)",
+              animation: "pp-bank-pop 1.6s ease-out forwards",
+            }}
+          >
+            +{bankCelebration.toLocaleString()} ¢
+          </div>
+          {/* 12 falling coins — lighter than the prestige shower. */}
+          {Array.from({ length: 12 }).map((_, i) => {
+            const left = (i * 8.33) % 100;
+            const delay = (i * 0.05) % 0.6;
+            return (
+              <span
+                key={i}
+                style={{
+                  position: "absolute",
+                  top: -28,
+                  left: `${left}%`,
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  background: "radial-gradient(circle at 35% 30%, #fff8c2, var(--gold-300) 60%, var(--gold-500) 100%)",
+                  border: "2px solid var(--gold-500)",
+                  boxShadow: "0 0 6px rgba(255,196,64,0.8)",
+                  animation: `pp-bank-coin 1.5s ${delay}s ease-in forwards`,
+                }}
+              />
+            );
+          })}
+          <style>{`
+            @keyframes pp-bank-pop {
+              0%   { transform: scale(0.7); opacity: 0; }
+              25%  { transform: scale(1.18); opacity: 1; }
+              80%  { transform: scale(1); opacity: 1; }
+              100% { transform: scale(0.95); opacity: 0; }
+            }
+            @keyframes pp-bank-coin {
+              0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+              100% { transform: translateY(85vh) rotate(540deg); opacity: 0.4; }
+            }
+          `}</style>
+        </div>
+      )}
 
       {prestigeCelebration != null && (
         <div
@@ -1954,34 +2031,80 @@ export function PennyPinchersClient() {
                     type="button"
                     onClick={() => flipCushion(idx)}
                     disabled={flipped}
+                    aria-label={flipped ? `Cushion ${idx + 1}: ${reveal!.label}` : `Cushion ${idx + 1}, unrevealed`}
                     style={{
                       aspectRatio: "1.6 / 1",
-                      background: flipped
-                        ? reveal!.pcGain === 0
-                          ? "var(--saddle-200)"
-                          : "var(--gold-100)"
-                        : "linear-gradient(180deg, #b07a4a 0%, #6b3f24 100%)",
-                      border: `3px solid ${flipped ? "var(--gold-300)" : "#1a0f08"}`,
-                      borderRadius: 8,
-                      color: "var(--ink-900)",
-                      fontFamily: "var(--font-display)",
+                      background: "transparent",
+                      border: "none",
+                      padding: 0,
                       cursor: flipped ? "default" : "pointer",
-                      padding: 8,
-                      textAlign: "center",
+                      perspective: "600px",
                     }}
                   >
-                    {flipped ? (
-                      <div>
-                        <div style={{ fontSize: 13, marginBottom: 2 }}>{reveal!.label}</div>
-                        {reveal!.pcGain > 0 ? (
-                          <div style={{ fontSize: 12, color: "var(--gold-500)" }}>+{reveal!.pcGain} PC</div>
-                        ) : (
-                          <div style={{ fontSize: 11, color: "var(--saddle-400)" }}>nothing</div>
+                    {/* 3D flip wrapper — front (?) and back (loot)
+                        sit back-to-back; rotateY(180deg) on flip. */}
+                    <div
+                      style={{
+                        position: "relative",
+                        width: "100%",
+                        height: "100%",
+                        transformStyle: "preserve-3d",
+                        transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                        transition: "transform 480ms cubic-bezier(.4, 1.4, .55, 1)",
+                      }}
+                    >
+                      {/* Front face — un-revealed cushion */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          backfaceVisibility: "hidden",
+                          background: "linear-gradient(180deg, #b07a4a 0%, #6b3f24 100%)",
+                          border: "3px solid #1a0f08",
+                          borderRadius: 8,
+                          display: "grid",
+                          placeItems: "center",
+                          color: "var(--gold-300)",
+                          fontFamily: "var(--font-display)",
+                          fontSize: 22,
+                        }}
+                      >
+                        ?
+                      </div>
+                      {/* Back face — loot reveal */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          backfaceVisibility: "hidden",
+                          transform: "rotateY(180deg)",
+                          background: !flipped
+                            ? "var(--parchment-100)"
+                            : reveal!.pcGain === 0
+                            ? "var(--saddle-200)"
+                            : "var(--gold-100)",
+                          border: `3px solid ${flipped ? "var(--gold-300)" : "#1a0f08"}`,
+                          borderRadius: 8,
+                          display: "grid",
+                          placeItems: "center",
+                          color: "var(--ink-900)",
+                          fontFamily: "var(--font-display)",
+                          padding: 8,
+                          textAlign: "center",
+                        }}
+                      >
+                        {flipped && (
+                          <div>
+                            <div style={{ fontSize: 13, marginBottom: 2 }}>{reveal!.label}</div>
+                            {reveal!.pcGain > 0 ? (
+                              <div style={{ fontSize: 12, color: "var(--gold-500)" }}>+{reveal!.pcGain} PC</div>
+                            ) : (
+                              <div style={{ fontSize: 11, color: "var(--saddle-400)" }}>nothing</div>
+                            )}
+                          </div>
                         )}
                       </div>
-                    ) : (
-                      <div style={{ fontSize: 22, color: "var(--gold-300)" }}>?</div>
-                    )}
+                    </div>
                   </button>
                 );
               })}
