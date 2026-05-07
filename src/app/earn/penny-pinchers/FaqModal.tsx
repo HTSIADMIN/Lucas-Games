@@ -43,10 +43,19 @@ const SECTIONS: { title: string; lines: string[] }[] = [
   {
     title: "Coin Album",
     lines: [
-      "Picking up a trait coin records it on the matching album page (Shiny, Sticky, or Foreign).",
-      "Each filled slot grants a small bonus; completing a page grants a bigger one.",
-      "Shiny → +0.5%/slot, +5% complete shiny chance.   Sticky → +1% / +3% sticky chance.   Foreign → +0.5% / +5% PC on every click.",
-      "The album survives Roll It Up — it's the lifetime collection.",
+      "Picking up a trait coin records it on the matching album page. Six pages, one per trait — Shiny, Sticky, Foreign, Bent, Cursed, Ancient.",
+      "Each filled slot grants a small spawn-chance bonus for that trait; completing a page grants a bigger one.",
+      "Bonuses: Shiny +0.5%/slot, +5% complete · Sticky +1% / +3% · Foreign +0.5% / +5% PC on every click · Bent +0.5% / +5% · Cursed +0.3% / +3% · Ancient +0.05% / +0.5%.",
+      "The album survives Roll It Up — it's the lifetime collection meta.",
+    ],
+  },
+  {
+    title: "Relic Shop",
+    lines: [
+      "Open the Relics tab. Spend Frugality on chests — Bronze (2), Silver (6), Gold (15) — server rolls a random relic by tier rarity.",
+      "Nine relics across common → legendary, each with up to 3-5 levels. Duplicates level up the relic you already own.",
+      "Effects stack with everything else. Highlights: Lucky Charm (shiny chance), Midas Thumb (click PC), Helping Hand (helper rate), Rainmaker (Coin Storm trigger), Fortune's Eye (every coin worth +5 PC permanently per level).",
+      "Relics persist through Roll It Up — they're the long-game power curve. Save your wallet returns.",
     ],
   },
   {

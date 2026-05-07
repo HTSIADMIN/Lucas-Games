@@ -154,6 +154,8 @@ export function PennyPinchersClient() {
   const [welcomeBack, setWelcomeBack] = useState<number | null>(null);
   const [prestigeOpen, setPrestigeOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
+  /** When set, shows the celebratory full-screen flash for ~2.5s after a Roll-Up succeeds. */
+  const [prestigeCelebration, setPrestigeCelebration] = useState<number | null>(null);
   const [achievementToasts, setAchievementToasts] = useState<AchievementId[]>([]);
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
   const [lostWallet, setLostWallet] = useState<LostWallet | null>(null);
@@ -747,9 +749,15 @@ export function PennyPinchersClient() {
     try {
       const r = await fetch("/api/earn/penny-pinchers/prestige", { method: "POST" });
       if (r.ok) {
+        const d = (await r.json()) as { awarded?: number };
         setPrestigeOpen(false);
         // Wipe local coin state too — fresh play area, fresh PC.
         setCoins([]);
+        // Celebration flash + coin-shower sfx so a Roll-Up feels
+        // like the milestone it is. Auto-dismisses after 2.5s.
+        Sfx.play("coins.shower");
+        setPrestigeCelebration(d.awarded ?? 0);
+        window.setTimeout(() => setPrestigeCelebration(null), 2500);
         await loadState();
       }
     } catch { await loadState(); }
@@ -824,6 +832,68 @@ export function PennyPinchersClient() {
         >
           {EVENTS[activeEvent.id].label} · {EVENTS[activeEvent.id].blurb} ·{" "}
           {Math.max(0, Math.ceil((activeEvent.endsAt - now) / 1000))}s
+        </div>
+      )}
+
+      {frenzyEndsAt != null && frenzyEndsAt > now && (
+        <div
+          style={{
+            background: "linear-gradient(90deg, var(--gold-300), var(--gold-500), var(--gold-300))",
+            backgroundSize: "200% 100%",
+            border: "3px solid var(--ink-900)",
+            padding: "var(--sp-2) var(--sp-3)",
+            fontFamily: "var(--font-display)",
+            fontSize: 14,
+            color: "var(--ink-900)",
+            textAlign: "center",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            textShadow: "1px 1px 0 var(--gold-100)",
+            animation: "pp-frenzy-shine 1.4s linear infinite, game-event-pulse 1.4s ease-in-out infinite",
+          }}
+        >
+          ★ Money Frenzy! · 2× clicks · {Math.max(0, Math.ceil((frenzyEndsAt - now) / 1000))}s
+          <style>{`
+            @keyframes pp-frenzy-shine {
+              0%   { background-position: 0% 50%; }
+              100% { background-position: 200% 50%; }
+            }
+          `}</style>
+        </div>
+      )}
+
+      {activeBlessings.length > 0 && (
+        <div
+          className="row"
+          style={{
+            gap: 8,
+            flexWrap: "wrap",
+            padding: "var(--sp-2)",
+            background: "var(--parchment-100)",
+            border: "2px solid var(--saddle-300)",
+          }}
+        >
+          {activeBlessings.map((b) => {
+            const def = BLESSINGS[b.id];
+            const left = Math.max(0, Math.ceil((b.endsAt - now) / 1000));
+            return (
+              <span
+                key={b.id}
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 11,
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                  background: "var(--gold-100)",
+                  border: "2px solid var(--gold-300)",
+                  padding: "2px 8px",
+                  color: "var(--ink-900)",
+                }}
+              >
+                ✦ {def.label} · {left}s
+              </span>
+            );
+          })}
         </div>
       )}
 
@@ -1416,6 +1486,76 @@ export function PennyPinchersClient() {
       )}
 
       {faqOpen && <FaqModal onClose={() => setFaqOpen(false)} />}
+
+      {prestigeCelebration != null && (
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9_800,
+            pointerEvents: "none",
+            background:
+              "radial-gradient(circle at 50% 40%, rgba(255,200,60,0.45) 0%, rgba(255,200,60,0) 60%)",
+            animation: "pp-prestige-celebrate 2.5s ease-out forwards",
+            display: "grid",
+            placeItems: "center",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "var(--fs-h1, 36px)",
+              color: "var(--gold-300)",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              textShadow: "3px 3px 0 var(--ink-900), 0 0 22px rgba(255,200,60,0.85)",
+              animation: "pp-prestige-pop 800ms cubic-bezier(.2,1,.25,1)",
+            }}
+          >
+            ★ +{prestigeCelebration.toLocaleString()} Tokens ★
+          </div>
+          {/* 24 coin sprites raining down */}
+          {Array.from({ length: 24 }).map((_, i) => {
+            const left = (i * 4.16) % 100;
+            const delay = (i * 0.07) % 1.4;
+            return (
+              <span
+                key={i}
+                style={{
+                  position: "absolute",
+                  top: -32,
+                  left: `${left}%`,
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  background: "radial-gradient(circle at 35% 30%, #fff8c2, var(--gold-300) 60%, var(--gold-500) 100%)",
+                  border: "2px solid var(--gold-500)",
+                  boxShadow: "0 0 8px rgba(255,196,64,0.8)",
+                  animation: `pp-prestige-coin 1.8s ${delay}s ease-in forwards`,
+                }}
+              />
+            );
+          })}
+          <style>{`
+            @keyframes pp-prestige-celebrate {
+              0%   { opacity: 0;   transform: scale(0.95); }
+              10%  { opacity: 1;   transform: scale(1); }
+              80%  { opacity: 1; }
+              100% { opacity: 0; }
+            }
+            @keyframes pp-prestige-pop {
+              0%   { transform: scale(0.6) rotate(-6deg); opacity: 0; }
+              60%  { transform: scale(1.15) rotate(2deg); opacity: 1; }
+              100% { transform: scale(1) rotate(0); opacity: 1; }
+            }
+            @keyframes pp-prestige-coin {
+              0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+              100% { transform: translateY(110vh) rotate(720deg); opacity: 0.4; }
+            }
+          `}</style>
+        </div>
+      )}
 
       {fountainModalOpen && (
         <div
