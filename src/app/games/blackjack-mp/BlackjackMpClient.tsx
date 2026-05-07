@@ -229,20 +229,55 @@ export function BlackjackMpClient() {
             )}
           </div>
 
-          {/* Felt */}
+          {/* Felt — wood-rimmed casino table. Gold pinstripe inside
+              the rim, radial light hot spot center, repeating felt
+              grain underneath, soft vignette in the corners. */}
           <div
             key={`felt-${shakeKey}`}
             style={{
-              background: "radial-gradient(circle at 50% 50%, #2d5b22, #1f3818)",
-              border: "4px solid var(--ink-900)",
-              padding: "var(--sp-4)",
-              minHeight: 280,
-              boxShadow: "inset 0 0 60px rgba(0, 0, 0, 0.7)",
+              background: `
+                radial-gradient(ellipse at 50% 30%, rgba(255, 232, 160, 0.18) 0%, transparent 55%),
+                radial-gradient(circle at 50% 50%, #347029 0%, #224620 55%, #16320f 100%),
+                repeating-linear-gradient(45deg, rgba(0,0,0,0.04) 0 2px, transparent 2px 6px),
+                repeating-linear-gradient(-45deg, rgba(0,0,0,0.04) 0 2px, transparent 2px 6px)
+              `,
+              border: "8px solid #4a2818",
+              outline: "2px solid var(--gold-300)",
+              outlineOffset: "-12px",
+              borderRadius: 10,
+              padding: "var(--sp-5) var(--sp-4) var(--sp-4)",
+              minHeight: 320,
+              boxShadow: `
+                inset 0 0 0 4px rgba(0,0,0,0.45),
+                inset 0 0 90px rgba(0, 0, 0, 0.7),
+                0 4px 0 rgba(0,0,0,0.4),
+                0 12px 28px rgba(0,0,0,0.5)
+              `,
               animation: shakeKey > 0 ? "bj-shake 0.5s var(--ease-snap)" : undefined,
               position: "relative",
               overflow: "hidden",
             }}
           >
+            {/* Game label arc on the dealer side — "BLACKJACK PAYS 3:2" */}
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: 12,
+                left: "50%",
+                transform: "translateX(-50%)",
+                fontFamily: "var(--font-display)",
+                fontSize: 11,
+                letterSpacing: "0.3em",
+                color: "rgba(255, 232, 168, 0.45)",
+                textTransform: "uppercase",
+                whiteSpace: "nowrap",
+                pointerEvents: "none",
+                textShadow: "0 1px 0 rgba(0,0,0,0.6)",
+              }}
+            >
+              ★ Blackjack pays 3:2 ★ Insurance pays 2:1 ★ Dealer must hit soft 17 ★
+            </div>
             {/* Dealer */}
             <div style={{ marginBottom: "var(--sp-5)" }}>
               <div className="row" style={{ marginBottom: "var(--sp-2)" }}>
@@ -256,8 +291,8 @@ export function BlackjackMpClient() {
               <div className="row" style={{ gap: "var(--sp-2)" }}>
                 {(round?.dealerHand ?? []).length === 0 ? (
                   <>
-                    <PlayingCard faceDown />
-                    <PlayingCard faceDown />
+                    <PlayingCard faceDown size="lg" />
+                    <PlayingCard faceDown size="lg" />
                   </>
                 ) : (
                   round!.dealerHand.map((c, i) => (
@@ -269,6 +304,7 @@ export function BlackjackMpClient() {
                       index={i}
                       isDealerHole={i === 1}
                       revealKey={revealHole}
+                      size="lg"
                     />
                   ))
                 )}
@@ -312,7 +348,7 @@ export function BlackjackMpClient() {
                         Bet {seat.bet.toLocaleString()}{seat.doubled && " ×2"}
                       </div>
                     </div>
-                    <div className="row" style={{ gap: 4 }}>
+                    <div className="row" style={{ gap: 6 }}>
                       {seat.hand.length === 0 ? <span className="text-mute">—</span> :
                         seat.hand.map((c, i) => (
                           <DealCard
@@ -322,7 +358,7 @@ export function BlackjackMpClient() {
                             faceDown={false}
                             index={i}
                             isDealerHole={false}
-                            size="sm"
+                            size="md"
                           />
                         ))
                       }
@@ -371,22 +407,46 @@ export function BlackjackMpClient() {
                   <span> · Hand {mySeats.findIndex((s) => s.status === "playing") + 1} of {mySeats.length}</span>
                 )}
               </p>
-              <div className="row" style={{ flexWrap: "wrap" }}>
-                <button className="btn btn-block" onClick={() => action("hit")} disabled={busy}>Hit</button>
-                <button className="btn btn-wood btn-block" onClick={() => action("stand")} disabled={busy}>Stand</button>
+              <div className="row" style={{ gap: "var(--sp-2)", flexWrap: "wrap" }}>
+                <BjActionButton
+                  kind="hit"
+                  label="Hit"
+                  icon="+"
+                  onClick={() => action("hit")}
+                  busy={busy}
+                />
+                <BjActionButton
+                  kind="stand"
+                  label="Stand"
+                  icon="✋"
+                  onClick={() => action("stand")}
+                  busy={busy}
+                />
               </div>
-              <div className="row" style={{ flexWrap: "wrap" }}>
-                {canDouble && (
-                  <button className="btn btn-danger btn-block" onClick={() => action("double")} disabled={busy}>
-                    Double (+{mySeat.bet.toLocaleString()} ¢)
-                  </button>
-                )}
-                {canSplit && (
-                  <button className="btn btn-success btn-block" onClick={() => action("split")} disabled={busy}>
-                    Split (+{mySeat.bet.toLocaleString()} ¢)
-                  </button>
-                )}
-              </div>
+              {(canDouble || canSplit) && (
+                <div className="row" style={{ gap: "var(--sp-2)", flexWrap: "wrap" }}>
+                  {canDouble && (
+                    <BjActionButton
+                      kind="double"
+                      label="Double"
+                      icon="×2"
+                      sub={`+${mySeat.bet.toLocaleString()} ¢`}
+                      onClick={() => action("double")}
+                      busy={busy}
+                    />
+                  )}
+                  {canSplit && (
+                    <BjActionButton
+                      kind="split"
+                      label="Split"
+                      icon="⫼"
+                      sub={`+${mySeat.bet.toLocaleString()} ¢`}
+                      onClick={() => action("split")}
+                      busy={busy}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           ) : mySeats.length === 0 && isBetting ? (
             <div className="stack-lg">
@@ -441,6 +501,76 @@ export function BlackjackMpClient() {
         </div>
       </div>
     </>
+  );
+}
+
+// ============================================================
+// Big chunky action button — colour-coded per move so Hit/Stand/
+// Double/Split each read at a glance instead of a row of look-alikes.
+// ============================================================
+type BjActionKind = "hit" | "stand" | "double" | "split";
+const BJ_ACTION_THEME: Record<
+  BjActionKind,
+  { bg: string; bgEnd: string; fg: string; border: string; glow: string }
+> = {
+  hit:    { bg: "#3a8c2a", bgEnd: "#1f4f17", fg: "#fef6e4", border: "#0b1e08", glow: "rgba(110, 220, 100, 0.55)" },
+  stand:  { bg: "#a85b1f", bgEnd: "#5a2e0c", fg: "#fef6e4", border: "#1a0f08", glow: "rgba(255, 168, 90, 0.5)" },
+  double: { bg: "#e0a830", bgEnd: "#8a6210", fg: "#1a0f08", border: "#1a0f08", glow: "rgba(255, 220, 90, 0.7)" },
+  split:  { bg: "#5a4cc0", bgEnd: "#2c2470", fg: "#fef6e4", border: "#1a0f08", glow: "rgba(160, 140, 255, 0.55)" },
+};
+function BjActionButton({
+  kind,
+  label,
+  icon,
+  sub,
+  onClick,
+  busy,
+}: {
+  kind: BjActionKind;
+  label: string;
+  icon: string;
+  sub?: string;
+  onClick: () => void;
+  busy: boolean;
+}) {
+  const theme = BJ_ACTION_THEME[kind];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      className={`bj-action bj-action-${kind}`}
+      style={{
+        flex: 1,
+        minWidth: 110,
+        padding: "10px 14px 12px",
+        background: `linear-gradient(180deg, ${theme.bg} 0%, ${theme.bgEnd} 100%)`,
+        color: theme.fg,
+        border: `3px solid ${theme.border}`,
+        boxShadow: `inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.35), 0 4px 0 ${theme.border}, 0 0 14px ${theme.glow}`,
+        fontFamily: "var(--font-display)",
+        letterSpacing: "var(--ls-loose)",
+        textTransform: "uppercase",
+        cursor: busy ? "not-allowed" : "pointer",
+        opacity: busy ? 0.55 : 1,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 2,
+        transition: "transform 90ms ease, box-shadow 160ms ease, filter 160ms ease",
+      }}
+    >
+      <span style={{ display: "inline-flex", gap: 6, alignItems: "baseline", fontSize: 18 }}>
+        <span aria-hidden style={{ fontSize: 16 }}>{icon}</span>
+        <span>{label}</span>
+      </span>
+      {sub && (
+        <span style={{ fontSize: 10, opacity: 0.85, letterSpacing: "var(--ls-tight)", textTransform: "none" }}>
+          {sub}
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -535,35 +665,63 @@ function ResultStamp({ kind, netLabel }: { kind: ResultKind; netLabel: string })
     loss:      { bg: "var(--crimson-500)", fg: "var(--parchment-50)", label: "HOUSE WINS" },
   }[kind];
   const big = kind === "win" || kind === "blackjack";
+  const isBlackjack = kind === "blackjack";
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%) rotate(-12deg)",
-        background: cfg.bg,
-        color: cfg.fg,
-        border: "5px solid var(--ink-900)",
-        padding: "var(--sp-4) var(--sp-6)",
-        fontFamily: "var(--font-display)",
-        fontSize: big ? 40 : 32,
-        letterSpacing: "var(--ls-loose)",
-        textTransform: "uppercase",
-        boxShadow: big ? "var(--glow-gold), 8px 8px 0 var(--ink-900)" : "8px 8px 0 var(--ink-900)",
-        textShadow: kind === "blackjack" ? "2px 2px 0 var(--gold-100)" : "3px 3px 0 var(--ink-900)",
-        animation: "bj-stamp 0.7s var(--ease-snap) backwards",
-        animationDelay: "1s",
-        zIndex: 10,
-        pointerEvents: "none",
-        textAlign: "center",
-      }}
-    >
-      {cfg.label}
-      <div style={{ fontSize: 16, marginTop: 4, letterSpacing: "var(--ls-tight)" }}>
-        {netLabel}
+    <>
+      {/* Starburst — radial gold rays behind a winning stamp so the
+          blackjack moment of truth actually pops. */}
+      {big && (
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            width: 460,
+            height: 460,
+            transform: "translate(-50%, -50%)",
+            background: isBlackjack
+              ? "conic-gradient(from 0deg, rgba(255,232,160,0.85), rgba(255,200,60,0) 18%, rgba(255,232,160,0.85) 36%, rgba(255,200,60,0) 54%, rgba(255,232,160,0.85) 72%, rgba(255,200,60,0) 90%, rgba(255,232,160,0.85))"
+              : "conic-gradient(from 0deg, rgba(180,255,150,0.7), rgba(80,200,80,0) 25%, rgba(180,255,150,0.7) 50%, rgba(80,200,80,0) 75%, rgba(180,255,150,0.7))",
+            filter: "blur(6px)",
+            animation: "bj-stamp-burst 1.6s ease-out 0.95s backwards",
+            zIndex: 9,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%) rotate(-12deg)",
+          background: cfg.bg,
+          color: cfg.fg,
+          border: "6px solid var(--ink-900)",
+          padding: "var(--sp-5) var(--sp-7)",
+          fontFamily: "var(--font-display)",
+          fontSize: big ? 56 : 40,
+          letterSpacing: "var(--ls-loose)",
+          textTransform: "uppercase",
+          lineHeight: 1.05,
+          boxShadow: big
+            ? "var(--glow-gold), 10px 10px 0 var(--ink-900), 0 0 60px rgba(255,200,60,0.45)"
+            : "10px 10px 0 var(--ink-900)",
+          textShadow: isBlackjack ? "2px 2px 0 var(--gold-100), 0 0 16px rgba(255,200,60,0.6)" : "3px 3px 0 var(--ink-900)",
+          animation: "bj-stamp 0.7s var(--ease-snap) backwards",
+          animationDelay: "1s",
+          zIndex: 10,
+          pointerEvents: "none",
+          textAlign: "center",
+        }}
+      >
+        {cfg.label}
+        <div style={{ fontSize: big ? 22 : 16, marginTop: 6, letterSpacing: "var(--ls-tight)" }}>
+          {netLabel}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -571,15 +729,24 @@ function ResultStamp({ kind, netLabel }: { kind: ResultKind; netLabel: string })
 // Confetti burst — coins fall from the top after a win
 // ============================================================
 function Confetti() {
-  const pieces = Array.from({ length: 32 }, (_, i) => ({
-    id: i,
-    left: Math.random() * 100,
-    delay: 1.2 + Math.random() * 0.5,
-    duration: 1.6 + Math.random() * 0.9,
-    rotate: Math.random() * 360,
-    size: 12 + Math.random() * 12,
-    color: i % 3 === 0 ? "#f5c842" : i % 3 === 1 ? "#ffd84d" : "#c8941d",
-  }));
+  // 60 mixed coin sprites + ribbon flecks falling from above the
+  // felt. More density + mixed sizes reads as "loot" instead of
+  // "a few pixels" once the result stamp lands.
+  const pieces = Array.from({ length: 60 }, (_, i) => {
+    const isRibbon = i % 5 === 0;
+    return {
+      id: i,
+      left: Math.random() * 100,
+      delay: 1.0 + Math.random() * 0.7,
+      duration: 1.5 + Math.random() * 1.1,
+      rotate: Math.random() * 360,
+      size: isRibbon ? 6 + Math.random() * 6 : 12 + Math.random() * 14,
+      isRibbon,
+      color: isRibbon
+        ? (i % 2 === 0 ? "#fef6e4" : "#a8d4ff")
+        : (i % 3 === 0 ? "#f5c842" : i % 3 === 1 ? "#ffd84d" : "#c8941d"),
+    };
+  });
   return (
     <div
       aria-hidden
@@ -598,11 +765,12 @@ function Confetti() {
             position: "absolute",
             left: `${p.left}%`,
             top: -20,
-            width: p.size,
-            height: p.size,
+            width: p.isRibbon ? p.size : p.size,
+            height: p.isRibbon ? p.size * 0.4 : p.size,
             background: p.color,
-            border: "2px solid var(--ink-900)",
-            borderRadius: 999,
+            border: p.isRibbon ? "1px solid rgba(0,0,0,0.4)" : "2px solid var(--ink-900)",
+            borderRadius: p.isRibbon ? 2 : 999,
+            boxShadow: p.isRibbon ? undefined : "inset 0 -3px 0 rgba(0,0,0,0.3), 0 0 6px rgba(255,200,60,0.4)",
             animation: `bj-coin-fall ${p.duration}s linear ${p.delay}s 1 forwards`,
             transform: `rotate(${p.rotate}deg)`,
           }}
@@ -659,6 +827,21 @@ const BJ_KEYFRAMES = `
 @keyframes bj-coin-fall {
   0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
   100% { transform: translateY(560px) rotate(720deg); opacity: 0; }
+}
+@keyframes bj-stamp-burst {
+  0%   { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+  60%  { transform: translate(-50%, -50%) scale(1.4);  opacity: 0.85; }
+  100% { transform: translate(-50%, -50%) scale(1.9);  opacity: 0; }
+}
+.bj-action:not(:disabled):hover,
+.bj-action:not(:disabled):focus-visible {
+  transform: translateY(-2px);
+  filter: brightness(1.1) saturate(1.05);
+  outline: none;
+}
+.bj-action:not(:disabled):active {
+  transform: translateY(2px);
+  filter: brightness(0.95);
 }
 `;
 
