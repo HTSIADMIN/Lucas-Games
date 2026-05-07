@@ -398,8 +398,12 @@ export function SlotsClient() {
             )}
           </div>
 
-          {/* Result sign (anchored bottom of reels) */}
-          {lastResult && !bonus && (
+          {/* Result sign — wrapper renders unconditionally so the
+              reserved 44px slot stays in the layout even during the
+              in-flight spin (when lastResult is null). Without this
+              the action bar shifts up and back down every cycle and
+              the Stop button slides out from under the cursor. */}
+          {!bonus && (
             <ResultSign result={lastResult} bet={bet} />
           )}
         </div>
@@ -902,49 +906,49 @@ function MeterBar({ value, max }: { value: number; max: number }) {
 // =============================================================
 // Result sign + line wins
 // =============================================================
-function ResultSign({ result, bet }: { result: SpinResponse; bet: number }) {
-  const big = result.linePayout >= bet * 5;
-  const positive = result.linePayout > 0;
+function ResultSign({ result, bet }: { result: SpinResponse | null; bet: number }) {
+  const big = result ? result.linePayout >= bet * 5 : false;
+  const positive = result ? result.linePayout > 0 : false;
   return (
-    // Outer wrapper holds a fixed height regardless of win state so
-    // the action bar below never shifts position. The inner pill
-    // does all the colour / size / border switching, but it's
-    // centred inside the reserved slot — wins land "in place"
-    // instead of shoving the Spin/Stop row down a few pixels every
-    // settle. Previously a missed Stop click landed on the air the
-    // button used to occupy.
+    // Outer wrapper holds a fixed height regardless of win state OR
+    // whether we have a result at all — keeps the action bar
+    // stationary across the in-flight (result=null) and post-settle
+    // states so the Stop button doesn't slide out from under the
+    // cursor between spins.
     <div
       style={{
         marginTop: "var(--sp-3)",
-        minHeight: 44,
+        height: 44,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
       }}
     >
-      <div
-        style={{
-          background: positive ? (big ? "var(--gold-300)" : "var(--cactus-500)") : "transparent",
-          color: positive ? "var(--ink-900)" : "var(--parchment-200)",
-          fontFamily: "var(--font-display)",
-          fontSize: positive ? 20 : 13,
-          textAlign: "center",
-          padding: positive ? "6px 12px" : "4px 8px",
-          textTransform: "uppercase",
-          letterSpacing: "var(--ls-loose)",
-          textShadow: positive ? "1px 1px 0 var(--gold-100)" : undefined,
-          animation: big ? "lg-cell-pop 0.5s var(--ease-snap)" : undefined,
-          border: positive ? "3px solid var(--ink-900)" : undefined,
-        }}
-      >
-        {positive
-          ? big
-            ? `BIG WIN! +${result.linePayout.toLocaleString()} ¢`
-            : `+${result.linePayout.toLocaleString()} ¢ on ${result.lineWins.length} line${result.lineWins.length === 1 ? "" : "s"}`
-          : result.coinCount >= 4
-          ? `${result.coinCount} coins — so close...`
-          : "Spin again."}
-      </div>
+      {result && (
+        <div
+          style={{
+            background: positive ? (big ? "var(--gold-300)" : "var(--cactus-500)") : "transparent",
+            color: positive ? "var(--ink-900)" : "var(--parchment-200)",
+            fontFamily: "var(--font-display)",
+            fontSize: positive ? 20 : 13,
+            textAlign: "center",
+            padding: positive ? "6px 12px" : "4px 8px",
+            textTransform: "uppercase",
+            letterSpacing: "var(--ls-loose)",
+            textShadow: positive ? "1px 1px 0 var(--gold-100)" : undefined,
+            animation: big ? "lg-cell-pop 0.5s var(--ease-snap)" : undefined,
+            border: positive ? "3px solid var(--ink-900)" : undefined,
+          }}
+        >
+          {positive
+            ? big
+              ? `BIG WIN! +${result.linePayout.toLocaleString()} ¢`
+              : `+${result.linePayout.toLocaleString()} ¢ on ${result.lineWins.length} line${result.lineWins.length === 1 ? "" : "s"}`
+            : result.coinCount >= 4
+            ? `${result.coinCount} coins — so close...`
+            : "Spin again."}
+        </div>
+      )}
     </div>
   );
 }
