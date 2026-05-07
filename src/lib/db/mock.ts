@@ -56,6 +56,7 @@ type Schema = {
   penny_pinchers_helpers: PennyPinchersHelper[];
   penny_pinchers_perm_upgrades: PennyPinchersPermUpgrade[];
   penny_pinchers_achievements: PennyPinchersAchievement[];
+  arcade_upgrades: { user_id: string; game: string; level: number }[];
   slot_runs: SlotRun[];
   daily_challenges: DailyChallenge[];
   _walletSeq: number;
@@ -76,6 +77,7 @@ const EMPTY: Schema = {
   penny_pinchers_state: [], penny_pinchers_upgrades: [], penny_pinchers_helpers: [],
   penny_pinchers_perm_upgrades: [],
   penny_pinchers_achievements: [],
+  arcade_upgrades: [],
   slot_runs: [],
   daily_challenges: [],
   _walletSeq: 0, _crashBetSeq: 0, _chatSeq: 0, _bjSeatSeq: 0,
@@ -469,6 +471,29 @@ export async function insertPennyPinchersAchievements(
     if (existing.has(id)) continue;
     db().penny_pinchers_achievements.push({ user_id: userId, achievement_id: id, unlocked_at: now });
   }
+  commit();
+}
+
+// ============ ARCADE UPGRADES ============
+export async function listArcadeUpgrades(
+  userId: string,
+): Promise<{ user_id: string; game: string; level: number }[]> {
+  return db().arcade_upgrades.filter((u) => u.user_id === userId);
+}
+export async function getArcadeUpgrade(
+  userId: string,
+  game: string,
+): Promise<{ user_id: string; game: string; level: number } | null> {
+  return db().arcade_upgrades.find((u) => u.user_id === userId && u.game === game) ?? null;
+}
+export async function setArcadeUpgrade(
+  userId: string,
+  game: string,
+  level: number,
+): Promise<void> {
+  const row = db().arcade_upgrades.find((u) => u.user_id === userId && u.game === game);
+  if (row) row.level = level;
+  else db().arcade_upgrades.push({ user_id: userId, game, level });
   commit();
 }
 

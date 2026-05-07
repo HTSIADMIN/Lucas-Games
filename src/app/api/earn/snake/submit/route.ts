@@ -3,8 +3,9 @@ import { randomUUID } from "node:crypto";
 import { readSession } from "@/lib/auth/session";
 import { verifySession } from "@/lib/auth/jwt";
 import { credit, getBalance } from "@/lib/wallet";
-import { insertGameSession } from "@/lib/db";
+import { getArcadeUpgrade, insertGameSession } from "@/lib/db";
 import { updatePersonalBest } from "@/lib/arcade/weekly";
+import { arcadeMultiplier } from "@/lib/games/arcade/upgrades";
 
 export const runtime = "nodejs";
 
@@ -13,9 +14,11 @@ export const runtime = "nodejs";
 // to swat the most obvious replay-bot exploit. Cap mirrors Crossy
 // (8 hops/sec) — Snake's grid moves at most ~8 cells/sec on the
 // fastest difficulty, so 8 fruit-events/sec is a generous ceiling.
+// MAX_PAYOUT bumped from 50k → 100k so a fully-upgraded player
+// (×2.25 earn-rate) can actually feel the upgrade on big runs.
 const COIN_PER_SCORE = 200;
 const MIN_PAYOUT = 1_000;
-const MAX_PAYOUT = 50_000;
+const MAX_PAYOUT = 100_000;
 const MAX_SCORE = 5_000;
 const MAX_SCORE_PER_SEC = 8;
 
@@ -42,7 +45,10 @@ export async function POST(req: Request) {
 
   const seconds = Math.max(1, Math.floor(durationMs / 1000));
   const effective = Math.min(score, seconds * MAX_SCORE_PER_SEC);
-  const raw = effective * COIN_PER_SCORE;
+  // Earn-rate upgrade multiplier — applied before the per-run cap.
+  const upgradeRow = await getArcadeUpgrade(s.user.id, "snake").catch(() => null);
+  const earnMul = arcadeMultiplier(upgradeRow?.level ?? 0);
+  const raw = Math.round(effective * COIN_PER_SCORE * earnMul);
   const payout = Math.max(0, Math.min(MAX_PAYOUT, raw));
 
   REDEEMED.add(payload.jti);

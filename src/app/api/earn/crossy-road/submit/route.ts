@@ -3,15 +3,18 @@ import { randomUUID } from "node:crypto";
 import { readSession } from "@/lib/auth/session";
 import { verifySession } from "@/lib/auth/jwt";
 import { credit, getBalance } from "@/lib/wallet";
-import { insertGameSession } from "@/lib/db";
+import { getArcadeUpgrade, insertGameSession } from "@/lib/db";
 import { recordChallengeEvent } from "@/lib/challenges/record";
 import { updatePersonalBest } from "@/lib/arcade/weekly";
+import { arcadeMultiplier } from "@/lib/games/arcade/upgrades";
 
 export const runtime = "nodejs";
 
 // Sanity bounds — server-side only.
+// MAX_PAYOUT bumped from 50k → 100k so a fully-upgraded player
+// (×2.25 multiplier) can actually feel the upgrade on big runs.
 const MIN_PAYOUT = 1_000;
-const MAX_PAYOUT = 50_000;
+const MAX_PAYOUT = 100_000;
 const COIN_PER_ROW = 50;          // 50¢ per row crossed
 const COIN_PER_PICKUP = 500;      // 500¢ per ground-coin pickup
 // Rows-per-second cap. The chicken hops once every ~120ms, so 8/s already
@@ -50,7 +53,13 @@ export async function POST(req: Request) {
   const effRows  = Math.min(rows, seconds * MAX_ROWS_PER_SEC);
   const effCoins = Math.min(coins, seconds * MAX_COINS_PER_SEC);
 
-  const raw = effRows * COIN_PER_ROW + effCoins * COIN_PER_PICKUP;
+  // Apply the player's earn-rate upgrade multiplier (level 0 = 1.0×).
+  // Multiplier stacks BEFORE the per-run cap so a maxed player can
+  // hit MAX_PAYOUT on a smaller raw run than a base player.
+  const upgradeRow = await getArcadeUpgrade(s.user.id, "crossy_road").catch(() => null);
+  const multiplier = arcadeMultiplier(upgradeRow?.level ?? 0);
+  const rawBase = effRows * COIN_PER_ROW + effCoins * COIN_PER_PICKUP;
+  const raw = Math.round(rawBase * multiplier);
   const payout = Math.max(0, Math.min(MAX_PAYOUT, raw));
 
   // Personal best + score-threshold challenge fire whether the run

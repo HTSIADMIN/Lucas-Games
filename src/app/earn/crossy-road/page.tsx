@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { GameShell } from "@/components/GameShell";
 import { MiniLeaderboard } from "@/components/MiniLeaderboard";
+import { ArcadeUpgradePanel } from "@/components/arcade/ArcadeUpgradePanel";
 import { readSession } from "@/lib/auth/session";
 import { CrossyRoadClient } from "./CrossyRoadClient";
 
@@ -12,9 +13,10 @@ export default async function CrossyRoadPage() {
     <GameShell
       title="Crossy Road"
       game="crossy-road"
-      blurb="Free to play. 100 Coins per row. Min 1k payout, capped at 10k per run."
+      blurb="Free to play. 100 Coins per row. Spend wallet ¢ on earn-rate upgrades to boost every payout."
     >
       <CrossyRoadClient />
+      <ArcadeUpgradePanel game="crossy_road" />
       <MiniLeaderboard
         endpoint="/api/games/crossy/leaderboard"
         title="Crossy Road · Top Scores"

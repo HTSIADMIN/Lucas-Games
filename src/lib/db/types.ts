@@ -371,6 +371,12 @@ export type PennyPinchersAchievement = {
   unlocked_at: string;
 };
 
+export type ArcadeUpgrade = {
+  user_id: string;
+  game: "crossy_road" | "flappy" | "snake";
+  level: number;
+};
+
 export type CoinflipDuel = {
   id: string;
   challenger_id: string;

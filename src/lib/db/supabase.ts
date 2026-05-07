@@ -578,6 +578,41 @@ export async function clearPennyPinchersRun(userId: string): Promise<void> {
   await client().from("penny_pinchers_upgrades").delete().eq("user_id", userId);
   await client().from("penny_pinchers_helpers").delete().eq("user_id", userId);
 }
+// ============ ARCADE UPGRADES ============
+export async function listArcadeUpgrades(
+  userId: string,
+): Promise<{ user_id: string; game: string; level: number }[]> {
+  const { data, error } = await client()
+    .from("arcade_upgrades")
+    .select("*")
+    .eq("user_id", userId);
+  if (error) throw new Error(`listArcadeUpgrades: ${error.message}`);
+  return (data ?? []) as { user_id: string; game: string; level: number }[];
+}
+export async function getArcadeUpgrade(
+  userId: string,
+  game: string,
+): Promise<{ user_id: string; game: string; level: number } | null> {
+  const { data, error } = await client()
+    .from("arcade_upgrades")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("game", game)
+    .maybeSingle();
+  if (error) throw new Error(`getArcadeUpgrade: ${error.message}`);
+  return (data as { user_id: string; game: string; level: number } | null) ?? null;
+}
+export async function setArcadeUpgrade(
+  userId: string,
+  game: string,
+  level: number,
+): Promise<void> {
+  const { error } = await client()
+    .from("arcade_upgrades")
+    .upsert({ user_id: userId, game, level }, { onConflict: "user_id,game" });
+  if (error) throw new Error(`setArcadeUpgrade: ${error.message}`);
+}
+
 export async function listPennyPinchersAchievements(userId: string): Promise<PennyPinchersAchievement[]> {
   const { data, error } = await client().from("penny_pinchers_achievements").select("*").eq("user_id", userId);
   if (error) throw new Error(`listPennyPinchersAchievements: ${error.message}`);

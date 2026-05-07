@@ -3,9 +3,10 @@ import { randomUUID } from "node:crypto";
 import { readSession } from "@/lib/auth/session";
 import { verifySession } from "@/lib/auth/jwt";
 import { credit, getBalance } from "@/lib/wallet";
-import { insertGameSession } from "@/lib/db";
+import { getArcadeUpgrade, insertGameSession } from "@/lib/db";
 import { recordChallengeEvent } from "@/lib/challenges/record";
 import { updatePersonalBest } from "@/lib/arcade/weekly";
+import { arcadeMultiplier } from "@/lib/games/arcade/upgrades";
 
 export const runtime = "nodejs";
 
@@ -62,7 +63,12 @@ export async function POST(req: Request) {
   const maxFeasible = Math.floor(seconds * cfg.maxScorePerSec) + 2;
   const effective = Math.min(score, maxFeasible);
 
-  const raw = effective * cfg.perPipe;
+  // Earn-rate upgrade multiplier — applied before the per-mode cap
+  // so a maxed (×2.25) player can hit the cap on a smaller raw run
+  // than a base player.
+  const upgradeRow = await getArcadeUpgrade(s.user.id, "flappy").catch(() => null);
+  const earnMul = arcadeMultiplier(upgradeRow?.level ?? 0);
+  const raw = Math.round(effective * cfg.perPipe * earnMul);
   const payout = Math.max(0, Math.min(cfg.maxPayout, raw));
 
   REDEEMED.add(payload.jti);

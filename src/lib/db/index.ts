@@ -29,6 +29,10 @@ export const getSession            = impl.getSession;
 export const revokeSession         = impl.revokeSession;
 export const touchSessionLastActive = impl.touchSessionLastActive;
 
+export const listArcadeUpgrades    = impl.listArcadeUpgrades;
+export const getArcadeUpgrade      = impl.getArcadeUpgrade;
+export const setArcadeUpgrade      = impl.setArcadeUpgrade;
+
 export const getPinAttempts        = impl.getPinAttempts;
 export const bumpPinAttempts       = impl.bumpPinAttempts;
 export const resetPinAttempts      = impl.resetPinAttempts;
