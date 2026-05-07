@@ -274,43 +274,65 @@ export function rollTrait(
 }
 
 // ============================================================
-// MERGING — proximity detection
+// MERGING — proximity sum-fusion
 // ============================================================
 
-export type MergePoint = { id: number; coin: CoinId; x: number; y: number; spawnedAt: number };
+export type MergePoint = {
+  id: number;
+  /** Combined PC value of this coin (post any prior merges). */
+  pc: number;
+  x: number;
+  y: number;
+  spawnedAt: number;
+};
 
 /**
- * Find one merge cluster among the given points, if any. Returns
- * the ids to despawn + the new coin to spawn at the centroid.
- *
- * Linear scan, O(n²) — fine because the play area never holds more
- * than ~20 coins at once. We only return one merge per call so the
- * caller animates one fusion at a time.
+ * Find one merge pair among the given points, if any. Returns the
+ * two ids to fuse + the centroid + the merged PC value. Linear
+ * O(n²) scan; the play area never holds more than ~20 coins.
  */
-export function findMerge(
+export function findMergePair(
   points: MergePoint[],
-  rule: { from: CoinId; count: number; to: CoinId },
   proximityPx: number = MERGE_PROXIMITY_PX,
-): { ids: number[]; centroid: { x: number; y: number }; to: CoinId } | null {
-  const candidates = points.filter((p) => p.coin === rule.from);
-  if (candidates.length < rule.count) return null;
-  for (const seed of candidates) {
-    const cluster: MergePoint[] = [seed];
-    for (const other of candidates) {
-      if (other.id === seed.id) continue;
-      if (cluster.length >= rule.count) break;
-      const dx = other.x - seed.x;
-      const dy = other.y - seed.y;
-      if (dx * dx + dy * dy <= proximityPx * proximityPx) cluster.push(other);
-    }
-    if (cluster.length >= rule.count) {
-      const used = cluster.slice(0, rule.count);
-      const cx = used.reduce((s, p) => s + p.x, 0) / used.length;
-      const cy = used.reduce((s, p) => s + p.y, 0) / used.length;
-      return { ids: used.map((p) => p.id), centroid: { x: cx, y: cy }, to: rule.to };
+): { ids: [number, number]; centroid: { x: number; y: number }; pc: number } | null {
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i];
+    for (let j = i + 1; j < points.length; j++) {
+      const b = points[j];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      if (dx * dx + dy * dy <= proximityPx * proximityPx) {
+        return {
+          ids: [a.id, b.id],
+          centroid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+          pc: a.pc + b.pc,
+        };
+      }
     }
   }
   return null;
+}
+
+// ============================================================
+// PINCH STREAK — find the active tier given recent click times
+// ============================================================
+
+import { STREAK_TIERS, STREAK_WINDOW_MS, type StreakTier } from "./catalog";
+
+export function streakTierFor(clickTimes: number[], now: number = Date.now()): StreakTier {
+  const cutoff = now - STREAK_WINDOW_MS;
+  const fresh = clickTimes.filter((t) => t >= cutoff);
+  let active = STREAK_TIERS[0];
+  for (const tier of STREAK_TIERS) {
+    if (fresh.length >= tier.threshold) active = tier;
+  }
+  return active;
+}
+
+/** Drop click timestamps that fell out of the streak window. */
+export function pruneStreakWindow(clickTimes: number[], now: number = Date.now()): number[] {
+  const cutoff = now - STREAK_WINDOW_MS;
+  return clickTimes.filter((t) => t >= cutoff);
 }
 
 // ============================================================

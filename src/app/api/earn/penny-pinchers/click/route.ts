@@ -8,6 +8,7 @@ import {
 } from "@/lib/db";
 import {
   COINS,
+  MAX_CLICK_PC,
   MAX_CLICKS_PER_SEC,
   TRAITS,
   type CoinId,
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  let body: { coinType?: unknown; trait?: unknown };
+  let body: { coinType?: unknown; trait?: unknown; pc?: unknown };
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "bad_json" }, { status: 400 }); }
 
@@ -55,6 +56,14 @@ export async function POST(req: Request) {
   let trait: CoinTrait | null = null;
   if (typeof body.trait === "string" && body.trait in TRAITS) {
     trait = body.trait as CoinTrait;
+  }
+
+  // Optional merged-coin override. Client tells us "this coin had
+  // grown to N PC via the merge system"; we clamp to MAX_CLICK_PC
+  // so a tampered request can't claim a million per click.
+  let mergedPC: number | null = null;
+  if (typeof body.pc === "number" && Number.isFinite(body.pc) && body.pc > 0) {
+    mergedPC = Math.min(MAX_CLICK_PC, Math.floor(body.pc));
   }
 
   const now = Date.now();
@@ -73,7 +82,10 @@ export async function POST(req: Request) {
   const permLevels: Partial<Record<PermUpgradeId, number>> = {};
   for (const u of permRows) permLevels[u.upgrade_id as PermUpgradeId] = u.level;
 
-  const baseValue = coinPCValue(coinType, upgradeLevels, permLevels);
+  // Use the client's merged PC if provided (clamped server-side),
+  // otherwise compute from the coin's intrinsic value + upgrades.
+  // Trait + Frugality multipliers stack on top of either source.
+  const baseValue = mergedPC ?? coinPCValue(coinType, upgradeLevels, permLevels);
   const pc = Math.round(
     baseValue * traitMultiplier(trait) * frugalityPCMultiplier(state.frugality),
   );

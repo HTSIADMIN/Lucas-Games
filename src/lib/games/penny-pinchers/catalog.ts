@@ -47,7 +47,8 @@ export type UpgradeId =
   | "boardwalk"
   | "grandpa_jar"
   | "auto_picker"
-  | "pile_it_up";
+  | "pile_it_up"
+  | "extra_hands";
 
 export type UpgradeDef = {
   id: UpgradeId;
@@ -85,9 +86,14 @@ export const UPGRADES: readonly UpgradeDef[] = [
   // Automation foundation
   { id: "auto_picker",       label: "Auto-Picker",            description: "Auto-clicks a random coin once per second per level.", category: "automation", baseCost: 5_000, costMultiplier: 3.0, maxLevel: 5 },
 
-  // Merging — strategic-wait mechanic. Once unlocked, coins that
-  // sit too close to each other auto-fuse into the next denomination.
-  { id: "pile_it_up",        label: "Pile It Up",             description: "Coins left near each other merge into bigger ones. 5 pennies → nickel; 2 nickels → dime.", category: "automation", baseCost: 500, costMultiplier: 1.0, maxLevel: 1 },
+  // Merging — strategic-wait mechanic. Once unlocked, ANY two
+  // coins that sit close to each other auto-fuse into a single
+  // coin whose value is the sum of both — chains keep growing
+  // until something despawns or you click them.
+  { id: "pile_it_up",        label: "Pile It Up",             description: "Coins near each other auto-merge into a single bigger coin (sums their value, resets the timer). Chains can grow huge.", category: "automation", baseCost: 500, costMultiplier: 1.0, maxLevel: 1 },
+
+  // Extra Hands — chance for a bonus coin alongside each spawn.
+  { id: "extra_hands",       label: "Extra Hands",            description: "+5% chance per level that each spawn drops an extra coin alongside it.", category: "spawn", baseCost: 350, costMultiplier: 1.6, maxLevel: 10 },
 ];
 
 export const UPGRADES_BY_ID: Record<UpgradeId, UpgradeDef> = Object.fromEntries(
@@ -178,27 +184,58 @@ export const TWO_FINGER_RADIUS = 110;
 export const AUTO_PICKER_PER_SEC = 1;
 
 // ============================================================
-// MERGING — Phase 2a
+// MERGING — Phase 2a (incremental rewrite Phase 3.5)
 //
-// When the `pile_it_up` upgrade is owned, coins of the same
-// denomination that have been on screen for at least
-// MERGE_MIN_AGE_MS auto-fuse into the next tier when enough are
-// within MERGE_PROXIMITY_PX of each other. Pure client-side cosmetic
-// — server still values clicked coins normally.
+// When the `pile_it_up` upgrade is owned, ANY two coins within
+// MERGE_PROXIMITY_PX of each other auto-fuse into a single coin
+// whose PC value is the sum of both inputs. The fused coin's
+// lifetime timer resets, so chains can keep growing. Chains pay
+// out via an optional `pc` field on the click endpoint, server-
+// clamped to MAX_CLICK_PC so a tampered client can't dump a
+// trillion-PC click.
 // ============================================================
 
-export const MERGE_PROXIMITY_PX = 110;
-export const MERGE_MIN_AGE_MS = 1500;
+export const MERGE_PROXIMITY_PX = 90;
+export const MERGE_MIN_AGE_MS = 800;
 
-export type MergeRule = { from: CoinId; count: number; to: CoinId };
+/** Server-side clamp on the per-click PC payout for merged coins. */
+export const MAX_CLICK_PC = 5_000;
 
-export const MERGE_RULES: readonly MergeRule[] = [
-  { from: "penny",   count: 5, to: "nickel"  },
-  { from: "nickel",  count: 2, to: "dime"    },
-  { from: "dime",    count: 5, to: "half"    },
-  { from: "quarter", count: 2, to: "half"    },
-  { from: "half",    count: 2, to: "dollar"  },
+// ============================================================
+// PINCH STREAK — Phase 3.5
+//
+// Click cadence is tracked in a sliding window; the more clicks
+// you land within the window, the more bonus PC each subsequent
+// click pays — up to a "Money Frenzy" tier where PC is doubled
+// AND coins rain. Server respects the optional `pc` field, so the
+// client just sends a streak-boosted value and lets the cap catch
+// any silliness.
+// ============================================================
+
+export const STREAK_WINDOW_MS = 6_000;
+
+export type StreakTier = {
+  /** Min clicks within the window. */
+  threshold: number;
+  /** PC multiplier this tier applies to subsequent clicks. */
+  multiplier: number;
+  label: string;
+};
+
+export const STREAK_TIERS: readonly StreakTier[] = [
+  { threshold: 0,  multiplier: 1.0, label: "—"             },
+  { threshold: 5,  multiplier: 1.2, label: "Warm"          },
+  { threshold: 15, multiplier: 1.5, label: "Hot"           },
+  { threshold: 30, multiplier: 2.0, label: "Money Frenzy!" },
 ];
+
+/** Money Frenzy threshold also unlocks a 5s burst of denser spawns. */
+export const FRENZY_THRESHOLD = 30;
+export const FRENZY_DURATION_MS = 5_000;
+/** Spawn interval multiplier while Money Frenzy is active. */
+export const FRENZY_SPAWN_MULTIPLIER = 0.35;
+/** Extra concurrent coins per Frenzy tick. */
+export const FRENZY_BURST_SIZE = 4;
 
 // ============================================================
 // CLICK / OFFLINE LIMITS

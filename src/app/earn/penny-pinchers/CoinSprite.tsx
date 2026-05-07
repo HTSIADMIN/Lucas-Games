@@ -12,6 +12,7 @@ import { COINS, type CoinId, type CoinTrait } from "@/lib/games/penny-pinchers/c
 export function CoinSprite({
   coin,
   trait,
+  pc,
   x,
   y,
   spawnedAt,
@@ -20,6 +21,8 @@ export function CoinSprite({
 }: {
   coin: CoinId;
   trait: CoinTrait | null;
+  /** Combined PC value of this coin (post any merges). */
+  pc: number;
   x: number;
   y: number;
   spawnedAt: number;
@@ -40,10 +43,14 @@ export function CoinSprite({
   const tarnish = lifeFrac < 0.5 ? 0 : (lifeFrac - 0.5) / 0.5; // 0 → 1
   const fade = lifeFrac < 0.85 ? 1 : Math.max(0, 1 - (lifeFrac - 0.85) / 0.15);
 
-  // Larger denomination → slightly bigger sprite.
+  // Size scales with both denom (visual classification) AND
+  // accumulated mergedPC so chains of merges grow visibly bigger.
+  // log2 keeps the curve gentle — a 32¢ merged coin is only
+  // ~2x the area of a fresh penny.
   const baseSize = 36;
   const sizeBoost = { penny: 0, nickel: 4, dime: 6, quarter: 10, half: 14, dollar: 18 }[coin];
-  const size = baseSize + sizeBoost;
+  const mergeBoost = Math.min(48, Math.round(Math.log2(Math.max(1, pc)) * 5));
+  const size = baseSize + sizeBoost + mergeBoost;
 
   // Trait visuals
   const isShiny = trait === "shiny";
@@ -114,7 +121,7 @@ export function CoinSprite({
           animation: isShiny ? "pp-coin-shiny-pulse 1.3s ease-in-out infinite" : undefined,
         }}
       >
-        {coinGlyph(coin)}
+        {formatPcLabel(pc)}
       </span>
       {/* Sparkle particles — three asterisks orbiting the disc */}
       {isShiny && (
@@ -169,15 +176,13 @@ function sparkleStyle(phase: number, halo: number, size: number): CSSProperties 
   };
 }
 
-function coinGlyph(coin: CoinId): string {
-  switch (coin) {
-    case "penny":   return "1¢";
-    case "nickel":  return "5¢";
-    case "dime":    return "10";
-    case "quarter": return "25";
-    case "half":    return "50";
-    case "dollar":  return "$1";
-  }
+function formatPcLabel(pc: number): string {
+  // Compact label so big merged values still fit in the disc.
+  if (pc >= 1_000_000) return `${(pc / 1_000_000).toFixed(1)}M`;
+  if (pc >= 10_000) return `${(pc / 1000).toFixed(0)}k`;
+  if (pc >= 1_000) return `${(pc / 1000).toFixed(1)}k`;
+  if (pc >= 100) return `${pc}`;
+  return `${pc}¢`;
 }
 
 function parseHex(hex: string): { r: number; g: number; b: number } | null {

@@ -13,7 +13,6 @@ import {
   LOST_WALLET_KEEP_PC,
   LOST_WALLET_LIFETIME_MS,
   MERGE_MIN_AGE_MS,
-  MERGE_RULES,
   PRESTIGE_THRESHOLD_PC,
   AUTO_PICKER_PER_SEC,
   BLESSINGS,
@@ -22,6 +21,11 @@ import {
   COUCH_LIFETIME_MS,
   FOUNTAIN_CHANCE_PER_POLL,
   FOUNTAIN_LIFETIME_MS,
+  FRENZY_BURST_SIZE,
+  FRENZY_DURATION_MS,
+  FRENZY_SPAWN_MULTIPLIER,
+  FRENZY_THRESHOLD,
+  STREAK_TIERS,
   STICKY_PICKUP_COUNT,
   STICKY_PICKUP_RADIUS,
   TRAITS,
@@ -37,7 +41,9 @@ import {
 } from "@/lib/games/penny-pinchers/catalog";
 import {
   coinPCValue,
-  findMerge,
+  findMergePair,
+  pruneStreakWindow,
+  streakTierFor,
   helperRatePcPerSec,
   rollSpawn,
   rollTrait,
@@ -107,7 +113,10 @@ type FloatPop = { id: number; x: number; y: number; pc: number; shiny: boolean }
 
 type SpawnedCoin = {
   id: number;
+  /** Original spawn denomination — drives the sprite's base colour. */
   coin: CoinId;
+  /** Combined PC value of this coin (post any merges). */
+  mergedPC: number;
   trait: CoinTrait | null;
   x: number;
   y: number;
@@ -135,6 +144,9 @@ export function PennyPinchersClient() {
   const [couchModalOpen, setCouchModalOpen] = useState(false);
   const [cushionReveals, setCushionReveals] = useState<CushionReveal[]>([]);
   const [activeBlessings, setActiveBlessings] = useState<ActiveBlessing[]>([]);
+  const streakClicksRef = useRef<number[]>([]);
+  const [streakCount, setStreakCount] = useState(0);
+  const [frenzyEndsAt, setFrenzyEndsAt] = useState<number | null>(null);
   const popSeqRef = useRef(0);
   const lostWalletSeqRef = useRef(0);
   const fountainSeqRef = useRef(0);
@@ -294,9 +306,15 @@ export function PennyPinchersClient() {
   const hasSharpEyes = activeBlessings.some((b) => b.id === "sharp_eyes");
   const hasLucky = activeBlessings.some((b) => b.id === "lucky_streak");
   const hasGreedy = activeBlessings.some((b) => b.id === "greedy_spawns");
+  const frenzyActive = frenzyEndsAt != null && frenzyEndsAt > Date.now();
   const eventInterval = eventDef ? baseIntervalMs * eventDef.spawnMultiplier : baseIntervalMs;
-  const intervalMs = Math.max(120, Math.round(eventInterval * (hasSharpEyes ? 0.5 : 1)));
-  const burstSize = (eventDef?.extraConcurrent ?? 0) > 0 ? 1 + eventDef!.extraConcurrent : 1;
+  const intervalMs = Math.max(
+    100,
+    Math.round(eventInterval * (hasSharpEyes ? 0.5 : 1) * (frenzyActive ? FRENZY_SPAWN_MULTIPLIER : 1)),
+  );
+  const burstSize =
+    ((eventDef?.extraConcurrent ?? 0) > 0 ? 1 + eventDef!.extraConcurrent : 1) +
+    (frenzyActive ? FRENZY_BURST_SIZE : 0);
   const bonusShiny = (eventDef?.bonusShinyChance ?? 0) + (hasLucky ? 0.1 : 0);
   useEffect(() => {
     if (!server) return;
@@ -310,7 +328,17 @@ export function PennyPinchersClient() {
       // coin — feels much rainier without halving the interval to
       // sub-100ms territory.
       const count = burstSize;
-      for (let i = 0; i < count; i++) {
+      // Extra Hands: each base spawn has a level*5% chance to
+      // also drop a bonus coin alongside it. We model that as
+      // an extra iteration of the regular spawn for-loop so the
+      // bonus coin also benefits from Greedy Spawns / shiny rolls.
+      const extraHandsLevel = upgrades.extra_hands ?? 0;
+      const baseCount = count;
+      let total = baseCount;
+      for (let k = 0; k < baseCount; k++) {
+        if (Math.random() < Math.min(0.5, 0.05 * extraHandsLevel)) total++;
+      }
+      for (let i = 0; i < total; i++) {
         const x = pad + Math.random() * Math.max(0, rect.width - pad * 2);
         const y = pad + Math.random() * Math.max(0, rect.height - pad * 2);
         // Greedy Spawns blessing: half the time, force the highest
@@ -327,7 +355,8 @@ export function PennyPinchersClient() {
         // base trait roll didn't already land something.
         if (!trait && bonusShiny > 0 && Math.random() < bonusShiny) trait = "shiny";
         coinSeqRef.current += 1;
-        newSpawns.push({ id: coinSeqRef.current, coin, trait, x, y, spawnedAt: Date.now() });
+        const mergedPC = coinPCValue(coin, upgrades, server.perm);
+        newSpawns.push({ id: coinSeqRef.current, coin, mergedPC, trait, x, y, spawnedAt: Date.now() });
       }
       setCoins((prev) => [...prev, ...newSpawns]);
     }, intervalMs);
@@ -357,35 +386,60 @@ export function PennyPinchersClient() {
   }, [server, autoPickerLevel]);
 
   // Merge proximity loop — only runs when "pile_it_up" is owned.
-  // Walks each merge rule once per tick and fuses one cluster
-  // per tick so the animation reads as a chain reaction rather
-  // than a single frame disappearance.
+  // Any two coins within MERGE_PROXIMITY_PX fuse into a single
+  // coin whose PC value is the sum of both inputs. The fused coin
+  // gets a fresh spawnedAt so chains can keep growing — watch a
+  // 1¢ + 1¢ become 2¢, then meet a fresh 1¢ to become 3¢, etc.
+  // One pair per tick reads as a chain reaction.
   useEffect(() => {
     if (!server) return;
     if ((upgrades.pile_it_up ?? 0) < 1) return;
     const t = window.setInterval(() => {
       setCoins((prev) => {
         const eligibleCutoff = Date.now() - MERGE_MIN_AGE_MS;
-        const eligible = prev.filter((c) => c.spawnedAt <= eligibleCutoff);
-        for (const rule of MERGE_RULES) {
-          const merge = findMerge(eligible, rule);
-          if (!merge) continue;
-          coinSeqRef.current += 1;
-          const fresh: SpawnedCoin = {
-            id: coinSeqRef.current,
-            coin: merge.to,
-            trait: null,
-            x: merge.centroid.x,
-            y: merge.centroid.y,
-            spawnedAt: Date.now(),
-          };
-          return [...prev.filter((c) => !merge.ids.includes(c.id)), fresh];
-        }
-        return prev;
+        const eligible = prev
+          .filter((c) => c.spawnedAt <= eligibleCutoff)
+          .map((c) => ({ id: c.id, pc: c.mergedPC, x: c.x, y: c.y, spawnedAt: c.spawnedAt }));
+        const pair = findMergePair(eligible);
+        if (!pair) return prev;
+        const [aId, bId] = pair.ids;
+        const a = prev.find((c) => c.id === aId);
+        const b = prev.find((c) => c.id === bId);
+        if (!a || !b) return prev;
+        coinSeqRef.current += 1;
+        // Pick whichever input had the bigger denom — keeps the
+        // sprite size scaling in step with PC growth. Trait is
+        // preserved if either input had one (shiny wins).
+        const baseCoin = a.mergedPC >= b.mergedPC ? a.coin : b.coin;
+        const trait = a.trait === "shiny" || b.trait === "shiny" ? "shiny"
+          : a.trait ?? b.trait;
+        const fresh: SpawnedCoin = {
+          id: coinSeqRef.current,
+          coin: baseCoin,
+          mergedPC: pair.pc,
+          trait,
+          x: pair.centroid.x,
+          y: pair.centroid.y,
+          spawnedAt: Date.now(),
+        };
+        return [...prev.filter((c) => c.id !== aId && c.id !== bId), fresh];
       });
-    }, 600);
+    }, 350);
     return () => window.clearInterval(t);
   }, [server, upgrades.pile_it_up]);
+
+  // Streak-window pruner — trims expired clicks + clears Frenzy
+  // when its 5s window runs out. Drives the meter shrinking
+  // visually even when the player isn't clicking.
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      const nowMs = Date.now();
+      streakClicksRef.current = pruneStreakWindow(streakClicksRef.current, nowMs);
+      setStreakCount(streakClicksRef.current.length);
+      setFrenzyEndsAt((cur) => (cur != null && cur < nowMs ? null : cur));
+    }, 250);
+    return () => window.clearInterval(t);
+  }, []);
 
   // Coin reaper — drop coins that have aged out
   useEffect(() => {
@@ -410,8 +464,21 @@ export function PennyPinchersClient() {
     // Slots reel-stop tick — chunky wood click that reads as
     // "the coin landed" without the long melodic tail of coin.drop.
     if (!opts.silent) Sfx.play("ui.wood");
+
+    // Pinch Streak tracking — record the click + recompute the
+    // active tier. Frenzy ignites once we cross the top threshold.
+    const nowClick = Date.now();
+    const window = pruneStreakWindow([...streakClicksRef.current, nowClick], nowClick);
+    streakClicksRef.current = window;
+    setStreakCount(window.length);
+    const tier = streakTierFor(window, nowClick);
+    if (tier.threshold >= FRENZY_THRESHOLD && (frenzyEndsAt == null || frenzyEndsAt < nowClick)) {
+      Sfx.play("coins.shower");
+      setFrenzyEndsAt(nowClick + FRENZY_DURATION_MS);
+    }
+
     const traitMul = coin.trait === "shiny" ? 5 : 1;
-    const optimisticPC = coinPCValue(coin.coin, upgrades) * traitMul;
+    const optimisticPC = Math.round(coin.mergedPC * traitMul * tier.multiplier);
     setLocalCents((c) => c + optimisticPC);
     spawnPop(coin.x, coin.y, optimisticPC, coin.trait === "shiny");
 
@@ -455,11 +522,15 @@ export function PennyPinchersClient() {
       return prev.filter((c) => !removeIds.has(c.id));
     });
 
+    // We send the *streak-multiplied merged PC* as the `pc` field;
+    // server clamps to MAX_CLICK_PC and stacks trait + frugality
+    // on top so a tampered client can't cheese the cap.
+    const sentPC = Math.round(coin.mergedPC * tier.multiplier);
     try {
       const r = await fetch("/api/earn/penny-pinchers/click", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ coinType: coin.coin, trait: coin.trait }),
+        body: JSON.stringify({ coinType: coin.coin, trait: coin.trait, pc: sentPC }),
       });
       if (r.ok) {
         const d = (await r.json()) as { cents: number };
@@ -470,13 +541,17 @@ export function PennyPinchersClient() {
     // Fire-and-forget the collateral pickups so each one is
     // metered + counted toward lifetime_clicks.
     for (const extra of collateral) {
-      const extraOptimistic = coinPCValue(extra.coin, upgrades) * (extra.trait === "shiny" ? 5 : 1);
+      const extraOptimistic = Math.round(extra.mergedPC * (extra.trait === "shiny" ? 5 : 1) * tier.multiplier);
       setLocalCents((c) => c + extraOptimistic);
       spawnPop(extra.x, extra.y, extraOptimistic, extra.trait === "shiny");
       void fetch("/api/earn/penny-pinchers/click", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ coinType: extra.coin, trait: extra.trait }),
+        body: JSON.stringify({
+          coinType: extra.coin,
+          trait: extra.trait,
+          pc: Math.round(extra.mergedPC * tier.multiplier),
+        }),
       }).catch(() => { /* ignore — sync poll reconciles */ });
     }
   }
@@ -723,6 +798,50 @@ export function PennyPinchersClient() {
           >
             {server.frugality > 0 ? "✓" : server.frugality < 0 ? "✗" : "·"} Frugality {server.frugality > 0 ? `+${server.frugality}` : server.frugality}
           </div>
+          {streakCount > 0 && (() => {
+            const tier = streakTierFor(streakClicksRef.current, now);
+            const nextTier = STREAK_TIERS.find((t) => t.threshold > tier.threshold);
+            const max = nextTier ? nextTier.threshold : tier.threshold;
+            const pct = nextTier ? Math.min(100, (streakCount / max) * 100) : 100;
+            const isFrenzy = frenzyEndsAt != null && frenzyEndsAt > now;
+            return (
+              <div
+                style={{
+                  marginTop: 6,
+                  padding: "4px 6px",
+                  border: `2px solid ${isFrenzy ? "var(--gold-300)" : "var(--saddle-300)"}`,
+                  background: isFrenzy ? "var(--gold-100)" : "var(--parchment-200)",
+                  fontFamily: "var(--font-display)",
+                  fontSize: 10,
+                  color: "var(--ink-900)",
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                }}
+              >
+                <div className="row" style={{ justifyContent: "space-between" }}>
+                  <span>Pinch Streak · {tier.label}</span>
+                  <span style={{ color: "var(--gold-500)" }}>{tier.multiplier}×</span>
+                </div>
+                <div
+                  style={{
+                    height: 4,
+                    marginTop: 3,
+                    background: "var(--saddle-200)",
+                    border: "1px solid var(--ink-900)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${pct}%`,
+                      height: "100%",
+                      background: isFrenzy ? "var(--gold-500)" : "var(--cactus-300)",
+                      transition: "width 200ms linear",
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
         </div>
         <div
           className="panel"
@@ -849,6 +968,7 @@ export function PennyPinchersClient() {
               key={c.id}
               coin={c.coin}
               trait={c.trait}
+              pc={c.mergedPC}
               x={c.x}
               y={c.y}
               spawnedAt={c.spawnedAt}
