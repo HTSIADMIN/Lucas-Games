@@ -42,15 +42,25 @@ export async function POST(req: Request, ctx: { params: Promise<{ sessionId: str
 
   try {
     if (action === "double") {
+      // Apply the engine transition FIRST and only debit if the
+      // pop+push actually happened (state.doubled flips true). That
+      // way a deck-pop failure can't leave the player charged
+      // without a card — the original symptom of "bet doubled but
+      // no card dealt".
       const additional = doubleAdditional(state);
-      await debit({
-        userId: s.user.id,
-        amount: additional,
-        reason: "blackjack_double",
-        refKind: "blackjack",
-        refId: `${sessionId}:double`,
-      });
+      const before = state.doubled;
       state = doubleDown(state);
+      if (state.doubled && !before) {
+        await debit({
+          userId: s.user.id,
+          amount: additional,
+          reason: "blackjack_double",
+          refKind: "blackjack",
+          refId: `${sessionId}:double`,
+        });
+      } else {
+        return NextResponse.json({ error: "cant_double" }, { status: 400 });
+      }
     } else if (action === "hit") {
       state = hit(state);
     } else {

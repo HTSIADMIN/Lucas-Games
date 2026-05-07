@@ -94,9 +94,14 @@ export function stand(state: BlackjackState): BlackjackState {
 export function doubleDown(state: BlackjackState): BlackjackState {
   if (state.status !== "player_turn") return state;
   if (state.player.length !== 2) return state;
-  state.doubled = true;
+  // Pop FIRST so a deck-pop failure (shouldn't happen — we use a 2
+  // deck shoe — but defensive) doesn't leave the doubled flag set
+  // without an actual card dealt. Route layer reads the doubled
+  // flag to know whether to charge the second half of the bet, so
+  // both halves of the contract have to land together.
   const c = state.deck.pop();
   if (!c) return state;
+  state.doubled = true;
   state.player.push(c);
   if (handValue(state.player).total > 21) {
     state.status = "player_bust";

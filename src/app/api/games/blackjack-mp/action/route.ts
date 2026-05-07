@@ -63,6 +63,11 @@ export async function POST(req: Request) {
   } else if (body.action === "double") {
     // Allow double on any 2-card hand (including post-split hands).
     if (seat.hand.length !== 2) return NextResponse.json({ error: "cant_double" }, { status: 400 });
+    // Pop the deck FIRST so we never debit the double bet without
+    // dealing the card — empty-deck races would otherwise charge the
+    // player and leave the hand at two cards (the original symptom).
+    const c = deck.pop();
+    if (!c) return NextResponse.json({ error: "deck_empty" }, { status: 500 });
     try {
       await debit({
         userId: s.user.id,
@@ -75,8 +80,7 @@ export async function POST(req: Request) {
       const msg = err instanceof Error ? err.message : "error";
       return NextResponse.json({ error: msg }, { status: 400 });
     }
-    const c = deck.pop();
-    if (c) hand.push(c);
+    hand.push(c);
     const total = handTotal(hand);
     const newStatus = total > 21 ? "busted" : "standing";
     await updateBlackjackSeat(seat.id, { hand, doubled: true, status: newStatus });

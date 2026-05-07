@@ -466,6 +466,16 @@ function DealCard({
   revealKey?: number;
 }) {
   const justRevealed = isDealerHole && !faceDown && (revealKey ?? 0) > 0;
+  // Stagger ONLY the first two cards in a hand. Hits / double-down /
+  // post-deal additions (index 2+) snap in at 0.05s so the new card
+  // is visible immediately rather than showing up half a second after
+  // the result stamp lands. Was 0.18 + index*0.32 across the board,
+  // which buried the double-down card under the dealer cascade.
+  const delay = justRevealed
+    ? "0s"
+    : index < 2
+    ? `${0.18 + index * 0.32}s`
+    : "0.05s";
   return (
     <span
       style={{
@@ -474,7 +484,7 @@ function DealCard({
         animation: justRevealed
           ? "bj-flip 0.85s cubic-bezier(0.2, 0.9, 0.3, 1) backwards"
           : `bj-deal 0.85s cubic-bezier(0.18, 0.85, 0.3, 1) backwards`,
-        animationDelay: justRevealed ? "0s" : `${0.18 + index * 0.32}s`,
+        animationDelay: delay,
       }}
     >
       <PlayingCard rank={rank} suit={suit} faceDown={faceDown} />

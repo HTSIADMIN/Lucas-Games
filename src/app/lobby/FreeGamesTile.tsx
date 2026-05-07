@@ -33,7 +33,7 @@ export function FreeGamesTile() {
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
           gridTemplateRows: "1fr 1fr",
-          padding: 6,
+          padding: 4,
           gap: 4,
         }}
       >
@@ -41,13 +41,30 @@ export function FreeGamesTile() {
           <div
             key={g.slug}
             style={{
-              display: "grid",
-              placeItems: "center",
-              background: "var(--parchment-100)",
               border: "2px solid var(--ink-900)",
+              overflow: "hidden",
+              minWidth: 0,
+              minHeight: 0,
+              position: "relative",
             }}
           >
-            <GameIcon name={g.icon} size={48} />
+            {/* Force the icon to fill the quadrant — GameIcon's
+                default <img width=size> attributes get overridden
+                by style:100% so the art reads at the full cell
+                size instead of looking like a 48px chip floating
+                in cream space. */}
+            <GameIcon
+              name={g.icon}
+              size={128}
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
           </div>
         ))}
       </div>
