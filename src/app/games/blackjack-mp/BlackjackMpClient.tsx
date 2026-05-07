@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { PlayingCard } from "@/components/PlayingCard";
@@ -397,6 +398,16 @@ export function BlackjackMpClient() {
               >
                 {busy ? "..." : `Sit Down (${bet.toLocaleString()} ¢)`}
               </button>
+              {/* Escape hatch — players who don't want to wait on the
+                  shared 15s bet timer can pop over to the solo
+                  blackjack room (instant pace, no shared dealer). */}
+              <Link
+                href="/games/blackjack"
+                className="btn btn-ghost btn-sm btn-block"
+                style={{ textDecoration: "none" }}
+              >
+                ↗ Play alone (solo table)
+              </Link>
             </div>
           ) : mySeats.length > 0 ? (
             <div className="stack-lg">
