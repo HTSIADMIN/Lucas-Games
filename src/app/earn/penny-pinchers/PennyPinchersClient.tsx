@@ -15,9 +15,11 @@ import {
   MERGE_MIN_AGE_MS,
   MERGE_RULES,
   PRESTIGE_THRESHOLD_PC,
+  AUTO_PICKER_PER_SEC,
   STICKY_PICKUP_COUNT,
   STICKY_PICKUP_RADIUS,
   TRAITS,
+  TWO_FINGER_RADIUS,
   type AchievementId,
   type CoinId,
   type CoinTrait,
@@ -260,6 +262,28 @@ export function PennyPinchersClient() {
     return () => window.clearInterval(t);
   }, [server, intervalMs, upgrades, burstSize, bonusShiny]);
 
+  // Auto-Picker — picks a random coin off the play area every
+  // `1000/level` ms. Routes through the same click flow (so PC
+  // popups and PC ticks fire) but in silent mode so the wood-tick
+  // SFX doesn't machine-gun. Closures over the latest clickCoin
+  // via a ref so upgrade changes mid-run don't get stale.
+  const clickCoinRef = useRef<typeof clickCoin>(clickCoin);
+  clickCoinRef.current = clickCoin;
+  const autoPickerLevel = upgrades.auto_picker ?? 0;
+  useEffect(() => {
+    if (!server || autoPickerLevel <= 0) return;
+    const intervalMs = Math.max(150, Math.floor(1000 / (AUTO_PICKER_PER_SEC * autoPickerLevel)));
+    const t = window.setInterval(() => {
+      let target: SpawnedCoin | null = null;
+      setCoins((prev) => {
+        if (prev.length > 0) target = prev[Math.floor(Math.random() * prev.length)];
+        return prev;
+      });
+      if (target) void clickCoinRef.current(target, { silent: true });
+    }, intervalMs);
+    return () => window.clearInterval(t);
+  }, [server, autoPickerLevel]);
+
   // Merge proximity loop — only runs when "pile_it_up" is owned.
   // Walks each merge rule once per tick and fuses one cluster
   // per tick so the animation reads as a chain reaction rather
@@ -310,22 +334,25 @@ export function PennyPinchersClient() {
     return () => window.clearInterval(t);
   }, [server]);
 
-  async function clickCoin(coin: SpawnedCoin) {
+  async function clickCoin(coin: SpawnedCoin, opts: { silent?: boolean } = {}) {
     // Slots reel-stop tick — chunky wood click that reads as
     // "the coin landed" without the long melodic tail of coin.drop.
-    Sfx.play("ui.wood");
+    if (!opts.silent) Sfx.play("ui.wood");
     const traitMul = coin.trait === "shiny" ? 5 : 1;
     const optimisticPC = coinPCValue(coin.coin, upgrades) * traitMul;
     setLocalCents((c) => c + optimisticPC);
     spawnPop(coin.x, coin.y, optimisticPC, coin.trait === "shiny");
 
-    // Sticky-click side effect: also pick up the N nearest coins
-    // within radius. Each becomes its own server click so the rate
-    // limiter still gates real abuse.
+    // Two-Finger Pickup + Sticky both add "collateral" pickups —
+    // extra coins this single click is going to grab. They share the
+    // same downstream code path (optimistic PC + pop + server click)
+    // so adding a second source is just adding to the list.
     const collateral: SpawnedCoin[] = [];
-    if (coin.trait === "sticky") {
-      setCoins((prev) => {
-        const others = prev.filter((c) => c.id !== coin.id);
+    setCoins((prev) => {
+      const others = prev.filter((c) => c.id !== coin.id);
+
+      // Sticky — grab the N nearest within radius.
+      if (coin.trait === "sticky") {
         const nearby = others
           .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
           .filter((e) => e.d2 <= STICKY_PICKUP_RADIUS * STICKY_PICKUP_RADIUS)
@@ -333,12 +360,28 @@ export function PennyPinchersClient() {
           .slice(0, STICKY_PICKUP_COUNT)
           .map((e) => e.c);
         collateral.push(...nearby);
-        const removeIds = new Set([coin.id, ...nearby.map((c) => c.id)]);
-        return prev.filter((c) => !removeIds.has(c.id));
-      });
-    } else {
-      setCoins((prev) => prev.filter((c) => c.id !== coin.id));
-    }
+      }
+
+      // Two-Finger Pickup — 5% per level chance to grab one extra
+      // coin within a generous radius. Independent of sticky, but
+      // we exclude anything already grabbed so we don't double-pop.
+      const tfLevel = upgrades.two_finger_pickup ?? 0;
+      if (tfLevel > 0) {
+        const chance = Math.min(0.5, 0.05 * tfLevel);
+        if (Math.random() < chance) {
+          const taken = new Set(collateral.map((c) => c.id));
+          const extra = others
+            .filter((c) => !taken.has(c.id))
+            .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
+            .filter((e) => e.d2 <= TWO_FINGER_RADIUS * TWO_FINGER_RADIUS)
+            .sort((a, b) => a.d2 - b.d2)[0];
+          if (extra) collateral.push(extra.c);
+        }
+      }
+
+      const removeIds = new Set([coin.id, ...collateral.map((c) => c.id)]);
+      return prev.filter((c) => !removeIds.has(c.id));
+    });
 
     try {
       const r = await fetch("/api/earn/penny-pinchers/click", {
@@ -352,7 +395,7 @@ export function PennyPinchersClient() {
       }
     } catch { /* ignore */ }
 
-    // Fire-and-forget the sticky collateral pickups so each one is
+    // Fire-and-forget the collateral pickups so each one is
     // metered + counted toward lifetime_clicks.
     for (const extra of collateral) {
       const extraOptimistic = coinPCValue(extra.coin, upgrades) * (extra.trait === "shiny" ? 5 : 1);

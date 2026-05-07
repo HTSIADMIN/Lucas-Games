@@ -172,6 +172,11 @@ export const STICKY_PICKUP_COUNT = 2;
 /** Sticky-click radius (px in play area). */
 export const STICKY_PICKUP_RADIUS = 140;
 
+/** Two-Finger Pickup radius (px). Only triggers on the upgrade roll. */
+export const TWO_FINGER_RADIUS = 110;
+/** Per-second auto-clicks per level of Auto-Picker. */
+export const AUTO_PICKER_PER_SEC = 1;
+
 // ============================================================
 // MERGING — Phase 2a
 //
