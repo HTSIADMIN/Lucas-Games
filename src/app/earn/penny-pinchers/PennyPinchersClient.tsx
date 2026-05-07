@@ -1208,6 +1208,120 @@ export function PennyPinchersClient() {
             cursor: "crosshair",
           }}
         >
+          {/* Event-atmosphere layer — sits below coins via z-index 0
+              vs coins/pops at default. Pure cosmetic; pointer-events
+              off so clicks pass through to coins. */}
+          {activeEvent?.id === "coin_storm" && (
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                background:
+                  "radial-gradient(ellipse at center, rgba(255,200,60,0.22) 0%, rgba(255,200,60,0.05) 50%, rgba(0,0,0,0) 80%)",
+                animation: "pp-storm-shine 3.6s ease-in-out infinite",
+                zIndex: 0,
+              }}
+            />
+          )}
+          {activeEvent?.id === "rainy_day" && (
+            <>
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  pointerEvents: "none",
+                  background:
+                    "linear-gradient(180deg, rgba(70,120,180,0.22) 0%, rgba(70,120,180,0.08) 100%)",
+                  zIndex: 0,
+                }}
+              />
+              {Array.from({ length: 28 }).map((_, i) => {
+                const left = (i * 3.6 + (i * 31) % 7) % 100;
+                const delay = (i * 0.13) % 1.6;
+                const duration = 0.9 + ((i * 7) % 5) / 10;
+                return (
+                  <span
+                    key={`rain-${i}`}
+                    aria-hidden
+                    style={{
+                      position: "absolute",
+                      left: `${left}%`,
+                      top: -16,
+                      width: 1,
+                      height: 12,
+                      background: "linear-gradient(180deg, rgba(180,210,255,0) 0%, rgba(180,210,255,0.85) 100%)",
+                      pointerEvents: "none",
+                      animation: `pp-raindrop ${duration}s ${delay}s linear infinite`,
+                      zIndex: 0,
+                    }}
+                  />
+                );
+              })}
+            </>
+          )}
+          {frenzyEndsAt != null && frenzyEndsAt > Date.now() && (
+            <>
+              <div
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  pointerEvents: "none",
+                  background:
+                    "radial-gradient(ellipse at center, rgba(255,220,100,0.30) 0%, rgba(255,180,40,0.10) 60%, rgba(0,0,0,0) 90%)",
+                  animation: "pp-frenzy-aura 1.1s ease-in-out infinite",
+                  zIndex: 0,
+                }}
+              />
+              {Array.from({ length: 18 }).map((_, i) => {
+                const left = (i * 5.5 + (i * 13) % 11) % 100;
+                const top = (i * 11.1 + (i * 7) % 23) % 100;
+                const delay = (i * 0.07) % 0.9;
+                return (
+                  <span
+                    key={`spark-${i}`}
+                    aria-hidden
+                    style={{
+                      position: "absolute",
+                      left: `${left}%`,
+                      top: `${top}%`,
+                      width: 4,
+                      height: 4,
+                      borderRadius: "50%",
+                      background: "var(--gold-300)",
+                      boxShadow: "0 0 8px rgba(255,220,100,0.9)",
+                      pointerEvents: "none",
+                      animation: `pp-spark-twinkle 1.2s ${delay}s ease-in-out infinite`,
+                      zIndex: 0,
+                    }}
+                  />
+                );
+              })}
+            </>
+          )}
+          <style>{`
+            @keyframes pp-storm-shine {
+              0%, 100% { opacity: 0.55; }
+              50%      { opacity: 1; }
+            }
+            @keyframes pp-frenzy-aura {
+              0%, 100% { opacity: 0.7; transform: scale(1); }
+              50%      { opacity: 1;   transform: scale(1.04); }
+            }
+            @keyframes pp-raindrop {
+              0%   { transform: translateY(0); opacity: 0; }
+              10%  { opacity: 0.85; }
+              90%  { opacity: 0.85; }
+              100% { transform: translateY(440px); opacity: 0; }
+            }
+            @keyframes pp-spark-twinkle {
+              0%, 100% { opacity: 0; transform: scale(0.4); }
+              50%      { opacity: 1; transform: scale(1.4); }
+            }
+          `}</style>
           {coins.map((c) => (
             <CoinSprite
               key={c.id}
