@@ -205,8 +205,18 @@ function RevealModal({ result, onClose }: { result: RollResult; onClose: () => v
   }, [result.relicId]);
 
   useEffect(() => {
+    // Decelerating tick schedule — exponentially spaced so the
+    // ticks slow down with the strip rather than firing at flat
+    // intervals. Cheap "real slot machine" feel.
+    const tickTimes = [180, 380, 560, 740, 940, 1180, 1460, 1780, 2150, 2520];
+    const tickHandles = tickTimes.map((ms) =>
+      window.setTimeout(() => Sfx.play("ui.wood"), ms),
+    );
     const t = window.setTimeout(() => setRevealed(true), SPIN_REVEAL_DELAY_MS);
-    return () => window.clearTimeout(t);
+    return () => {
+      window.clearTimeout(t);
+      for (const h of tickHandles) window.clearTimeout(h);
+    };
   }, []);
 
   // Stopping offset: line up the winner card's centre with the
@@ -319,7 +329,8 @@ function RevealModal({ result, onClose }: { result: RollResult; onClose: () => v
               );
             })}
           </div>
-          {/* Centre marker */}
+          {/* Centre marker — pulses while spinning, sets up a
+              "land flash" once the spin resolves. */}
           <div
             aria-hidden
             style={{
@@ -329,7 +340,46 @@ function RevealModal({ result, onClose }: { result: RollResult; onClose: () => v
               left: "50%",
               width: 0,
               borderLeft: "3px solid var(--gold-300)",
-              boxShadow: "0 0 8px rgba(255,200,60,0.75)",
+              boxShadow: revealed
+                ? "0 0 18px rgba(255,200,60,1)"
+                : "0 0 8px rgba(255,200,60,0.75)",
+              pointerEvents: "none",
+              animation: revealed
+                ? "pp-relic-marker-land 420ms ease-out"
+                : "pp-relic-marker-pulse 0.6s ease-in-out infinite",
+              transition: "box-shadow 200ms",
+            }}
+          />
+          {/* Marker arrows pointing at the winning card */}
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: -2,
+              left: "50%",
+              transform: "translate(-50%, 0)",
+              width: 0,
+              height: 0,
+              borderLeft: "8px solid transparent",
+              borderRight: "8px solid transparent",
+              borderTop: "10px solid var(--gold-300)",
+              filter: "drop-shadow(0 0 4px rgba(255,200,60,0.8))",
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              bottom: -2,
+              left: "50%",
+              transform: "translate(-50%, 0)",
+              width: 0,
+              height: 0,
+              borderLeft: "8px solid transparent",
+              borderRight: "8px solid transparent",
+              borderBottom: "10px solid var(--gold-300)",
+              filter: "drop-shadow(0 0 4px rgba(255,200,60,0.8))",
               pointerEvents: "none",
             }}
           />
@@ -344,6 +394,24 @@ function RevealModal({ result, onClose }: { result: RollResult; onClose: () => v
                 "linear-gradient(90deg, var(--saddle-200), transparent 12%, transparent 88%, var(--saddle-200))",
             }}
           />
+          {/* Land flash — bright pulse over the centre when the
+              spin resolves, so the eye snaps to the winner. */}
+          {revealed && (
+            <div
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: `calc(50% - ${STRIP_CARD_W / 2}px)`,
+                width: STRIP_CARD_W,
+                pointerEvents: "none",
+                background:
+                  "radial-gradient(ellipse at center, rgba(255,220,90,0.55) 0%, rgba(255,220,90,0) 70%)",
+                animation: "pp-relic-land-flash 520ms ease-out",
+              }}
+            />
+          )}
         </div>
 
         {/* Result card — fades in after the spin lands. */}
@@ -403,6 +471,20 @@ function RevealModal({ result, onClose }: { result: RollResult; onClose: () => v
           @keyframes pp-relic-spin {
             0%   { transform: translateX(0); }
             100% { transform: translateX(var(--spin-stop)); }
+          }
+          @keyframes pp-relic-marker-pulse {
+            0%, 100% { box-shadow: 0 0 8px rgba(255,200,60,0.7); }
+            50%      { box-shadow: 0 0 14px rgba(255,200,60,1); }
+          }
+          @keyframes pp-relic-marker-land {
+            0%   { box-shadow: 0 0 24px rgba(255,200,60,1); transform: scaleY(1.08); }
+            60%  { box-shadow: 0 0 32px rgba(255,200,60,1); transform: scaleY(1.04); }
+            100% { box-shadow: 0 0 18px rgba(255,200,60,1); transform: scaleY(1); }
+          }
+          @keyframes pp-relic-land-flash {
+            0%   { opacity: 0; transform: scale(0.8); }
+            40%  { opacity: 1; transform: scale(1.15); }
+            100% { opacity: 0; transform: scale(1); }
           }
         `}</style>
       </div>

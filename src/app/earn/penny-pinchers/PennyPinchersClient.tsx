@@ -128,7 +128,7 @@ type LostWallet = { id: number; x: number; y: number; spawnedAt: number };
 type Fountain  = { id: number; x: number; y: number; spawnedAt: number };
 type Couch     = { id: number; x: number; y: number; spawnedAt: number };
 type ActiveBlessing = { id: BlessingId; endsAt: number };
-type CushionReveal = { idx: number; lootId: string; label: string; pcGain: number };
+type CushionReveal = { idx: number; lootId: string; label: string; pcGain: number; revealedAt: number };
 type FloatPop = { id: number; x: number; y: number; pc: number; shiny: boolean };
 type ClickBurst = {
   id: number;
@@ -779,7 +779,10 @@ export function PennyPinchersClient() {
       if (!r.ok) return;
       const d = (await r.json()) as { loot: string; label: string; pcGain: number; cents: number };
       setLocalCents(d.cents);
-      setCushionReveals((prev) => [...prev, { idx, lootId: d.loot, label: d.label, pcGain: d.pcGain }]);
+      setCushionReveals((prev) => [
+        ...prev,
+        { idx, lootId: d.loot, label: d.label, pcGain: d.pcGain, revealedAt: Date.now() },
+      ]);
       if (d.pcGain > 0) Sfx.play("coin.drop");
     } catch { /* ignore */ }
   }
@@ -999,18 +1002,25 @@ export function PennyPinchersClient() {
               aria-label="How to play"
               title="How to play"
               style={{
-                width: 22,
-                height: 22,
+                // Bigger touch target on phones — 22px was below the
+                // 44px HIG floor and felt fiddly. Sized inline so we
+                // don't need a media query just for one button.
+                width: 32,
+                height: 32,
                 padding: 0,
                 background: "var(--saddle-200)",
                 border: "2px solid var(--ink-900)",
                 borderRadius: "50%",
                 fontFamily: "var(--font-display)",
-                fontSize: 12,
+                fontSize: 16,
                 color: "var(--ink-900)",
                 cursor: "pointer",
-                lineHeight: "18px",
+                lineHeight: "28px",
+                transition: "transform 120ms, box-shadow 200ms",
               }}
+              onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.92)")}
+              onMouseUp={(e) => (e.currentTarget.style.transform = "")}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = "")}
             >
               ?
             </button>
@@ -1577,7 +1587,30 @@ export function PennyPinchersClient() {
             gap: "var(--sp-2)",
           }}
         >
-          <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+          <div
+            className="row pp-tab-row"
+            style={{
+              gap: 6,
+              flexWrap: "wrap",
+              // On narrow viewports the row falls back to horizontal
+              // scroll so all six tabs stay on one swipeable line
+              // instead of stacking 3+3 (see media query in style block).
+            }}
+          >
+            <style>{`
+              @media (max-width: 480px) {
+                .pp-tab-row {
+                  flex-wrap: nowrap !important;
+                  overflow-x: auto;
+                  -webkit-overflow-scrolling: touch;
+                  scrollbar-width: thin;
+                  padding-bottom: 4px;
+                }
+                .pp-tab-row > button {
+                  flex: 0 0 auto !important;
+                }
+              }
+            `}</style>
             {([
               ["upgrades",     "Upgrades",     "✦"],
               ["helpers",      "Helpers",      "⚒"],
@@ -2093,16 +2126,7 @@ export function PennyPinchersClient() {
                           textAlign: "center",
                         }}
                       >
-                        {flipped && (
-                          <div>
-                            <div style={{ fontSize: 13, marginBottom: 2 }}>{reveal!.label}</div>
-                            {reveal!.pcGain > 0 ? (
-                              <div style={{ fontSize: 12, color: "var(--gold-500)" }}>+{reveal!.pcGain} PC</div>
-                            ) : (
-                              <div style={{ fontSize: 11, color: "var(--saddle-400)" }}>nothing</div>
-                            )}
-                          </div>
-                        )}
+                        {flipped && <CushionLootReveal reveal={reveal!} />}
                       </div>
                     </div>
                   </button>
@@ -2266,6 +2290,92 @@ export function PennyPinchersClient() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Vertical slot-reel reveal for a flipped Couch Cushion. Cycles
+ * through six labels then lands on the actual reward, with the
+ * +N PC line fading in afterward. Pure CSS transition keyed to
+ * `revealedAt` so React doesn't have to drive frame-by-frame.
+ */
+function CushionLootReveal({ reveal }: { reveal: CushionReveal }) {
+  const filler = ["Lint", "Pennies", "Nickels", "Dimes", "Quarters", "Jackpot!"];
+  const labels = [...filler.filter((l) => l !== reveal.label), reveal.label];
+  const finalIdx = labels.length - 1;
+  const ROW = 18;
+  return (
+    <div style={{ width: "100%" }}>
+      <div
+        key={reveal.revealedAt}
+        style={{
+          position: "relative",
+          height: ROW,
+          overflow: "hidden",
+          fontFamily: "var(--font-display)",
+        }}
+      >
+        <div
+          style={{
+            ["--cushion-final" as string]: `-${finalIdx * ROW}px`,
+            animation: "pp-cushion-spin 700ms cubic-bezier(.18, .82, .25, 1) forwards",
+          }}
+        >
+          {labels.map((l, i) => (
+            <div
+              key={i}
+              style={{
+                height: ROW,
+                lineHeight: `${ROW}px`,
+                fontSize: 13,
+                textAlign: "center",
+                color: i === finalIdx && reveal.pcGain > 0 ? "var(--ink-900)" : "var(--saddle-400)",
+              }}
+            >
+              {l}
+            </div>
+          ))}
+        </div>
+      </div>
+      {reveal.pcGain > 0 ? (
+        <div
+          key={`pc-${reveal.revealedAt}`}
+          style={{
+            fontSize: 12,
+            color: "var(--gold-500)",
+            opacity: 0,
+            animation: "pp-cushion-pc-fade 300ms 700ms ease-out forwards",
+            textAlign: "center",
+            fontFamily: "var(--font-display)",
+          }}
+        >
+          +{reveal.pcGain} PC
+        </div>
+      ) : (
+        <div
+          key={`nothing-${reveal.revealedAt}`}
+          style={{
+            fontSize: 11,
+            color: "var(--saddle-400)",
+            opacity: 0,
+            animation: "pp-cushion-pc-fade 300ms 700ms ease-out forwards",
+            textAlign: "center",
+          }}
+        >
+          nothing
+        </div>
+      )}
+      <style>{`
+        @keyframes pp-cushion-spin {
+          0%   { transform: translateY(0); }
+          100% { transform: translateY(var(--cushion-final)); }
+        }
+        @keyframes pp-cushion-pc-fade {
+          0%   { opacity: 0; transform: translateY(4px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
