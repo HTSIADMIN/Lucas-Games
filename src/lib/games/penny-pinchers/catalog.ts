@@ -134,12 +134,6 @@ export const HELPERS_BY_ID: Record<HelperId, HelperDef> = Object.fromEntries(
 
 /** PC required for 1 wallet ¢ on Bank It. */
 export const BANK_PC_PER_WALLET_CENT = 4;
-/** Minimum cooldown between bank actions, milliseconds. */
-export const BANK_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
-/** Cap on a single bank's wallet payout (¢). */
-export const MAX_BANK_PAYOUT = 25_000;
-/** Cap on total wallet payouts per UTC day. */
-export const DAILY_BANK_CAP = 100_000;
 
 /** How much PC stays in the player's pocket after banking. */
 export const BANK_HOUSE_CUT = 0; // 0 = bank everything; raise later if we want a residual

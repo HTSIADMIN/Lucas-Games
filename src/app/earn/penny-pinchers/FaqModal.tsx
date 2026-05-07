@@ -9,7 +9,7 @@ const SECTIONS: { title: string; lines: string[] }[] = [
     title: "The Basics",
     lines: [
       "Click coins to bank Pinch Cents (PC). PC stays inside the game — you spend it on upgrades and helpers.",
-      "Hit Bank It once an hour to convert PC into wallet ¢. Daily cap of 100k wallet ¢ — same shape as the other free games.",
+      "Hit Bank It any time to convert your full PC pool into wallet ¢ at the standard ratio. No cooldown, no caps.",
       "Helpers tick PC on their own, even while you're not clicking. They keep working while you're away (capped at 8h offline by default).",
     ],
   },
@@ -62,7 +62,7 @@ const SECTIONS: { title: string; lines: string[] }[] = [
     title: "Bank It",
     lines: [
       "Converts your current PC into wallet ¢ at a 4 PC : 1 ¢ ratio.",
-      "1 hour cooldown between banks, 25k wallet ¢ per bank, 100k wallet ¢ per UTC day.",
+      "No cooldown, no caps — bank as often as you like.",
       "After banking, your PC pool resets to 0. Upgrades and helpers stay.",
     ],
   },

@@ -8,10 +8,8 @@ import {
   CHESTS,
   COINS,
   COIN_ORDER,
-  DAILY_BANK_CAP,
   FRUGALITY_PC_PER_POINT,
   HELPERS_BY_ID,
-  MAX_BANK_PAYOUT,
   MERGE_PROXIMITY_PX,
   OFFLINE_CAP_HOURS,
   PERM_UPGRADES_BY_ID,
@@ -263,15 +261,12 @@ export function nextHelperCost(helperId: HelperId, currentCount: number): number
 // ============================================================
 
 /**
- * Compute the wallet ¢ payout for banking `cents` (PC) given the
- * day's already-banked total. Returns 0 when the day is capped.
+ * Compute the wallet ¢ payout for banking `cents` (PC). No caps —
+ * the player gets the full PC → wallet conversion every time.
  */
-export function bankPayoutCents(cents: number, dailyBankedSoFar: number): number {
+export function bankPayoutCents(cents: number): number {
   if (cents <= 0) return 0;
-  const raw = Math.floor(cents / BANK_PC_PER_WALLET_CENT);
-  const capPerBank = MAX_BANK_PAYOUT;
-  const capPerDay = Math.max(0, DAILY_BANK_CAP - dailyBankedSoFar);
-  return Math.min(raw, capPerBank, capPerDay);
+  return Math.floor(cents / BANK_PC_PER_WALLET_CENT);
 }
 
 // ============================================================

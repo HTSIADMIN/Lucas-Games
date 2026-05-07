@@ -13,10 +13,7 @@ import {
 } from "@/lib/db";
 import {
   ACHIEVEMENTS_BY_ID,
-  BANK_COOLDOWN_MS,
   BANK_PC_PER_WALLET_CENT,
-  DAILY_BANK_CAP,
-  MAX_BANK_PAYOUT,
   PRESTIGE_THRESHOLD_PC,
   type AchievementId,
   type HelperId,
@@ -211,10 +208,6 @@ export async function GET() {
     }
   }
 
-  // Bank cooldown
-  const lastBankMs = state.last_bank_at ? new Date(state.last_bank_at).getTime() : 0;
-  const bankReadyAt = lastBankMs > 0 ? lastBankMs + BANK_COOLDOWN_MS : 0;
-
   // Leaderboard piggy-backs on the same poll so the player isn't
   // making a separate /leaderboard request every 30s. Failure is
   // non-fatal — empty array degrades gracefully in the UI.
@@ -234,11 +227,6 @@ export async function GET() {
     offlineCapHours: offlineCapHours(permLevels),
     bank: {
       pcPerWalletCent: BANK_PC_PER_WALLET_CENT,
-      cooldownMs: BANK_COOLDOWN_MS,
-      readyAt: bankReadyAt,
-      maxPerBank: MAX_BANK_PAYOUT,
-      dailyCap: DAILY_BANK_CAP,
-      dailyBanked: state.daily_banked_cents,
     },
     prestige: {
       count: state.prestige_count,

@@ -89,11 +89,6 @@ type StateResponse = {
   offlineCapHours: number;
   bank: {
     pcPerWalletCent: number;
-    cooldownMs: number;
-    readyAt: number;
-    maxPerBank: number;
-    dailyCap: number;
-    dailyBanked: number;
   };
   prestige: {
     count: number;
@@ -1036,14 +1031,7 @@ export function PennyPinchersClient() {
   const now = Date.now();
   const canRoll = server.lifetimePCEarned >= server.prestige.thresholdPC && server.prestige.tokensIfRolled > 0;
   const lifetimeProgress = Math.min(1, server.lifetimePCEarned / server.prestige.thresholdPC);
-  const bankReady = server.bank.readyAt === 0 || now >= server.bank.readyAt;
-  const dailyRoom = Math.max(0, server.bank.dailyCap - server.bank.dailyBanked);
-  const projectedPayout = Math.min(
-    Math.floor(localCents / server.bank.pcPerWalletCent),
-    server.bank.maxPerBank,
-    dailyRoom,
-  );
-  const cooldownLeftMs = Math.max(0, server.bank.readyAt - now);
+  const projectedPayout = Math.floor(localCents / server.bank.pcPerWalletCent);
 
   return (
     <div className="stack" style={{ gap: "var(--sp-4)" }}>
@@ -1283,17 +1271,12 @@ export function PennyPinchersClient() {
             padding: "var(--sp-3) var(--sp-4)",
             flex: "1 1 260px",
             minWidth: 260,
-            background: bankReady && projectedPayout > 0 ? "var(--gold-100)" : undefined,
-            animation: bankReady && projectedPayout > 0 ? "pp-bank-ready 1.6s ease-in-out infinite" : undefined,
+            background: projectedPayout > 0 ? "var(--gold-100)" : undefined,
+            animation: projectedPayout > 0 ? "pp-bank-ready 1.6s ease-in-out infinite" : undefined,
           }}
         >
-          <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-            <div className="text-mute" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Bank It
-            </div>
-            <div className="text-mute" style={{ fontSize: 11 }}>
-              {server.bank.dailyBanked.toLocaleString()} / {server.bank.dailyCap.toLocaleString()} ¢ today
-            </div>
+          <div className="text-mute" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            Bank It
           </div>
           <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)" }}>
             ≈ {projectedPayout.toLocaleString()} ¢
@@ -1301,17 +1284,11 @@ export function PennyPinchersClient() {
           <button
             type="button"
             className="btn btn-sm"
-            disabled={!bankReady || projectedPayout <= 0}
+            disabled={projectedPayout <= 0}
             onClick={bank}
             style={{ marginTop: 6, width: "100%" }}
           >
-            {bankReady
-              ? projectedPayout > 0
-                ? "Bank It"
-                : dailyRoom <= 0
-                ? "Daily cap reached"
-                : "Need more PC"
-              : `Cooldown ${formatHMS(cooldownLeftMs)}`}
+            {projectedPayout > 0 ? "Bank It" : "Need more PC"}
           </button>
           <style>{`
             @keyframes pp-bank-ready {
@@ -2660,12 +2637,3 @@ function CushionLootReveal({ reveal }: { reveal: CushionReveal }) {
   );
 }
 
-function formatHMS(ms: number): string {
-  const total = Math.ceil(ms / 1000);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${String(s).padStart(2, "0")}s`;
-  return `${s}s`;
-}

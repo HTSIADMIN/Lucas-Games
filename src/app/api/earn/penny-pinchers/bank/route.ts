@@ -7,11 +7,8 @@ import {
   upsertPennyPinchersState,
 } from "@/lib/db";
 import {
-  BANK_COOLDOWN_MS,
   BANK_HOUSE_CUT,
   BANK_PC_PER_WALLET_CENT,
-  DAILY_BANK_CAP,
-  MAX_BANK_PAYOUT,
 } from "@/lib/games/penny-pinchers/catalog";
 import { bankPayoutCents, relicEffects } from "@/lib/games/penny-pinchers/engine";
 
@@ -20,9 +17,9 @@ export const runtime = "nodejs";
 // POST /api/earn/penny-pinchers/bank
 //
 // Converts the player's accumulated PC into wallet ¢ at the fixed
-// ratio in catalog.ts. Enforces the 1h between-bank cooldown and
-// the per-UTC-day wallet payout cap. Banking resets PC to 0 (modulo
-// any house-cut residual we want to keep on the books).
+// ratio in catalog.ts. No cooldown, no caps — banking just dumps
+// everything in the pocket into the wallet at the conversion rate.
+// daily_banked_cents / last_bank_at are still tracked for stats.
 export async function POST() {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -30,38 +27,22 @@ export async function POST() {
   const state = await getPennyPinchersState(s.user.id);
   if (!state) return NextResponse.json({ error: "no_state" }, { status: 400 });
 
-  const now = Date.now();
-  const todayUtc = new Date(now).toISOString().slice(0, 10);
-
-  // Cooldown
-  const lastBankMs = state.last_bank_at ? new Date(state.last_bank_at).getTime() : 0;
-  const readyAt = lastBankMs + BANK_COOLDOWN_MS;
-  if (lastBankMs > 0 && now < readyAt) {
-    return NextResponse.json(
-      { error: "cooldown", readyAt, msRemaining: readyAt - now },
-      { status: 429 },
-    );
-  }
-
   if (state.cents <= 0) {
     return NextResponse.json({ error: "no_cents" }, { status: 400 });
   }
 
-  // Day rollover for the daily cap.
-  const dailyBankedSoFar = state.daily_banked_day === todayUtc ? state.daily_banked_cents : 0;
-  // Merchant Seal relic — multiplier on top of the base payout
-  // (the cap math runs unchanged so a fully-relic'd player still
-  // can't bypass the daily ceiling, but they hit it faster).
+  const now = Date.now();
+  const todayUtc = new Date(now).toISOString().slice(0, 10);
+
+  // Merchant Seal relic — flat multiplier on the conversion.
   const relicE = relicEffects(state.relics as Parameters<typeof relicEffects>[0]);
-  const basePayout = bankPayoutCents(state.cents, dailyBankedSoFar);
-  const payoutCents = Math.min(
-    bankPayoutCents(state.cents * relicE.bankPayoutMul, dailyBankedSoFar),
-    Math.round(basePayout * relicE.bankPayoutMul),
-    DAILY_BANK_CAP - dailyBankedSoFar,
+  const payoutCents = Math.max(
+    0,
+    Math.round(bankPayoutCents(state.cents) * relicE.bankPayoutMul),
   );
 
   if (payoutCents <= 0) {
-    return NextResponse.json({ error: "daily_cap_reached" }, { status: 400 });
+    return NextResponse.json({ error: "no_cents" }, { status: 400 });
   }
 
   // PC consumed for this payout (round up so we never undercharge).
@@ -77,6 +58,7 @@ export async function POST() {
     refId: `${randomUUID()}:bank`,
   });
 
+  const dailyBankedSoFar = state.daily_banked_day === todayUtc ? state.daily_banked_cents : 0;
   await upsertPennyPinchersState({
     ...state,
     cents: remainingPC,
@@ -92,10 +74,6 @@ export async function POST() {
     payoutCents,
     pcConsumed,
     remainingPC,
-    dailyBanked: dailyBankedSoFar + payoutCents,
-    dailyCap: DAILY_BANK_CAP,
-    maxPerBank: MAX_BANK_PAYOUT,
-    nextReadyAt: now + BANK_COOLDOWN_MS,
     walletBalance: await getBalance(s.user.id),
   });
 }
