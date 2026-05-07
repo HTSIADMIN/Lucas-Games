@@ -17,6 +17,7 @@ import {
   MinesGame,
   MonopolyOwned,
   MonopolyState,
+  PennyPinchersAchievement,
   PennyPinchersHelper,
   PennyPinchersPermUpgrade,
   PennyPinchersState,
@@ -54,6 +55,7 @@ type Schema = {
   penny_pinchers_upgrades: PennyPinchersUpgrade[];
   penny_pinchers_helpers: PennyPinchersHelper[];
   penny_pinchers_perm_upgrades: PennyPinchersPermUpgrade[];
+  penny_pinchers_achievements: PennyPinchersAchievement[];
   slot_runs: SlotRun[];
   daily_challenges: DailyChallenge[];
   _walletSeq: number;
@@ -73,6 +75,7 @@ const EMPTY: Schema = {
   monopoly_states: [], monopoly_owned: [],
   penny_pinchers_state: [], penny_pinchers_upgrades: [], penny_pinchers_helpers: [],
   penny_pinchers_perm_upgrades: [],
+  penny_pinchers_achievements: [],
   slot_runs: [],
   daily_challenges: [],
   _walletSeq: 0, _crashBetSeq: 0, _chatSeq: 0, _bjSeatSeq: 0,
@@ -442,6 +445,26 @@ export async function clearPennyPinchersRun(userId: string): Promise<void> {
   const d = db();
   d.penny_pinchers_upgrades = d.penny_pinchers_upgrades.filter((u) => u.user_id !== userId);
   d.penny_pinchers_helpers = d.penny_pinchers_helpers.filter((h) => h.user_id !== userId);
+  commit();
+}
+export async function listPennyPinchersAchievements(userId: string): Promise<PennyPinchersAchievement[]> {
+  return db().penny_pinchers_achievements.filter((a) => a.user_id === userId);
+}
+export async function insertPennyPinchersAchievements(
+  userId: string,
+  achievementIds: string[],
+): Promise<void> {
+  if (achievementIds.length === 0) return;
+  const now = new Date().toISOString();
+  const existing = new Set(
+    db().penny_pinchers_achievements
+      .filter((a) => a.user_id === userId)
+      .map((a) => a.achievement_id),
+  );
+  for (const id of achievementIds) {
+    if (existing.has(id)) continue;
+    db().penny_pinchers_achievements.push({ user_id: userId, achievement_id: id, unlocked_at: now });
+  }
   commit();
 }
 

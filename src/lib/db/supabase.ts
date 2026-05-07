@@ -17,6 +17,7 @@ import {
   MinesGame,
   MonopolyOwned,
   MonopolyState,
+  PennyPinchersAchievement,
   PennyPinchersHelper,
   PennyPinchersPermUpgrade,
   PennyPinchersState,
@@ -566,6 +567,25 @@ export async function upsertPennyPinchersPermUpgrade(row: PennyPinchersPermUpgra
 export async function clearPennyPinchersRun(userId: string): Promise<void> {
   await client().from("penny_pinchers_upgrades").delete().eq("user_id", userId);
   await client().from("penny_pinchers_helpers").delete().eq("user_id", userId);
+}
+export async function listPennyPinchersAchievements(userId: string): Promise<PennyPinchersAchievement[]> {
+  const { data, error } = await client().from("penny_pinchers_achievements").select("*").eq("user_id", userId);
+  if (error) throw new Error(`listPennyPinchersAchievements: ${error.message}`);
+  return (data ?? []) as PennyPinchersAchievement[];
+}
+export async function insertPennyPinchersAchievements(
+  userId: string,
+  achievementIds: string[],
+): Promise<void> {
+  if (achievementIds.length === 0) return;
+  const rows = achievementIds.map((id) => ({ user_id: userId, achievement_id: id }));
+  // Ignore duplicate-key races — `upsert` with ignoreDuplicates is the
+  // safe path. The dedupe in detectNewUnlocks already prevents this in
+  // the common case, but two near-simultaneous fetches could double up.
+  const { error } = await client()
+    .from("penny_pinchers_achievements")
+    .upsert(rows, { onConflict: "user_id,achievement_id", ignoreDuplicates: true });
+  if (error) throw new Error(`insertPennyPinchersAchievements: ${error.message}`);
 }
 export async function listPennyPinchersUpgrades(userId: string): Promise<PennyPinchersUpgrade[]> {
   const { data, error } = await client().from("penny_pinchers_upgrades").select("*").eq("user_id", userId);

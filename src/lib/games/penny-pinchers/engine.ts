@@ -2,6 +2,7 @@
 // these helpers; client uses them for optimistic projections.
 
 import {
+  ACHIEVEMENTS,
   BANK_PC_PER_WALLET_CENT,
   BANK_TOKEN_DIVISOR,
   COINS,
@@ -15,6 +16,7 @@ import {
   PRESTIGE_THRESHOLD_PC,
   TRAITS,
   UPGRADES_BY_ID,
+  type AchievementId,
   type CoinId,
   type CoinTrait,
   type HelperId,
@@ -277,6 +279,52 @@ export function nextPermUpgradeCost(upgradeId: PermUpgradeId, currentLevel: numb
  */
 export function prestigeStartingCents(perm: PermLevels): number {
   return (perm.bigger_pockets ?? 0) * 1_000;
+}
+
+// ============================================================
+// ACHIEVEMENTS — condition predicates
+//
+// Pure check given a snapshot of state + helpers + upgrades. The
+// state route runs `detectNewUnlocks` once per fetch against the
+// rows already persisted to compute what to insert + credit.
+// ============================================================
+
+export type AchievementSnapshot = {
+  lifetimeClicks: number;
+  prestigeCount: number;
+  lifetimeBankedCents: number;
+  helpers: HelperCounts;
+  upgrades: UpgradeLevels;
+};
+
+const CONDITIONS: Record<AchievementId, (s: AchievementSnapshot) => boolean> = {
+  a_penny_saved:          (s) => s.lifetimeClicks >= 1,
+  sidewalk_scholar:       (s) => s.lifetimeClicks >= 1_000,
+  coin_connoisseur:       (s) => s.lifetimeClicks >= 10_000,
+  basically_mining:       (s) => s.lifetimeClicks >= 100_000,
+  goblin_mode:            (s) => (s.helpers.laundry_goblin ?? 0) >= 1,
+  pile_it_up:             (s) => (s.upgrades.pile_it_up ?? 0) >= 1,
+  bank_tellers_nightmare: (s) => s.prestigeCount >= 1,
+  bigger_boat:            (s) => s.prestigeCount >= 2,
+  frequent_flyer:         (s) => s.prestigeCount >= 10,
+  first_million:          (s) => s.lifetimeBankedCents >= 1_000_000,
+};
+
+/**
+ * Returns the achievement ids whose condition is met but which are
+ * not already in `alreadyUnlocked`. Caller persists rows + credits
+ * the bank-token reward in one batch.
+ */
+export function detectNewUnlocks(
+  snapshot: AchievementSnapshot,
+  alreadyUnlocked: Set<string>,
+): AchievementId[] {
+  const out: AchievementId[] = [];
+  for (const def of ACHIEVEMENTS) {
+    if (alreadyUnlocked.has(def.id)) continue;
+    if (CONDITIONS[def.id](snapshot)) out.push(def.id);
+  }
+  return out;
 }
 
 /** Coins the player has unlocked (i.e. has at least 1 level in the unlock upgrade). */

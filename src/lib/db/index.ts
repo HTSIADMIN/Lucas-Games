@@ -101,6 +101,8 @@ export const upsertPennyPinchersHelper       = impl.upsertPennyPinchersHelper;
 export const listPennyPinchersPermUpgrades   = impl.listPennyPinchersPermUpgrades;
 export const upsertPennyPinchersPermUpgrade  = impl.upsertPennyPinchersPermUpgrade;
 export const clearPennyPinchersRun           = impl.clearPennyPinchersRun;
+export const listPennyPinchersAchievements   = impl.listPennyPinchersAchievements;
+export const insertPennyPinchersAchievements = impl.insertPennyPinchersAchievements;
 
 export const getSlotsMeter           = impl.getSlotsMeter;
 export const setSlotsMeter           = impl.setSlotsMeter;

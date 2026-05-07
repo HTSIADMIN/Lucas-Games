@@ -3,21 +3,28 @@ import { readSession } from "@/lib/auth/session";
 import { getBalance } from "@/lib/wallet";
 import {
   getPennyPinchersState,
+  insertPennyPinchersAchievements,
+  listPennyPinchersAchievements,
   listPennyPinchersHelpers,
   listPennyPinchersPermUpgrades,
   listPennyPinchersUpgrades,
   upsertPennyPinchersState,
 } from "@/lib/db";
 import {
+  ACHIEVEMENTS_BY_ID,
   BANK_COOLDOWN_MS,
   BANK_PC_PER_WALLET_CENT,
   DAILY_BANK_CAP,
   MAX_BANK_PAYOUT,
   PRESTIGE_THRESHOLD_PC,
+  type AchievementId,
+  type HelperId,
   type PermUpgradeId,
+  type UpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
 import {
   bankTokensFromPrestige,
+  detectNewUnlocks,
   helperRatePcPerSec,
   offlineCapHours,
   offlinePCAccrued,
@@ -92,6 +99,36 @@ export async function GET() {
   const upgradeLevels: Record<string, number> = {};
   for (const u of upgrades) upgradeLevels[u.upgrade_id] = u.level;
 
+  // Achievement detection — runs after the offline-accrual upsert
+  // so any one-shot milestones triggered by the catch-up are
+  // captured in the same fetch. Newly unlocked rows are inserted
+  // and their bank-token rewards are added to state in one upsert.
+  const unlockedRows = await listPennyPinchersAchievements(s.user.id);
+  const alreadyUnlocked = new Set(unlockedRows.map((r) => r.achievement_id));
+  const newlyUnlocked = detectNewUnlocks(
+    {
+      lifetimeClicks: state.lifetime_clicks,
+      prestigeCount: state.prestige_count,
+      lifetimeBankedCents: state.lifetime_banked_cents,
+      helpers: helperCounts as Partial<Record<HelperId, number>>,
+      upgrades: upgradeLevels as Partial<Record<UpgradeId, number>>,
+    },
+    alreadyUnlocked,
+  );
+  if (newlyUnlocked.length > 0) {
+    await insertPennyPinchersAchievements(s.user.id, newlyUnlocked);
+    const tokenReward = newlyUnlocked.reduce(
+      (sum, id) => sum + (ACHIEVEMENTS_BY_ID[id]?.reward ?? 0),
+      0,
+    );
+    if (tokenReward > 0) {
+      state = await upsertPennyPinchersState({
+        ...state,
+        bank_tokens: state.bank_tokens + tokenReward,
+      });
+    }
+  }
+
   // Bank cooldown
   const lastBankMs = state.last_bank_at ? new Date(state.last_bank_at).getTime() : 0;
   const bankReadyAt = lastBankMs > 0 ? lastBankMs + BANK_COOLDOWN_MS : 0;
@@ -121,6 +158,10 @@ export async function GET() {
       thresholdPC: PRESTIGE_THRESHOLD_PC,
       tokensIfRolled: bankTokensFromPrestige(state.lifetime_pc_earned),
       lifetimeBanked: state.lifetime_banked_cents,
+    },
+    achievements: {
+      unlocked: [...alreadyUnlocked, ...newlyUnlocked],
+      newlyUnlocked,
     },
     walletBalance: await getBalance(s.user.id),
   });

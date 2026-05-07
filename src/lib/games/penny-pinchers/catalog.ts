@@ -258,3 +258,50 @@ export const PERM_UPGRADES: readonly PermUpgradeDef[] = [
 export const PERM_UPGRADES_BY_ID: Record<PermUpgradeId, PermUpgradeDef> = Object.fromEntries(
   PERM_UPGRADES.map((u) => [u.id, u]),
 ) as Record<PermUpgradeId, PermUpgradeDef>;
+
+// ============================================================
+// ACHIEVEMENTS — Phase 3b
+//
+// One-shot milestones with humour titles. Each pays Bank Tokens
+// the first (and only) time the condition is met. State-route
+// detects + inserts a row + credits the reward atomically; the
+// client just gets back a list of "newly unlocked this fetch" so
+// it can pop a toast.
+// ============================================================
+
+export type AchievementId =
+  | "a_penny_saved"
+  | "sidewalk_scholar"
+  | "coin_connoisseur"
+  | "basically_mining"
+  | "goblin_mode"
+  | "pile_it_up"
+  | "bank_tellers_nightmare"
+  | "bigger_boat"
+  | "frequent_flyer"
+  | "first_million";
+
+export type AchievementDef = {
+  id: AchievementId;
+  label: string;
+  description: string;
+  /** Bank Tokens awarded on first unlock. */
+  reward: number;
+};
+
+export const ACHIEVEMENTS: readonly AchievementDef[] = [
+  { id: "a_penny_saved",         label: "A Penny Saved",         description: "Pick up your first coin.",                          reward: 1  },
+  { id: "sidewalk_scholar",      label: "Sidewalk Scholar",      description: "Pick up 1,000 coins in your career.",               reward: 2  },
+  { id: "coin_connoisseur",      label: "Coin Connoisseur",      description: "Pick up 10,000 coins in your career.",              reward: 5  },
+  { id: "basically_mining",      label: "This Is Basically Mining", description: "Pick up 100,000 coins in your career.",          reward: 15 },
+  { id: "goblin_mode",           label: "Goblin Mode",           description: "Hire the Laundromat Goblin.",                       reward: 3  },
+  { id: "pile_it_up",            label: "Pile It Up",            description: "Buy the merging upgrade. Stack 'em.",               reward: 2  },
+  { id: "bank_tellers_nightmare",label: "Bank Teller's Nightmare", description: "Roll It Up for the first time.",                 reward: 5  },
+  { id: "bigger_boat",           label: "Bigger Boat",           description: "Roll It Up a second time. We're gonna need it.",    reward: 5  },
+  { id: "frequent_flyer",        label: "Frequent Flyer",        description: "Roll It Up ten times.",                             reward: 25 },
+  { id: "first_million",         label: "First Million",         description: "Bank 1,000,000 ¢ to your wallet across all sessions.", reward: 10 },
+];
+
+export const ACHIEVEMENTS_BY_ID: Record<AchievementId, AchievementDef> = Object.fromEntries(
+  ACHIEVEMENTS.map((a) => [a.id, a]),
+) as Record<AchievementId, AchievementDef>;

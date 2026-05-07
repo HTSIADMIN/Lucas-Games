@@ -350,6 +350,12 @@ export type PennyPinchersPermUpgrade = {
   level: number;
 };
 
+export type PennyPinchersAchievement = {
+  user_id: string;
+  achievement_id: string;
+  unlocked_at: string;
+};
+
 export type CoinflipDuel = {
   id: string;
   challenger_id: string;

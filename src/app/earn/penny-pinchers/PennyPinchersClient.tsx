@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import * as Sfx from "@/lib/sfx";
 import {
+  ACHIEVEMENTS_BY_ID,
   COINS,
   COIN_ORDER,
   MERGE_MIN_AGE_MS,
@@ -11,6 +12,7 @@ import {
   PRESTIGE_THRESHOLD_PC,
   STICKY_PICKUP_COUNT,
   STICKY_PICKUP_RADIUS,
+  type AchievementId,
   type CoinId,
   type CoinTrait,
   type HelperId,
@@ -30,6 +32,7 @@ import { CoinSprite } from "./CoinSprite";
 import { UpgradeShop } from "./UpgradeShop";
 import { HelperRoster } from "./HelperRoster";
 import { BankTokenShop } from "./BankTokenShop";
+import { AchievementsPanel } from "./AchievementsPanel";
 
 // Penny Pinchers — main client. Coins spawn as absolutely-positioned
 // DOM elements inside a play area; clicking them dispatches a server
@@ -66,6 +69,10 @@ type StateResponse = {
     tokensIfRolled: number;
     lifetimeBanked: number;
   };
+  achievements: {
+    unlocked: AchievementId[];
+    newlyUnlocked: AchievementId[];
+  };
   walletBalance: number;
 };
 
@@ -85,9 +92,10 @@ export function PennyPinchersClient() {
   const [server, setServer] = useState<StateResponse | null>(null);
   const [localCents, setLocalCents] = useState<number>(0);
   const [coins, setCoins] = useState<SpawnedCoin[]>([]);
-  const [tab, setTab] = useState<"upgrades" | "helpers" | "tokens">("upgrades");
+  const [tab, setTab] = useState<"upgrades" | "helpers" | "tokens" | "achievements">("upgrades");
   const [welcomeBack, setWelcomeBack] = useState<number | null>(null);
   const [prestigeOpen, setPrestigeOpen] = useState(false);
+  const [achievementToasts, setAchievementToasts] = useState<AchievementId[]>([]);
 
   const playRef = useRef<HTMLDivElement | null>(null);
   const coinSeqRef = useRef(0);
@@ -109,6 +117,19 @@ export function PennyPinchersClient() {
       if (d.offlineAccruedJustNow > 0) {
         setWelcomeBack(d.offlineAccruedJustNow);
         window.setTimeout(() => setWelcomeBack(null), 6000);
+      }
+      // Achievement unlock toasts — chime + show one card per unlock.
+      // Toasts auto-dismiss after 6s. Tokens are already credited
+      // server-side (state.prestige.bankTokens reflects the bonus).
+      if (d.achievements.newlyUnlocked.length > 0) {
+        Sfx.play("win.levelup");
+        const ids = d.achievements.newlyUnlocked;
+        setAchievementToasts((prev) => [...prev, ...ids]);
+        const dismiss = window.setTimeout(() => {
+          setAchievementToasts((prev) => prev.filter((id) => !ids.includes(id)));
+        }, 6000);
+        // best-effort cleanup — clearing on unmount is overkill for a one-shot
+        void dismiss;
       }
     } catch {
       /* network blip — try again next tick */
@@ -192,7 +213,9 @@ export function PennyPinchersClient() {
   }, [server]);
 
   async function clickCoin(coin: SpawnedCoin) {
-    Sfx.play("coin.drop");
+    // Slots reel-stop tick — chunky wood click that reads as
+    // "the coin landed" without the long melodic tail of coin.drop.
+    Sfx.play("ui.wood");
     const traitMul = coin.trait === "shiny" ? 5 : 1;
     const optimisticPC = coinPCValue(coin.coin, upgrades) * traitMul;
     setLocalCents((c) => c + optimisticPC);
@@ -565,6 +588,14 @@ export function PennyPinchersClient() {
             >
               ★ Tokens
             </button>
+            <button
+              type="button"
+              className={`btn btn-sm${tab === "achievements" ? "" : " btn-ghost"}`}
+              style={{ flex: 1, minWidth: 80 }}
+              onClick={() => setTab("achievements")}
+            >
+              Trophies
+            </button>
           </div>
           {tab === "upgrades" ? (
             <UpgradeShop
@@ -578,11 +609,15 @@ export function PennyPinchersClient() {
               cents={localCents}
               onHire={hireHelper}
             />
-          ) : (
+          ) : tab === "tokens" ? (
             <BankTokenShop
               levels={server.perm}
               bankTokens={server.prestige.bankTokens}
               onBuy={buyPermUpgrade}
+            />
+          ) : (
+            <AchievementsPanel
+              unlocked={new Set(server.achievements.unlocked)}
             />
           )}
         </div>
@@ -636,6 +671,51 @@ export function PennyPinchersClient() {
           );
         })}
       </div>
+
+      {achievementToasts.length > 0 && (
+        <div
+          aria-live="polite"
+          style={{
+            position: "fixed",
+            top: 80,
+            right: 16,
+            zIndex: 200,
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            pointerEvents: "none",
+          }}
+        >
+          {achievementToasts.map((id) => {
+            const def = ACHIEVEMENTS_BY_ID[id];
+            if (!def) return null;
+            return (
+              <div
+                key={id}
+                style={{
+                  background: "var(--gold-100)",
+                  border: "3px solid var(--ink-900)",
+                  padding: "8px 12px",
+                  fontFamily: "var(--font-display)",
+                  minWidth: 240,
+                  boxShadow: "var(--sh-card-rest), var(--glow-gold)",
+                  color: "var(--ink-900)",
+                }}
+              >
+                <div style={{ fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--saddle-400)" }}>
+                  Achievement Unlocked · +{def.reward} ★
+                </div>
+                <div style={{ fontSize: 14, color: "var(--ink-900)" }}>
+                  {def.label}
+                </div>
+                <div className="text-mute" style={{ fontSize: 11 }}>
+                  {def.description}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {prestigeOpen && (
         <div
