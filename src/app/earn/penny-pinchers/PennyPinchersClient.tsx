@@ -130,7 +130,13 @@ type Couch     = { id: number; x: number; y: number; spawnedAt: number };
 type ActiveBlessing = { id: BlessingId; endsAt: number };
 type CushionReveal = { idx: number; lootId: string; label: string; pcGain: number };
 type FloatPop = { id: number; x: number; y: number; pc: number; shiny: boolean };
-type ClickBurst = { id: number; x: number; y: number; shiny: boolean };
+type ClickBurst = {
+  id: number;
+  x: number;
+  y: number;
+  /** Burst flavour — drives particle count, colour, and radius. */
+  flavour: "default" | "shiny" | "ancient" | "cursed";
+};
 
 type SpawnedCoin = {
   id: number;
@@ -190,7 +196,13 @@ export function PennyPinchersClient() {
   const fountainSeqRef = useRef(0);
   const couchSeqRef = useRef(0);
 
-  const spawnPop = useCallback((x: number, y: number, pc: number, shiny: boolean) => {
+  const spawnPop = useCallback((
+    x: number,
+    y: number,
+    pc: number,
+    shiny: boolean,
+    trait: CoinTrait | null = null,
+  ) => {
     popSeqRef.current += 1;
     const id = popSeqRef.current;
     setPops((prev) => [...prev, { id, x, y, pc, shiny }]);
@@ -198,12 +210,21 @@ export function PennyPinchersClient() {
       setPops((prev) => prev.filter((p) => p.id !== id));
     }, 800);
     // Click burst — radial particle ring at the pickup point.
+    // Rare traits get a beefier burst flavour: more particles,
+    // bigger radius, distinct colour. Plain pickups stay light.
+    const flavour: ClickBurst["flavour"] =
+      trait === "ancient" ? "ancient"
+      : trait === "shiny"  ? "shiny"
+      : trait === "cursed" ? "cursed"
+      : "default";
     burstSeqRef.current += 1;
     const burstId = burstSeqRef.current;
-    setBursts((prev) => [...prev, { id: burstId, x, y, shiny }]);
+    setBursts((prev) => [...prev, { id: burstId, x, y, flavour }]);
+    // Ancient burst lingers a bit longer because it's the rarest.
+    const lifeMs = flavour === "ancient" ? 720 : flavour === "default" ? 480 : 600;
     window.setTimeout(() => {
       setBursts((prev) => prev.filter((b) => b.id !== burstId));
-    }, 480);
+    }, lifeMs);
   }, []);
   /** True until the first /state load resolves — keeps the
    *  welcome-back banner restricted to "you just opened the page"
@@ -590,7 +611,7 @@ export function PennyPinchersClient() {
     const clickMul = server?.relicEffects.clickPCMul ?? 1;
     const optimisticPC = Math.round(coin.mergedPC * traitMul * tier.multiplier * clickMul);
     setLocalCents((c) => c + optimisticPC);
-    spawnPop(coin.x, coin.y, optimisticPC, coin.trait === "shiny");
+    spawnPop(coin.x, coin.y, optimisticPC, coin.trait === "shiny", coin.trait);
     // Pulse the PC counter only on manual / auto-picker clicks —
     // helper drips already update the value smoothly and don't
     // need a visible jolt.
@@ -658,7 +679,7 @@ export function PennyPinchersClient() {
     for (const extra of collateral) {
       const extraOptimistic = Math.round(extra.mergedPC * (extra.trait === "shiny" ? 5 : 1) * tier.multiplier * clickMul);
       setLocalCents((c) => c + extraOptimistic);
-      spawnPop(extra.x, extra.y, extraOptimistic, extra.trait === "shiny");
+      spawnPop(extra.x, extra.y, extraOptimistic, extra.trait === "shiny", extra.trait);
       void fetch("/api/earn/penny-pinchers/click", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -1336,48 +1357,56 @@ export function PennyPinchersClient() {
               onClick={() => clickCoin(c)}
             />
           ))}
-          {bursts.map((b) => (
-            <div
-              key={b.id}
-              aria-hidden
-              style={{
-                position: "absolute",
-                left: b.x,
-                top: b.y,
-                width: 0,
-                height: 0,
-                pointerEvents: "none",
-                zIndex: 9,
-              }}
-            >
-              {Array.from({ length: 6 }).map((_, i) => {
-                const angle = (i / 6) * Math.PI * 2;
-                const dx = Math.cos(angle) * 28;
-                const dy = Math.sin(angle) * 28;
-                return (
-                  <span
-                    key={i}
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: 0,
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      background: b.shiny ? "var(--gold-300)" : "var(--gold-500)",
-                      boxShadow: b.shiny
-                        ? "0 0 6px rgba(255,220,90,0.95)"
-                        : "0 0 3px rgba(255,196,64,0.7)",
-                      transform: "translate(-50%, -50%)",
-                      ["--dx" as string]: `${dx}px`,
-                      ["--dy" as string]: `${dy}px`,
-                      animation: "pp-burst-fly 480ms ease-out forwards",
-                    }}
-                  />
-                );
-              })}
-            </div>
-          ))}
+          {bursts.map((b) => {
+            const cfg =
+              b.flavour === "ancient"
+                ? { count: 12, radius: 46, size: 7, color: "#c8ffd8", glow: "rgba(120,220,160,0.95)", duration: 720 }
+                : b.flavour === "shiny"
+                ? { count: 10, radius: 36, size: 6, color: "var(--gold-300)", glow: "rgba(255,220,90,0.95)", duration: 600 }
+                : b.flavour === "cursed"
+                ? { count: 10, radius: 36, size: 6, color: "#ff8585", glow: "rgba(220,80,80,0.95)", duration: 600 }
+                : { count: 6,  radius: 28, size: 6, color: "var(--gold-500)", glow: "rgba(255,196,64,0.7)", duration: 480 };
+            return (
+              <div
+                key={b.id}
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  left: b.x,
+                  top: b.y,
+                  width: 0,
+                  height: 0,
+                  pointerEvents: "none",
+                  zIndex: 9,
+                }}
+              >
+                {Array.from({ length: cfg.count }).map((_, i) => {
+                  const angle = (i / cfg.count) * Math.PI * 2;
+                  const dx = Math.cos(angle) * cfg.radius;
+                  const dy = Math.sin(angle) * cfg.radius;
+                  return (
+                    <span
+                      key={i}
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        top: 0,
+                        width: cfg.size,
+                        height: cfg.size,
+                        borderRadius: "50%",
+                        background: cfg.color,
+                        boxShadow: `0 0 ${cfg.size + 2}px ${cfg.glow}`,
+                        transform: "translate(-50%, -50%)",
+                        ["--dx" as string]: `${dx}px`,
+                        ["--dy" as string]: `${dy}px`,
+                        animation: `pp-burst-fly ${cfg.duration}ms ease-out forwards`,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })}
           {pops.map((p) => (
             <div
               key={p.id}
