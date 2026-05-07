@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SpinSlice } from "@/lib/games/dailySpin/engine";
 import * as Sfx from "@/lib/sfx";
@@ -27,23 +27,47 @@ const TONE_COLOR: Record<SpinSlice["tone"], { bg: string; fg: string }> = {
 };
 
 const SPIN_MS = 5500;
-const REVEAL_DELAY = 250; // wait after wheel stops before stamp + confetti
+const REVEAL_DELAY = 250; // wait after strip stops before stamp + confetti
+const CARD_W = 110;       // each strip card width (px)
+const STRIP_LENGTH = 41;  // total cards on the strip; winner sits at index 20
 
 export function DailySpinClient() {
   const router = useRouter();
   const [status, setStatus] = useState<Status | null>(null);
   const [busy, setBusy] = useState(false);
-  const [angle, setAngle] = useState(0);
+  /** Strip offset in px (translateX) — animated from a small starting
+   *  offset to a far-left target so the winner card lands centered
+   *  under the marker line. Replaces the old `angle` rotation. */
+  const [stripOffset, setStripOffset] = useState(0);
   const [result, setResult] = useState<SpinResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [stampKey, setStampKey] = useState(0);
   const [confettiKey, setConfettiKey] = useState(0);
+  /** Frozen filler-card list for the active spin animation. The
+   *  winner card sits at index 20; the rest are random samples
+   *  from `slices` weighted toward common (low/mid) tones so the
+   *  reel reads visually busy without spoiling the result early. */
+  const [stripCards, setStripCards] = useState<SpinSlice[] | null>(null);
+  /** Width of the viewport (in px) so we can centre the winner
+   *  regardless of screen size. Measured on mount + resize. */
+  const stripViewportRef = useRef<HTMLDivElement | null>(null);
+  const [viewportW, setViewportW] = useState(520);
 
   useEffect(() => {
     fetch("/api/earn/daily-spin").then((r) => r.json()).then(setStatus);
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
+  }, []);
+
+  useEffect(() => {
+    const update = () => {
+      const w = stripViewportRef.current?.clientWidth ?? 520;
+      setViewportW(w);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
 
   async function spin() {
@@ -61,15 +85,35 @@ export function DailySpinClient() {
       return;
     }
 
-    // Wheel rotates clockwise; we want sliceIndex centered under the top
-    // pointer. Add 6 full rotations and a small jitter so the stop never
-    // looks dead-center on the slice.
-    const slices = status.slices.length;
-    const sliceAngle = 360 / slices;
-    const target = -((data.sliceIndex * sliceAngle) + sliceAngle / 2);
-    const jitter = (Math.random() - 0.5) * (sliceAngle * 0.55);
-    const finalAngle = 360 * 6 + target + jitter;
-    setAngle(finalAngle);
+    // Build the filler strip — winner pinned at index 20, the rest
+    // sampled from the slice list with a bias toward low/mid tones
+    // so the reveal lands as a visible payoff vs cosmetic filler.
+    const winnerSlice = status.slices[data.sliceIndex];
+    const filler: SpinSlice[] = [];
+    const weighted: SpinSlice[] = [];
+    for (const s of status.slices) {
+      const w = s.tone === "low" ? 6 : s.tone === "mid" ? 3 : s.tone === "high" ? 1 : 1;
+      for (let i = 0; i < w; i++) weighted.push(s);
+    }
+    for (let i = 0; i < STRIP_LENGTH; i++) {
+      if (i === 20) filler.push(winnerSlice);
+      else filler.push(weighted[Math.floor(Math.random() * weighted.length)]);
+    }
+    setStripCards(filler);
+
+    // Snap to a small starting offset (so the strip fills the
+    // viewport and the deceleration has somewhere to fly in from)
+    // before kicking off the transition.
+    const startOffset = -(2 * CARD_W);
+    setStripOffset(startOffset);
+    requestAnimationFrame(() => {
+      // Land the winner (index 20) centered under the marker line.
+      // Center coord = viewportW/2; card center = idx*CARD_W + CARD_W/2.
+      // → offset = viewportCenter − (idx*CARD_W + CARD_W/2)
+      const jitter = (Math.random() - 0.5) * (CARD_W * 0.55);
+      const target = viewportW / 2 - (20 * CARD_W + CARD_W / 2) + jitter;
+      setStripOffset(target);
+    });
 
     setTimeout(() => {
       setResult(data);
@@ -116,7 +160,12 @@ export function DailySpinClient() {
           <Bulbs running={busy} />
 
           <div className="center" style={{ flexDirection: "column", gap: "var(--sp-4)", padding: "var(--sp-3) 0" }}>
-            <Wheel slices={status.slices} angle={angle} spinning={busy} />
+            <Strip
+              cards={stripCards ?? status.slices.slice(0, STRIP_LENGTH)}
+              offset={stripOffset}
+              spinning={busy}
+              viewportRef={stripViewportRef}
+            />
           </div>
 
           {/* Result stamp & confetti */}
@@ -227,142 +276,218 @@ export function DailySpinClient() {
 }
 
 // ============================================================
-// Wheel (SVG conic, hub, pointer)
+// Strip — case-opening style. Horizontal reel of cards scrolling
+// past a centred marker. Decelerates over SPIN_MS to land the
+// winner card centred under the gold pointer. Replaces the old
+// circular SVG wheel — same data, more cinematic reveal.
 // ============================================================
-function Wheel({ slices, angle, spinning }: { slices: SpinSlice[]; angle: number; spinning: boolean }) {
-  const r = 200;
-  const cx = r;
-  const cy = r;
-  const sliceAngle = 360 / slices.length;
-
-  const paths = useMemo(() => {
-    return slices.map((s, i) => {
-      const a0 = i * sliceAngle - 90; // top is -90deg in SVG
-      const a1 = a0 + sliceAngle;
-      const x0 = cx + r * Math.cos((a0 * Math.PI) / 180);
-      const y0 = cy + r * Math.sin((a0 * Math.PI) / 180);
-      const x1 = cx + r * Math.cos((a1 * Math.PI) / 180);
-      const y1 = cy + r * Math.sin((a1 * Math.PI) / 180);
-      return {
-        slice: s,
-        d: `M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 0 1 ${x1} ${y1} Z`,
-        midDeg: i * sliceAngle + sliceAngle / 2,
-      };
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slices.length]);
-
+function Strip({
+  cards,
+  offset,
+  spinning,
+  viewportRef,
+}: {
+  cards: SpinSlice[];
+  offset: number;
+  spinning: boolean;
+  viewportRef: React.RefObject<HTMLDivElement | null>;
+}) {
   return (
-    <div style={{ position: "relative", width: 400, maxWidth: "94%" }}>
-      {/* Pointer at top */}
+    <div style={{ position: "relative", width: "100%", maxWidth: 720 }}>
+      {/* Top pointer + bottom pointer pinching the centre marker so
+          the eye locks onto the landing slot. */}
       <div
         aria-hidden
         style={{
           position: "absolute",
           left: "50%",
-          top: -22,
+          top: -10,
           transform: "translateX(-50%)",
           width: 0,
           height: 0,
-          borderLeft: "22px solid transparent",
-          borderRight: "22px solid transparent",
-          borderTop: "32px solid var(--gold-300)",
+          borderLeft: "14px solid transparent",
+          borderRight: "14px solid transparent",
+          borderTop: "20px solid var(--gold-300)",
           filter: "drop-shadow(0 0 6px var(--gold-300))",
           zIndex: 10,
         }}
       />
-      {/* Outer rim */}
       <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: "50%",
+          bottom: -10,
+          transform: "translateX(-50%)",
+          width: 0,
+          height: 0,
+          borderLeft: "14px solid transparent",
+          borderRight: "14px solid transparent",
+          borderBottom: "20px solid var(--gold-300)",
+          filter: "drop-shadow(0 0 6px var(--gold-300))",
+          zIndex: 10,
+        }}
+      />
+      {/* Viewport — clips the strip + holds edge fade gradients */}
+      <div
+        ref={viewportRef}
         style={{
           position: "relative",
           width: "100%",
-          aspectRatio: "1 / 1",
+          height: 160,
           background:
-            "radial-gradient(circle at 50% 30%, #ffe9a8, #c8941d 70%, #7a5510 100%)",
-          borderRadius: 999,
-          padding: 14,
-          boxShadow: "0 0 0 6px var(--ink-900), 0 16px 0 rgba(0, 0, 0, 0.6), 0 0 32px rgba(245, 200, 66, 0.45)",
+            "radial-gradient(circle at 50% 50%, #4a2818 0%, #1a0f08 80%)",
+          border: "4px solid var(--ink-900)",
+          borderRadius: 8,
+          overflow: "hidden",
+          boxShadow: "inset 0 0 28px rgba(0,0,0,0.7), 0 0 32px rgba(245, 200, 66, 0.25)",
         }}
       >
-        {/* Rotating wheel */}
+        {/* The reel itself — translates left over SPIN_MS with a
+            cubic-bezier deceleration. */}
         <div
           style={{
-            position: "relative",
-            width: "100%",
+            display: "flex",
+            gap: 0,
+            position: "absolute",
+            left: 0,
+            top: 0,
             height: "100%",
-            transform: `rotate(${angle}deg)`,
-            transition: spinning ? `transform ${SPIN_MS}ms cubic-bezier(0.18, 0.85, 0.18, 1)` : "none",
-            borderRadius: 999,
-            overflow: "hidden",
-            border: "4px solid var(--ink-900)",
-            boxShadow: "inset 0 0 24px rgba(0, 0, 0, 0.5)",
+            transform: `translateX(${offset}px)`,
+            transition: spinning
+              ? `transform ${SPIN_MS}ms cubic-bezier(0.18, 0.85, 0.18, 1)`
+              : "transform 220ms ease-out",
           }}
         >
-          <svg viewBox={`0 0 ${r * 2} ${r * 2}`} style={{ width: "100%", height: "100%", display: "block" }}>
-            {paths.map((p, i) => {
-              const c = TONE_COLOR[p.slice.tone];
-              return (
-                <g key={i}>
-                  <path d={p.d} fill={c.bg} stroke="#1a0f08" strokeWidth={3} />
-                </g>
-              );
-            })}
-            {/* Slice labels */}
-            {paths.map((p, i) => {
-              const c = TONE_COLOR[p.slice.tone];
-              const labelR = r * 0.65;
-              const a = (p.midDeg - 90) * (Math.PI / 180);
-              const x = cx + labelR * Math.cos(a);
-              const y = cy + labelR * Math.sin(a);
-              return (
-                <g key={`l-${i}`} transform={`rotate(${p.midDeg} ${x} ${y})`}>
-                  <text
-                    x={x}
-                    y={y}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fontFamily="M6X11, monospace"
-                    fontSize={28}
-                    fill={c.fg}
-                    stroke="#1a0f08"
-                    strokeWidth={1}
-                    paintOrder="stroke"
-                  >
-                    {p.slice.label}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
+          {cards.map((s, i) => (
+            <StripCard key={i} slice={s} />
+          ))}
         </div>
-        {/* Center hub */}
+        {/* Centre marker — vertical gold line where the winner lands */}
         <div
           aria-hidden
           style={{
             position: "absolute",
             left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
+            top: 0,
+            bottom: 0,
+            width: 3,
+            transform: "translateX(-50%)",
+            background: "var(--gold-300)",
+            boxShadow: "0 0 10px rgba(245, 200, 66, 0.95), 0 0 22px rgba(245, 200, 66, 0.55)",
+            zIndex: 6,
+          }}
+        />
+        {/* Edge fades — soft black gradients on left/right so cards
+            "appear from" the darkness as they scroll into view. */}
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
             width: 80,
-            height: 80,
-            borderRadius: 999,
-            background:
-              "radial-gradient(circle at 35% 30%, #ffd84d, #c8941d 60%, #7a5510 100%)",
-            border: "4px solid var(--ink-900)",
-            boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.4), inset 0 3px 0 rgba(255,255,255,0.4), 0 0 12px rgba(245, 200, 66, 0.6)",
+            background: "linear-gradient(90deg, #1a0f08 0%, transparent 100%)",
             zIndex: 5,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: 80,
+            background: "linear-gradient(270deg, #1a0f08 0%, transparent 100%)",
+            zIndex: 5,
+            pointerEvents: "none",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function StripCard({ slice }: { slice: SpinSlice }) {
+  const c = TONE_COLOR[slice.tone];
+  const isJackpot = slice.tone === "jackpot";
+  const isHigh = slice.tone === "high";
+  return (
+    <div
+      style={{
+        flex: `0 0 ${CARD_W}px`,
+        height: "100%",
+        background: c.bg,
+        color: c.fg,
+        borderRight: "3px solid var(--ink-900)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        position: "relative",
+        boxShadow: isJackpot
+          ? "inset 0 0 24px rgba(255, 200, 60, 0.55), inset 0 -4px 0 rgba(0,0,0,0.35)"
+          : "inset 0 -4px 0 rgba(0,0,0,0.35), inset 0 4px 0 rgba(255,255,255,0.2)",
+      }}
+    >
+      {(isJackpot || isHigh) && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: isJackpot
+              ? "radial-gradient(circle at 50% 50%, rgba(255, 232, 168, 0.45), transparent 70%)"
+              : "radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.18), transparent 70%)",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      <span
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: isJackpot ? 22 : 18,
+          letterSpacing: "0.04em",
+          textShadow: "1px 1px 0 rgba(0,0,0,0.45)",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        {slice.label}
+      </span>
+      {isJackpot && (
+        <span
+          style={{
+            background: "var(--ink-900)",
+            color: "var(--gold-300)",
             fontFamily: "var(--font-display)",
-            color: "var(--ink-900)",
-            fontSize: 18,
-            textShadow: "1px 1px 0 var(--gold-100)",
+            fontSize: 9,
+            letterSpacing: "var(--ls-loose)",
+            padding: "1px 6px",
+            border: "2px solid var(--gold-300)",
+            position: "relative",
+            zIndex: 1,
           }}
         >
-          $
-        </div>
-      </div>
+          JACKPOT
+        </span>
+      )}
+      <span
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: 11,
+          color: c.fg,
+          opacity: 0.85,
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        {slice.amount.toLocaleString()} ¢
+      </span>
     </div>
   );
 }
