@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CosmeticItem, Rarity } from "@/lib/shop/catalog";
 import { rarityOf, RARITY_COLOR, DECK_PALETTES, isDefaultItem } from "@/lib/shop/catalog";
@@ -73,8 +73,17 @@ export function ShopClient({
   const [chosenId, setChosenId] = useState<string | null>(null);
   const [keptId, setKeptId] = useState<string | null>(null);
 
-  // Loadout modal
+  // Loadout modal — opens automatically if the page is reached via
+  // /shop#loadout (e.g. from the "My Loadout" CTA on the profile
+  // modal) so deep-linking to a player's gear is a single click.
   const [showLoadout, setShowLoadout] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#loadout") {
+      setShowLoadout(true);
+      // Clear the hash so reloading doesn't keep re-opening it.
+      try { history.replaceState(null, "", window.location.pathname); } catch { /* ignore */ }
+    }
+  }, []);
   // Showcase (full collection) modal
   const [showShowcase, setShowShowcase] = useState(false);
   // Currently selected pack tier — defaults to the cheapest.

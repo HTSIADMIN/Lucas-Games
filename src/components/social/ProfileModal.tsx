@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { useBigBetToastMuted } from "@/lib/preferences";
 
@@ -225,6 +226,20 @@ export function ProfileModal({
                   </tbody>
                 </table>
               </>
+            )}
+            {userId === "me" && (
+              <Link
+                href="/shop#loadout"
+                onClick={onClose}
+                className="btn btn-wood btn-block"
+                style={{
+                  marginTop: "var(--sp-4)",
+                  textDecoration: "none",
+                  textAlign: "center",
+                }}
+              >
+                ✦ My Loadout →
+              </Link>
             )}
             {userId === "me" && <SettingsPanel />}
           </>
