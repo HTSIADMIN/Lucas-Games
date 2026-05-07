@@ -541,6 +541,7 @@ export async function upsertPennyPinchersState(state: PennyPinchersState): Promi
       last_prestige_at: state.last_prestige_at,
       frugality: state.frugality,
       album: state.album,
+      relics: state.relics,
     }, { onConflict: "user_id" })
     .select("*")
     .single();

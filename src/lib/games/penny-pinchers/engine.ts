@@ -5,6 +5,7 @@ import {
   ACHIEVEMENTS,
   BANK_PC_PER_WALLET_CENT,
   BANK_TOKEN_DIVISOR,
+  CHESTS,
   COINS,
   COIN_ORDER,
   DAILY_BANK_CAP,
@@ -15,13 +16,17 @@ import {
   OFFLINE_CAP_HOURS,
   PERM_UPGRADES_BY_ID,
   PRESTIGE_THRESHOLD_PC,
+  RELICS,
   TRAITS,
   UPGRADES_BY_ID,
   type AchievementId,
+  type ChestTier,
   type CoinId,
   type CoinTrait,
   type HelperId,
   type PermUpgradeId,
+  type RelicDef,
+  type RelicId,
   type UpgradeId,
 } from "./catalog";
 
@@ -33,22 +38,25 @@ export type PermLevels = Partial<Record<PermUpgradeId, number>>;
 // COIN VALUE
 // ============================================================
 
-/** PC paid for clicking one coin of `coinType`, given current upgrades + perm bonuses. */
+/** PC paid for clicking one coin of `coinType`, given current upgrades + perm bonuses + relic effects. */
 export function coinPCValue(
   coinType: CoinId,
   levels: UpgradeLevels,
   perm: PermLevels = {},
+  relicE: RelicEffects = ZERO_EFFECTS,
 ): number {
   const base = COINS[coinType].basePC;
   // Penny Multiplier — adds +1 PC per level to *every* coin so it
   // stays useful end-to-end. Practice Eyes (perm) is penny-only
   // because that's the only denom 5 PC actually moves the needle on.
   const pennyBoost = levels.penny_multiplier ?? 0;
+  // Fortune's Eye (relic) — flat bonus stacked across every coin.
+  const relicBoost = relicE.coinBaseBonus;
   if (coinType === "penny") {
     const permBonus = (perm.practice_eyes ?? 0) * 5;
-    return base + permBonus + pennyBoost;
+    return base + permBonus + pennyBoost + relicBoost;
   }
-  return base + pennyBoost;
+  return base + pennyBoost + relicBoost;
 }
 
 /**
@@ -79,7 +87,7 @@ export function frugalityPCMultiplier(frugality: number): number {
 // COIN ALBUM — Phase 2d
 // ============================================================
 
-export type AlbumPage = "shiny" | "sticky" | "foreign";
+export type AlbumPage = "shiny" | "sticky" | "foreign" | "bent" | "cursed" | "ancient";
 export type AlbumState = Partial<Record<AlbumPage, Partial<Record<CoinId, number>>>>;
 
 /** Coin denominations that participate in each page. */
@@ -87,13 +95,19 @@ export const ALBUM_PAGE_COINS: Record<AlbumPage, readonly CoinId[]> = {
   shiny:   ["penny", "nickel", "dime", "quarter", "half", "dollar"],
   sticky:  ["penny", "nickel"],
   foreign: ["penny", "nickel", "dime", "quarter", "half", "dollar"],
+  bent:    ["penny", "nickel", "dime", "quarter", "half", "dollar"],
+  cursed:  ["penny", "nickel", "dime", "quarter", "half", "dollar"],
+  ancient: ["penny", "nickel", "dime", "quarter", "half", "dollar"],
 };
 
-/** Per-slot bonus added to the relevant trait chance. */
+/** Per-slot bonus added to the relevant trait chance (or PC bonus for foreign). */
 const ALBUM_SLOT_BONUS: Record<AlbumPage, number> = {
-  shiny:   0.005,  // +0.5% per shiny coin you've collected
-  sticky:  0.01,   // +1%   per sticky coin
-  foreign: 0.005,  // +0.5% PC per foreign coin (consumed by albumPCBonus, not rollTrait)
+  shiny:   0.005,
+  sticky:  0.01,
+  foreign: 0.005,   // PC bonus, not trait chance
+  bent:    0.005,   // +0.5% bent chance per slot
+  cursed:  0.003,   // +0.3% cursed chance per slot
+  ancient: 0.0005,  // +0.05% ancient chance per slot
 };
 
 /** Bonus added when a page is fully complete (every coin collected at least once). */
@@ -101,6 +115,9 @@ const ALBUM_PAGE_COMPLETE_BONUS: Record<AlbumPage, number> = {
   shiny:   0.05,
   sticky:  0.03,
   foreign: 0.05,
+  bent:    0.05,
+  cursed:  0.03,
+  ancient: 0.005,
 };
 
 /** Number of distinct coin slots filled on a page (0..page length). */
@@ -182,8 +199,12 @@ export function spawnIntervalMs(levels: UpgradeLevels): number {
 // HELPERS
 // ============================================================
 
-/** Total PC produced per second across all owned helpers, with the Generous Helpers perm bonus applied. */
-export function helperRatePcPerSec(helpers: HelperCounts, perm: PermLevels = {}): number {
+/** Total PC produced per second across all owned helpers, with the Generous Helpers perm bonus + Helping Hand relic applied. */
+export function helperRatePcPerSec(
+  helpers: HelperCounts,
+  perm: PermLevels = {},
+  relicE: RelicEffects = ZERO_EFFECTS,
+): number {
   let rate = 0;
   for (const [id, count] of Object.entries(helpers) as [HelperId, number][]) {
     const def = HELPERS_BY_ID[id];
@@ -191,7 +212,7 @@ export function helperRatePcPerSec(helpers: HelperCounts, perm: PermLevels = {})
     rate += def.pcPerSec * count;
   }
   const permBonus = 1 + 0.25 * (perm.generous_helpers ?? 0);
-  return rate * permBonus;
+  return rate * permBonus * relicE.helperRateMul;
 }
 
 /** Effective offline accrual cap given the Old Hand permanent upgrade. */
@@ -271,26 +292,28 @@ export function rollTrait(
   levels: UpgradeLevels,
   perm: PermLevels = {},
   album: AlbumState = {},
+  relicE: RelicEffects = ZERO_EFFECTS,
   rand: () => number = Math.random,
 ): CoinTrait | null {
   const luck = levels.lucky_crack ?? 0;
   const permLuck = perm.lucky_streak ?? 0;
 
   // Roll order matters when multiple traits could land — earlier
-  // roll wins. We sort by descending value-impact so the rare
-  // big-payout traits (Ancient, Cursed) get first dibs even when
-  // the cheaper traits would also have fired.
+  // roll wins. Rarest-first so an Ancient never gets clobbered
+  // by a cheap Bent.
   const ancientChance =
-    TRAITS.ancient.baseChance + TRAITS.ancient.perLuckLevel * luck;
+    TRAITS.ancient.baseChance + TRAITS.ancient.perLuckLevel * luck +
+    albumTraitBonus(album, "ancient") + relicE.ancientChanceBonus;
   if (rand() < ancientChance) return "ancient";
 
   const cursedChance =
-    TRAITS.cursed.baseChance + TRAITS.cursed.perLuckLevel * luck;
+    TRAITS.cursed.baseChance + TRAITS.cursed.perLuckLevel * luck +
+    albumTraitBonus(album, "cursed");
   if (rand() < cursedChance) return "cursed";
 
   const shinyChance =
     TRAITS.shiny.baseChance + TRAITS.shiny.perLuckLevel * luck +
-    0.01 * permLuck + albumTraitBonus(album, "shiny");
+    0.01 * permLuck + albumTraitBonus(album, "shiny") + relicE.shinyChanceBonus;
   if (rand() < shinyChance) return "shiny";
 
   const foreignChance =
@@ -298,7 +321,8 @@ export function rollTrait(
   if (rand() < foreignChance) return "foreign";
 
   const bentChance =
-    TRAITS.bent.baseChance + TRAITS.bent.perLuckLevel * luck;
+    TRAITS.bent.baseChance + TRAITS.bent.perLuckLevel * luck +
+    albumTraitBonus(album, "bent");
   if (rand() < bentChance) return "bent";
 
   // Sticky only on penny / nickel — feels weird on big coins.
@@ -370,6 +394,92 @@ export function streakTierFor(clickTimes: number[], now: number = Date.now()): S
 export function pruneStreakWindow(clickTimes: number[], now: number = Date.now()): number[] {
   const cutoff = now - STREAK_WINDOW_MS;
   return clickTimes.filter((t) => t >= cutoff);
+}
+
+// ============================================================
+// RELICS — chest roll + effect aggregation
+// ============================================================
+
+export type RelicLevels = Partial<Record<RelicId, number>>;
+
+/**
+ * Pick a random relic from a chest's weight table. Returns null
+ * only if the chest has no eligible relics (shouldn't happen in
+ * the catalogued config). Caller supplies the RNG so the server
+ * can use crypto-grade randomness.
+ */
+export function rollRelicFromChest(
+  tier: ChestTier,
+  rand01: () => number,
+): RelicDef | null {
+  const weights = CHESTS[tier].weights;
+  const totalWeight = Object.values(weights).reduce((s, v) => s + (v ?? 0), 0);
+  if (totalWeight <= 0) return null;
+  let r = rand01() * totalWeight;
+  let pickedRarity: keyof typeof weights | null = null;
+  for (const [rarity, w] of Object.entries(weights) as Array<[keyof typeof weights, number]>) {
+    r -= w;
+    if (r <= 0) { pickedRarity = rarity; break; }
+  }
+  if (!pickedRarity) pickedRarity = Object.keys(weights)[0] as keyof typeof weights;
+  const pool = RELICS.filter((d) => d.rarity === pickedRarity);
+  if (pool.length === 0) return null;
+  return pool[Math.floor(rand01() * pool.length)];
+}
+
+/**
+ * Aggregated effect bundle from owned relics. Effects are
+ * additive within a relic (level 3 of Lucky Charm = +3% shiny)
+ * and cumulative across relics. Consumers apply each field where
+ * relevant — click endpoint reads clickPCMul, spawn loop reads
+ * spawnSpeedMul, etc.
+ */
+export type RelicEffects = {
+  /** Additive bonus to spawn shiny chance. */
+  shinyChanceBonus: number;
+  /** Multiplier on helper PC/sec (1 + Σ 0.10 per level of helping_hand). */
+  helperRateMul: number;
+  /** Multiplier on every click PC. */
+  clickPCMul: number;
+  /** Multiplier on spawn interval (<1 = faster). */
+  spawnSpeedMul: number;
+  /** Bonus PC seeded at the start of each Roll-Up. */
+  prestigeStartBonusPC: number;
+  /** Multiplier on Bank-It wallet ¢ payout. */
+  bankPayoutMul: number;
+  /** Per-poll bonus chance for a Coin Storm event. */
+  stormChanceBonus: number;
+  /** Additive bonus to ancient-spawn chance. */
+  ancientChanceBonus: number;
+  /** Flat PC added to every coin's base value (stacks with Penny Multiplier). */
+  coinBaseBonus: number;
+};
+
+const ZERO_EFFECTS: RelicEffects = {
+  shinyChanceBonus: 0,
+  helperRateMul: 1,
+  clickPCMul: 1,
+  spawnSpeedMul: 1,
+  prestigeStartBonusPC: 0,
+  bankPayoutMul: 1,
+  stormChanceBonus: 0,
+  ancientChanceBonus: 0,
+  coinBaseBonus: 0,
+};
+
+export function relicEffects(relics: RelicLevels): RelicEffects {
+  const e: RelicEffects = { ...ZERO_EFFECTS };
+  const lvl = (id: RelicId) => relics[id] ?? 0;
+  e.shinyChanceBonus    += 0.01  * lvl("lucky_charm");
+  e.helperRateMul       += 0.10  * lvl("helping_hand");
+  e.clickPCMul          += 0.10  * lvl("midas_thumb");
+  e.spawnSpeedMul       *= Math.pow(0.95, lvl("fast_fingers"));
+  e.prestigeStartBonusPC += 1000 * lvl("thick_pockets");
+  e.bankPayoutMul       += 0.05  * lvl("merchant_seal");
+  e.stormChanceBonus    += 0.01  * lvl("rainmaker");
+  e.ancientChanceBonus  += 0.0005 * lvl("ancient_idol");
+  e.coinBaseBonus       += 5     * lvl("fortunes_eye");
+  return e;
 }
 
 // ============================================================

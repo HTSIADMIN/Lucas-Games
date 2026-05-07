@@ -393,6 +393,85 @@ export const COUCH_CUSHIONS = 4;
 /** PC multiplier per positive Frugality point (e.g. 0.005 → +0.5%/pt). */
 export const FRUGALITY_PC_PER_POINT = 0.005;
 
+// ============================================================
+// RELICS
+//
+// Spent Frugality on a chest → server rolls a random relic by
+// tier weights → relic level increments (or starts at 1). Relics
+// survive Roll-Up; their effects stack across the run.
+// ============================================================
+
+export type RelicRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
+
+export type RelicId =
+  | "lucky_charm"
+  | "helping_hand"
+  | "midas_thumb"
+  | "fast_fingers"
+  | "thick_pockets"
+  | "merchant_seal"
+  | "rainmaker"
+  | "ancient_idol"
+  | "fortunes_eye";
+
+export type RelicDef = {
+  id: RelicId;
+  label: string;
+  description: string;
+  rarity: RelicRarity;
+  maxLevel: number;
+};
+
+export const RELICS: readonly RelicDef[] = [
+  { id: "lucky_charm",   label: "Lucky Charm",   description: "+1% shiny chance per level.",                                      rarity: "common",    maxLevel: 5 },
+  { id: "helping_hand",  label: "Helping Hand",  description: "+10% helper PC/sec per level.",                                    rarity: "common",    maxLevel: 5 },
+  { id: "midas_thumb",   label: "Midas Thumb",   description: "+10% PC on every click per level.",                                rarity: "uncommon",  maxLevel: 5 },
+  { id: "fast_fingers",  label: "Fast Fingers",  description: "Coins spawn 5% faster per level.",                                 rarity: "uncommon",  maxLevel: 5 },
+  { id: "thick_pockets", label: "Thick Pockets", description: "+1,000 PC starting after every Roll-Up per level.",                rarity: "rare",      maxLevel: 5 },
+  { id: "merchant_seal", label: "Merchant Seal", description: "+5% wallet ¢ on every Bank-It per level.",                         rarity: "rare",      maxLevel: 5 },
+  { id: "rainmaker",     label: "Rainmaker",     description: "+1% per level chance for a Coin Storm to start each poll.",        rarity: "epic",      maxLevel: 5 },
+  { id: "ancient_idol",  label: "Ancient Idol",  description: "+0.05% Ancient-coin spawn chance per level.",                      rarity: "epic",      maxLevel: 3 },
+  { id: "fortunes_eye",  label: "Fortune's Eye", description: "Every coin is worth +5 PC permanently per level (stacks with everything).", rarity: "legendary", maxLevel: 3 },
+];
+
+export const RELICS_BY_ID: Record<RelicId, RelicDef> = Object.fromEntries(
+  RELICS.map((r) => [r.id, r]),
+) as Record<RelicId, RelicDef>;
+
+// Chest tiers — each gives one relic, weighted by tier rarities.
+
+export type ChestTier = "bronze" | "silver" | "gold";
+
+export type ChestDef = {
+  id: ChestTier;
+  label: string;
+  /** Frugality cost. */
+  cost: number;
+  /** Rarity → weight; non-zero entries form the roll table. */
+  weights: Partial<Record<RelicRarity, number>>;
+};
+
+export const CHESTS: Record<ChestTier, ChestDef> = {
+  bronze: {
+    id: "bronze",
+    label: "Bronze Chest",
+    cost: 2,
+    weights: { common: 70, uncommon: 25, rare: 5 },
+  },
+  silver: {
+    id: "silver",
+    label: "Silver Chest",
+    cost: 6,
+    weights: { common: 30, uncommon: 40, rare: 25, epic: 5 },
+  },
+  gold: {
+    id: "gold",
+    label: "Gold Chest",
+    cost: 15,
+    weights: { uncommon: 25, rare: 45, epic: 25, legendary: 5 },
+  },
+};
+
 // Lost Wallet — single-shot spawn, separate from passive events.
 /** Per-poll chance a Lost Wallet sprite spawns when none on screen. */
 export const LOST_WALLET_CHANCE_PER_POLL = 0.012;

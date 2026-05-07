@@ -62,6 +62,7 @@ import { BankTokenShop } from "./BankTokenShop";
 import { AchievementsPanel } from "./AchievementsPanel";
 import { AlbumPanel } from "./AlbumPanel";
 import { FaqModal } from "./FaqModal";
+import { RelicShop } from "./RelicShop";
 import { PennyLeaderboard } from "./PennyLeaderboard";
 import type { AlbumState } from "@/lib/games/penny-pinchers/engine";
 
@@ -107,6 +108,18 @@ type StateResponse = {
   };
   frugality: number;
   album: AlbumState;
+  relics: Record<string, number>;
+  relicEffects: {
+    shinyChanceBonus: number;
+    helperRateMul: number;
+    clickPCMul: number;
+    spawnSpeedMul: number;
+    prestigeStartBonusPC: number;
+    bankPayoutMul: number;
+    stormChanceBonus: number;
+    ancientChanceBonus: number;
+    coinBaseBonus: number;
+  };
   walletBalance: number;
 };
 
@@ -137,7 +150,7 @@ export function PennyPinchersClient() {
   const [server, setServer] = useState<StateResponse | null>(null);
   const [localCents, setLocalCents] = useState<number>(0);
   const [coins, setCoins] = useState<SpawnedCoin[]>([]);
-  const [tab, setTab] = useState<"upgrades" | "helpers" | "tokens" | "achievements" | "album">("upgrades");
+  const [tab, setTab] = useState<"upgrades" | "helpers" | "tokens" | "achievements" | "album" | "relics">("upgrades");
   const [welcomeBack, setWelcomeBack] = useState<number | null>(null);
   const [prestigeOpen, setPrestigeOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
@@ -213,12 +226,20 @@ export function PennyPinchersClient() {
       const nowMs = Date.now();
       setActiveEvent((current) => {
         if (current && current.endsAt > nowMs) return current;
-        if (Math.random() < EVENT_START_CHANCE_PER_POLL) {
+        // Rainmaker relic adds a flat per-poll chance for ANY
+        // event to start (it's tagged as Coin Storm in the
+        // selection logic below — that's the relic's flavour).
+        const stormBonus = d.relicEffects.stormChanceBonus ?? 0;
+        if (Math.random() < EVENT_START_CHANCE_PER_POLL + stormBonus) {
           const ids = Object.keys(EVENTS) as EventId[];
-          const id = ids[Math.floor(Math.random() * ids.length)];
+          // Bias toward Coin Storm proportional to the bonus so a
+          // maxed-Rainmaker player actually sees more storms,
+          // not just more Rainy Days.
+          const id: EventId =
+            stormBonus > 0 && Math.random() < 0.5 + stormBonus * 5
+              ? "coin_storm"
+              : ids[Math.floor(Math.random() * ids.length)];
           const def = EVENTS[id];
-          // Distinct stinger so events feel like a Thing — different
-          // SFX per event keeps Coin Storm and Rainy Day audibly apart.
           Sfx.play(id === "coin_storm" ? "win.levelup" : "win.notify");
           return { id, endsAt: nowMs + def.durationMs };
         }
@@ -324,7 +345,12 @@ export function PennyPinchersClient() {
   const eventInterval = eventDef ? baseIntervalMs * eventDef.spawnMultiplier : baseIntervalMs;
   const intervalMs = Math.max(
     100,
-    Math.round(eventInterval * (hasSharpEyes ? 0.5 : 1) * (frenzyActive ? FRENZY_SPAWN_MULTIPLIER : 1)),
+    Math.round(
+      eventInterval *
+        (hasSharpEyes ? 0.5 : 1) *
+        (frenzyActive ? FRENZY_SPAWN_MULTIPLIER : 1) *
+        (server?.relicEffects.spawnSpeedMul ?? 1),
+    ),
   );
   const burstSize =
     ((eventDef?.extraConcurrent ?? 0) > 0 ? 1 + eventDef!.extraConcurrent : 1) +
@@ -375,7 +401,7 @@ export function PennyPinchersClient() {
         // base trait roll didn't already land something.
         if (!trait && bonusShiny > 0 && Math.random() < bonusShiny) trait = "shiny";
         coinSeqRef.current += 1;
-        const mergedPC = coinPCValue(coin, upgrades, server.perm);
+        const mergedPC = coinPCValue(coin, upgrades, server.perm, server.relicEffects);
         newSpawns.push({ id: coinSeqRef.current, coin, mergedPC, trait, x, y, spawnedAt: Date.now() });
       }
       setCoins((prev) => [...prev, ...newSpawns]);
@@ -520,7 +546,11 @@ export function PennyPinchersClient() {
       : coin.trait === "cursed" ? 3
       : coin.trait === "bent" ? 0.5
       : 1;
-    const optimisticPC = Math.round(coin.mergedPC * traitMul * tier.multiplier);
+    // Mirror the server's click-side multiplier stack so the
+    // optimistic counter doesn't undercount what the server is
+    // about to credit.
+    const clickMul = server?.relicEffects.clickPCMul ?? 1;
+    const optimisticPC = Math.round(coin.mergedPC * traitMul * tier.multiplier * clickMul);
     setLocalCents((c) => c + optimisticPC);
     spawnPop(coin.x, coin.y, optimisticPC, coin.trait === "shiny");
 
@@ -584,7 +614,7 @@ export function PennyPinchersClient() {
     // Fire-and-forget the collateral pickups so each one is
     // metered + counted toward lifetime_clicks.
     for (const extra of collateral) {
-      const extraOptimistic = Math.round(extra.mergedPC * (extra.trait === "shiny" ? 5 : 1) * tier.multiplier);
+      const extraOptimistic = Math.round(extra.mergedPC * (extra.trait === "shiny" ? 5 : 1) * tier.multiplier * clickMul);
       setLocalCents((c) => c + extraOptimistic);
       spawnPop(extra.x, extra.y, extraOptimistic, extra.trait === "shiny");
       void fetch("/api/earn/penny-pinchers/click", {
@@ -1246,6 +1276,14 @@ export function PennyPinchersClient() {
             >
               Album
             </button>
+            <button
+              type="button"
+              className={`btn btn-sm${tab === "relics" ? "" : " btn-ghost"}`}
+              style={{ flex: 1, minWidth: 80 }}
+              onClick={() => setTab("relics")}
+            >
+              Relics
+            </button>
           </div>
           {tab === "upgrades" ? (
             <UpgradeShop
@@ -1269,8 +1307,14 @@ export function PennyPinchersClient() {
             <AchievementsPanel
               unlocked={new Set(server.achievements.unlocked)}
             />
-          ) : (
+          ) : tab === "album" ? (
             <AlbumPanel album={server.album} />
+          ) : (
+            <RelicShop
+              frugality={server.frugality}
+              relics={server.relics}
+              onPurchased={() => void loadState()}
+            />
           )}
         </div>
       </div>

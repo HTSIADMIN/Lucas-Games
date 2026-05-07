@@ -13,7 +13,7 @@ import {
   DAILY_BANK_CAP,
   MAX_BANK_PAYOUT,
 } from "@/lib/games/penny-pinchers/catalog";
-import { bankPayoutCents } from "@/lib/games/penny-pinchers/engine";
+import { bankPayoutCents, relicEffects } from "@/lib/games/penny-pinchers/engine";
 
 export const runtime = "nodejs";
 
@@ -49,7 +49,16 @@ export async function POST() {
 
   // Day rollover for the daily cap.
   const dailyBankedSoFar = state.daily_banked_day === todayUtc ? state.daily_banked_cents : 0;
-  const payoutCents = bankPayoutCents(state.cents, dailyBankedSoFar);
+  // Merchant Seal relic — multiplier on top of the base payout
+  // (the cap math runs unchanged so a fully-relic'd player still
+  // can't bypass the daily ceiling, but they hit it faster).
+  const relicE = relicEffects(state.relics as Parameters<typeof relicEffects>[0]);
+  const basePayout = bankPayoutCents(state.cents, dailyBankedSoFar);
+  const payoutCents = Math.min(
+    bankPayoutCents(state.cents * relicE.bankPayoutMul, dailyBankedSoFar),
+    Math.round(basePayout * relicE.bankPayoutMul),
+    DAILY_BANK_CAP - dailyBankedSoFar,
+  );
 
   if (payoutCents <= 0) {
     return NextResponse.json({ error: "daily_cap_reached" }, { status: 400 });

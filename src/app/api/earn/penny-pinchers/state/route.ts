@@ -28,6 +28,7 @@ import {
   helperRatePcPerSec,
   offlineCapHours,
   offlinePCAccrued,
+  relicEffects,
 } from "@/lib/games/penny-pinchers/engine";
 
 export const runtime = "nodejs";
@@ -62,6 +63,7 @@ export async function GET() {
       last_prestige_at: null,
       frugality: 0,
       album: {},
+      relics: {},
       created_at: now.toISOString(),
     });
   }
@@ -74,8 +76,11 @@ export async function GET() {
   const permLevels: Partial<Record<PermUpgradeId, number>> = {};
   for (const u of permRows) permLevels[u.upgrade_id as PermUpgradeId] = u.level;
 
+  const relics = (state.relics ?? {}) as Record<string, number>;
+  const relicE = relicEffects(relics as Parameters<typeof relicEffects>[0]);
+
   // Offline accrual — only credit if we actually owe something.
-  const rate = helperRatePcPerSec(helperCounts, permLevels);
+  const rate = helperRatePcPerSec(helperCounts, permLevels, relicE);
   const lastTickDate = state.last_tick_at ? new Date(state.last_tick_at) : null;
   const accrued = offlinePCAccrued(rate, lastTickDate, permLevels, now);
   // Welcome-back UI only fires when the player was meaningfully
@@ -168,6 +173,8 @@ export async function GET() {
     },
     frugality: state.frugality,
     album: state.album ?? {},
+    relics,
+    relicEffects: relicE,
     walletBalance: await getBalance(s.user.id),
   });
 }

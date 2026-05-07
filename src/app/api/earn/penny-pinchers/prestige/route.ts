@@ -7,7 +7,7 @@ import {
   upsertPennyPinchersState,
 } from "@/lib/db";
 import { type PermUpgradeId } from "@/lib/games/penny-pinchers/catalog";
-import { bankTokensFromPrestige, prestigeStartingCents } from "@/lib/games/penny-pinchers/engine";
+import { bankTokensFromPrestige, prestigeStartingCents, relicEffects } from "@/lib/games/penny-pinchers/engine";
 
 export const runtime = "nodejs";
 
@@ -39,7 +39,8 @@ export async function POST() {
   const now = new Date().toISOString();
   const updated = await upsertPennyPinchersState({
     ...state,
-    cents: prestigeStartingCents(permLevels),
+    cents: prestigeStartingCents(permLevels) +
+      relicEffects(state.relics as Parameters<typeof relicEffects>[0]).prestigeStartBonusPC,
     lifetime_pc_earned: 0,           // resets so the next prestige is earned fresh
     lifetime_clicks: state.lifetime_clicks, // career clicks survive — feels weird to lose them
     last_tick_at: now,

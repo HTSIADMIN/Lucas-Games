@@ -15,7 +15,13 @@ import {
   type CoinTrait,
   type PermUpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
-import { albumPCBonus, coinPCValue, frugalityPCMultiplier, traitMultiplier } from "@/lib/games/penny-pinchers/engine";
+import {
+  albumPCBonus,
+  coinPCValue,
+  frugalityPCMultiplier,
+  relicEffects,
+  traitMultiplier,
+} from "@/lib/games/penny-pinchers/engine";
 
 export const runtime = "nodejs";
 
@@ -84,21 +90,31 @@ export async function POST(req: Request) {
 
   // Use the client's merged PC if provided (clamped server-side),
   // otherwise compute from the coin's intrinsic value + upgrades.
-  // Trait, Frugality, and the Foreign album bonus all stack on
-  // top of either source.
-  const baseValue = mergedPC ?? coinPCValue(coinType, upgradeLevels, permLevels);
+  // Trait, Frugality, the Foreign album bonus, and relic effects
+  // (Midas Thumb's clickPCMul) all stack on top of either source.
+  const relicE = relicEffects(state.relics as Parameters<typeof relicEffects>[0]);
+  const baseValue = mergedPC ?? coinPCValue(coinType, upgradeLevels, permLevels, relicE);
   const pc = Math.round(
     baseValue *
       traitMultiplier(trait) *
       frugalityPCMultiplier(state.frugality) *
-      albumPCBonus(state.album ?? {}),
+      albumPCBonus(state.album ?? {}) *
+      relicE.clickPCMul,
   );
 
   // Atomic write — pp_record_click does the cents/lifetime/album
   // increments in a single SQL statement so concurrent in-flight
   // clicks (Auto-Picker bursts, Pinch Streak frenzies) all add
   // up instead of clobbering each other's album updates.
-  const albumPage = trait === "shiny" || trait === "sticky" || trait === "foreign" ? trait : null;
+  // All six traits feed into their matching album page now.
+  const albumPage =
+    trait === "shiny"   ? "shiny" :
+    trait === "sticky"  ? "sticky" :
+    trait === "foreign" ? "foreign" :
+    trait === "bent"    ? "bent" :
+    trait === "cursed"  ? "cursed" :
+    trait === "ancient" ? "ancient" :
+    null;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (url && key) {

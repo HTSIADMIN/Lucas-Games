@@ -337,6 +337,7 @@ export type PennyPinchersState = {
   last_prestige_at: string | null;
   frugality: number;
   album: PennyPinchersAlbum;
+  relics: Record<string, number>;
   created_at: string;
 };
 
