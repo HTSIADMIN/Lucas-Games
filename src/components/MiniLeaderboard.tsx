@@ -66,7 +66,7 @@ export function MiniLeaderboard({
                   key={r.userId}
                   style={{
                     borderBottom: "2px dashed var(--saddle-300)",
-                    background: isMe ? "var(--gold-100)" : undefined,
+                    background: isMe ? "var(--surface-highlight)" : undefined,
                   }}
                 >
                   <td style={{ padding: "6px 4px", color: rankColor(i + 1) }}>{i + 1}</td>

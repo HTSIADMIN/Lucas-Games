@@ -145,9 +145,8 @@ function Podium({
                 style={{
                   fontSize: isFirst ? "var(--fs-h3)" : "var(--fs-h4)",
                   letterSpacing: "var(--ls-loose)",
-                  color: "var(--ink-900)",
+                  color: "var(--fg)",
                   textAlign: "center",
-                  textShadow: "1px 1px 0 var(--parchment-50)",
                   marginBottom: 6,
                 }}
               >
@@ -230,7 +229,7 @@ function LeaderRowView({
       onClick={onPick}
       className={`leaderboard-row`}
       style={{
-        background: isMe ? "var(--gold-100)" : "var(--parchment-100)",
+        background: isMe ? "var(--surface-highlight)" : "var(--parchment-100)",
         border: "0",
         borderBottom: "2px dashed var(--saddle-300)",
         cursor: "pointer",
@@ -240,7 +239,7 @@ function LeaderRowView({
         transition: "background var(--dur-quick)",
       }}
       onMouseEnter={(e) => (e.currentTarget.style.background = "var(--parchment-200)")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = isMe ? "var(--gold-100)" : "var(--parchment-100)")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = isMe ? "var(--surface-highlight)" : "var(--parchment-100)")}
     >
       <div className="rank">{row.rank}</div>
       <div className="player">

@@ -907,7 +907,7 @@ function ChipSwatch({
         border: `3px solid ${c.ring}`,
         boxShadow: active
           ? `inset 0 0 0 2px var(--gold-300), 0 0 0 2px var(--gold-300), var(--glow-gold)`
-          : "inset 0 -2px 0 rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.25), 0 3px 0 rgba(0,0,0,0.4)",
+          : "inset 0 -2px 0 rgba(0,0,0,0.25), inset 0 2px 0 rgba(255,255,255,0.25), 0 3px 0 var(--chip-shadow)",
         fontFamily: "var(--font-display)",
         fontSize: 11,
         fontWeight: "bold",

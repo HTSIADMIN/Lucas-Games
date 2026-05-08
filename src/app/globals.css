@@ -86,6 +86,11 @@
      overridden per-theme below so dark themes don't show a
      bright cream against a dark panel. */
   --surface-highlight: var(--gold-100);
+  /* Drop shadow under chip-shaped UI (roulette bet chips, etc).
+     Lighter on light themes (depth without crushing the cream),
+     darker on dark themes (so the chip reads as raised against the
+     low-light bg instead of disappearing into it). */
+  --chip-shadow:   rgba(0, 0, 0, 0.4);
   --fg:            var(--ink-900);
   --fg-muted:      var(--saddle-400);
   --fg-dim:        var(--saddle-300);
@@ -186,6 +191,7 @@
   --surface:      #f1d9b3;
   --surface-edge: #8a8077;
   --surface-highlight: #ffe2a3; /* warmer than the panel tan */
+  --chip-shadow: rgba(0, 0, 0, 0.4);
   --fg-muted:     #6b3f24;
   --fg-dim:       #8a8077;
 }
@@ -208,6 +214,7 @@
   --surface:      #5a1a1a;
   --surface-edge: #8b3a3a;
   --surface-highlight: #7a2828; /* slightly lighter burgundy, still dark */
+  --chip-shadow: rgba(0, 0, 0, 0.6);
   --fg:           #fef6e4;
   --fg-muted:     #f1d9b3;
   --fg-dim:       #d4a574;
@@ -253,6 +260,7 @@
   --surface:      #2a1810;
   --surface-edge: #4a2818;
   --surface-highlight: #4a2c14; /* warmer dark brown — gold-tinted, not bright */
+  --chip-shadow: rgba(0, 0, 0, 0.7);
   --fg:           #fef6e4;
   --fg-muted:     #d4a574;
   --fg-dim:       #a87545;
@@ -314,6 +322,7 @@
   --surface:      #1a4d2e;
   --surface-edge: #5a8a3e;
   --surface-highlight: #2a6840; /* slightly lighter forest, still dark */
+  --chip-shadow: rgba(0, 0, 0, 0.65);
   --fg:           #f4ecdc;
   --fg-muted:     #a0c890;
   --fg-dim:       #6ba84f;
@@ -357,6 +366,7 @@
   --surface:      #2a1545;
   --surface-edge: #7a5510;
   --surface-highlight: #3a2068; /* lifted plum — darker than gold-100 */
+  --chip-shadow: rgba(0, 0, 0, 0.65);
   --fg:           #fff7e6;
   --fg-muted:     #d4b8e8;
   --fg-dim:       #a888c0;
@@ -400,6 +410,7 @@
   --surface:      #4a0a0a;
   --surface-edge: #8b1a1a;
   --surface-highlight: #5a1818; /* slightly brighter blood — still dark */
+  --chip-shadow: rgba(0, 0, 0, 0.7);
   --fg:           #fef6e4;
   --fg-muted:     #ffb888;
   --fg-dim:       #c83838;
@@ -443,6 +454,7 @@
   --surface:      #e8f4f8;
   --surface-edge: #5fa8d3;
   --surface-highlight: #c8e0ec; /* faintly deeper ice — gentle highlight on a light theme */
+  --chip-shadow: rgba(13, 58, 90, 0.3); /* tinted with the deep ice ink */
   --fg:           #0d3a5a;
   --fg-muted:     #2c6a8e;
   --fg-dim:       #5a8aaa;
@@ -480,6 +492,7 @@
   --surface:      #fff7d0;
   --surface-edge: #c8941d;
   --surface-highlight: #ffe9a8; /* deeper bone — pops against the brighter panel */
+  --chip-shadow: rgba(0, 0, 0, 0.35); /* moderate drop on the bone-bright bg */
   --fg:           #1a0f08;
   --fg-muted:     #6b3f24;
   --fg-dim:       #a87545;
@@ -771,7 +784,12 @@ img, svg, canvas {
   background: var(--saddle-500);
   border: var(--bw-panel) solid var(--ink-900);
   padding: var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-2);
-  color: var(--parchment-50);
+  /* Bar bg is overridden to a dark wood/saddle on every theme, so the
+     player's name needs an always-cream text color. The plain
+     --parchment-50 gets redefined to a dark tone on dark themes,
+     which made the username disappear into the bar — pin to the raw
+     cream instead. */
+  color: #fef6e4;
   box-shadow: var(--sh-card-rest);
   position: relative;
 }
