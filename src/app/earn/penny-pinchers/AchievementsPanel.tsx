@@ -34,7 +34,7 @@ export function AchievementsPanel({
           <div
             key={a.id}
             style={{
-              background: got ? "var(--gold-100)" : "var(--parchment-200)",
+              background: got ? "var(--surface-highlight)" : "var(--parchment-200)",
               border: `3px solid ${got ? "var(--gold-300)" : "var(--saddle-300)"}`,
               padding: "12px 14px",
               opacity: got ? 1 : 0.85,

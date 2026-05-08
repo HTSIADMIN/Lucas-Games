@@ -105,7 +105,7 @@ export function HelperRoster({
                 fontFamily: "var(--font-display)",
                 fontSize: 13,
                 color: "var(--ink-900)",
-                background: "var(--gold-100)",
+                background: "var(--surface-highlight)",
                 border: "2px solid var(--gold-300)",
                 padding: "3px 8px",
                 marginBottom: 8,

@@ -51,7 +51,7 @@ export function BankTokenShop({
               background: maxed
                 ? "var(--saddle-200)"
                 : affordable
-                ? "var(--gold-100)"
+                ? "var(--surface-highlight)"
                 : "var(--parchment-200)",
               border: `3px solid ${affordable ? "var(--gold-300)" : maxed ? "var(--saddle-400)" : "var(--saddle-300)"}`,
               padding: "12px 14px 14px",

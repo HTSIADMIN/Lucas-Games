@@ -54,7 +54,7 @@ function Page({ page, album }: { page: AlbumPage; album: AlbumState }) {
   return (
     <section
       style={{
-        background: complete ? "var(--gold-100)" : "var(--parchment-100)",
+        background: complete ? "var(--surface-highlight)" : "var(--parchment-100)",
         border: `3px solid ${complete ? "var(--gold-300)" : "var(--saddle-300)"}`,
         padding: "var(--sp-3)",
         color: "var(--ink-900)",
@@ -101,7 +101,7 @@ function Slot({ page, coin, count }: { page: AlbumPage; coin: CoinId; count: num
       title={`${def.label} · ${count}`}
       style={{
         aspectRatio: "1 / 1",
-        background: got ? "var(--gold-100)" : "var(--parchment-200)",
+        background: got ? "var(--surface-highlight)" : "var(--parchment-200)",
         border: `2px solid ${got ? ringColor : "var(--saddle-300)"}`,
         display: "grid",
         placeItems: "center",

@@ -1092,7 +1092,7 @@ export function PennyPinchersClient() {
       {welcomeBack != null && (
         <div
           style={{
-            background: "var(--gold-100)",
+            background: "var(--surface-highlight)",
             border: "3px solid var(--gold-300)",
             padding: "var(--sp-2) var(--sp-3)",
             fontFamily: "var(--font-display)",
@@ -1193,7 +1193,7 @@ export function PennyPinchersClient() {
                   fontSize: 11,
                   letterSpacing: "0.05em",
                   textTransform: "uppercase",
-                  background: "var(--gold-100)",
+                  background: "var(--surface-highlight)",
                   border: "2px solid var(--gold-300)",
                   padding: "2px 8px",
                   color: "var(--ink-900)",
@@ -1305,7 +1305,7 @@ export function PennyPinchersClient() {
                   marginTop: 6,
                   padding: "4px 6px",
                   border: `2px solid ${isFrenzy ? "var(--gold-300)" : "var(--saddle-300)"}`,
-                  background: isFrenzy ? "var(--gold-100)" : "var(--parchment-200)",
+                  background: isFrenzy ? "var(--surface-highlight)" : "var(--parchment-200)",
                   fontFamily: "var(--font-display)",
                   fontSize: 10,
                   color: "var(--ink-900)",
@@ -1344,7 +1344,7 @@ export function PennyPinchersClient() {
             padding: "var(--sp-3) var(--sp-4)",
             flex: "1 1 260px",
             minWidth: 260,
-            background: projectedPayout > 0 ? "var(--gold-100)" : undefined,
+            background: projectedPayout > 0 ? "var(--surface-highlight)" : undefined,
             animation: projectedPayout > 0 ? "pp-bank-ready 1.6s ease-in-out infinite" : undefined,
           }}
         >
@@ -1376,7 +1376,7 @@ export function PennyPinchersClient() {
             padding: "var(--sp-3) var(--sp-4)",
             flex: "1 1 240px",
             minWidth: 240,
-            background: canRoll ? "var(--gold-100)" : undefined,
+            background: canRoll ? "var(--surface-highlight)" : undefined,
             border: canRoll ? "3px solid var(--gold-300)" : undefined,
           }}
         >
@@ -2072,7 +2072,7 @@ export function PennyPinchersClient() {
               <div
                 key={id}
                 style={{
-                  background: "var(--gold-100)",
+                  background: "var(--surface-highlight)",
                   border: "3px solid var(--ink-900)",
                   padding: "8px 12px",
                   fontFamily: "var(--font-display)",
@@ -2305,7 +2305,7 @@ export function PennyPinchersClient() {
                       textAlign: "left",
                       background: granted
                         ? "var(--gold-300)"
-                        : affordable ? "var(--gold-100)" : "var(--parchment-200)",
+                        : affordable ? "var(--surface-highlight)" : "var(--parchment-200)",
                       border: `2px solid ${granted ? "var(--gold-500)" : affordable ? "var(--gold-300)" : "var(--saddle-300)"}`,
                       padding: "10px 12px",
                       cursor: affordable && !grantedBlessing ? "pointer" : "default",

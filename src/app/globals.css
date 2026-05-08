@@ -79,6 +79,13 @@
   --surface:       var(--parchment-100);
   --surface-edge:  var(--saddle-300);
   --surface-panel: var(--saddle-200);
+  /* Subtle accent shade for "highlighted" backgrounds (Bank It
+     ready, leaderboard your-row, helper PC/sec chip, affordable
+     cards). Slightly more saturated than --surface on light
+     themes, slightly lighter than --surface on dark themes —
+     overridden per-theme below so dark themes don't show a
+     bright cream against a dark panel. */
+  --surface-highlight: var(--gold-100);
   --fg:            var(--ink-900);
   --fg-muted:      var(--saddle-400);
   --fg-dim:        var(--saddle-300);
@@ -178,6 +185,7 @@
   --bg-lift:      #f1d9b3;
   --surface:      #f1d9b3;
   --surface-edge: #8a8077;
+  --surface-highlight: #ffe2a3; /* warmer than the panel tan */
   --fg-muted:     #6b3f24;
   --fg-dim:       #8a8077;
 }
@@ -199,6 +207,7 @@
   --bg-lift:      #5a3a78;
   --surface:      #5a1a1a;
   --surface-edge: #8b3a3a;
+  --surface-highlight: #7a2828; /* slightly lighter burgundy, still dark */
   --fg:           #fef6e4;
   --fg-muted:     #f1d9b3;
   --fg-dim:       #d4a574;
@@ -243,6 +252,7 @@
   --bg-lift:      #3d2418;
   --surface:      #2a1810;
   --surface-edge: #4a2818;
+  --surface-highlight: #4a2c14; /* warmer dark brown — gold-tinted, not bright */
   --fg:           #fef6e4;
   --fg-muted:     #d4a574;
   --fg-dim:       #a87545;
@@ -303,6 +313,7 @@
   --bg-lift:      #1a4d2e;
   --surface:      #1a4d2e;
   --surface-edge: #5a8a3e;
+  --surface-highlight: #2a6840; /* slightly lighter forest, still dark */
   --fg:           #f4ecdc;
   --fg-muted:     #a0c890;
   --fg-dim:       #6ba84f;
@@ -345,6 +356,7 @@
   --bg-lift:      #3a1f5e;
   --surface:      #2a1545;
   --surface-edge: #7a5510;
+  --surface-highlight: #3a2068; /* lifted plum — darker than gold-100 */
   --fg:           #fff7e6;
   --fg-muted:     #d4b8e8;
   --fg-dim:       #a888c0;
@@ -387,6 +399,7 @@
   --bg-lift:      #5a0a0a;
   --surface:      #4a0a0a;
   --surface-edge: #8b1a1a;
+  --surface-highlight: #5a1818; /* slightly brighter blood — still dark */
   --fg:           #fef6e4;
   --fg-muted:     #ffb888;
   --fg-dim:       #c83838;
@@ -429,6 +442,7 @@
   --bg-lift:      #e8f4f8;
   --surface:      #e8f4f8;
   --surface-edge: #5fa8d3;
+  --surface-highlight: #c8e0ec; /* faintly deeper ice — gentle highlight on a light theme */
   --fg:           #0d3a5a;
   --fg-muted:     #2c6a8e;
   --fg-dim:       #5a8aaa;
@@ -465,6 +479,7 @@
   --bg-lift:      #fff7d0;
   --surface:      #fff7d0;
   --surface-edge: #c8941d;
+  --surface-highlight: #ffe9a8; /* deeper bone — pops against the brighter panel */
   --fg:           #1a0f08;
   --fg-muted:     #6b3f24;
   --fg-dim:       #a87545;
