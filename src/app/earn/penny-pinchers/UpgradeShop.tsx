@@ -75,6 +75,7 @@ export function UpgradeShop({
         const maxed = lvl >= maxLvl;
         const cost = nextUpgradeCost(u.id, lvl, perm ?? {});
         const affordable = cost != null && cents >= cost;
+        const pct = maxLvl > 0 ? Math.min(100, (lvl / maxLvl) * 100) : 0;
         return (
           <button
             key={u.id}
@@ -82,56 +83,140 @@ export function UpgradeShop({
             disabled={maxed || !affordable}
             onClick={() => cost != null && onBuy(u.id, cost)}
             style={{
+              position: "relative",
               textAlign: "left",
               background: maxed
                 ? "var(--saddle-200)"
                 : affordable
                 ? "var(--parchment-100)"
                 : "var(--parchment-200)",
-              border: `2px solid ${affordable ? "var(--gold-300)" : "var(--saddle-300)"}`,
-              padding: "8px 10px",
+              border: `3px solid ${affordable ? "var(--gold-300)" : maxed ? "var(--saddle-400)" : "var(--saddle-300)"}`,
+              padding: "12px 14px 14px",
               cursor: maxed || !affordable ? "default" : "pointer",
               color: "var(--ink-900)",
-              opacity: maxed ? 0.55 : 1,
+              opacity: maxed ? 0.7 : 1,
               animation: affordable
                 ? "pp-shop-affordable 1.6s ease-in-out infinite"
                 : undefined,
-              transition: "background 200ms, transform 120ms",
+              transition: "background 200ms, transform 120ms, box-shadow 160ms",
+              overflow: "hidden",
             }}
           >
-            <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline", gap: 6 }}>
-              <span style={{ display: "inline-flex", alignItems: "baseline", gap: 6 }}>
+            {/* Header: category chip + label + level badge */}
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                 <span
                   style={{
                     fontFamily: "var(--font-display)",
-                    fontSize: 9,
+                    fontSize: 11,
                     letterSpacing: "0.08em",
                     textTransform: "uppercase",
                     background: CATEGORY_BG[u.category],
                     color: CATEGORY_FG[u.category],
-                    border: "1px solid var(--ink-900)",
-                    padding: "1px 5px",
+                    border: "2px solid var(--ink-900)",
+                    padding: "2px 7px",
+                    flex: "0 0 auto",
                   }}
                 >
                   {CATEGORY_LABEL[u.category]}
                 </span>
-                <span style={{ fontFamily: "var(--font-display)", fontSize: 13, color: "var(--ink-900)" }}>
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 17,
+                    color: "var(--ink-900)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {u.label}
                 </span>
               </span>
-              <span style={{ fontFamily: "var(--font-display)", fontSize: 11, color: "var(--saddle-400)" }}>
+              <span
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 12,
+                  color: "var(--ink-900)",
+                  background: "var(--parchment-50)",
+                  border: "2px solid var(--ink-900)",
+                  padding: "2px 7px",
+                  whiteSpace: "nowrap",
+                  flex: "0 0 auto",
+                }}
+              >
                 Lv {lvl}/{maxLvl}
               </span>
             </div>
-            <div className="text-mute" style={{ fontSize: 11, marginBottom: 4 }}>
+            {/* Description */}
+            <div
+              className="text-mute"
+              style={{
+                fontSize: 13,
+                lineHeight: 1.35,
+                marginBottom: 8,
+                color: "var(--saddle-500)",
+              }}
+            >
               {u.description}
             </div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 12 }}>
+            {/* Progress bar — visual depth on partially-leveled upgrades */}
+            <div
+              aria-hidden
+              style={{
+                height: 6,
+                background: "var(--parchment-50)",
+                border: "2px solid var(--ink-900)",
+                marginBottom: 8,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${pct}%`,
+                  height: "100%",
+                  background: maxed ? "var(--cactus-500)" : "var(--gold-300)",
+                  transition: "width 320ms",
+                }}
+              />
+            </div>
+            {/* Cost / status — the big call to action */}
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
               {maxed ? (
-                <span className="text-mute">Maxed</span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 14,
+                    letterSpacing: "var(--ls-loose)",
+                    color: "var(--cactus-500)",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  ✓ Maxed
+                </span>
               ) : (
-                <span style={{ color: affordable ? "var(--gold-500)" : "var(--saddle-400)" }}>
-                  {cost?.toLocaleString()} PC
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 18,
+                    color: affordable ? "var(--gold-500)" : "var(--saddle-400)",
+                    textShadow: affordable ? "1px 1px 0 var(--gold-100)" : undefined,
+                  }}
+                >
+                  {cost?.toLocaleString()} <span style={{ fontSize: 12, opacity: 0.85 }}>PC</span>
+                </span>
+              )}
+              {!maxed && affordable && (
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 11,
+                    letterSpacing: "var(--ls-loose)",
+                    textTransform: "uppercase",
+                    color: "var(--cactus-500)",
+                  }}
+                >
+                  ✦ Affordable
                 </span>
               )}
             </div>
