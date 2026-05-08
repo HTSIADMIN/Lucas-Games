@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { useBigBetToastMuted } from "@/lib/preferences";
+import * as Sfx from "@/lib/sfx";
 
 type ProfileData = {
   user: {
@@ -254,7 +255,12 @@ export function ProfileModal({
 // Holds client-side preferences that don't need a DB column.
 // ============================================================
 function SettingsPanel() {
-  const [muted, setMuted] = useBigBetToastMuted();
+  const [bigBetMuted, setBigBetMuted] = useBigBetToastMuted();
+  // Subscribe to the SFX bus so this panel re-renders whenever
+  // mute / volume change (including from other tabs that share
+  // the same localStorage state).
+  const sfxMuted = useSyncExternalStore(Sfx.subscribe, () => Sfx.isMuted(), () => false);
+  const sfxVolume = useSyncExternalStore(Sfx.subscribe, () => Sfx.getVolume(), () => 0.7);
   return (
     <div
       className="panel"
@@ -285,10 +291,73 @@ function SettingsPanel() {
         </span>
         <input
           type="checkbox"
-          checked={muted}
-          onChange={(e) => setMuted(e.target.checked)}
+          checked={bigBetMuted}
+          onChange={(e) => setBigBetMuted(e.target.checked)}
           style={{ width: 22, height: 22, cursor: "pointer" }}
         />
+      </label>
+
+      <hr style={{ border: 0, borderTop: "2px dashed var(--saddle-300)", margin: "var(--sp-2) 0" }} />
+
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "var(--sp-3)",
+          fontFamily: "var(--font-display)",
+          fontSize: 13,
+          padding: "6px 0",
+          cursor: "pointer",
+        }}
+      >
+        <span>
+          <span style={{ display: "block" }}>Mute sound effects</span>
+          <span className="text-mute" style={{ fontSize: 11, fontFamily: "var(--font-body)" }}>
+            Silence every game SFX (clicks, wins, dealer flips, etc.). Survives across pages.
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          checked={sfxMuted}
+          onChange={(e) => Sfx.setMuted(e.target.checked)}
+          style={{ width: 22, height: 22, cursor: "pointer" }}
+        />
+      </label>
+
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "var(--sp-3)",
+          fontFamily: "var(--font-display)",
+          fontSize: 13,
+          padding: "6px 0",
+          opacity: sfxMuted ? 0.5 : 1,
+        }}
+      >
+        <span>
+          <span style={{ display: "block" }}>SFX volume</span>
+          <span className="text-mute" style={{ fontSize: 11, fontFamily: "var(--font-body)" }}>
+            Master volume across the whole site.
+          </span>
+        </span>
+        <span className="row" style={{ gap: 8, alignItems: "center" }}>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(sfxVolume * 100)}
+            onChange={(e) => Sfx.setVolume(Number(e.target.value) / 100)}
+            disabled={sfxMuted}
+            aria-label="SFX volume"
+            style={{ width: 120 }}
+          />
+          <span style={{ minWidth: 32, textAlign: "right", fontFamily: "var(--font-display)", fontSize: 11 }}>
+            {Math.round(sfxVolume * 100)}%
+          </span>
+        </span>
       </label>
     </div>
   );
