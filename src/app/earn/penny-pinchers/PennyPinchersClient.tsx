@@ -1772,28 +1772,31 @@ export function PennyPinchersClient() {
               aria-label="Wishing fountain"
               style={{
                 position: "absolute",
-                left: fountain.x - 36,
-                top: fountain.y - 36,
-                width: 72,
-                height: 72,
+                left: fountain.x - 40,
+                top: fountain.y - 40,
+                width: 80,
+                height: 80,
                 padding: 0,
-                background: "radial-gradient(circle at 50% 35%, #c8e0f5 0%, #6aa3d4 55%, #1f4f88 100%)",
-                border: "3px solid #1a0f08",
-                borderRadius: "50%",
+                background: "transparent",
+                border: "none",
                 cursor: "pointer",
-                color: "#fff",
-                fontFamily: "var(--font-display)",
-                fontSize: 28,
-                lineHeight: 1,
-                boxShadow: "0 0 0 3px rgba(120,200,255,0.55), 0 0 24px rgba(120,200,255,0.7), 2px 2px 0 rgba(0,0,0,0.4)",
+                filter: "drop-shadow(0 0 14px rgba(120,200,255,0.65)) drop-shadow(0 3px 0 rgba(0,0,0,0.4))",
                 animation: "pp-coin-spawn 240ms var(--ease-out, ease-out), pp-fountain-bob 1.6s ease-in-out infinite",
               }}
             >
-              <span aria-hidden>⛲</span>
+              <FountainSprite />
               <style>{`
                 @keyframes pp-fountain-bob {
                   0%, 100% { transform: translateY(0); }
                   50%      { transform: translateY(-3px); }
+                }
+                @keyframes pp-fountain-water {
+                  0%, 100% { transform: scaleY(0.85); opacity: 0.85; }
+                  50%      { transform: scaleY(1.15); opacity: 1; }
+                }
+                @keyframes pp-fountain-glint {
+                  0%, 80%, 100% { opacity: 0.35; }
+                  90%           { opacity: 1; }
                 }
               `}</style>
             </button>
@@ -1805,26 +1808,30 @@ export function PennyPinchersClient() {
               aria-label="Couch"
               style={{
                 position: "absolute",
-                left: couch.x - 48,
-                top: couch.y - 28,
-                width: 96,
-                height: 56,
+                left: couch.x - 56,
+                top: couch.y - 32,
+                width: 112,
+                height: 72,
                 padding: 0,
-                background: "linear-gradient(180deg, #8b5a2b 0%, #6b3f24 60%, #3d2418 100%)",
-                border: "3px solid #1a0f08",
-                borderRadius: "10px 10px 6px 6px",
+                background: "transparent",
+                border: "none",
                 cursor: "pointer",
-                color: "var(--gold-300)",
-                fontFamily: "var(--font-display)",
-                fontSize: 14,
-                lineHeight: 1,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                boxShadow: "0 0 0 3px rgba(212,165,116,0.45), 0 0 22px rgba(212,165,116,0.55), 2px 2px 0 rgba(0,0,0,0.4)",
-                animation: "pp-coin-spawn 240ms var(--ease-out, ease-out)",
+                filter: "drop-shadow(0 0 18px rgba(212,165,116,0.55)) drop-shadow(0 4px 0 rgba(0,0,0,0.45))",
+                animation: "pp-coin-spawn 240ms var(--ease-out, ease-out), pp-couch-call 2.2s ease-in-out infinite",
               }}
             >
-              Dive!
+              <CouchSprite />
+              <style>{`
+                @keyframes pp-couch-call {
+                  0%, 100% { transform: translateY(0); }
+                  50%      { transform: translateY(-2px); }
+                }
+                @keyframes pp-couch-mote {
+                  0%   { transform: translateY(0)    scale(1);   opacity: 0; }
+                  20%  {                                          opacity: 0.85; }
+                  100% { transform: translateY(-22px) scale(0.4); opacity: 0; }
+                }
+              `}</style>
             </button>
           )}
           {lostWallet && (
@@ -2831,6 +2838,77 @@ function CushionLootReveal({ reveal }: { reveal: CushionReveal }) {
         }
       `}</style>
     </div>
+  );
+}
+
+/** Hand-drawn fountain sprite — basin, water arcs, a coin glinting
+ *  in the pool. Used in place of the ⛲ emoji so the rare-event
+ *  sprite reads as "drawn for this game" rather than a placeholder. */
+function FountainSprite() {
+  return (
+    <svg viewBox="0 0 80 80" width="100%" height="100%" aria-hidden>
+      {/* Stone basin (bottom bowl) */}
+      <ellipse cx="40" cy="62" rx="32" ry="9" fill="#3d2418" />
+      <ellipse cx="40" cy="60" rx="30" ry="7" fill="#7a8a96" />
+      <ellipse cx="40" cy="59" rx="28" ry="5.5" fill="#2c5a8a" />
+      {/* Pool surface highlight */}
+      <ellipse cx="34" cy="58" rx="10" ry="1.5" fill="rgba(255,255,255,0.45)" />
+      {/* Coin glinting in the pool */}
+      <circle cx="44" cy="59" r="2.2" fill="#f5c842" stroke="#1a0f08" strokeWidth="0.6" style={{ animation: "pp-fountain-glint 1.4s ease-in-out infinite" }} />
+      {/* Pillar */}
+      <rect x="36" y="38" width="8" height="20" fill="#7a8a96" stroke="#3d2418" strokeWidth="1.2" />
+      <rect x="36" y="38" width="8" height="3" fill="#a8b8c4" />
+      {/* Top dish */}
+      <ellipse cx="40" cy="38" rx="14" ry="3.5" fill="#3d2418" />
+      <ellipse cx="40" cy="36.5" rx="12" ry="2.5" fill="#7a8a96" />
+      <ellipse cx="40" cy="36" rx="10.5" ry="1.6" fill="#2c5a8a" />
+      {/* Water arcs spurting up */}
+      <g style={{ transformOrigin: "40px 36px", animation: "pp-fountain-water 1.1s ease-in-out infinite" }}>
+        <path d="M 40 34 Q 28 18 26 34" fill="none" stroke="#7ec8ef" strokeWidth="2.4" strokeLinecap="round" opacity="0.85" />
+        <path d="M 40 34 Q 52 18 54 34" fill="none" stroke="#7ec8ef" strokeWidth="2.4" strokeLinecap="round" opacity="0.85" />
+        <path d="M 40 32 L 40 12" stroke="#a8d8f0" strokeWidth="2.6" strokeLinecap="round" opacity="0.95" />
+        <circle cx="40" cy="11" r="1.8" fill="#c8e8f8" />
+      </g>
+    </svg>
+  );
+}
+
+/** Hand-drawn couch sprite — wood frame, two stitched cushions,
+ *  legs, and a small dust mote rising from one cushion to telegraph
+ *  "there's stuff in here." Replaces the flat brown-rectangle
+ *  placeholder so the rare event reads as a real object. */
+function CouchSprite() {
+  return (
+    <svg viewBox="0 0 112 72" width="100%" height="100%" aria-hidden>
+      {/* Floor shadow */}
+      <ellipse cx="56" cy="68" rx="48" ry="3" fill="rgba(0,0,0,0.35)" />
+      {/* Wood frame back */}
+      <rect x="6" y="14" width="100" height="42" rx="8" fill="#6b3f24" stroke="#1a0f08" strokeWidth="2.5" />
+      <rect x="6" y="14" width="100" height="6" rx="3" fill="#8b5a2b" />
+      {/* Side arms */}
+      <rect x="4" y="22" width="14" height="34" rx="4" fill="#5a3220" stroke="#1a0f08" strokeWidth="2" />
+      <rect x="94" y="22" width="14" height="34" rx="4" fill="#5a3220" stroke="#1a0f08" strokeWidth="2" />
+      {/* Two cushions */}
+      <g>
+        <rect x="22" y="30" width="32" height="22" rx="4" fill="#c8884a" stroke="#1a0f08" strokeWidth="2" />
+        <rect x="25" y="33" width="26" height="16" rx="3" fill="none" stroke="rgba(255,220,168,0.55)" strokeWidth="1" strokeDasharray="2 2" />
+      </g>
+      <g>
+        <rect x="58" y="30" width="32" height="22" rx="4" fill="#c8884a" stroke="#1a0f08" strokeWidth="2" />
+        <rect x="61" y="33" width="26" height="16" rx="3" fill="none" stroke="rgba(255,220,168,0.55)" strokeWidth="1" strokeDasharray="2 2" />
+      </g>
+      {/* Legs */}
+      <rect x="10" y="56" width="6" height="8" fill="#3d2418" />
+      <rect x="96" y="56" width="6" height="8" fill="#3d2418" />
+      {/* Dust mote rising from the right cushion — animates upward */}
+      <circle cx="74" cy="32" r="1.6" fill="#fef6e4" opacity="0.7" style={{ animation: "pp-couch-mote 2s ease-out infinite" }} />
+      <circle cx="38" cy="32" r="1.2" fill="#fef6e4" opacity="0.6" style={{ animation: "pp-couch-mote 2s ease-out 0.7s infinite" }} />
+      {/* Tiny "DIVE" tag chip pinned to the back, top-centre */}
+      <rect x="44" y="9" width="24" height="11" rx="2" fill="#f5c842" stroke="#1a0f08" strokeWidth="1.4" />
+      <text x="56" y="17" textAnchor="middle" fontFamily="M6X11, monospace" fontSize="7" fill="#1a0f08" letterSpacing="1">
+        DIVE!
+      </text>
+    </svg>
   );
 }
 
