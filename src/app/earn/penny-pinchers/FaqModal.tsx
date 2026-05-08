@@ -74,6 +74,7 @@ const SECTIONS: { title: string; lines: string[] }[] = [
       "Spend Tokens in the ★ Tokens tab on permanent upgrades that survive every future Roll-Up.",
       "Each Roll-Up adds a permanent PC multiplier on every coin pickup: first one is +300% (×4), and each subsequent +100% (×5, ×6, ...).",
       "First Roll-Up earns you the ★ Roll-Up Club badge next to your name on the leaderboard at the bottom of the game.",
+      "Higher Ceilings (perm) adds +10 to the max level of every base upgrade per level — five tiers (5, 7, 10, 14, 20★, total 56★) take Penny Multiplier from 20 → 70, Sharper Eyes 10 → 60, the spawn unlocks 5 → 55, etc.",
     ],
   },
   {

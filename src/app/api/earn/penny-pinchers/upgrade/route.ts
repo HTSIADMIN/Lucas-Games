@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { readSession } from "@/lib/auth/session";
-import { listPennyPinchersUpgrades } from "@/lib/db";
-import { UPGRADES_BY_ID, type UpgradeId } from "@/lib/games/penny-pinchers/catalog";
-import { nextUpgradeCost } from "@/lib/games/penny-pinchers/engine";
+import { listPennyPinchersPermUpgrades, listPennyPinchersUpgrades } from "@/lib/db";
+import {
+  UPGRADES_BY_ID,
+  type PermUpgradeId,
+  type UpgradeId,
+} from "@/lib/games/penny-pinchers/catalog";
+import { effectiveUpgradeMaxLevel, nextUpgradeCost } from "@/lib/games/penny-pinchers/engine";
 
 export const runtime = "nodejs";
 
@@ -29,14 +33,21 @@ export async function POST(req: Request) {
   const def = UPGRADES_BY_ID[upgradeId];
   if (!def) return NextResponse.json({ error: "bad_upgrade" }, { status: 400 });
 
-  // Read just enough state to know the current level (for cost
-  // computation) — the RPC does the actual debit + level-up.
-  const upgrades = await listPennyPinchersUpgrades(s.user.id);
+  // Read perm upgrades + run upgrades to compute the EFFECTIVE max
+  // level (Higher Ceilings adds +10 per level). The RPC itself does
+  // the atomic debit + level-up; we just gate it here.
+  const [upgrades, permRows] = await Promise.all([
+    listPennyPinchersUpgrades(s.user.id),
+    listPennyPinchersPermUpgrades(s.user.id),
+  ]);
+  const permLevels: Partial<Record<PermUpgradeId, number>> = {};
+  for (const u of permRows) permLevels[u.upgrade_id as PermUpgradeId] = u.level;
+
   const currentLevel = upgrades.find((u) => u.upgrade_id === upgradeId)?.level ?? 0;
-  if (currentLevel >= def.maxLevel) {
+  if (currentLevel >= effectiveUpgradeMaxLevel(def, permLevels)) {
     return NextResponse.json({ error: "max_level" }, { status: 400 });
   }
-  const cost = nextUpgradeCost(upgradeId, currentLevel);
+  const cost = nextUpgradeCost(upgradeId, currentLevel, permLevels);
   if (cost == null) return NextResponse.json({ error: "max_level" }, { status: 400 });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

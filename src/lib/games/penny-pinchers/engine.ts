@@ -265,11 +265,27 @@ export function offlinePCAccrued(
 // COSTS
 // ============================================================
 
+/**
+ * The Higher Ceilings perm upgrade adds +10 to the max level of every
+ * base upgrade per level. Single source of truth for "what's the
+ * effective ceiling on this run upgrade for this player."
+ */
+export function effectiveUpgradeMaxLevel(
+  upgrade: { maxLevel: number },
+  perm: PermLevels = {},
+): number {
+  return upgrade.maxLevel + (perm.higher_ceilings ?? 0) * 10;
+}
+
 /** PC cost to take an upgrade from `currentLevel` to `currentLevel + 1`. */
-export function nextUpgradeCost(upgradeId: UpgradeId, currentLevel: number): number | null {
+export function nextUpgradeCost(
+  upgradeId: UpgradeId,
+  currentLevel: number,
+  perm: PermLevels = {},
+): number | null {
   const def = UPGRADES_BY_ID[upgradeId];
   if (!def) return null;
-  if (currentLevel >= def.maxLevel) return null;
+  if (currentLevel >= effectiveUpgradeMaxLevel(def, perm)) return null;
   return Math.ceil(def.baseCost * Math.pow(def.costMultiplier, currentLevel));
 }
 

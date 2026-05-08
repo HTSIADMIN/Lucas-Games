@@ -58,7 +58,10 @@ export function RelicShop({
       if (r.ok) {
         const d = (await r.json()) as RollResult;
         setReveal(d);
-        Sfx.play(d.rarity === "legendary" || d.rarity === "epic" ? "win.big" : "win.notify");
+        // Tone-down — win.big / win.notify were jarring on every
+        // chest pull. Use a celebratory coin-shower for top-tier
+        // rolls, a quieter chip stack for everything else.
+        Sfx.play(d.rarity === "legendary" || d.rarity === "epic" ? "coins.shower" : "chips.stack");
         onPurchased();
       }
     } catch { /* ignore — sync poll reconciles */ }

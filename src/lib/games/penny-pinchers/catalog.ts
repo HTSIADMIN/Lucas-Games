@@ -515,7 +515,8 @@ export type PermUpgradeId =
   | "vending_lifer"
   | "old_hand"
   | "lucky_streak"
-  | "generous_helpers";
+  | "generous_helpers"
+  | "higher_ceilings";
 
 export type PermUpgradeDef = {
   id: PermUpgradeId;
@@ -533,6 +534,12 @@ export const PERM_UPGRADES: readonly PermUpgradeDef[] = [
   { id: "old_hand",         label: "Old Hand",         description: "Helpers keep generating PC for an extra hour while you're away per level.",        baseCost: 2, costMultiplier: 1.6, maxLevel: 8 },
   { id: "lucky_streak",     label: "Lucky Streak",     description: "+1% permanent shiny-coin chance per level. Stacks with Lucky Sidewalk Crack.",     baseCost: 5, costMultiplier: 1.7, maxLevel: 5 },
   { id: "generous_helpers", label: "Generous Helpers", description: "+25% PC/sec from all helpers per level.",                                          baseCost: 8, costMultiplier: 1.8, maxLevel: 4 },
+  // Higher Ceilings — adds +10 to the max level of EVERY base
+  // upgrade per level. At level 5 (max), Penny Multiplier goes
+  // 20 → 70, Sharper Eyes 10 → 60, the spawn unlocks 5 → 55,
+  // etc. Cost ramp is base 5 × 1.4^lvl rounded up: 5, 7, 10,
+  // 14, 20★ — total 56★ for full extension.
+  { id: "higher_ceilings",  label: "Higher Ceilings",  description: "+10 to the max level of every base upgrade per level. Stacks across all run upgrades — go deeper on what you like.", baseCost: 5, costMultiplier: 1.4, maxLevel: 5 },
 ];
 
 export const PERM_UPGRADES_BY_ID: Record<PermUpgradeId, PermUpgradeDef> = Object.fromEntries(

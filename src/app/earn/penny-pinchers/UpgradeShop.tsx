@@ -2,10 +2,11 @@
 
 import {
   UPGRADES,
+  type PermUpgradeId,
   type UpgradeCategory,
   type UpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
-import { nextUpgradeCost } from "@/lib/games/penny-pinchers/engine";
+import { effectiveUpgradeMaxLevel, nextUpgradeCost } from "@/lib/games/penny-pinchers/engine";
 
 const CATEGORY_LABEL: Record<UpgradeCategory, string> = {
   click: "Click",
@@ -19,10 +20,13 @@ export function UpgradeShop({
   levels,
   cents,
   onBuy,
+  perm,
 }: {
   levels: Record<UpgradeId, number> | Partial<Record<UpgradeId, number>>;
   cents: number;
   onBuy: (id: UpgradeId, cost: number) => void;
+  /** Higher Ceilings (perm) extends the per-upgrade max levels. */
+  perm?: Partial<Record<PermUpgradeId, number>>;
 }) {
   return (
     <div className="stack" style={{ gap: "var(--sp-2)", overflowY: "auto", maxHeight: 480 }}>
@@ -45,8 +49,9 @@ export function UpgradeShop({
             </div>
             {list.map((u) => {
               const lvl = levels[u.id] ?? 0;
-              const maxed = lvl >= u.maxLevel;
-              const cost = nextUpgradeCost(u.id, lvl);
+              const maxLvl = effectiveUpgradeMaxLevel(u, perm ?? {});
+              const maxed = lvl >= maxLvl;
+              const cost = nextUpgradeCost(u.id, lvl, perm ?? {});
               const affordable = cost != null && cents >= cost;
               return (
                 <button
@@ -79,7 +84,7 @@ export function UpgradeShop({
                       {u.label}
                     </span>
                     <span style={{ fontFamily: "var(--font-display)", fontSize: 11, color: "var(--saddle-400)" }}>
-                      Lv {lvl}/{u.maxLevel}
+                      Lv {lvl}/{maxLvl}
                     </span>
                   </div>
                   <div className="text-mute" style={{ fontSize: 11, marginBottom: 4 }}>

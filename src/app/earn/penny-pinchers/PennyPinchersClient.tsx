@@ -1923,6 +1923,7 @@ export function PennyPinchersClient() {
               levels={upgrades}
               cents={localCents}
               onBuy={buyUpgrade}
+              perm={server.perm}
             />
           ) : tab === "helpers" ? (
             <HelperRoster
