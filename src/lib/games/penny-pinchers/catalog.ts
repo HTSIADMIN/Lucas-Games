@@ -73,7 +73,14 @@ export const UPGRADES: readonly UpgradeDef[] = [
   { id: "two_finger_pickup", label: "Two-Finger Pickup",   description: "Each click has a +5% chance to grab a nearby coin.", category: "click",   baseCost: 200,   costMultiplier: 1.65, maxLevel: 10 },
 
   // Value — make coins worth more
-  { id: "penny_multiplier",  label: "Penny Multiplier",    description: "+1 PC on every coin per level — pennies, nickels, dimes, the lot.", category: "value", baseCost: 50, costMultiplier: 1.45, maxLevel: 20 },
+  // Replaces the old flat-+1-PC "Penny Multiplier" — that one
+  // disproportionately boosted pennies (penny went 1 → 21 at lv20
+  // while a dollar only went 100 → 120). Now scales every coin's
+  // base value by +10% per level instead, so the relative pecking
+  // order between denominations is preserved.
+  // Same upgrade_id retained so existing per-user rows carry over
+  // their level on deploy.
+  { id: "penny_multiplier",  label: "Coin Value",          description: "+10% PC on every coin per level — keeps the denominations in proportion.", category: "value", baseCost: 50, costMultiplier: 1.45, maxLevel: 20 },
   { id: "lucky_crack",       label: "Lucky Sidewalk Crack", description: "+1% chance per level for a coin to spawn shiny (5×).", category: "value",  baseCost: 500,   costMultiplier: 1.7,  maxLevel: 10 },
 
   // Spawn — unlock new coin tiers, then pump their weight

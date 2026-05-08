@@ -44,17 +44,19 @@ export function coinPCValue(
   relicE: RelicEffects = ZERO_EFFECTS,
 ): number {
   const base = COINS[coinType].basePC;
-  // Penny Multiplier — adds +1 PC per level to *every* coin so it
-  // stays useful end-to-end. Practice Eyes (perm) is penny-only
-  // because that's the only denom 5 PC actually moves the needle on.
-  const pennyBoost = levels.penny_multiplier ?? 0;
+  // "Coin Value" upgrade — scales every coin's base by +10% per
+  // level. Replaces the old flat-+1-PC Penny Multiplier so the
+  // pecking order between denominations stays intact at high
+  // levels (1/5/10/25/50/100 base × the same multiplier).
+  // upgrade_id is unchanged so existing rows persist.
+  const coinValueLvl = levels.penny_multiplier ?? 0;
+  const valueMul = 1 + 0.1 * coinValueLvl;
+  // Practice Eyes (perm) is penny-only — kept as a flat +5 because
+  // that's the only denom 5 PC actually moves the needle on.
+  const permBonus = coinType === "penny" ? (perm.practice_eyes ?? 0) * 5 : 0;
   // Fortune's Eye (relic) — flat bonus stacked across every coin.
   const relicBoost = relicE.coinBaseBonus;
-  if (coinType === "penny") {
-    const permBonus = (perm.practice_eyes ?? 0) * 5;
-    return base + permBonus + pennyBoost + relicBoost;
-  }
-  return base + pennyBoost + relicBoost;
+  return Math.round(base * valueMul) + permBonus + relicBoost;
 }
 
 /**
