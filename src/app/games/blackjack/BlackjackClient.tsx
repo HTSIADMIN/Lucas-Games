@@ -32,27 +32,7 @@ type Hand = {
   balance: number;
 };
 
-const STATUS_LABEL: Record<Status, string> = {
-  player_turn: "Your move",
-  dealer_turn: "Dealer plays...",
-  player_bust: "Bust!",
-  dealer_bust: "Dealer busts — you win!",
-  player_blackjack: "Blackjack!",
-  push: "Push",
-  win: "You win",
-  loss: "House wins",
-};
 
-const STATUS_BG: Record<Status, string> = {
-  player_turn: "var(--saddle-500)",
-  dealer_turn: "var(--saddle-500)",
-  player_bust: "var(--crimson-500)",
-  dealer_bust: "var(--cactus-500)",
-  player_blackjack: "var(--gold-300)",
-  push: "var(--saddle-300)",
-  win: "var(--cactus-500)",
-  loss: "var(--crimson-500)",
-};
 
 // Status helpers
 function isWin(s: Status) { return s === "win" || s === "dealer_bust" || s === "player_blackjack"; }
@@ -66,10 +46,10 @@ export function BlackjackClient() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
-  // Detected animation cues
+  // Detected animation cues. Confetti was retired when the result
+  // banner switched to a pure numeric slam — settle SFX still play.
   const [revealHole, setRevealHole] = useState(0);    // bumps when dealer hole flips
   const [shake, setShake] = useState(0);              // bumps on bust
-  const [confettiKey, setConfettiKey] = useState(0);  // re-key confetti for win
   const [stampKey, setStampKey] = useState(0);        // re-key result stamp animation
   const prevStatusRef = useRef<Status | null>(null);
   const prevPlayerTotal = useRef<number>(0);
@@ -98,7 +78,6 @@ export function BlackjackClient() {
     // Settle cues
     if (prev !== cur && isSettled(cur) && (prev === null || !isSettled(prev))) {
       setStampKey((k) => k + 1);
-      if (isWin(cur)) setConfettiKey((k) => k + 1);
       if (isLoss(cur)) setShake((k) => k + 1);
     }
     // Total pulse on change
@@ -119,7 +98,6 @@ export function BlackjackClient() {
     setHand(null);
     setShake(0);
     setStampKey(0);
-    setConfettiKey(0);
     setRevealHole(0);
     const res = await fetch("/api/games/blackjack/deal", {
       method: "POST",
@@ -176,7 +154,6 @@ export function BlackjackClient() {
           {hand && settled && (
             <ResultStamp key={stampKey} status={hand.status} payout={hand.payout} bet={hand.bet} doubled={hand.doubled} />
           )}
-          {hand && isWin(hand.status) && <Confetti key={confettiKey} />}
         </div>
 
         {/* === Action bar === */}
@@ -526,7 +503,10 @@ function Deck() {
 }
 
 // ============================================================
-// Result stamp — slams into view when the hand settles.
+// Result stamp — lean numeric slam. Shows just +N ¢ / -N ¢ /
+// PUSH at the centre of the felt, colour-keyed by outcome. No
+// banner pill, no starburst, no confetti — same direction as
+// the MP table redesign so both blackjack rooms feel coherent.
 // ============================================================
 function ResultStamp({
   status,
@@ -541,96 +521,60 @@ function ResultStamp({
 }) {
   const cost = doubled ? bet * 2 : bet;
   const net = payout != null ? payout - cost : 0;
-  const big = isWin(status);
+  const isPush = status === "push";
+  const positive = isWin(status);
+  const fg =
+    positive ? "var(--cactus-500)"
+    : isLoss(status) ? "var(--crimson-500)"
+    : "var(--parchment-100)";
+  const stroke = "var(--ink-900)";
+  const display =
+    isPush
+      ? "PUSH"
+      : positive
+      ? `+${net.toLocaleString()} ¢`
+      : `${net.toLocaleString()} ¢`;
   return (
     <div
       style={{
         position: "absolute",
         top: "50%",
         left: "50%",
-        transform: "translate(-50%, -50%) rotate(-12deg)",
-        background: STATUS_BG[status],
-        color: status === "player_blackjack" ? "var(--ink-900)" : "var(--parchment-50)",
-        border: "5px solid var(--ink-900)",
-        padding: "var(--sp-4) var(--sp-6)",
+        transform: "translate(-50%, -50%)",
         fontFamily: "var(--font-display)",
-        fontSize: big ? 48 : 36,
-        letterSpacing: "var(--ls-loose)",
-        textTransform: "uppercase",
-        boxShadow: big ? "var(--glow-gold), 8px 8px 0 var(--ink-900)" : "8px 8px 0 var(--ink-900)",
-        textShadow: status === "player_blackjack" ? "2px 2px 0 var(--gold-100)" : "3px 3px 0 var(--ink-900)",
-        animation: "bj-stamp 0.7s var(--ease-snap) backwards",
-        animationDelay: "1.2s",
+        fontSize: 88,
+        lineHeight: 1,
+        color: fg,
+        WebkitTextStroke: `4px ${stroke}`,
+        textShadow: `5px 5px 0 ${stroke}`,
+        letterSpacing: "0.02em",
+        animation: "bj-numslam 0.65s var(--ease-snap) backwards",
+        animationDelay: "1.05s",
         zIndex: 10,
         pointerEvents: "none",
-        textAlign: "center",
+        whiteSpace: "nowrap",
       }}
     >
-      {STATUS_LABEL[status]}
-      {payout !== null && payout > 0 && (
-        <div
-          style={{
-            fontSize: 18,
-            marginTop: 4,
-            letterSpacing: "var(--ls-tight)",
-          }}
-        >
-          +{net.toLocaleString()} ¢
-        </div>
-      )}
+      {display}
     </div>
   );
 }
 
 // ============================================================
-// Confetti — gold coins falling from the top after a win.
+// Action button — casino-sign aesthetic, ported from the MP
+// table. Cream face, thick ink border, single accent stripe on
+// top in the action's signature colour (Hit clubs/green, Stand
+// hearts/red, Double diamonds/gold). No gradient, no glow —
+// reads cleaner against the felt.
 // ============================================================
-function Confetti() {
-  // Delay the burst until just after the result stamp has slammed in.
-  const pieces = Array.from({ length: 32 }, (_, i) => ({
-    id: i,
-    left: Math.random() * 100,
-    delay: 1.4 + Math.random() * 0.5,
-    duration: 1.6 + Math.random() * 0.9,
-    rotate: Math.random() * 360,
-    size: 12 + Math.random() * 12,
-    color: i % 3 === 0 ? "#f5c842" : i % 3 === 1 ? "#ffd84d" : "#c8941d",
-  }));
-  return (
-    <div
-      aria-hidden
-      style={{
-        position: "absolute",
-        inset: 0,
-        pointerEvents: "none",
-        overflow: "hidden",
-        zIndex: 9,
-      }}
-    >
-      {pieces.map((p) => (
-        <span
-          key={p.id}
-          style={{
-            position: "absolute",
-            left: `${p.left}%`,
-            top: -20,
-            width: p.size,
-            height: p.size,
-            background: p.color,
-            border: "2px solid var(--ink-900)",
-            borderRadius: 999,
-            animation: `bj-coin-fall ${p.duration}s linear ${p.delay}s 1 forwards`,
-            transform: `rotate(${p.rotate}deg)`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ============================================================
-// Action button with kind-specific styling.
-// ============================================================
+const BJ_ACTION_THEME: Record<
+  "hit" | "stand" | "double",
+  { stripe: string; suit: string; suitColor: string }
+> = {
+  hit:    { stripe: "var(--cactus-500)",  suit: "♣", suitColor: "var(--cactus-500)" },
+  stand:  { stripe: "var(--crimson-500)", suit: "♥", suitColor: "var(--crimson-500)" },
+  double: { stripe: "var(--gold-300)",    suit: "♦", suitColor: "var(--gold-500)" },
+};
 function ActionButton({
   kind,
   amount,
@@ -642,23 +586,71 @@ function ActionButton({
   onClick: () => void;
   busy: boolean;
 }) {
-  const labels = {
-    hit:    "Hit",
-    stand:  "Stand",
-    double: amount ? `Double (+${amount.toLocaleString()})` : "Double",
-  };
-  const cls = kind === "stand" ? "btn btn-wood" : kind === "double" ? "btn btn-danger" : "btn";
+  const labels = { hit: "Hit", stand: "Stand", double: "Double" };
+  const sub = kind === "double" && amount ? `+${amount.toLocaleString()} ¢` : null;
+  const theme = BJ_ACTION_THEME[kind];
   return (
     <button
-      className={`${cls}`}
+      type="button"
       onClick={onClick}
       disabled={busy}
+      className={`bj-action bj-action-${kind}`}
       style={{
         flex: 1,
-        minWidth: 100,
+        minWidth: 110,
+        padding: 0,
+        background: "var(--parchment-50)",
+        color: "var(--ink-900)",
+        border: "3px solid var(--ink-900)",
+        boxShadow: "0 3px 0 var(--ink-900)",
+        fontFamily: "var(--font-display)",
+        letterSpacing: "var(--ls-loose)",
+        textTransform: "uppercase",
+        cursor: busy ? "not-allowed" : "pointer",
+        opacity: busy ? 0.55 : 1,
+        overflow: "hidden",
+        transition: "transform 90ms ease, box-shadow 160ms ease, background-color 160ms ease",
       }}
     >
-      {labels[kind]}
+      <span
+        aria-hidden
+        style={{
+          display: "block",
+          height: 6,
+          background: theme.stripe,
+          borderBottom: "2px solid var(--ink-900)",
+        }}
+      />
+      <span
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "10px 12px 12px",
+          gap: 2,
+        }}
+      >
+        <span style={{ display: "inline-flex", gap: 8, alignItems: "baseline", fontSize: 17 }}>
+          <span aria-hidden style={{ color: theme.suitColor, fontSize: 18 }}>
+            {theme.suit}
+          </span>
+          <span>{labels[kind]}</span>
+        </span>
+        {sub && (
+          <span
+            style={{
+              fontSize: 10,
+              opacity: 0.7,
+              letterSpacing: "var(--ls-tight)",
+              textTransform: "none",
+              color: "var(--saddle-400)",
+            }}
+          >
+            {sub}
+          </span>
+        )}
+      </span>
     </button>
   );
 }
@@ -706,15 +698,24 @@ const BLACKJACK_KEYFRAMES = `
   18%, 62% { transform: translateX(-10px); }
   38%, 82% { transform: translateX(10px); }
 }
-@keyframes bj-stamp {
-  0%   { transform: translate(-50%, -50%) rotate(-30deg) scale(3); opacity: 0; }
-  55%  { transform: translate(-50%, -50%) rotate(-8deg)  scale(0.88); opacity: 1; }
-  80%  { transform: translate(-50%, -50%) rotate(-16deg) scale(1.1); }
-  100% { transform: translate(-50%, -50%) rotate(-12deg) scale(1); opacity: 1; }
+@keyframes bj-numslam {
+  /* Numeric slam — drops in fast from above, overshoots, settles.
+     Used by the +N / -N / PUSH result label so the moment of truth
+     reads as a punch instead of a bulky stamp. */
+  0%   { transform: translate(-50%, -120%) scale(2.2); opacity: 0; }
+  55%  { transform: translate(-50%, -45%)  scale(1.08); opacity: 1; }
+  80%  { transform: translate(-50%, -52%)  scale(0.96); }
+  100% { transform: translate(-50%, -50%)  scale(1);   opacity: 1; }
 }
-@keyframes bj-coin-fall {
-  0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(520px) rotate(720deg); opacity: 0; }
+.bj-action:not(:disabled):hover,
+.bj-action:not(:disabled):focus-visible {
+  transform: translateY(-2px);
+  filter: brightness(1.1) saturate(1.05);
+  outline: none;
+}
+.bj-action:not(:disabled):active {
+  transform: translateY(2px);
+  filter: brightness(0.95);
 }
 `;
 
