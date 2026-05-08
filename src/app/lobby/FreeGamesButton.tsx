@@ -95,13 +95,13 @@ export function FreeGamesButton({ compact = false }: { compact?: boolean }) {
                     className={`tile free-games-tile${tileStatus?.ready ? " is-ready" : ""}`}
                     onClick={() => setOpen(false)}
                     style={{
-                      background: "var(--gold-100)",
+                      background: "var(--surface-highlight)",
                       padding: "var(--sp-3)",
                       gap: "var(--sp-2)",
                       position: "relative",
                     }}
                   >
-                    <div className="tile-art" style={{ background: "var(--gold-200)" }}>
+                    <div className="tile-art">
                       <GameIcon name={g.icon} size={96} />
                     </div>
                     <div className="tile-name" style={{ fontSize: "var(--fs-body-lg)" }}>

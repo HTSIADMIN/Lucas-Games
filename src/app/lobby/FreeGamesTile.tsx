@@ -20,7 +20,7 @@ export function FreeGamesTile() {
       onClick={open}
       className="tile"
       style={{
-        background: "var(--gold-100)",
+        background: "var(--surface-highlight)",
         cursor: "pointer",
         textAlign: "left",
         font: "inherit",
@@ -41,7 +41,6 @@ export function FreeGamesTile() {
       <div
         className="tile-art free-games-collage"
         style={{
-          background: "var(--gold-200)",
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
           gridTemplateRows: "1fr 1fr",
@@ -53,7 +52,7 @@ export function FreeGamesTile() {
           <div
             key={g.slug}
             style={{
-              border: "2px solid var(--ink-900)",
+              border: "2px solid var(--stroke)",
               minWidth: 0,
               minHeight: 0,
             }}
