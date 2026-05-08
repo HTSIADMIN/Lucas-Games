@@ -176,13 +176,20 @@ export function spawnPool(levels: UpgradeLevels): { coin: CoinId; weight: number
   const pool: { coin: CoinId; weight: number }[] = [{ coin: "penny", weight: 100 }];
   // Each spawn-unlock upgrade contributes weight at level >= 1; later
   // levels (up to maxLevel) bump the weight further.
+  //
+  // Old weights (boardwalk 3, grandpa 2 base) gave half-dollars a
+  // ~2% spawn rate even after the player paid 250k PC for the
+  // upgrade — players reasonably reported it as "didn't work".
+  // Rebalanced so each tier reads as visibly more frequent than
+  // the next-cheaper tier, and a fully-maxed spawn shop pushes
+  // pennies down from 71% → 36% of the pool.
   const unlockMap: Array<[UpgradeId, CoinId, number, number]> = [
     // [upgrade,           coin,      base weight, per-level boost]
-    ["vending_machines", "nickel",  20, 8],
-    ["parking_lot",      "dime",    10, 5],
-    ["laundry_day",      "quarter",  6, 3],
-    ["boardwalk",        "half",     3, 2],
-    ["grandpa_jar",      "dollar",   2, 1],
+    ["vending_machines", "nickel",  25, 10],
+    ["parking_lot",      "dime",    15, 7],
+    ["laundry_day",      "quarter", 10, 5],
+    ["boardwalk",        "half",     8, 4],
+    ["grandpa_jar",      "dollar",   6, 3],
   ];
   for (const [upgradeId, coin, base, boost] of unlockMap) {
     const lvl = levels[upgradeId] ?? 0;
