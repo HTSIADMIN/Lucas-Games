@@ -142,7 +142,19 @@ export function RelicShop({
       >
         Owned Relics
       </div>
-      {RELICS.map((r) => {
+      {/* Sort: in-progress relics (owned but not maxed) at top so the
+          player can see what's leveling up, unstarted in the middle
+          (still goals), maxed-out sink to the bottom. */}
+      {RELICS.slice().sort((a, b) => {
+        const aLvl = relics[a.id] ?? 0;
+        const bLvl = relics[b.id] ?? 0;
+        const rank = (lvl: number, max: number) => {
+          if (lvl >= max && max > 0) return 2; // maxed → bottom
+          if (lvl > 0)               return 0; // in progress → top
+          return 1;                            // unstarted → middle
+        };
+        return rank(aLvl, a.maxLevel) - rank(bLvl, b.maxLevel);
+      }).map((r) => {
         const lvl = relics[r.id] ?? 0;
         const owned = lvl > 0;
         const tone = RARITY_COLOR[r.rarity];

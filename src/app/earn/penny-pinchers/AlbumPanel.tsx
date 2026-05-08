@@ -29,9 +29,17 @@ const PAGE_BLURB: Record<AlbumPage, string> = {
 };
 
 export function AlbumPanel({ album }: { album: AlbumState }) {
+  // Completed pages sink to the bottom so the still-collecting
+  // pages stay at the top of the scroll container.
+  const pages = (Object.keys(ALBUM_PAGE_COINS) as AlbumPage[]).slice().sort((a, b) => {
+    const aDone = albumPageComplete(album, a);
+    const bDone = albumPageComplete(album, b);
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    return 0;
+  });
   return (
     <div className="stack" style={{ gap: "var(--sp-3)", overflowY: "auto", maxHeight: 480 }}>
-      {(Object.keys(ALBUM_PAGE_COINS) as AlbumPage[]).map((page) => (
+      {pages.map((page) => (
         <Page key={page} page={page} album={album} />
       ))}
     </div>

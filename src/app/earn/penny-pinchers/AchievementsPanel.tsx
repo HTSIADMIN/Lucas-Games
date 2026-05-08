@@ -21,7 +21,14 @@ export function AchievementsPanel({
       >
         {completed} / {ACHIEVEMENTS.length} unlocked
       </div>
-      {ACHIEVEMENTS.map((a) => {
+      {/* Unlocked trophies sink to the bottom — the player's targets
+          (still locked) stay at the top so progress remains visible. */}
+      {ACHIEVEMENTS.slice().sort((a, b) => {
+        const aGot = unlocked.has(a.id);
+        const bGot = unlocked.has(b.id);
+        if (aGot !== bGot) return aGot ? 1 : -1;
+        return 0;
+      }).map((a) => {
         const got = unlocked.has(a.id);
         return (
           <div

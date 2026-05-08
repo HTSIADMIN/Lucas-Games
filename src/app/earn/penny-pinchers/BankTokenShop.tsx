@@ -20,7 +20,16 @@ export function BankTokenShop({
       >
         Permanent — survives every Roll It Up
       </div>
-      {PERM_UPGRADES.map((u) => {
+      {/* Maxed perm upgrades sink to the bottom so the still-buy-able
+          ones stay visible up top. */}
+      {PERM_UPGRADES.slice().sort((a, b) => {
+        const aLvl = levels[a.id] ?? 0;
+        const bLvl = levels[b.id] ?? 0;
+        const aMaxed = aLvl >= a.maxLevel;
+        const bMaxed = bLvl >= b.maxLevel;
+        if (aMaxed !== bMaxed) return aMaxed ? 1 : -1;
+        return 0;
+      }).map((u) => {
         const lvl = levels[u.id] ?? 0;
         const maxed = lvl >= u.maxLevel;
         const cost = nextPermUpgradeCost(u.id, lvl);

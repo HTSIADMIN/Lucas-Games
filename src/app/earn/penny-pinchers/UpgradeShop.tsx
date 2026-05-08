@@ -37,7 +37,17 @@ export function UpgradeShop({
         }
       `}</style>
       {CATEGORY_ORDER.map((cat) => {
-        const list = UPGRADES.filter((u) => u.category === cat);
+        // Maxed upgrades sink to the bottom of each category so the
+        // active set stays at the top — keeps the eye on what's
+        // still buyable without losing the "this is done" record.
+        const list = UPGRADES.filter((u) => u.category === cat).slice().sort((a, b) => {
+          const aLvl = levels[a.id] ?? 0;
+          const bLvl = levels[b.id] ?? 0;
+          const aMaxed = aLvl >= effectiveUpgradeMaxLevel(a, perm ?? {});
+          const bMaxed = bLvl >= effectiveUpgradeMaxLevel(b, perm ?? {});
+          if (aMaxed !== bMaxed) return aMaxed ? 1 : -1;
+          return 0;
+        });
         if (list.length === 0) return null;
         return (
           <div key={cat} className="stack" style={{ gap: 4 }}>
