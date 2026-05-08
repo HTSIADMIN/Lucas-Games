@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ProfileButton } from "@/components/social/ProfileButton";
 import { SfxControls } from "@/components/SfxControls";
+import { WhatsNewButton } from "@/components/WhatsNewButton";
 
 // Hamburger drop-down for mobile. The desktop SiteHeader keeps the
 // inline nav; this component is hidden via CSS until the viewport
@@ -64,6 +65,10 @@ export function MobileNavMenu({ current }: { current?: string }) {
               </Link>
             ))}
             <div className="mobile-nav-divider" />
+            <div className="mobile-nav-row" onClick={() => setOpen(false)}>
+              <span className="mobile-nav-label">News</span>
+              <WhatsNewButton />
+            </div>
             <div className="mobile-nav-row">
               <span className="mobile-nav-label">Sound</span>
               <SfxControls />

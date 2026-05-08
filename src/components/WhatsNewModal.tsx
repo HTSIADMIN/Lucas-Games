@@ -15,7 +15,12 @@ import { CHANGELOG, type ChangelogEntry } from "@/lib/changelog";
 // never seen the modal will see whatever the current latest entry
 // is on their next page load.
 
-const SEEN_KEY = "lg-whats-new-seen";
+export const WHATS_NEW_SEEN_KEY = "lg-whats-new-seen";
+const SEEN_KEY = WHATS_NEW_SEEN_KEY;
+/** Window event for force-opening the modal from the header button —
+ *  matches the lg:open-free-games pattern so we don't need to lift
+ *  modal state into a provider. */
+export const WHATS_NEW_OPEN_EVENT = "lg:open-whats-new";
 
 export function WhatsNewModal() {
   const [open, setOpen] = useState(false);
@@ -31,9 +36,26 @@ export function WhatsNewModal() {
     if (seen !== latest.id) setOpen(true);
   }, [latest]);
 
+  // Allow the WhatsNewButton in the SiteHeader to force-open the
+  // modal at any time, even after the player has dismissed the
+  // auto-popup. Stays mounted while AppLive is mounted.
+  useEffect(() => {
+    function onOpen() {
+      setShowHistory(false);
+      setOpen(true);
+    }
+    window.addEventListener(WHATS_NEW_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(WHATS_NEW_OPEN_EVENT, onOpen);
+  }, []);
+
   function dismiss() {
     if (latest) {
-      try { localStorage.setItem(SEEN_KEY, latest.id); } catch { /* ignore */ }
+      try {
+        localStorage.setItem(SEEN_KEY, latest.id);
+        // Tell the WhatsNewButton its dot can clear without waiting
+        // for a remount — same store, but custom event for in-tab.
+        window.dispatchEvent(new Event("lg:whats-new-seen"));
+      } catch { /* ignore */ }
     }
     setOpen(false);
   }

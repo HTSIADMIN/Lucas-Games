@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ProfileButton } from "@/components/social/ProfileButton";
 import { SfxControls } from "@/components/SfxControls";
 import { MobileNavMenu } from "@/components/MobileNavMenu";
+import { WhatsNewButton } from "@/components/WhatsNewButton";
 
 export function SiteHeader({
   current,
@@ -33,6 +34,7 @@ export function SiteHeader({
       {/* Desktop-only inline nav + sfx. Hidden under the breakpoint;
           MobileNavMenu picks them up there instead. */}
       <div className="site-header-desktop">
+        <WhatsNewButton />
         <SfxControls />
         <nav className="site-nav">
           <Link href="/lobby" aria-current={current === "lobby" ? "page" : undefined}>
