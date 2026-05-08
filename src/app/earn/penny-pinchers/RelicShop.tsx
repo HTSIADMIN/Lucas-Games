@@ -58,10 +58,10 @@ export function RelicShop({
       if (r.ok) {
         const d = (await r.json()) as RollResult;
         setReveal(d);
-        // Tone-down — win.big / win.notify were jarring on every
-        // chest pull. Use a celebratory coin-shower for top-tier
-        // rolls, a quieter chip stack for everything else.
-        Sfx.play(d.rarity === "legendary" || d.rarity === "epic" ? "coins.shower" : "chips.stack");
+        // Win SFX moved into RevealModal so it fires WHEN the spin
+        // strip lands — not the moment the response arrives (which
+        // was 2.5s before the visual reveal, so the sound felt
+        // detached). RevealModal also picks the sound by rarity.
         onPurchased();
       }
     } catch { /* ignore — sync poll reconciles */ }
@@ -231,12 +231,23 @@ function RevealModal({ result, onClose }: { result: RollResult; onClose: () => v
     const tickHandles = tickTimes.map((ms) =>
       window.setTimeout(() => Sfx.play("ui.wood"), ms),
     );
-    const t = window.setTimeout(() => setRevealed(true), SPIN_REVEAL_DELAY_MS);
+    const t = window.setTimeout(() => {
+      setRevealed(true);
+      // Reveal SFX — fires synced with the strip landing. Single
+      // chip-lay click for everything (clean, casino-y, doesn't
+      // step on the tick cadence). Top-tier rolls get a brief
+      // coin-drop chaser to mark the rarity without blasting the
+      // win.big fanfare.
+      Sfx.play("chip.lay");
+      if (result.rarity === "legendary" || result.rarity === "epic") {
+        window.setTimeout(() => Sfx.play("coin.drop"), 140);
+      }
+    }, SPIN_REVEAL_DELAY_MS);
     return () => {
       window.clearTimeout(t);
       for (const h of tickHandles) window.clearTimeout(h);
     };
-  }, []);
+  }, [result.rarity]);
 
   // Stopping offset: line up the winner card's centre with the
   // viewport's centre. translate-X is negative because the strip

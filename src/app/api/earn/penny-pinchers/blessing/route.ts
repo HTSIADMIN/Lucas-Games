@@ -28,9 +28,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "insufficient_pc" }, { status: 400 });
   }
 
+  // Frugality cap matches the catalog's +50 trophy ceiling.
+  const FRUGALITY_MAX = 50;
+  const frugalityGain = def.frugality ?? 0;
+  const newFrugality = Math.min(FRUGALITY_MAX, state.frugality + frugalityGain);
+
   const updated = await upsertPennyPinchersState({
     ...state,
     cents: state.cents - def.cost,
+    frugality: newFrugality,
     last_tick_at: new Date().toISOString(),
   });
 
@@ -40,5 +46,7 @@ export async function POST(req: Request) {
     cost: def.cost,
     durationMs: def.durationMs,
     cents: updated.cents,
+    frugality: updated.frugality,
+    frugalityGained: newFrugality - state.frugality,
   });
 }

@@ -317,7 +317,7 @@ export const EVENT_START_CHANCE_PER_POLL = 0.025;
 // spawn behaviour, not click payouts).
 // ============================================================
 
-export type BlessingId = "lucky_streak" | "sharp_eyes" | "greedy_spawns";
+export type BlessingId = "lucky_streak" | "sharp_eyes" | "greedy_spawns" | "frugal_toss";
 
 export type BlessingDef = {
   id: BlessingId;
@@ -326,12 +326,18 @@ export type BlessingDef = {
   /** PC cost paid when the blessing is selected. */
   cost: number;
   durationMs: number;
+  /** Optional Frugality grant. Used by `frugal_toss` to convert a
+   *  small PC sacrifice into a permanent Frugality point. */
+  frugality?: number;
 };
 
 export const BLESSINGS: Record<BlessingId, BlessingDef> = {
   lucky_streak:  { id: "lucky_streak",  label: "Lucky Streak",  blurb: "+10% shiny chance for 30s.",                    cost: 250,  durationMs: 30_000 },
   sharp_eyes:    { id: "sharp_eyes",    label: "Sharp Eyes",    blurb: "Spawns twice as fast for 30s.",                  cost: 400,  durationMs: 30_000 },
   greedy_spawns: { id: "greedy_spawns", label: "Greedy Spawns", blurb: "+50% chance to spawn the highest unlocked coin for 30s.", cost: 600, durationMs: 30_000 },
+  // Quiet, virtuous option — drop a coin in the fountain and walk
+  // away with one Frugality point. No buff timer, just the karma.
+  frugal_toss:   { id: "frugal_toss",   label: "Toss a coin and walk away", blurb: "Drop 50 PC in the fountain and walk. +1 Frugality.", cost: 50, durationMs: 0, frugality: 1 },
 };
 
 /** Per-poll chance a Wishing Fountain spawns when none on screen. */
@@ -349,7 +355,15 @@ export const FOUNTAIN_LIFETIME_MS = 25_000;
 // reveals or after a 15s timeout.
 // ============================================================
 
-export type CushionLootId = "lint" | "penny_pile" | "nickel_pile" | "dime_pile" | "quarter_pile" | "jackpot";
+export type CushionLootId =
+  | "lint"
+  | "penny_pile"
+  | "nickel_pile"
+  | "dime_pile"
+  | "quarter_pile"
+  | "half_dollar_pile"
+  | "dollar_pile"
+  | "jackpot";
 
 export type CushionLoot = {
   id: CushionLootId;
@@ -358,15 +372,29 @@ export type CushionLoot = {
   pc: number;
   /** Relative weight in the loot roll. */
   weight: number;
+  /** Frugality awarded when revealed. Lint gives +1 as a
+   *  consolation prize for the bad RNG (matches the Frugality
+   *  fantasy of "I didn't even need that"). */
+  frugality?: number;
+  /** UI tier — drives the reveal card's colour + decoration. */
+  tier: "lint" | "low" | "mid" | "high" | "jackpot";
 };
 
+// Rebalanced from the old ~50-PC mean to ~1,250 PC mean per
+// cushion (×4 cushions ≈ 5,000 PC per couch event). The couch
+// sprite spawns rarely (~0.6% per poll), so the throughput stays
+// reasonable but each event reads as a real find. Two new tiers
+// (half-dollar + dollar piles) give the loot table more reveal
+// variety and let the modal show a wider range of card colours.
 export const CUSHION_LOOT: readonly CushionLoot[] = [
-  { id: "lint",         label: "Lint",      pc: 0,    weight: 8  },
-  { id: "penny_pile",   label: "Pennies",   pc: 5,    weight: 28 },
-  { id: "nickel_pile",  label: "Nickels",   pc: 25,   weight: 22 },
-  { id: "dime_pile",    label: "Dimes",     pc: 60,   weight: 14 },
-  { id: "quarter_pile", label: "Quarters",  pc: 150,  weight: 6  },
-  { id: "jackpot",      label: "Jackpot!",  pc: 1500, weight: 1  },
+  { id: "lint",             label: "Lint",       pc: 0,      weight: 4,  frugality: 1, tier: "lint" },
+  { id: "penny_pile",       label: "Pennies",    pc: 50,     weight: 22, tier: "low" },
+  { id: "nickel_pile",      label: "Nickels",    pc: 200,    weight: 20, tier: "low" },
+  { id: "dime_pile",        label: "Dimes",      pc: 600,    weight: 14, tier: "mid" },
+  { id: "quarter_pile",     label: "Quarters",   pc: 1_500,  weight: 8,  tier: "mid" },
+  { id: "half_dollar_pile", label: "Half-Dollars", pc: 4_000, weight: 5, tier: "high" },
+  { id: "dollar_pile",      label: "Dollars",    pc: 10_000, weight: 2,  tier: "high" },
+  { id: "jackpot",          label: "Jackpot!",   pc: 30_000, weight: 1,  tier: "jackpot" },
 ];
 
 /** Per-poll chance a Couch sprite spawns when none on screen. */
@@ -580,6 +608,10 @@ export type AchievementDef = {
   description: string;
   /** Bank Tokens awarded on first unlock. */
   reward: number;
+  /** Frugality points awarded on first unlock. Used by the Frugality
+   *  trophies (Frugal Saver, Saint) to reward virtuous play with a
+   *  permanent run-side payout boost on top of the Bank Tokens. */
+  frugalityReward?: number;
 };
 
 // Trophy stars now pay meaningfully — small wins drip 1-2★, big
@@ -603,8 +635,12 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   { id: "relic_hoarder",         label: "Relic Hoarder",         description: "Own at least one of every relic.",                  reward: 8 },
   { id: "page_turner",           label: "Page Turner",           description: "Complete any one album page.",                       reward: 2 },
   { id: "album_curator",         label: "Album Curator",         description: "Complete every album page.",                         reward: 10 },
-  { id: "frugal_saver",          label: "Frugal Saver",          description: "Hit +25 Frugality.",                                 reward: 2 },
-  { id: "saint",                 label: "Saint",                 description: "Max out Frugality at +50.",                          reward: 5 },
+  // Frugality trophies — reward bookends on the Frugality grind.
+  // Bank Token payouts unchanged; new frugalityReward stacks +5 / +10
+  // permanent Frugality on top so reaching the milestone is its own
+  // boost (Frugal Saver +5 = +2.5% PC, Saint +10 = +5%).
+  { id: "frugal_saver",          label: "Frugal Saver",          description: "Hit +25 Frugality.",                                 reward: 2, frugalityReward: 5 },
+  { id: "saint",                 label: "Saint",                 description: "Max out Frugality at +50.",                          reward: 5, frugalityReward: 10 },
 ];
 
 export const ACHIEVEMENTS_BY_ID: Record<AchievementId, AchievementDef> = Object.fromEntries(

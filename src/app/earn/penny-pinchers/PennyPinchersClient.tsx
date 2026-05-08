@@ -23,6 +23,7 @@ import {
   COUCH_CHANCE_PER_POLL,
   COUCH_CUSHIONS,
   COUCH_LIFETIME_MS,
+  CUSHION_LOOT,
   CURSED_PAUSE_MS,
   FOUNTAIN_CHANCE_PER_POLL,
   FOUNTAIN_LIFETIME_MS,
@@ -137,7 +138,19 @@ type LostWallet = { id: number; x: number; y: number; spawnedAt: number };
 type Fountain  = { id: number; x: number; y: number; spawnedAt: number };
 type Couch     = { id: number; x: number; y: number; spawnedAt: number };
 type ActiveBlessing = { id: BlessingId; endsAt: number };
-type CushionReveal = { idx: number; lootId: string; label: string; pcGain: number; revealedAt: number };
+type CushionReveal = {
+  idx: number;
+  lootId: string;
+  label: string;
+  pcGain: number;
+  revealedAt: number;
+  /** Tier drives the reveal card's colour — looked up from
+   *  CUSHION_LOOT on the client so the server response can stay
+   *  minimal. */
+  tier: "lint" | "low" | "mid" | "high" | "jackpot";
+  /** Frugality awarded by the lint pull (0 for everything else). */
+  frugalityGained: number;
+};
 type FloatPop = { id: number; x: number; y: number; pc: number; shiny: boolean };
 type ClickBurst = {
   id: number;
@@ -915,13 +928,18 @@ export function PennyPinchersClient() {
         body: JSON.stringify({ blessingId: id }),
       });
       if (r.ok) {
-        const d = (await r.json()) as { durationMs: number; cents: number };
+        const d = (await r.json()) as { durationMs: number; cents: number; frugalityGained?: number };
         setLocalCents(d.cents);
-        setActiveBlessings((bs) => [...bs, { id, endsAt: Date.now() + d.durationMs }]);
+        // Only stack a buff if there's actually a duration. The
+        // frugal_toss option has durationMs=0 — it's a Frugality
+        // grant, not a timed buff — so skip the active list.
+        if (d.durationMs > 0) {
+          setActiveBlessings((bs) => [...bs, { id, endsAt: Date.now() + d.durationMs }]);
+        }
         // Hold the modal open with a "Granted!" flash on the chosen
         // blessing button before closing — dramatises the buy.
         setGrantedBlessing(id);
-        Sfx.play("win.notify");
+        Sfx.play(d.durationMs > 0 ? "win.notify" : "coins.handle");
         window.setTimeout(() => {
           setGrantedBlessing(null);
           setFountain(null);
@@ -942,13 +960,34 @@ export function PennyPinchersClient() {
     try {
       const r = await fetch("/api/earn/penny-pinchers/cushion", { method: "POST" });
       if (!r.ok) return;
-      const d = (await r.json()) as { loot: string; label: string; pcGain: number; cents: number };
+      const d = (await r.json()) as {
+        loot: string;
+        label: string;
+        pcGain: number;
+        cents: number;
+        frugalityGained?: number;
+      };
       setLocalCents(d.cents);
+      // Map the rolled loot id back to its catalog entry so the
+      // reveal card knows what tier theme to apply (drives card
+      // colour + glow + reveal SFX). Server response stays small.
+      const def = CUSHION_LOOT.find((c) => c.id === d.loot);
       setCushionReveals((prev) => [
         ...prev,
-        { idx, lootId: d.loot, label: d.label, pcGain: d.pcGain, revealedAt: Date.now() },
+        {
+          idx,
+          lootId: d.loot,
+          label: d.label,
+          pcGain: d.pcGain,
+          revealedAt: Date.now(),
+          tier: def?.tier ?? "low",
+          frugalityGained: d.frugalityGained ?? 0,
+        },
       ]);
-      if (d.pcGain > 0) Sfx.play("coin.drop");
+      if (def?.tier === "jackpot") Sfx.play("win.big");
+      else if (def?.tier === "high") Sfx.play("coins.shower");
+      else if (d.pcGain > 0) Sfx.play("coin.drop");
+      else Sfx.play("ui.soft"); // lint — quiet acknowledgement
     } catch { /* ignore */ }
   }
 
@@ -2295,144 +2334,205 @@ export function PennyPinchersClient() {
         </div>
       )}
 
-      {couchModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Couch cushion dive"
-          onClick={() => closeCouch()}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9_500,
-            background: "rgba(26,15,8,0.7)",
-            display: "grid",
-            placeItems: "center",
-            padding: 16,
-            backdropFilter: "blur(2px)",
-          }}
-        >
+      {couchModalOpen && (() => {
+        // Tally so the player can watch their couch take grow as
+        // they flip — turns the modal into a mini score-screen
+        // instead of four blind clicks.
+        const totalPC = cushionReveals.reduce((sum, r) => sum + r.pcGain, 0);
+        const totalFrugality = cushionReveals.reduce((sum, r) => sum + r.frugalityGained, 0);
+        const allDone = cushionReveals.length >= COUCH_CUSHIONS;
+        return (
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="panel-wood"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Couch cushion dive"
+            onClick={() => closeCouch()}
             style={{
-              width: "min(440px, 100%)",
-              padding: "var(--sp-5)",
-              border: "4px solid var(--ink-900)",
-              boxShadow: "var(--sh-popover), var(--glow-gold)",
+              position: "fixed",
+              inset: 0,
+              zIndex: 9_500,
+              background: "rgba(26,15,8,0.78)",
+              display: "grid",
+              placeItems: "center",
+              padding: 16,
+              backdropFilter: "blur(3px)",
             }}
           >
             <div
-              className="uppercase"
+              onClick={(e) => e.stopPropagation()}
+              className="panel-wood"
               style={{
-                fontFamily: "var(--font-display)",
-                fontSize: "var(--fs-h3)",
-                color: "var(--gold-300)",
-                letterSpacing: "var(--ls-loose)",
-                textShadow: "2px 2px 0 var(--ink-900)",
-                marginBottom: "var(--sp-2)",
-                textAlign: "center",
+                width: "min(560px, 100%)",
+                padding: "var(--sp-5)",
+                border: "4px solid var(--ink-900)",
+                boxShadow: "var(--sh-popover), var(--glow-gold)",
               }}
             >
-              Couch Cushion Dive
-            </div>
-            <p className="text-mute" style={{ fontSize: 12, textAlign: "center", marginBottom: "var(--sp-3)" }}>
-              Flip {COUCH_CUSHIONS} cushions — keep what you find.
-            </p>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-                marginBottom: "var(--sp-3)",
-              }}
-            >
-              {Array.from({ length: COUCH_CUSHIONS }).map((_, idx) => {
-                const reveal = cushionReveals.find((r) => r.idx === idx);
-                const flipped = !!reveal;
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => flipCushion(idx)}
-                    disabled={flipped}
-                    aria-label={flipped ? `Cushion ${idx + 1}: ${reveal!.label}` : `Cushion ${idx + 1}, unrevealed`}
-                    style={{
-                      aspectRatio: "1.6 / 1",
-                      background: "transparent",
-                      border: "none",
-                      padding: 0,
-                      cursor: flipped ? "default" : "pointer",
-                      perspective: "600px",
-                    }}
-                  >
-                    {/* 3D flip wrapper — front (?) and back (loot)
-                        sit back-to-back; rotateY(180deg) on flip. */}
-                    <div
+              {/* Title row with running total */}
+              <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline", marginBottom: "var(--sp-2)" }}>
+                <div
+                  className="uppercase"
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "var(--fs-h3)",
+                    color: "var(--gold-300)",
+                    letterSpacing: "var(--ls-loose)",
+                    textShadow: "2px 2px 0 var(--ink-900)",
+                  }}
+                >
+                  Couch Cushion Dive
+                </div>
+                <div
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 14,
+                    color: "var(--gold-300)",
+                    background: "rgba(0,0,0,0.35)",
+                    padding: "4px 10px",
+                    border: "2px solid var(--ink-900)",
+                    minWidth: 90,
+                    textAlign: "right",
+                  }}
+                >
+                  +{totalPC.toLocaleString()} PC
+                </div>
+              </div>
+              <p className="text-mute" style={{ fontSize: 12, marginBottom: "var(--sp-4)" }}>
+                Flip {COUCH_CUSHIONS} cushions — keep what you find. Lint counts
+                as patience: <span style={{ color: "var(--cactus-500)" }}>+1 Frugality</span> if you pull one.
+              </p>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 14,
+                  marginBottom: "var(--sp-4)",
+                }}
+              >
+                {Array.from({ length: COUCH_CUSHIONS }).map((_, idx) => {
+                  const reveal = cushionReveals.find((r) => r.idx === idx);
+                  const flipped = !!reveal;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => flipCushion(idx)}
+                      disabled={flipped}
+                      aria-label={flipped ? `Cushion ${idx + 1}: ${reveal!.label}` : `Cushion ${idx + 1}, unrevealed`}
                       style={{
-                        position: "relative",
-                        width: "100%",
-                        height: "100%",
-                        transformStyle: "preserve-3d",
-                        transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
-                        transition: "transform 480ms cubic-bezier(.4, 1.4, .55, 1)",
+                        aspectRatio: "1.4 / 1",
+                        background: "transparent",
+                        border: "none",
+                        padding: 0,
+                        cursor: flipped ? "default" : "pointer",
+                        perspective: "700px",
                       }}
                     >
-                      {/* Front face — un-revealed cushion */}
                       <div
                         style={{
-                          position: "absolute",
-                          inset: 0,
-                          backfaceVisibility: "hidden",
-                          background: "linear-gradient(180deg, #b07a4a 0%, #6b3f24 100%)",
-                          border: "3px solid #1a0f08",
-                          borderRadius: 8,
-                          display: "grid",
-                          placeItems: "center",
-                          color: "var(--gold-300)",
-                          fontFamily: "var(--font-display)",
-                          fontSize: 22,
+                          position: "relative",
+                          width: "100%",
+                          height: "100%",
+                          transformStyle: "preserve-3d",
+                          transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+                          transition: "transform 540ms cubic-bezier(.35, 1.45, .55, 1)",
                         }}
                       >
-                        ?
+                        {/* Front face — stitched cushion sprite */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            backfaceVisibility: "hidden",
+                            background:
+                              "radial-gradient(circle at 30% 30%, #c8884a 0%, #8a4f25 60%, #4a2818 100%)",
+                            border: "3px solid #1a0f08",
+                            borderRadius: 14,
+                            display: "grid",
+                            placeItems: "center",
+                            color: "rgba(0,0,0,0.65)",
+                            fontFamily: "var(--font-display)",
+                            fontSize: 32,
+                            boxShadow:
+                              "inset 0 -6px 0 rgba(0,0,0,0.3), inset 0 6px 0 rgba(255,255,255,0.15), 0 4px 0 rgba(0,0,0,0.5)",
+                          }}
+                        >
+                          {/* Stitch outline — dashed border just inside the cushion */}
+                          <span
+                            aria-hidden
+                            style={{
+                              position: "absolute",
+                              inset: 8,
+                              border: "2px dashed rgba(255, 220, 168, 0.45)",
+                              borderRadius: 10,
+                              pointerEvents: "none",
+                            }}
+                          />
+                          <span
+                            style={{
+                              position: "relative",
+                              zIndex: 1,
+                              color: "var(--gold-300)",
+                              textShadow: "2px 2px 0 var(--ink-900)",
+                            }}
+                          >
+                            ?
+                          </span>
+                        </div>
+                        {/* Back face — tier-themed loot reveal */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            backfaceVisibility: "hidden",
+                            transform: "rotateY(180deg)",
+                            ...cushionRevealStyle(reveal?.tier),
+                            borderRadius: 14,
+                            display: "grid",
+                            placeItems: "center",
+                            color: "var(--ink-900)",
+                            fontFamily: "var(--font-display)",
+                            padding: 10,
+                            textAlign: "center",
+                          }}
+                        >
+                          {flipped && <CushionLootReveal reveal={reveal!} />}
+                        </div>
                       </div>
-                      {/* Back face — loot reveal */}
-                      <div
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          backfaceVisibility: "hidden",
-                          transform: "rotateY(180deg)",
-                          background: !flipped
-                            ? "var(--parchment-100)"
-                            : reveal!.pcGain === 0
-                            ? "var(--saddle-200)"
-                            : "var(--gold-100)",
-                          border: `3px solid ${flipped ? "var(--gold-300)" : "#1a0f08"}`,
-                          borderRadius: 8,
-                          display: "grid",
-                          placeItems: "center",
-                          color: "var(--ink-900)",
-                          fontFamily: "var(--font-display)",
-                          padding: 8,
-                          textAlign: "center",
-                        }}
-                      >
-                        {flipped && <CushionLootReveal reveal={reveal!} />}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="row" style={{ gap: 8, justifyContent: "center" }}>
-              <button type="button" className="btn btn-ghost" onClick={closeCouch}>
-                {cushionReveals.length >= COUCH_CUSHIONS ? "Done" : "Walk away"}
-              </button>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Frugality + done row */}
+              <div className="row" style={{ gap: 8, justifyContent: "space-between", alignItems: "center" }}>
+                <div
+                  className="text-mute"
+                  style={{
+                    fontSize: 11,
+                    minHeight: 16,
+                  }}
+                >
+                  {totalFrugality > 0 && (
+                    <span style={{ color: "var(--cactus-500)" }}>
+                      ✓ +{totalFrugality} Frugality
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className={allDone ? "btn" : "btn btn-ghost"}
+                  onClick={closeCouch}
+                  style={allDone
+                    ? { background: "var(--gold-300)", color: "var(--ink-900)" }
+                    : undefined}
+                >
+                  {allDone ? "✓ Pocket the lot" : "Walk away"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {walletModalChoice != null && (
         <div
@@ -2592,11 +2692,50 @@ export function PennyPinchersClient() {
  * +N PC line fading in afterward. Pure CSS transition keyed to
  * `revealedAt` so React doesn't have to drive frame-by-frame.
  */
+/** Tier-themed background + border colour for a flipped cushion. */
+function cushionRevealStyle(tier: CushionReveal["tier"] | undefined): React.CSSProperties {
+  switch (tier) {
+    case "jackpot":
+      return {
+        background: "radial-gradient(circle at 50% 50%, var(--neon-gold) 0%, var(--gold-300) 70%)",
+        border: "3px solid var(--gold-500)",
+        boxShadow: "var(--glow-gold), inset 0 0 18px rgba(255, 232, 168, 0.6)",
+      };
+    case "high":
+      return {
+        background: "linear-gradient(180deg, var(--gold-100) 0%, var(--gold-300) 100%)",
+        border: "3px solid var(--gold-500)",
+        boxShadow: "inset 0 0 12px rgba(255, 220, 90, 0.5)",
+      };
+    case "mid":
+      return {
+        background: "linear-gradient(180deg, var(--sky-300) 0%, var(--sky-500) 100%)",
+        border: "3px solid var(--ink-900)",
+        boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.25)",
+      };
+    case "low":
+      return {
+        background: "var(--gold-100)",
+        border: "3px solid var(--gold-300)",
+      };
+    case "lint":
+      return {
+        background: "var(--saddle-200)",
+        border: "3px dashed var(--saddle-400)",
+      };
+    default:
+      return { background: "var(--parchment-100)", border: "3px solid var(--ink-900)" };
+  }
+}
+
 function CushionLootReveal({ reveal }: { reveal: CushionReveal }) {
-  const filler = ["Lint", "Pennies", "Nickels", "Dimes", "Quarters", "Jackpot!"];
+  const filler = ["Lint", "Pennies", "Nickels", "Dimes", "Quarters", "Half-Dollars", "Dollars", "Jackpot!"];
   const labels = [...filler.filter((l) => l !== reveal.label), reveal.label];
   const finalIdx = labels.length - 1;
-  const ROW = 18;
+  const ROW = 22;
+  const isJackpot = reveal.tier === "jackpot";
+  const isHigh = reveal.tier === "high";
+  const lintCushion = reveal.tier === "lint";
   return (
     <div style={{ width: "100%" }}>
       <div
@@ -2620,9 +2759,13 @@ function CushionLootReveal({ reveal }: { reveal: CushionReveal }) {
               style={{
                 height: ROW,
                 lineHeight: `${ROW}px`,
-                fontSize: 13,
+                fontSize: i === finalIdx ? (isJackpot ? 17 : 15) : 13,
+                fontWeight: i === finalIdx ? 700 : 400,
                 textAlign: "center",
-                color: i === finalIdx && reveal.pcGain > 0 ? "var(--ink-900)" : "var(--saddle-400)",
+                color: i === finalIdx
+                  ? (isJackpot ? "var(--ink-900)" : isHigh ? "var(--ink-900)" : reveal.pcGain > 0 ? "var(--ink-900)" : "var(--saddle-400)")
+                  : "var(--saddle-400)",
+                textShadow: i === finalIdx && isJackpot ? "1px 1px 0 var(--gold-100)" : undefined,
               }}
             >
               {l}
@@ -2634,15 +2777,34 @@ function CushionLootReveal({ reveal }: { reveal: CushionReveal }) {
         <div
           key={`pc-${reveal.revealedAt}`}
           style={{
-            fontSize: 12,
-            color: "var(--gold-500)",
+            fontSize: isJackpot ? 18 : isHigh ? 16 : 14,
+            color: isJackpot ? "var(--ink-900)" : "var(--gold-500)",
+            fontWeight: isJackpot ? 700 : 600,
             opacity: 0,
             animation: "pp-cushion-pc-fade 300ms 700ms ease-out forwards",
             textAlign: "center",
             fontFamily: "var(--font-display)",
+            textShadow: isJackpot ? "1px 1px 0 var(--gold-100)" : undefined,
+            marginTop: 2,
           }}
         >
-          +{reveal.pcGain} PC
+          +{reveal.pcGain.toLocaleString()} PC
+        </div>
+      ) : lintCushion ? (
+        <div
+          key={`lint-${reveal.revealedAt}`}
+          style={{
+            opacity: 0,
+            animation: "pp-cushion-pc-fade 300ms 700ms ease-out forwards",
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 11, color: "var(--saddle-400)" }}>nothing here…</div>
+          {reveal.frugalityGained > 0 && (
+            <div style={{ fontSize: 11, color: "var(--cactus-500)", fontFamily: "var(--font-display)" }}>
+              +{reveal.frugalityGained} Frugality
+            </div>
+          )}
         </div>
       ) : (
         <div

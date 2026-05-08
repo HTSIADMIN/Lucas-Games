@@ -31,11 +31,18 @@ export async function POST() {
   }
 
   const pcGain = Math.round(pick.pc * frugalityPCMultiplier(state.frugality));
+  // Frugality consolation prize — lint pulls credit +1 Frugality
+  // (catalog has frugality:1 on the lint entry only). Capped at +50.
+  const FRUGALITY_MAX = 50;
+  const frugalityGain = pick.frugality ?? 0;
+  const newFrugality = Math.min(FRUGALITY_MAX, state.frugality + frugalityGain);
+
   const updated = await upsertPennyPinchersState({
     ...state,
     cents: state.cents + pcGain,
     lifetime_pc_earned: state.lifetime_pc_earned + pcGain,
     lifetime_clicks: state.lifetime_clicks + 1,
+    frugality: newFrugality,
     last_tick_at: new Date().toISOString(),
   });
 
@@ -45,5 +52,7 @@ export async function POST() {
     label: pick.label,
     pcGain,
     cents: updated.cents,
+    frugality: updated.frugality,
+    frugalityGained: newFrugality - state.frugality,
   });
 }

@@ -200,10 +200,21 @@ export async function GET() {
       (sum, id) => sum + (ACHIEVEMENTS_BY_ID[id]?.reward ?? 0),
       0,
     );
-    if (tokenReward > 0) {
+    // Frugality tail rewards on Frugal Saver / Saint stack on top of
+    // the Bank Token reward. Capped at +50 (the run-side ceiling).
+    const FRUGALITY_MAX = 50;
+    const frugalityReward = newlyUnlocked.reduce(
+      (sum, id) => sum + (ACHIEVEMENTS_BY_ID[id]?.frugalityReward ?? 0),
+      0,
+    );
+    const newFrugality = frugalityReward > 0
+      ? Math.min(FRUGALITY_MAX, state.frugality + frugalityReward)
+      : state.frugality;
+    if (tokenReward > 0 || newFrugality !== state.frugality) {
       state = await upsertPennyPinchersState({
         ...state,
         bank_tokens: state.bank_tokens + tokenReward,
+        frugality: newFrugality,
       });
     }
   }
