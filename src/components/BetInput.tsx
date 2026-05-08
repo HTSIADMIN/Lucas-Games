@@ -76,19 +76,22 @@ export function BetInput({
         </button>
       </div>
 
-      {/* Amount display */}
+      {/* Amount display — pinned to a cream "cash drawer" paper bg so
+          the dark-gold value text stays legible on every theme. The
+          theme-aware --parchment-50 flips dark on dark themes, which
+          dropped the gold value to ~2:1 contrast. */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          background: "var(--parchment-50)",
-          border: "3px solid var(--ink-900)",
+          background: "#fef6e4",
+          border: "3px solid #1a0f08",
           padding: "var(--sp-2) var(--sp-3)",
           width: "100%",
         }}
       >
-        <span className="currency" style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-tiny)", letterSpacing: "var(--ls-loose)", color: "var(--saddle-400)" }}>
+        <span className="currency" style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-tiny)", letterSpacing: "var(--ls-loose)", color: "#6b3f24" }}>
           COINS
         </span>
         <input
@@ -109,8 +112,8 @@ export function BetInput({
             boxShadow: "none",
             fontFamily: "var(--font-display)",
             fontSize: "var(--fs-h3)",
-            color: "var(--gold-500)",
-            textShadow: "2px 2px 0 var(--gold-100)",
+            color: "#c8941d",
+            textShadow: "2px 2px 0 #ffe9a8",
             textAlign: "center",
             width: "100%",
             outline: "none",
