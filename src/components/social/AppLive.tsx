@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { LiveProvider } from "./LiveProvider";
 import { ChatDrawer } from "./ChatDrawer";
 import { DailyChallenges } from "@/components/DailyChallenges";
+import { DailySpinReadyToast } from "@/components/DailySpinReadyToast";
 import { EventTicker } from "@/components/EventTicker";
 import { BigEventToast } from "@/components/BigEventToast";
 import { AppSnapshotProvider } from "@/components/AppSnapshotProvider";
@@ -52,6 +53,7 @@ export function AppLive({
         {me && <ChatDrawer currentUserId={me.id} />}
         {me && <DailyChallenges />}
         {me && <BigEventToast />}
+        {me && <DailySpinReadyToast />}
       </AppSnapshotProvider>
     </LiveProvider>
   );
