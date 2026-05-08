@@ -1,17 +1,22 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { readSession } from "@/lib/auth/session";
-import {
-  getPennyPinchersState,
-  listPennyPinchersUpgrades,
-  upsertPennyPinchersState,
-  upsertPennyPinchersUpgrade,
-} from "@/lib/db";
+import { listPennyPinchersUpgrades } from "@/lib/db";
 import { UPGRADES_BY_ID, type UpgradeId } from "@/lib/games/penny-pinchers/catalog";
 import { nextUpgradeCost } from "@/lib/games/penny-pinchers/engine";
 
 export const runtime = "nodejs";
 
 // POST /api/earn/penny-pinchers/upgrade  body: { upgradeId }
+//
+// Switched off the old read-modify-write upsert pattern (which
+// could debit cents without leveling up if the second write
+// failed — e.g. the boardwalk "took my money but didn't level
+// up" report). Now calls the pp_buy_upgrade RPC which folds
+// both writes into a single transaction: atomic cents debit +
+// atomic level increment, or both rolled back. The route still
+// validates the upgrade id + max-level + cost client-side so
+// the RPC payload matches the catalog constraints.
 export async function POST(req: Request) {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -21,36 +26,49 @@ export async function POST(req: Request) {
   catch { return NextResponse.json({ error: "bad_json" }, { status: 400 }); }
 
   const upgradeId = String(body.upgradeId ?? "") as UpgradeId;
-  if (!UPGRADES_BY_ID[upgradeId]) return NextResponse.json({ error: "bad_upgrade" }, { status: 400 });
+  const def = UPGRADES_BY_ID[upgradeId];
+  if (!def) return NextResponse.json({ error: "bad_upgrade" }, { status: 400 });
 
-  const state = await getPennyPinchersState(s.user.id);
-  if (!state) return NextResponse.json({ error: "no_state" }, { status: 400 });
-
+  // Read just enough state to know the current level (for cost
+  // computation) — the RPC does the actual debit + level-up.
   const upgrades = await listPennyPinchersUpgrades(s.user.id);
-  const current = upgrades.find((u) => u.upgrade_id === upgradeId);
-  const currentLevel = current?.level ?? 0;
-
+  const currentLevel = upgrades.find((u) => u.upgrade_id === upgradeId)?.level ?? 0;
+  if (currentLevel >= def.maxLevel) {
+    return NextResponse.json({ error: "max_level" }, { status: 400 });
+  }
   const cost = nextUpgradeCost(upgradeId, currentLevel);
   if (cost == null) return NextResponse.json({ error: "max_level" }, { status: 400 });
-  if (state.cents < cost) return NextResponse.json({ error: "insufficient_cents" }, { status: 400 });
 
-  await upsertPennyPinchersState({
-    ...state,
-    cents: state.cents - cost,
-    last_tick_at: new Date().toISOString(),
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    return NextResponse.json({ error: "config_missing" }, { status: 500 });
+  }
+  const sb = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
-  const newLevel = currentLevel + 1;
-  await upsertPennyPinchersUpgrade({
-    user_id: s.user.id,
-    upgrade_id: upgradeId,
-    level: newLevel,
+
+  const { data, error } = await sb.rpc("pp_buy_upgrade", {
+    p_user_id: s.user.id,
+    p_upgrade_id: upgradeId,
+    p_cost: cost,
   });
+  if (error) {
+    console.error("[pp_buy_upgrade]", error);
+    return NextResponse.json({ error: "rpc_failed", detail: error.message }, { status: 500 });
+  }
+
+  type RpcResult = { ok: true; cents: number; newLevel: number } | { ok: false; error: string };
+  const result = data as RpcResult;
+  if (!result?.ok) {
+    return NextResponse.json({ error: result?.error ?? "unknown" }, { status: 400 });
+  }
 
   return NextResponse.json({
     ok: true,
-    cents: state.cents - cost,
+    cents: result.cents,
     upgradeId,
-    newLevel,
+    newLevel: result.newLevel,
     cost,
   });
 }

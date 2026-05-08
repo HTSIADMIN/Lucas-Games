@@ -230,6 +230,10 @@ export function PennyPinchersClient() {
   /** Blessing id mid-celebration — keeps the fountain modal open for ~800ms with a Granted! flash. */
   const [grantedBlessing, setGrantedBlessing] = useState<BlessingId | null>(null);
   const [achievementToasts, setAchievementToasts] = useState<AchievementId[]>([]);
+  /** Transient error toast for failed upgrade purchases — surfaces
+   *  any "took my money but didn't level" failures the new atomic
+   *  pp_buy_upgrade RPC was meant to eliminate. */
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
   const [lostWallet, setLostWallet] = useState<LostWallet | null>(null);
   const [walletModalChoice, setWalletModalChoice] = useState<null | "open" | "submitting">(null);
@@ -849,8 +853,17 @@ export function PennyPinchersClient() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ upgradeId: id }),
       });
-      if (r.ok) await loadState();
-      else await loadState(); // refund any optimistic deduction
+      if (!r.ok) {
+        // Surface the failure so the player isn't left wondering why
+        // their cents went down without a level bump. Server returns
+        // structured error codes (insufficient_cents, max_level, etc.)
+        // which we render via labelForUpgradeError.
+        const data = await r.json().catch(() => ({} as { error?: string }));
+        const msg = labelForUpgradeError(data?.error);
+        setUpgradeError(msg);
+        window.setTimeout(() => setUpgradeError((cur) => (cur === msg ? null : cur)), 4000);
+      }
+      await loadState(); // reconcile cents either way
     } catch { await loadState(); }
   }
 
@@ -1050,6 +1063,25 @@ export function PennyPinchersClient() {
           }}
         >
           ★ Welcome back — your helpers earned <b>{welcomeBack.toLocaleString()} PC</b> while you were away.
+        </div>
+      )}
+
+      {upgradeError && (
+        <div
+          role="alert"
+          style={{
+            background: "var(--crimson-500)",
+            color: "var(--parchment-50)",
+            border: "3px solid var(--ink-900)",
+            padding: "var(--sp-2) var(--sp-3)",
+            fontFamily: "var(--font-display)",
+            fontSize: 13,
+            letterSpacing: "var(--ls-loose)",
+            textAlign: "center",
+            boxShadow: "0 0 12px rgba(255, 85, 68, 0.55)",
+          }}
+        >
+          {upgradeError}
         </div>
       )}
 
@@ -2637,5 +2669,19 @@ function CushionLootReveal({ reveal }: { reveal: CushionReveal }) {
       `}</style>
     </div>
   );
+}
+
+/** Render a server-side upgrade-purchase error code as a player-
+ *  facing string. Falls back to a generic message for anything we
+ *  haven't enumerated. */
+function labelForUpgradeError(code: string | undefined | null): string {
+  switch (code) {
+    case "insufficient_cents": return "Not enough PC for this upgrade.";
+    case "max_level":          return "This upgrade is already at max level.";
+    case "bad_upgrade":        return "Unknown upgrade.";
+    case "rpc_failed":         return "Server error — your PC wasn't charged.";
+    case "config_missing":     return "Server is misconfigured. Try again shortly.";
+    default:                   return "Couldn't buy that upgrade. Try again.";
+  }
 }
 
