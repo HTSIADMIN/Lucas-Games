@@ -99,7 +99,6 @@ export function UpgradeShop({
                 ? "pp-shop-affordable 1.6s ease-in-out infinite"
                 : undefined,
               transition: "background 200ms, transform 120ms, box-shadow 160ms",
-              overflow: "hidden",
             }}
           >
             {/* Header: category chip + label + level badge */}
@@ -125,9 +124,7 @@ export function UpgradeShop({
                     fontFamily: "var(--font-display)",
                     fontSize: 17,
                     color: "var(--ink-900)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
+                    lineHeight: 1.15,
                   }}
                 >
                   {u.label}

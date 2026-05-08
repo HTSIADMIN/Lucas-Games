@@ -35,39 +35,74 @@ export function AchievementsPanel({
             key={a.id}
             style={{
               background: got ? "var(--gold-100)" : "var(--parchment-200)",
-              border: `2px solid ${got ? "var(--gold-300)" : "var(--saddle-300)"}`,
-              padding: "8px 10px",
-              opacity: got ? 1 : 0.7,
+              border: `3px solid ${got ? "var(--gold-300)" : "var(--saddle-300)"}`,
+              padding: "12px 14px",
+              opacity: got ? 1 : 0.85,
               color: "var(--ink-900)",
             }}
           >
-            <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
               <span
                 style={{
                   fontFamily: "var(--font-display)",
-                  fontSize: 13,
+                  fontSize: 17,
                   color: "var(--ink-900)",
-                  textDecoration: got ? "none" : "line-through",
+                  lineHeight: 1.15,
                 }}
               >
                 {got ? "✓ " : ""}
                 {a.label}
               </span>
-              {a.reward > 0 ? (
-                <span
-                  style={{
-                    fontFamily: "var(--font-display)",
-                    fontSize: 11,
-                    color: got ? "var(--gold-500)" : "var(--saddle-400)",
-                  }}
-                >
-                  {a.reward} ★
-                </span>
-              ) : null}
+              <span style={{ display: "inline-flex", gap: 6, alignItems: "center", flex: "0 0 auto" }}>
+                {a.reward > 0 && (
+                  <span
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: 13,
+                      color: got ? "var(--ink-900)" : "var(--saddle-400)",
+                      background: got ? "var(--gold-300)" : "var(--parchment-50)",
+                      border: "2px solid var(--ink-900)",
+                      padding: "2px 8px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {a.reward} ★
+                  </span>
+                )}
+                {a.frugalityReward && a.frugalityReward > 0 ? (
+                  <span
+                    style={{
+                      fontFamily: "var(--font-display)",
+                      fontSize: 13,
+                      color: "var(--parchment-50)",
+                      background: "var(--cactus-500)",
+                      border: "2px solid var(--ink-900)",
+                      padding: "2px 8px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    +{a.frugalityReward} F
+                  </span>
+                ) : null}
+              </span>
             </div>
-            <div className="text-mute" style={{ fontSize: 11 }}>
+            <div className="text-mute" style={{ fontSize: 13, lineHeight: 1.35, color: "var(--saddle-500)" }}>
               {a.description}
             </div>
+            {got && (
+              <div
+                style={{
+                  marginTop: 6,
+                  fontFamily: "var(--font-display)",
+                  fontSize: 11,
+                  letterSpacing: "var(--ls-loose)",
+                  textTransform: "uppercase",
+                  color: "var(--cactus-500)",
+                }}
+              >
+                ✦ Unlocked
+              </div>
+            )}
           </div>
         );
       })}

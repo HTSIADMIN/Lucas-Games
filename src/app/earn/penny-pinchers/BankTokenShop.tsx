@@ -20,20 +20,26 @@ export function BankTokenShop({
       >
         Permanent — survives every Roll It Up
       </div>
-      {/* Maxed perm upgrades sink to the bottom so the still-buy-able
-          ones stay visible up top. */}
+      {/* Maxed perm upgrades sink to the bottom; affordable rises. */}
       {PERM_UPGRADES.slice().sort((a, b) => {
         const aLvl = levels[a.id] ?? 0;
         const bLvl = levels[b.id] ?? 0;
         const aMaxed = aLvl >= a.maxLevel;
         const bMaxed = bLvl >= b.maxLevel;
         if (aMaxed !== bMaxed) return aMaxed ? 1 : -1;
+        if (aMaxed) return 0;
+        const aCost = nextPermUpgradeCost(a.id, aLvl);
+        const bCost = nextPermUpgradeCost(b.id, bLvl);
+        const aAff = aCost != null && bankTokens >= aCost;
+        const bAff = bCost != null && bankTokens >= bCost;
+        if (aAff !== bAff) return aAff ? -1 : 1;
         return 0;
       }).map((u) => {
         const lvl = levels[u.id] ?? 0;
         const maxed = lvl >= u.maxLevel;
         const cost = nextPermUpgradeCost(u.id, lvl);
         const affordable = cost != null && bankTokens >= cost;
+        const pct = u.maxLevel > 0 ? Math.min(100, (lvl / u.maxLevel) * 100) : 0;
         return (
           <button
             key={u.id}
@@ -47,30 +53,90 @@ export function BankTokenShop({
                 : affordable
                 ? "var(--gold-100)"
                 : "var(--parchment-200)",
-              border: `2px solid ${affordable ? "var(--gold-300)" : "var(--saddle-300)"}`,
-              padding: "8px 10px",
+              border: `3px solid ${affordable ? "var(--gold-300)" : maxed ? "var(--saddle-400)" : "var(--saddle-300)"}`,
+              padding: "12px 14px 14px",
               cursor: maxed || !affordable ? "default" : "pointer",
               color: "var(--ink-900)",
-              opacity: maxed ? 0.55 : 1,
+              opacity: maxed ? 0.7 : 1,
             }}
           >
-            <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-              <span style={{ fontFamily: "var(--font-display)", fontSize: 13, color: "var(--ink-900)" }}>
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span style={{ fontFamily: "var(--font-display)", fontSize: 17, color: "var(--ink-900)", lineHeight: 1.15 }}>
                 {u.label}
               </span>
-              <span style={{ fontFamily: "var(--font-display)", fontSize: 11, color: "var(--saddle-400)" }}>
+              <span
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 12,
+                  color: "var(--ink-900)",
+                  background: "var(--parchment-50)",
+                  border: "2px solid var(--ink-900)",
+                  padding: "2px 7px",
+                  whiteSpace: "nowrap",
+                  flex: "0 0 auto",
+                }}
+              >
                 Lv {lvl}/{u.maxLevel}
               </span>
             </div>
-            <div className="text-mute" style={{ fontSize: 11, marginBottom: 4 }}>
+            <div className="text-mute" style={{ fontSize: 13, lineHeight: 1.35, marginBottom: 8, color: "var(--saddle-500)" }}>
               {u.description}
             </div>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: 12 }}>
+            <div
+              aria-hidden
+              style={{
+                height: 6,
+                background: "var(--parchment-50)",
+                border: "2px solid var(--ink-900)",
+                marginBottom: 8,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${pct}%`,
+                  height: "100%",
+                  background: maxed ? "var(--cactus-500)" : "var(--gold-300)",
+                  transition: "width 320ms",
+                }}
+              />
+            </div>
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
               {maxed ? (
-                <span className="text-mute">Maxed</span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 14,
+                    letterSpacing: "var(--ls-loose)",
+                    color: "var(--cactus-500)",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  ✓ Maxed
+                </span>
               ) : (
-                <span style={{ color: affordable ? "var(--gold-500)" : "var(--saddle-400)" }}>
-                  {cost} ★ Token{cost === 1 ? "" : "s"}
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 18,
+                    color: affordable ? "var(--gold-500)" : "var(--saddle-400)",
+                    textShadow: affordable ? "1px 1px 0 var(--gold-100)" : undefined,
+                  }}
+                >
+                  {cost} <span style={{ fontSize: 12, opacity: 0.85 }}>★ Token{cost === 1 ? "" : "s"}</span>
+                </span>
+              )}
+              {!maxed && affordable && (
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 11,
+                    letterSpacing: "var(--ls-loose)",
+                    textTransform: "uppercase",
+                    color: "var(--cactus-500)",
+                  }}
+                >
+                  ✦ Affordable
                 </span>
               )}
             </div>
