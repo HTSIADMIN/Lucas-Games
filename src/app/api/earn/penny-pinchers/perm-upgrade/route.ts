@@ -6,7 +6,11 @@ import {
   upsertPennyPinchersPermUpgrade,
   upsertPennyPinchersState,
 } from "@/lib/db";
-import { PERM_UPGRADES_BY_ID, type PermUpgradeId } from "@/lib/games/penny-pinchers/catalog";
+import {
+  FRUGALITY_MAX,
+  PERM_UPGRADES_BY_ID,
+  type PermUpgradeId,
+} from "@/lib/games/penny-pinchers/catalog";
 import { nextPermUpgradeCost } from "@/lib/games/penny-pinchers/engine";
 import { applyPendingClicksFromBody } from "@/lib/games/penny-pinchers/recordClicks";
 
@@ -55,9 +59,21 @@ export async function POST(req: Request) {
     upgrade_id: upgradeId,
     level: newLevel,
   });
-  await upsertPennyPinchersState({
+
+  // Prestige Tithe — each rank instantly grants Frugality equal
+  // to the player's current prestige_count, capped at the +50
+  // ceiling. Pure goodie when you've prestiged a few times; a
+  // no-op when you haven't (you'll still be charged the tokens,
+  // mirrors how Bigger Pockets seeds 0 cents at lvl 0).
+  const frugalityGrant =
+    upgradeId === "prestige_tithe"
+      ? Math.max(0, Math.min(FRUGALITY_MAX - state.frugality, state.prestige_count))
+      : 0;
+
+  const updated = await upsertPennyPinchersState({
     ...state,
     bank_tokens: state.bank_tokens - cost,
+    frugality: state.frugality + frugalityGrant,
   });
 
   return NextResponse.json({
@@ -65,6 +81,8 @@ export async function POST(req: Request) {
     upgradeId,
     newLevel,
     cost,
-    bankTokens: state.bank_tokens - cost,
+    bankTokens: updated.bank_tokens,
+    frugalityGained: frugalityGrant,
+    frugality: updated.frugality,
   });
 }

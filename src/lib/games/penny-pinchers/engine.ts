@@ -566,6 +566,9 @@ export type RelicEffects = {
   coinBaseBonus: number;
   /** Extra Frugality awarded on a Lost Wallet "Return It" (stacks on the base +1). */
   returnFrugalityBonus: number;
+  /** Merge slide / ready-to-merge delay multiplier (<1 = faster).
+   *  Merging Hands relic at lvl 1 sets this to 0.5 (twice as fast). */
+  mergeSpeedMul: number;
 };
 
 const ZERO_EFFECTS: RelicEffects = {
@@ -579,6 +582,7 @@ const ZERO_EFFECTS: RelicEffects = {
   ancientChanceBonus: 0,
   coinBaseBonus: 0,
   returnFrugalityBonus: 0,
+  mergeSpeedMul: 1,
 };
 
 export function relicEffects(relics: RelicLevels): RelicEffects {
@@ -594,6 +598,10 @@ export function relicEffects(relics: RelicLevels): RelicEffects {
   e.ancientChanceBonus  += 0.0015 * lvl("ancient_idol");
   e.coinBaseBonus       += 15     * lvl("fortunes_eye");
   e.returnFrugalityBonus += 1     * lvl("saints_mark");
+  // Merging Hands — single-rank legendary, halves both the merge
+  // slide and the ready-to-merge cooldown. Applied multiplicatively
+  // so future relics could stack additional speed-ups.
+  if (lvl("merging_hands") > 0) e.mergeSpeedMul *= 0.5;
   return e;
 }
 
@@ -602,27 +610,51 @@ export function relicEffects(relics: RelicLevels): RelicEffects {
 // ============================================================
 
 /**
+ * Tiered prestige threshold — each prestige needs more than the
+ * last so a high-prestige player has to actually grind back up
+ * instead of perma-looping at the 100k floor.
+ *
+ *   First 10 prestiges: each adds +100k    (P1=100k, P10=1M)
+ *   Prestige 11–20:     each adds +200k    (P11=1.2M, P20=3M)
+ *   Prestige 21–30:     each adds +300k    (P21=3.3M, P30=6M)
+ *   Beyond:             tier index keeps climbing by +100k/decade
+ *
+ * `prestigeCount` is the count BEFORE this prestige (the player has
+ * already done that many). The return is the cents required to
+ * trigger the (count+1)-th prestige.
+ */
+export function nextPrestigeThreshold(prestigeCount: number): number {
+  let total = 0;
+  for (let p = 1; p <= prestigeCount + 1; p++) {
+    const tier = Math.ceil(p / 10);
+    total += PRESTIGE_THRESHOLD_CENTS * tier;
+  }
+  return total;
+}
+
+/**
  * Bank Tokens awarded for prestiging with `currentCents` in pocket.
  * The cents themselves are consumed (the prestige reset wipes them
  * either way) — the more you've saved, the more tokens you get.
  *
- * Curve flattens at high cents (1M is reachable with one good
- * session, so the token reward shouldn't keep doubling forever).
- * Floor of sqrt(c / 4000) lands the threshold at exactly 5 tokens:
+ * Curve still flattens at high cents (sqrt of cents/4k) so the
+ * token-per-cent rate keeps shrinking; the tiered threshold
+ * pushes the entry point upward instead of touching the slope.
  *
  *   tokens = floor(sqrt(currentCents / 4000))   when above threshold
  *   tokens = 0                                  below threshold
- *
- *   100k → 5    200k → 7    300k → 8    500k → 11    1M → 15    10M → 50
  */
-export function bankTokensFromCurrentCents(currentCents: number): number {
-  if (currentCents < PRESTIGE_THRESHOLD_CENTS) return 0;
+export function bankTokensFromCurrentCents(
+  currentCents: number,
+  prestigeCount: number = 0,
+): number {
+  if (currentCents < nextPrestigeThreshold(prestigeCount)) return 0;
   return Math.floor(Math.sqrt(currentCents / PRESTIGE_TOKEN_DIVISOR));
 }
 
 /** Whether the player has hit the threshold to prestige. */
-export function canPrestige(currentCents: number): boolean {
-  return currentCents >= PRESTIGE_THRESHOLD_CENTS;
+export function canPrestige(currentCents: number, prestigeCount: number = 0): boolean {
+  return currentCents >= nextPrestigeThreshold(prestigeCount);
 }
 
 /**
@@ -631,8 +663,8 @@ export function canPrestige(currentCents: number): boolean {
  * `bankTokensFromCurrentCents` so the response stays consistent.
  * @deprecated prefer `bankTokensFromCurrentCents`.
  */
-export function bankTokensFromPrestige(currentCents: number): number {
-  return bankTokensFromCurrentCents(currentCents);
+export function bankTokensFromPrestige(currentCents: number, prestigeCount: number = 0): number {
+  return bankTokensFromCurrentCents(currentCents, prestigeCount);
 }
 
 /** Bank Token cost to take a perm upgrade from `currentLevel` to `currentLevel + 1`. */
@@ -791,6 +823,8 @@ export function permUpgradeCurrentValueLabel(id: PermUpgradeId, level: number): 
       return `+${level * 25}% helper PC/sec`;
     case "higher_ceilings":
       return `+${level * 10} max levels per upgrade`;
+    case "prestige_tithe":
+      return `${level} purchase${level === 1 ? "" : "s"} · +Frugality = prestige count each`;
     default:
       return null;
   }

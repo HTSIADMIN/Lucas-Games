@@ -240,7 +240,7 @@ export const TRAIT_COLOR: Record<CoinTrait, string> = {
   sticky:    "#ff82c8",
   lightning: "#ffe14d",
   frosted:   "#9adcff",
-  lucky:     "#5cd277",
+  lucky:     "#ff9a3c",
 };
 
 /** Bent's lucky-window duration after click. */
@@ -509,7 +509,8 @@ export type RelicId =
   | "rainmaker"
   | "ancient_idol"
   | "fortunes_eye"
-  | "saints_mark";
+  | "saints_mark"
+  | "merging_hands";
 
 export type RelicDef = {
   id: RelicId;
@@ -538,6 +539,9 @@ export const RELICS: readonly RelicDef[] = [
   { id: "rainmaker",     label: "Rainmaker",     description: "+3% per level chance for a Coin Storm to start each poll.",        rarity: "epic",      maxLevel: 5 },
   { id: "ancient_idol",  label: "Ancient Idol",  description: "+0.15% Ancient-coin spawn chance per level.",                      rarity: "epic",      maxLevel: 3 },
   { id: "fortunes_eye",  label: "Fortune's Eye", description: "Every coin is worth +15 PC permanently per level (stacks with everything).", rarity: "legendary", maxLevel: 3 },
+  // Single-rank legendary — Pile It Up's slide + min-age delays
+  // both halve, so chains form twice as fast.
+  { id: "merging_hands", label: "Merging Hands", description: "Coins merge twice as fast — slide + ready-to-merge delay both halve.", rarity: "legendary", maxLevel: 1 },
 ];
 
 export const RELICS_BY_ID: Record<RelicId, RelicDef> = Object.fromEntries(
@@ -641,7 +645,8 @@ export type PermUpgradeId =
   | "old_hand"
   | "lucky_streak"
   | "generous_helpers"
-  | "higher_ceilings";
+  | "higher_ceilings"
+  | "prestige_tithe";
 
 export type PermUpgradeDef = {
   id: PermUpgradeId;
@@ -668,6 +673,12 @@ export const PERM_UPGRADES: readonly PermUpgradeDef[] = [
   // etc. Cost ramp is base 5 × 1.4^lvl rounded up: 5, 7, 10,
   // 14, 20★ — total 56★ for full extension.
   { id: "higher_ceilings",  label: "Higher Ceilings",  description: "+10 to the max level of every base upgrade per level. Stacks across all run upgrades — go deeper on what you like.", baseCost: 5, costMultiplier: 1.4, maxLevel: 5 },
+  // Each rank instantly grants Frugality equal to your current
+  // prestige count. Encourages prestige loops on top of the
+  // tiered threshold scaling — a high-prestige player can dump
+  // tokens for guaranteed Frugality instead of fishing through
+  // wallets / fountain / cushions.
+  { id: "prestige_tithe",   label: "Prestige Tithe",   description: "Each level instantly grants Frugality equal to your current prestige count.", baseCost: 4, costMultiplier: 1.7, maxLevel: 5 },
 ];
 
 export const PERM_UPGRADES_BY_ID: Record<PermUpgradeId, PermUpgradeDef> = Object.fromEntries(

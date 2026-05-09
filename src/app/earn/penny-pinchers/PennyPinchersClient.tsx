@@ -15,7 +15,6 @@ import {
   LOST_WALLET_KEEP_WEALTH_PCT,
   LOST_WALLET_LIFETIME_MS,
   MERGE_MIN_AGE_MS,
-  PRESTIGE_THRESHOLD_PC,
   AUTO_PICKER_PER_SEC,
   BENT_LUCKY_MS,
   BENT_LUCKY_SHINY_BOOST,
@@ -121,6 +120,7 @@ type StateResponse = {
     ancientChanceBonus: number;
     coinBaseBonus: number;
     returnFrugalityBonus: number;
+    mergeSpeedMul: number;
   };
   walletBalance: number;
   leaderboard: LeaderboardRow[];
@@ -690,15 +690,20 @@ export function PennyPinchersClient() {
   // Any two coins within MERGE_PROXIMITY_PX fuse into a single
   // coin whose PC value is the sum. We mark both as `mergingTo`
   // the centroid first; CSS transitions slide them together over
-  // MERGE_SLIDE_MS, then a setTimeout swaps them for the fused
-  // coin. Watching pennies physically pull toward each other
-  // before fusing reads way better than them just blinking out.
+  // mergeSlideMs (driven by the Merging Hands relic, default
+  // MERGE_SLIDE_MS = 280ms), then a setTimeout swaps them for the
+  // fused coin. Watching pennies physically pull toward each
+  // other before fusing reads way better than them just blinking
+  // out.
+  const mergeSpeedMul = server?.relicEffects.mergeSpeedMul ?? 1;
+  const mergeSlideMs = Math.max(80, Math.round(MERGE_SLIDE_MS * mergeSpeedMul));
+  const mergeMinAgeMs = Math.max(200, Math.round(MERGE_MIN_AGE_MS * mergeSpeedMul));
   useEffect(() => {
     if (!server) return;
     if ((upgrades.pile_it_up ?? 0) < 1) return;
     const t = window.setInterval(() => {
       setCoins((prev) => {
-        const eligibleCutoff = Date.now() - MERGE_MIN_AGE_MS;
+        const eligibleCutoff = Date.now() - mergeMinAgeMs;
         const eligible = prev
           // Skip already-merging coins so a pair can't get re-recruited mid-slide.
           .filter((c) => c.spawnedAt <= eligibleCutoff && !c.mergingTo)
@@ -743,7 +748,7 @@ export function PennyPinchersClient() {
               },
             ];
           });
-        }, MERGE_SLIDE_MS);
+        }, mergeSlideMs);
         return prev.map((c) =>
           c.id === aId || c.id === bId
             ? { ...c, mergingTo: pair.centroid }
@@ -752,7 +757,7 @@ export function PennyPinchersClient() {
       });
     }, 350);
     return () => window.clearInterval(t);
-  }, [server, upgrades.pile_it_up]);
+  }, [server, upgrades.pile_it_up, mergeSlideMs, mergeMinAgeMs]);
 
   // Streak-window pruner — trims expired clicks + clears
   // expired client-side timers (Frenzy, Bent's lucky window,
@@ -1613,7 +1618,7 @@ export function PennyPinchersClient() {
             >
               {canRoll
                 ? "Prestige →"
-                : `${(localCents / 1000).toFixed(0)}k / ${(PRESTIGE_THRESHOLD_PC / 1000).toFixed(0)}k cents`}
+                : `${(localCents / 1000).toFixed(0)}k / ${(server.prestige.thresholdPC / 1000).toFixed(0)}k cents`}
             </button>
           </div>
           <div
@@ -1814,6 +1819,7 @@ export function PennyPinchersClient() {
               spawnedAt={c.spawnedAt}
               lifetimeMs={COIN_LIFETIME_MS + (c.traits.includes("frosted") ? FROSTED_LIFETIME_BONUS_MS : 0)}
               mergingTo={c.mergingTo}
+              mergeSlideMs={mergeSlideMs}
               firstTapAt={c.firstTapAt}
               onClick={() => clickCoin(c)}
             />

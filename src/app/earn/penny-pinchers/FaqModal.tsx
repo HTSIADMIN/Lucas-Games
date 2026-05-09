@@ -69,13 +69,14 @@ const SECTIONS: { title: string; lines: string[] }[] = [
   {
     title: "Prestige",
     lines: [
-      "Once you've saved 100k current cents in your pocket, you can Prestige. The cents are spent on tokens — you lose the pocket cash, your run-state upgrades, and your helpers.",
-      "Tokens scale with a sqrt curve: 100k → 5 ★, 200k → 7 ★, 500k → 11 ★, 1M → 15 ★, 10M → 50 ★. Crossing the threshold pays off; sitting on a fortune past 1M earns less per cent.",
+      "First Prestige unlocks at 100k current cents. The threshold ramps with each prestige: +100k per rank for the first 10 prestiges (P10 = 1M), then +200k per rank through P20 (= 3M total), then +300k per rank through P30 (= 6M), etc.",
+      "Cents are spent on tokens — sqrt curve: floor(sqrt(cents / 4000)). At the entry threshold you always pocket 5 tokens; sitting on extra cents above it earns more (200k ≈ 7, 500k ≈ 11, 1M ≈ 15) but with diminishing returns.",
       "Spend Tokens in the ★ Tokens tab on permanent upgrades that survive every future Prestige.",
       "Each Prestige adds a permanent PC multiplier on every coin pickup: first one is +300% (×4), and each subsequent +100% (×5, ×6, ...).",
       "Your prestige count rides the leaderboard as a ★ N Prestige badge — gold at first, then emerald (5+), ruby (10+), sapphire (15+), amethyst (20+), and diamond rainbow (25+).",
       "Higher Ceilings (perm) adds +10 to the max level of every base upgrade per level — five tiers (5, 7, 10, 14, 20★, total 56★) take Coin Value from 20 → 70, Sharper Eyes 10 → 60, etc. Spawn unlocks (Vending / Parking / Laundry / Boardwalk / Grandpa) and Pile It Up are exempt because their meaningful work is the first 5 ranks.",
-      "Bigger Pockets (perm) is quadratic: lvl 1 seeds 1k, lvl 5 seeds 25k, maxed seeds 100k cents into the next cycle so the grind back to the threshold is automatic at full ranks.",
+      "Bigger Pockets (perm) is quadratic: lvl 1 seeds 1k, lvl 5 seeds 25k, maxed seeds 100k cents into the next cycle so the grind back to the first-prestige threshold is automatic at full ranks.",
+      "Prestige Tithe (perm, 5★ × 1.7^lvl) is the new payoff for high-prestige players — each rank instantly grants Frugality equal to your current prestige count, capped at +50.",
     ],
   },
   {

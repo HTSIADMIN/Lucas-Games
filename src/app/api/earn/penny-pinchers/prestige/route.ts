@@ -27,7 +27,7 @@ export async function POST() {
   const state = await getPennyPinchersState(s.user.id);
   if (!state) return NextResponse.json({ error: "no_state" }, { status: 400 });
 
-  const tokens = bankTokensFromCurrentCents(state.cents);
+  const tokens = bankTokensFromCurrentCents(state.cents, state.prestige_count);
   if (tokens <= 0) {
     return NextResponse.json({ error: "below_threshold" }, { status: 400 });
   }

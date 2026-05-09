@@ -14,7 +14,6 @@ import {
 import {
   ACHIEVEMENTS_BY_ID,
   BANK_PC_PER_WALLET_CENT,
-  PRESTIGE_THRESHOLD_CENTS,
   type AchievementId,
   type HelperId,
   type PermUpgradeId,
@@ -24,6 +23,7 @@ import {
   bankTokensFromCurrentCents,
   detectNewUnlocks,
   helperRatePcPerSec,
+  nextPrestigeThreshold,
   offlineCapHours,
   offlinePCAccrued,
   relicEffects,
@@ -242,11 +242,13 @@ export async function GET() {
     prestige: {
       count: state.prestige_count,
       bankTokens: state.bank_tokens,
-      // The wire-side `thresholdPC` field name is preserved for
-      // compatibility with the existing client; its value is now the
-      // cents threshold (the lifetime PC threshold is gone).
-      thresholdPC: PRESTIGE_THRESHOLD_CENTS,
-      tokensIfRolled: bankTokensFromCurrentCents(state.cents),
+      // Threshold scales per prestige_count — each rank +100k base,
+      // tier index doubles after p10, triples after p20, etc.
+      // Wire-field name `thresholdPC` is kept for client compat; the
+      // value is now the dynamic cents threshold for the player's
+      // NEXT prestige.
+      thresholdPC: nextPrestigeThreshold(state.prestige_count),
+      tokensIfRolled: bankTokensFromCurrentCents(state.cents, state.prestige_count),
       lifetimeBanked: state.lifetime_banked_cents,
     },
     achievements: {

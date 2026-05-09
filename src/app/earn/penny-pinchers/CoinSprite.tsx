@@ -31,6 +31,7 @@ export function CoinSprite({
   spawnedAt,
   lifetimeMs,
   mergingTo,
+  mergeSlideMs = 280,
   firstTapAt,
   onClick,
 }: {
@@ -46,6 +47,10 @@ export function CoinSprite({
   lifetimeMs: number;
   /** When set, the coin is sliding toward this point to fuse with another. */
   mergingTo?: { x: number; y: number };
+  /** Driven by the parent's mergeSpeedMul (Merging Hands relic). The
+   *  slide CSS transition matches this so the slide finishes in
+   *  lock-step with the setTimeout that swaps in the fused coin. */
+  mergeSlideMs?: number;
   /** Sticky-only: stamped on the first of its required two taps. The
    *  disc skews and locks into a tilted "still stuck" pose until the
    *  second tap dislodges it. */
@@ -97,12 +102,13 @@ export function CoinSprite({
   // trait coins still get a single primary aura on the disc itself
   // and the additional halos render in their own conditional blocks
   // below. Sticky was cyan; flipped to bubblegum pink to fit the
-  // 'sticky like gum' read.
+  // 'sticky like gum' read. Lucky is intentionally absent — its
+  // visual is a sweeping orange shine on the disc face, not an
+  // outer halo / aura ring.
   const auraColor =
     isAncient   ? "rgba(120, 220, 160, 0.95)" :
     isLightning ? "rgba(255, 230, 90, 1)" :
     isShiny     ? "rgba(255, 220, 90, 0.95)" :
-    isLucky     ? "rgba(120, 220, 110, 0.9)" :
     isCursed    ? "rgba(220, 90, 90, 0.95)" :
     isFrosted   ? "rgba(170, 220, 255, 0.9)" :
     isForeign   ? "rgba(140, 200, 255, 0.85)" :
@@ -114,7 +120,6 @@ export function CoinSprite({
   const halo =
     isShiny || isAncient || isLightning ? 32 :
     isCursed                            ? 22 :
-    isLucky                             ? 22 :
     isFrosted                           ? 20 :
     isForeign                           ? 18 :
     isSticky                            ? 18 :
@@ -162,7 +167,7 @@ export function CoinSprite({
         // of the spawn-pop animation so the player tracks each
         // coin physically moving toward its partner.
         transition: mergingTo
-          ? `left 280ms cubic-bezier(.55, 0, .45, 1), top 280ms cubic-bezier(.55, 0, .45, 1), opacity 280ms`
+          ? `left ${mergeSlideMs}ms cubic-bezier(.55, 0, .45, 1), top ${mergeSlideMs}ms cubic-bezier(.55, 0, .45, 1), opacity ${mergeSlideMs}ms`
           : undefined,
         animation: mergingTo
           ? undefined
@@ -268,21 +273,9 @@ export function CoinSprite({
           }}
         />
       )}
-      {/* Lucky verdant glow — green halo with a slow rotate. */}
-      {isLucky && (
-        <span
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            borderRadius: "50%",
-            background:
-              "conic-gradient(from 0deg, rgba(140,240,160,0.8), rgba(60,180,90,0.0) 50%, rgba(140,240,160,0.8))",
-            filter: "blur(5px)",
-            animation: "pp-coin-halo-spin 6s linear infinite",
-          }}
-        />
-      )}
+      {/* Lucky's identity is an orange shine that sweeps across the
+          disc face — no outer halo, no glow ring (handled inside
+          the disc element below via an overlay span). */}
       {/* Coin disc */}
       <span
         aria-hidden
@@ -303,7 +296,6 @@ export function CoinSprite({
             isAncient   ? "#3d8a4d" :
             isLightning ? "#c89018" :
             isShiny     ? "#f5c842" :
-            isLucky     ? "#2a8a40" :
             isCursed    ? "#7a1a1a" :
             isFrosted   ? "#3d8acc" :
             isForeign   ? "#3d6f9a" :
@@ -346,6 +338,28 @@ export function CoinSprite({
         }}
       >
         {formatPcLabel(pc)}
+        {/* Lucky's orange shine — a diagonal warm-orange band that
+            sweeps across the disc face every couple seconds. Lives
+            inside the disc element so it's clipped to the circle
+            and doesn't leak into the halo space. No outer aura /
+            border ring — the shine IS the trait. */}
+        {isLucky && (
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              background:
+                "linear-gradient(115deg, transparent 30%, rgba(255,180,80,0.85) 48%, rgba(255,255,200,0.95) 52%, rgba(255,180,80,0.85) 56%, transparent 72%)",
+              backgroundSize: "260% 100%",
+              backgroundPosition: "140% 0",
+              animation: "pp-coin-lucky-shine 2.6s ease-in-out infinite",
+              mixBlendMode: "screen",
+              pointerEvents: "none",
+            }}
+          />
+        )}
       </span>
       {/* Sparkle particles — three asterisks orbiting the disc */}
       {(isShiny || isAncient) && (
@@ -462,6 +476,13 @@ export function CoinSprite({
         @keyframes pp-coin-frosted-pulse {
           0%, 100% { transform: scale(0.95); opacity: 0.55; }
           50%      { transform: scale(1.08); opacity: 0.85; }
+        }
+        @keyframes pp-coin-lucky-shine {
+          /* Diagonal orange band sweeps left → right with a long
+             tail of nothing so the shine pops once per cycle
+             rather than feeling like a perpetual glare. */
+          0%, 70%, 100% { background-position: 140% 0; }
+          85%           { background-position: -40% 0; }
         }
         @keyframes pp-coin-sticky-skew {
           0%   { transform: skewX(0)   rotate(0)    translateY(0); }
