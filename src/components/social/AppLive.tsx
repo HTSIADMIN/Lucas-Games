@@ -45,16 +45,20 @@ export function AppLive({
   championId?: string | null;
   children: ReactNode;
 }) {
+  // Snapshot wraps Live so LiveProvider can consume the chat + bets
+  // fallback feed via useAppSnapshot() — saves a separate /social/live
+  // poll. Realtime channels in LiveProvider still push updates
+  // independently, so this only affects the polling fallback.
   return (
-    <LiveProvider me={me} initialChat={initialChat} game={game} championId={championId}>
-      <AppSnapshotProvider initialBalance={initialBalance} enabled={!!me}>
+    <AppSnapshotProvider initialBalance={initialBalance} enabled={!!me}>
+      <LiveProvider me={me} initialChat={initialChat} game={game} championId={championId}>
         {me && <EventTicker />}
         {children}
         {me && <ChatDrawer currentUserId={me.id} />}
         {me && <DailyChallenges />}
         {me && <BigEventToast />}
         {me && <DailySpinReadyToast />}
-      </AppSnapshotProvider>
-    </LiveProvider>
+      </LiveProvider>
+    </AppSnapshotProvider>
   );
 }

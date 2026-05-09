@@ -11,18 +11,30 @@ import {
   BANK_PC_PER_WALLET_CENT,
 } from "@/lib/games/penny-pinchers/catalog";
 import { bankPayoutCents, relicEffects } from "@/lib/games/penny-pinchers/engine";
+import { applyPendingClicksFromBody } from "@/lib/games/penny-pinchers/recordClicks";
 
 export const runtime = "nodejs";
 
-// POST /api/earn/penny-pinchers/bank
+// POST /api/earn/penny-pinchers/bank  body: { clicks? }
 //
 // Converts the player's accumulated PC into wallet ¢ at the fixed
 // ratio in catalog.ts. No cooldown, no caps — banking just dumps
 // everything in the pocket into the wallet at the conversion rate.
 // daily_banked_cents / last_bank_at are still tracked for stats.
-export async function POST() {
+//
+// Optional `clicks` flushes pending PC into the pocket BEFORE the
+// payout is computed, so a buffered burst of clicks doesn't get
+// stranded after a quick bank tap.
+export async function POST(req: Request) {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  // Body is optional — Bank It can fire with no payload at all. If JSON
+  // parsing fails, treat as empty (the route worked that way before).
+  let body: { clicks?: unknown } = {};
+  try { body = await req.json(); } catch { /* no body, ignore */ }
+
+  await applyPendingClicksFromBody(s.user.id, body);
 
   const state = await getPennyPinchersState(s.user.id);
   if (!state) return NextResponse.json({ error: "no_state" }, { status: 400 });

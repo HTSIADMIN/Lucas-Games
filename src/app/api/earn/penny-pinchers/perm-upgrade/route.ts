@@ -8,19 +8,24 @@ import {
 } from "@/lib/db";
 import { PERM_UPGRADES_BY_ID, type PermUpgradeId } from "@/lib/games/penny-pinchers/catalog";
 import { nextPermUpgradeCost } from "@/lib/games/penny-pinchers/engine";
+import { applyPendingClicksFromBody } from "@/lib/games/penny-pinchers/recordClicks";
 
 export const runtime = "nodejs";
 
-// POST /api/earn/penny-pinchers/perm-upgrade  body: { upgradeId }
+// POST /api/earn/penny-pinchers/perm-upgrade  body: { upgradeId, clicks? }
 //
 // Spends Bank Tokens (the prestige currency) on a permanent
 // upgrade. These survive every Roll-It-Up, so the cost curve is
 // steeper than per-run upgrades.
+//
+// `clicks` doesn't affect affordability (perm cost is in tokens, not
+// cents) but the bundling keeps queued PC moving in the same packet
+// instead of stranding it behind a buy.
 export async function POST(req: Request) {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  let body: { upgradeId?: unknown };
+  let body: { upgradeId?: unknown; clicks?: unknown };
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "bad_json" }, { status: 400 }); }
 
@@ -28,6 +33,8 @@ export async function POST(req: Request) {
   if (!PERM_UPGRADES_BY_ID[upgradeId]) {
     return NextResponse.json({ error: "bad_upgrade" }, { status: 400 });
   }
+
+  await applyPendingClicksFromBody(s.user.id, body);
 
   const state = await getPennyPinchersState(s.user.id);
   if (!state) return NextResponse.json({ error: "no_state" }, { status: 400 });

@@ -338,20 +338,31 @@ export function PennyPinchersClient() {
   const FLUSH_INTERVAL_MS = 400;
   const FLUSH_AT_SIZE = 12;
 
-  const flushClicks = useCallback(() => {
+  /**
+   * Drain whatever's in the queue and cancel any pending flush timer.
+   * Returns the clicks so callers can either POST them on their own
+   * (the periodic flushClicks) or piggyback them on a spend request
+   * (buyUpgrade / hireHelper / etc — closes the stale-cents race).
+   */
+  const drainClickQueue = useCallback(() => {
     if (flushTimerRef.current != null) {
       window.clearTimeout(flushTimerRef.current);
       flushTimerRef.current = null;
     }
     const queue = clickQueueRef.current;
-    if (queue.length === 0) return;
-    const clicks = queue.splice(0, queue.length);
+    if (queue.length === 0) return [] as typeof queue;
+    return queue.splice(0, queue.length);
+  }, []);
+
+  const flushClicks = useCallback(() => {
+    const clicks = drainClickQueue();
+    if (clicks.length === 0) return;
     void fetch("/api/earn/penny-pinchers/click", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ clicks }),
     }).catch(() => { /* ignore — /state poll reconciles */ });
-  }, []);
+  }, [drainClickQueue]);
 
   const enqueueClick = useCallback((click: { coinType: CoinId; trait: CoinTrait | null; pc: number }) => {
     clickQueueRef.current.push(click);
@@ -873,10 +884,11 @@ export function PennyPinchersClient() {
     }, 700);
     Sfx.play("ui.click");
     try {
+      const pendingClicks = drainClickQueue();
       const r = await fetch("/api/earn/penny-pinchers/upgrade", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ upgradeId: id }),
+        body: JSON.stringify({ upgradeId: id, clicks: pendingClicks }),
       });
       if (!r.ok) {
         // Surface the failure so the player isn't left wondering why
@@ -905,10 +917,11 @@ export function PennyPinchersClient() {
     }, 700);
     Sfx.play("chips.handle");
     try {
+      const pendingClicks = drainClickQueue();
       await fetch("/api/earn/penny-pinchers/hire", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ helperId: id }),
+        body: JSON.stringify({ helperId: id, clicks: pendingClicks }),
       });
       await loadState();
     } catch { await loadState(); }
@@ -931,10 +944,11 @@ export function PennyPinchersClient() {
     }, 700);
     Sfx.play("ui.click");
     try {
+      const pendingClicks = drainClickQueue();
       await fetch("/api/earn/penny-pinchers/perm-upgrade", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ upgradeId: id }),
+        body: JSON.stringify({ upgradeId: id, clicks: pendingClicks }),
       });
       await loadState();
     } catch { await loadState(); }
@@ -946,10 +960,11 @@ export function PennyPinchersClient() {
     setLocalCents((c) => c - def.cost);
     Sfx.play("ui.confirm");
     try {
+      const pendingClicks = drainClickQueue();
       const r = await fetch("/api/earn/penny-pinchers/blessing", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ blessingId: id }),
+        body: JSON.stringify({ blessingId: id, clicks: pendingClicks }),
       });
       if (r.ok) {
         const d = (await r.json()) as { durationMs: number; cents: number; frugalityGained?: number };
@@ -1068,7 +1083,12 @@ export function PennyPinchersClient() {
   async function bank() {
     Sfx.play("chips.stack");
     try {
-      const r = await fetch("/api/earn/penny-pinchers/bank", { method: "POST" });
+      const pendingClicks = drainClickQueue();
+      const r = await fetch("/api/earn/penny-pinchers/bank", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ clicks: pendingClicks }),
+      });
       if (r.ok) {
         const d = (await r.json()) as { payoutCents: number; remainingPC: number };
         // Tell the global LiveBalance to refresh

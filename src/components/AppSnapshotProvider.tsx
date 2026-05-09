@@ -9,12 +9,18 @@ import {
   useState,
 } from "react";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+import type { ChatMessagePublic } from "@/lib/db";
+import type { LiveBet } from "@/components/social/LiveProvider";
 
 // Single-poll context that exposes balance, active event, free-games
-// readiness, and daily-challenge claimable count. Consumed by header
-// fixtures (LiveBalance), the EventTicker, the FreeGamesButton, and
-// the DailyChallenges launcher badge — all formerly polling their
-// own endpoints. One ~10s poll instead of four independent ones.
+// readiness, daily-challenge claimable count, AND the chat + big-bets
+// HTTP fallback that LiveProvider used to fetch separately.
+// Consumed by header fixtures (LiveBalance), the EventTicker,
+// FreeGamesButton, the DailyChallenges launcher badge, and
+// LiveProvider — all formerly polling their own endpoints. One ~10s
+// poll instead of five independent ones. (Realtime channels for
+// chat / bets / presence keep pushing updates instantly; the snapshot
+// only carries the fallback feed.)
 
 export type ActiveEvent = {
   kind: "lucky_hour";
@@ -35,6 +41,10 @@ export type AppSnapshot = {
   event: ActiveEvent;
   earn: EarnStatus;
   dailyClaimable: number;
+  /** Recent chat history — Realtime is the primary path. */
+  chat: ChatMessagePublic[];
+  /** Recent qualifying big-bets feed — Realtime is the primary path. */
+  bets: LiveBet[];
 };
 
 type Ctx = {
@@ -78,6 +88,8 @@ export function AppSnapshotProvider({
             monopoly: { ready: false, nextAt: null },
           },
           dailyClaimable: 0,
+          chat: [],
+          bets: [],
         }
       : null,
   );

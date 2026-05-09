@@ -8,20 +8,26 @@ import {
 } from "@/lib/db";
 import { HELPERS_BY_ID, type HelperId } from "@/lib/games/penny-pinchers/catalog";
 import { nextHelperCost } from "@/lib/games/penny-pinchers/engine";
+import { applyPendingClicksFromBody } from "@/lib/games/penny-pinchers/recordClicks";
 
 export const runtime = "nodejs";
 
-// POST /api/earn/penny-pinchers/hire  body: { helperId }
+// POST /api/earn/penny-pinchers/hire  body: { helperId, clicks? }
+//
+// Optional `clicks` flushes the player's queued clicks before the
+// affordability check, same pattern as /upgrade.
 export async function POST(req: Request) {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  let body: { helperId?: unknown };
+  let body: { helperId?: unknown; clicks?: unknown };
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "bad_json" }, { status: 400 }); }
 
   const helperId = String(body.helperId ?? "") as HelperId;
   if (!HELPERS_BY_ID[helperId]) return NextResponse.json({ error: "bad_helper" }, { status: 400 });
+
+  await applyPendingClicksFromBody(s.user.id, body);
 
   const state = await getPennyPinchersState(s.user.id);
   if (!state) return NextResponse.json({ error: "no_state" }, { status: 400 });

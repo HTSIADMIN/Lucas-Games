@@ -8,10 +8,11 @@ import {
   type UpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
 import { effectiveUpgradeMaxLevel, nextUpgradeCost } from "@/lib/games/penny-pinchers/engine";
+import { applyPendingClicksFromBody } from "@/lib/games/penny-pinchers/recordClicks";
 
 export const runtime = "nodejs";
 
-// POST /api/earn/penny-pinchers/upgrade  body: { upgradeId }
+// POST /api/earn/penny-pinchers/upgrade  body: { upgradeId, clicks? }
 //
 // Switched off the old read-modify-write upsert pattern (which
 // could debit cents without leveling up if the second write
@@ -21,17 +22,26 @@ export const runtime = "nodejs";
 // atomic level increment, or both rolled back. The route still
 // validates the upgrade id + max-level + cost client-side so
 // the RPC payload matches the catalog constraints.
+//
+// Client may also include the player's queued clicks in `clicks` so
+// the pending PC lands BEFORE the cost check — closes the race where
+// a buy POST overtakes the periodic click flush and gets rejected
+// for stale cents.
 export async function POST(req: Request) {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  let body: { upgradeId?: unknown };
+  let body: { upgradeId?: unknown; clicks?: unknown };
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "bad_json" }, { status: 400 }); }
 
   const upgradeId = String(body.upgradeId ?? "") as UpgradeId;
   const def = UPGRADES_BY_ID[upgradeId];
   if (!def) return NextResponse.json({ error: "bad_upgrade" }, { status: 400 });
+
+  // Flush any queued clicks first so cents reflect them when we
+  // compute affordability + run the atomic debit RPC.
+  await applyPendingClicksFromBody(s.user.id, body);
 
   // Read perm upgrades + run upgrades to compute the EFFECTIVE max
   // level (Higher Ceilings adds +10 per level). The RPC itself does

@@ -1,10 +1,10 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { getBrowserClient } from "@/lib/supabase/browser";
 import type { ChatMessagePublic } from "@/lib/db";
 import { qualifyBet, MAX_FEED_ROWS } from "@/lib/feed/thresholds";
-import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+import { useAppSnapshot } from "@/components/AppSnapshotProvider";
 
 export type PresenceMember = {
   userId: string;
@@ -252,42 +252,38 @@ export function LiveProvider({
     });
   }, [game, me]);
 
-  // Combined chat + bets polling fallback. Realtime postgres_changes
-  // can be flaky in some browsers / network conditions, so we poll
-  // /api/social/live every 6s and merge by id. If Realtime is working,
-  // this is redundant (idempotent merge). One endpoint, one round-trip
-  // — replaces the previous 3s chat + 4s bets pair (~35 req/min → ~10).
-  const pollLive = useCallback(async () => {
-    if (!me) return;
-    try {
-      const r = await fetch("/api/social/live");
-      if (!r.ok) return;
-      const data = await r.json();
-      if (Array.isArray(data.messages)) {
-        setChat((prev) => {
-          const byId = new Map<number, ChatMessagePublic>();
-          for (const m of prev) byId.set(m.id, m);
-          for (const m of data.messages as ChatMessagePublic[]) byId.set(m.id, m);
-          return Array.from(byId.values())
-            .sort((a, b) => a.id - b.id)
-            .slice(-MAX_CHAT);
-        });
-      }
-      if (Array.isArray(data.bets)) {
-        setBets((prev) => {
-          const byId = new Map<string, LiveBet>();
-          for (const m of prev) byId.set(m.id, m);
-          for (const b of data.bets as LiveBet[]) byId.set(b.id, b);
-          return Array.from(byId.values())
-            .sort((a, b) => b.at - a.at)
-            .slice(0, MAX_BETS);
-        });
-      }
-    } catch {
-      // ignore — best effort
+  // Chat + bets fallback — Realtime postgres_changes is the primary
+  // path, but in browsers / networks where it's flaky we merge in the
+  // snapshot's chat[] and bets[] fields. AppSnapshotProvider polls
+  // /api/app/snapshot every ~10s and exposes the same shape we used
+  // to fetch from /api/social/live. Reading via context drops the
+  // separate 6s poll entirely.
+  const { snapshot } = useAppSnapshot();
+  useEffect(() => {
+    if (!me || !snapshot) return;
+    const incomingChat = snapshot.chat;
+    if (incomingChat.length > 0) {
+      setChat((prev) => {
+        const byId = new Map<number, ChatMessagePublic>();
+        for (const m of prev) byId.set(m.id, m);
+        for (const m of incomingChat) byId.set(m.id, m);
+        return Array.from(byId.values())
+          .sort((a, b) => a.id - b.id)
+          .slice(-MAX_CHAT);
+      });
     }
-  }, [me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  useVisibleInterval(pollLive, me ? 6000 : null);
+    const incomingBets = snapshot.bets;
+    if (incomingBets.length > 0) {
+      setBets((prev) => {
+        const byId = new Map<string, LiveBet>();
+        for (const m of prev) byId.set(m.id, m);
+        for (const b of incomingBets) byId.set(b.id, b);
+        return Array.from(byId.values())
+          .sort((a, b) => b.at - a.at)
+          .slice(0, MAX_BETS);
+      });
+    }
+  }, [me, snapshot]);
 
   const value = useMemo(
     () => ({ ready, presence, bets, chat, championId, pushChat }),
