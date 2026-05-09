@@ -32,12 +32,15 @@ export function UpgradeShop({
   cents,
   onBuy,
   perm,
+  recentlyBoughtId,
 }: {
   levels: Record<UpgradeId, number> | Partial<Record<UpgradeId, number>>;
   cents: number;
   onBuy: (id: UpgradeId, cost: number) => void;
   /** Higher Ceilings (perm) extends the per-upgrade max levels. */
   perm?: Partial<Record<PermUpgradeId, number>>;
+  /** When set, that upgrade's card briefly flashes gold + bumps after a successful purchase. */
+  recentlyBoughtId?: UpgradeId | null;
 }) {
   // Flat sort — categories are no longer top-level groupings; instead
   // every card carries a small category chip for kind-at-a-glance
@@ -68,6 +71,11 @@ export function UpgradeShop({
           0%, 100% { box-shadow: 0 0 0 0 rgba(255,196,64,0); }
           50%      { box-shadow: 0 0 0 2px rgba(255,196,64,0.45), 0 0 12px rgba(255,196,64,0.5); }
         }
+        @keyframes pp-upgrade-bought {
+          0%   { box-shadow: 0 0 0 0 rgba(255,196,64,0); transform: scale(1); }
+          25%  { box-shadow: 0 0 0 5px rgba(255,196,64,1), 0 0 26px rgba(255,196,64,0.95); transform: scale(1.04); }
+          100% { box-shadow: 0 0 0 0 rgba(255,196,64,0); transform: scale(1); }
+        }
       `}</style>
       {sorted.map((u) => {
         const lvl = levels[u.id] ?? 0;
@@ -95,7 +103,9 @@ export function UpgradeShop({
               cursor: maxed || !affordable ? "default" : "pointer",
               color: "var(--ink-900)",
               opacity: maxed ? 0.7 : 1,
-              animation: affordable
+              animation: recentlyBoughtId === u.id
+                ? "pp-upgrade-bought 700ms ease-out"
+                : affordable
                 ? "pp-shop-affordable 1.6s ease-in-out infinite"
                 : undefined,
               transition: "background 200ms, transform 120ms, box-shadow 160ms",

@@ -238,6 +238,10 @@ export function PennyPinchersClient() {
   const [pcPulseKey, setPcPulseKey] = useState(0);
   /** Most-recently hired helper id — drives a brief celebratory flash on its row. */
   const [recentlyHiredId, setRecentlyHiredId] = useState<HelperId | null>(null);
+  /** Most-recently bought upgrade id — same flash treatment on its card. */
+  const [recentlyBoughtUpgradeId, setRecentlyBoughtUpgradeId] = useState<UpgradeId | null>(null);
+  /** Most-recently bought perm (token) upgrade id — flash + bump on its card. */
+  const [recentlyBoughtPermId, setRecentlyBoughtPermId] = useState<PermUpgradeId | null>(null);
   /** Wallet ¢ payout from the most recent bank — shows the coin-shower for ~1.6s. */
   const [bankCelebration, setBankCelebration] = useState<number | null>(null);
   /** Blessing id mid-celebration — keeps the fountain modal open for ~800ms with a Granted! flash. */
@@ -863,6 +867,10 @@ export function PennyPinchersClient() {
     // makes the card snap immediately. loadState() reconciles after.
     setLocalCents((c) => c - cost);
     setServer((s) => (s ? { ...s, upgrades: { ...s.upgrades, [id]: (s.upgrades[id] ?? 0) + 1 } } : s));
+    setRecentlyBoughtUpgradeId(id);
+    window.setTimeout(() => {
+      setRecentlyBoughtUpgradeId((cur) => (cur === id ? null : cur));
+    }, 700);
     Sfx.play("ui.click");
     try {
       const r = await fetch("/api/earn/penny-pinchers/upgrade", {
@@ -917,6 +925,10 @@ export function PennyPinchersClient() {
         prestige: { ...s.prestige, bankTokens: s.prestige.bankTokens - cost },
       };
     });
+    setRecentlyBoughtPermId(id);
+    window.setTimeout(() => {
+      setRecentlyBoughtPermId((cur) => (cur === id ? null : cur));
+    }, 700);
     Sfx.play("ui.click");
     try {
       await fetch("/api/earn/penny-pinchers/perm-upgrade", {
@@ -1988,6 +2000,7 @@ export function PennyPinchersClient() {
               cents={localCents}
               onBuy={buyUpgrade}
               perm={server.perm}
+              recentlyBoughtId={recentlyBoughtUpgradeId}
             />
           ) : tab === "helpers" ? (
             <HelperRoster
@@ -2001,6 +2014,7 @@ export function PennyPinchersClient() {
               levels={server.perm}
               bankTokens={server.prestige.bankTokens}
               onBuy={buyPermUpgrade}
+              recentlyBoughtId={recentlyBoughtPermId}
             />
           ) : tab === "achievements" ? (
             <AchievementsPanel

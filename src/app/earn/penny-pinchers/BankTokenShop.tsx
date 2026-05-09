@@ -7,13 +7,23 @@ export function BankTokenShop({
   levels,
   bankTokens,
   onBuy,
+  recentlyBoughtId,
 }: {
   levels: Record<PermUpgradeId, number> | Partial<Record<PermUpgradeId, number>>;
   bankTokens: number;
   onBuy: (id: PermUpgradeId, cost: number) => void;
+  /** Briefly flashes + bumps the matching card after a successful purchase. */
+  recentlyBoughtId?: PermUpgradeId | null;
 }) {
   return (
     <div className="stack" style={{ gap: "var(--sp-2)", overflowY: "auto", maxHeight: 480 }}>
+      <style>{`
+        @keyframes pp-upgrade-bought {
+          0%   { box-shadow: 0 0 0 0 rgba(255,196,64,0); transform: scale(1); }
+          25%  { box-shadow: 0 0 0 5px rgba(255,196,64,1), 0 0 26px rgba(255,196,64,0.95); transform: scale(1.04); }
+          100% { box-shadow: 0 0 0 0 rgba(255,196,64,0); transform: scale(1); }
+        }
+      `}</style>
       <div
         className="text-mute"
         style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", paddingLeft: 4 }}
@@ -58,6 +68,8 @@ export function BankTokenShop({
               cursor: maxed || !affordable ? "default" : "pointer",
               color: "var(--ink-900)",
               opacity: maxed ? 0.7 : 1,
+              animation: recentlyBoughtId === u.id ? "pp-upgrade-bought 700ms ease-out" : undefined,
+              transition: "transform 120ms, box-shadow 160ms",
             }}
           >
             <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
