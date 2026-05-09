@@ -214,7 +214,7 @@ export function CoinSprite({
               ? "conic-gradient(from 0deg, rgba(255,250,180,1), rgba(255,200,60,0.0) 30%, rgba(255,250,180,1) 50%, rgba(255,200,60,0.0) 80%, rgba(255,250,180,1))"
               : "conic-gradient(from 0deg, rgba(180,255,210,1), rgba(80,200,140,0.0) 30%, rgba(180,255,210,1) 50%, rgba(80,200,140,0.0) 80%, rgba(180,255,210,1))",
             filter: "blur(7px)",
-            animation: `pp-coin-halo-spin ${isAncient ? "3.6s" : "2.4s"} linear infinite`,
+            animation: `pp-coin-halo-spin ${isAncient ? "8s" : "5s"} linear infinite`,
           }}
         />
       )}
@@ -229,7 +229,7 @@ export function CoinSprite({
             background:
               "radial-gradient(circle, rgba(220,80,80,0.6) 0%, rgba(220,80,80,0.0) 70%)",
             filter: "blur(4px)",
-            animation: "pp-coin-cursed-pulse 0.9s ease-in-out infinite",
+            animation: "pp-coin-cursed-pulse 1.6s ease-in-out infinite",
           }}
         />
       )}
@@ -244,7 +244,7 @@ export function CoinSprite({
             background:
               "conic-gradient(from 0deg, rgba(140,200,255,0.8), rgba(60,140,220,0.0) 50%, rgba(140,200,255,0.8))",
             filter: "blur(5px)",
-            animation: "pp-coin-halo-spin 4s linear infinite",
+            animation: "pp-coin-halo-spin 7s linear infinite",
           }}
         />
       )}
@@ -259,7 +259,7 @@ export function CoinSprite({
             background:
               "conic-gradient(from 0deg, rgba(255,255,180,1), rgba(255,210,40,0.0) 25%, rgba(255,255,180,1) 50%, rgba(255,210,40,0.0) 75%, rgba(255,255,180,1))",
             filter: "blur(6px)",
-            animation: "pp-coin-lightning-flicker 0.4s steps(4) infinite",
+            animation: "pp-coin-lightning-flicker 1.4s steps(4) infinite",
           }}
         />
       )}
@@ -289,7 +289,7 @@ export function CoinSprite({
             background:
               "conic-gradient(from 0deg, rgba(140,240,160,0.8), rgba(60,180,90,0.0) 50%, rgba(140,240,160,0.8))",
             filter: "blur(5px)",
-            animation: "pp-coin-halo-spin 3.2s linear infinite",
+            animation: "pp-coin-halo-spin 6s linear infinite",
           }}
         />
       )}
