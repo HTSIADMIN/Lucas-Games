@@ -6,6 +6,7 @@ import { readSession } from "@/lib/auth/session";
 import { getUserById, listInventory, recentChatMessages } from "@/lib/db";
 import { getBalance } from "@/lib/wallet";
 import { getChampionId } from "@/lib/champion";
+import { getUserLevel } from "@/lib/xpServer";
 import { CATALOG } from "@/lib/shop/catalog";
 import { ShopClient } from "./ShopClient";
 
@@ -17,6 +18,7 @@ export default async function ShopPage() {
   const balance = await getBalance(user.id);
   const initialChat = await recentChatMessages(50);
   const championId = await getChampionId();
+  const xpInfo = await getUserLevel(user.id);
   const me = {
     id: user.id,
     username: user.username,
@@ -24,6 +26,7 @@ export default async function ShopPage() {
     initials: user.initials,
     frame: user.equipped_frame ?? null,
     hat: user.equipped_hat ?? null,
+    level: xpInfo.level,
   };
 
   return (

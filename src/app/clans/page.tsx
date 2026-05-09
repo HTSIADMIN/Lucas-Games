@@ -5,6 +5,7 @@ import { HeaderPresence } from "@/components/social/HeaderPresence";
 import { readSession } from "@/lib/auth/session";
 import { getUserById, recentChatMessages } from "@/lib/db";
 import { getChampionId } from "@/lib/champion";
+import { getUserLevel } from "@/lib/xpServer";
 import { ClansClient } from "./ClansClient";
 
 export default async function ClansPage() {
@@ -13,6 +14,7 @@ export default async function ClansPage() {
   const user = (await getUserById(s.user.id))!;
   const initialChat = await recentChatMessages(50);
   const championId = await getChampionId();
+  const xpInfo = await getUserLevel(user.id);
   const me = {
     id: user.id,
     username: user.username,
@@ -20,6 +22,7 @@ export default async function ClansPage() {
     initials: user.initials,
     frame: user.equipped_frame ?? null,
     hat: user.equipped_hat ?? null,
+    level: xpInfo.level,
   };
 
   return (

@@ -7,7 +7,6 @@ import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AppLive } from "@/components/social/AppLive";
 import { HeaderPresence } from "@/components/social/HeaderPresence";
-import { HeaderBalance } from "@/components/HeaderBalance";
 import { DeckProvider } from "@/components/PlayingCard";
 import { CoinFaceProvider } from "@/components/CoinFaceProvider";
 import { FreeGamesButton } from "@/app/lobby/FreeGamesButton";
@@ -49,26 +48,19 @@ export async function GameShell({
     initials: user.initials,
     frame: user.equipped_frame ?? null,
     hat: user.equipped_hat ?? null,
+    level: xpInfo.level,
   };
 
   return (
     <AppLive me={me} initialBalance={balance} initialChat={initialChat} game={game} championId={championId}>
+      {/* Compact in-game header — no right-side profile pill so the
+          shell stays minimal: brand, presence, hamburger. The lobby
+          / shop / leaderboard / clans pages render the full
+          balance-bar pill via SiteHeader's desktop nav slot. */}
       <SiteHeader
         current="lobby"
         compact
         centerSlot={<HeaderPresence currentUserId={user.id} />}
-        rightSlot={
-          <HeaderBalance
-            initials={user.initials}
-            avatarColor={user.avatar_color}
-            username={user.username}
-            level={xpInfo.level}
-            frame={user.equipped_frame ?? null}
-            hat={user.equipped_hat ?? null}
-            champion={user.id === championId}
-            balance={balance}
-          />
-        }
       />
       <main className="page page-game">
         <div

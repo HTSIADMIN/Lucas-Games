@@ -42,6 +42,9 @@ type Me = {
   initials: string;
   frame?: string | null;
   hat?: string | null;
+  /** XP-derived level. Optional so legacy callers don't break;
+   *  falls back to 1 when missing. */
+  level?: number;
 };
 
 type LiveCtx = {

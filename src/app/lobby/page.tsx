@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
-import { Avatar } from "@/components/Avatar";
 import { AppLive } from "@/components/social/AppLive";
 import { HeaderPresence } from "@/components/social/HeaderPresence";
+import { LobbyBalanceBar } from "./LobbyBalanceBar";
 import { readSession } from "@/lib/auth/session";
 import { getBalance } from "@/lib/wallet";
 import {
@@ -18,7 +18,6 @@ import { getUserLevel } from "@/lib/xpServer";
 import { getChampionId } from "@/lib/champion";
 import { GameIcon, type GameIconName } from "@/components/GameIcon";
 import { TilePresence } from "@/components/TilePresence";
-import { LiveBalance } from "@/components/LiveBalance";
 import { WelcomeModal } from "@/components/WelcomeModal";
 import { SignOutButton } from "./SignOutButton";
 import { FreeGamesButton } from "./FreeGamesButton";
@@ -109,6 +108,7 @@ export default async function LobbyPage() {
     initials: user.initials,
     frame: user.equipped_frame ?? null,
     hat: user.equipped_hat ?? null,
+    level: xpInfo.level,
   };
 
   return (
@@ -116,22 +116,16 @@ export default async function LobbyPage() {
       <SiteHeader current="lobby" centerSlot={<HeaderPresence currentUserId={user.id} />} />
       <main className="page">
         <section className="row-lg" style={{ marginBottom: "var(--sp-7)", flexWrap: "wrap" }}>
-          <div className="balance-bar">
-            <Avatar
-              initials={user.initials}
-              color={user.avatar_color}
-              size={48}
-              level={xpInfo.level}
-              frame={user.equipped_frame ?? null}
-              hat={user.equipped_hat ?? null}
-              champion={user.id === championId}
-            />
-            <div className="avatar-username">
-              <div className="uname">{user.username}</div>
-              <div className="role">LVL {xpInfo.level}</div>
-            </div>
-            <LiveBalance initial={balance} className="balance" />
-          </div>
+          <LobbyBalanceBar
+            initials={user.initials}
+            avatarColor={user.avatar_color}
+            username={user.username}
+            level={xpInfo.level}
+            frame={user.equipped_frame ?? null}
+            hat={user.equipped_hat ?? null}
+            champion={user.id === championId}
+            balance={balance}
+          />
           <div
             className="lobby-action-buttons"
             style={{

@@ -7,14 +7,15 @@ import { useLive } from "@/components/social/LiveProvider";
 import { useAppSnapshot } from "@/components/AppSnapshotProvider";
 import { ProfileModal } from "@/components/social/ProfileModal";
 
-// Replaces the bare 'Profile' button in the desktop nav with the
-// same avatar + username + balance pill that game pages render on
-// the right side of the header. Username is a button — tap it to
-// open the profile modal. Reads `me` from useLive() (LiveProvider)
-// and the live balance from useAppSnapshot(). Both providers wrap
-// every authed page via AppLive, so the pill renders on lobby /
-// shop / leaderboard / clans / game pages without re-threading
-// user data from the server through the SiteHeader props.
+// Lobby-style profile pill rendered in the SiteHeader's right side
+// (replaces the bare 'Profile' link). Same balance-bar markup the
+// lobby content uses — avatar with level ring, username + LVL
+// badge, live balance pill — but compact enough for a header.
+//
+// Tapping the username (or the avatar block) opens the
+// ProfileModal. Reads `me` from useLive() and live balance from
+// useAppSnapshot() so it self-renders on every authed page that
+// wraps in <AppLive>.
 
 export function HeaderProfilePill() {
   const { me, championId } = useLive();
@@ -22,40 +23,41 @@ export function HeaderProfilePill() {
   const [open, setOpen] = useState(false);
 
   if (!me || !snapshot) return null;
+  const level = me.level ?? 1;
 
   return (
     <>
-      <div className="header-balance" style={{ marginLeft: "var(--sp-2)" }}>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={`Open ${me.username}'s profile`}
+        className="balance-bar"
+        style={{
+          // Shrink slightly so the bar fits next to the nav links
+          // without wrapping. Lobby content uses size 48 + sp-3 gap;
+          // header gets 36 + sp-2.
+          gap: "var(--sp-2)",
+          padding: "4px var(--sp-3) 4px 4px",
+          cursor: "pointer",
+          fontFamily: "inherit",
+        }}
+      >
         <Avatar
           initials={me.initials}
           color={me.avatarColor}
-          size={32}
-          fontSize={13}
+          size={36}
+          fontSize={14}
+          level={level}
           frame={me.frame ?? null}
           hat={me.hat ?? null}
           champion={me.id === championId}
         />
-        <div className="header-balance-text">
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="header-balance-name"
-            aria-label={`Open ${me.username}'s profile`}
-            style={{
-              background: "transparent",
-              border: 0,
-              padding: 0,
-              cursor: "pointer",
-              font: "inherit",
-              color: "inherit",
-              textAlign: "left",
-            }}
-          >
-            {me.username}
-          </button>
-          <LiveBalance initial={snapshot.balance} className="header-balance-coins" />
+        <div className="avatar-username">
+          <div className="uname" style={{ fontSize: "var(--fs-body)" }}>{me.username}</div>
+          <div className="role" style={{ fontSize: 10 }}>LVL {level}</div>
         </div>
-      </div>
+        <LiveBalance initial={snapshot.balance} className="balance" />
+      </button>
       {open && <ProfileModal userId="me" onClose={() => setOpen(false)} />}
     </>
   );

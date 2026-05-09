@@ -5,6 +5,7 @@ import { HeaderPresence } from "@/components/social/HeaderPresence";
 import { readSession } from "@/lib/auth/session";
 import { getUserById, leaderboard, recentChatMessages } from "@/lib/db";
 import { getChampionId } from "@/lib/champion";
+import { getUserLevel } from "@/lib/xpServer";
 import { LeaderboardClient } from "./LeaderboardClient";
 
 export default async function LeaderboardPage() {
@@ -15,6 +16,7 @@ export default async function LeaderboardPage() {
   const rows = (await leaderboard()).slice(0, 50);
   const initialChat = await recentChatMessages(50);
   const championId = await getChampionId();
+  const xpInfo = await getUserLevel(user.id);
   const me = {
     id: user.id,
     username: user.username,
@@ -22,6 +24,7 @@ export default async function LeaderboardPage() {
     initials: user.initials,
     frame: user.equipped_frame ?? null,
     hat: user.equipped_hat ?? null,
+    level: xpInfo.level,
   };
 
   return (

@@ -17,6 +17,8 @@ export type Me = {
   initials: string;
   frame?: string | null;
   hat?: string | null;
+  /** XP-derived level — surfaced in the header profile pill. */
+  level?: number;
 };
 
 // Single client wrapper used by every authed page. Loads:
