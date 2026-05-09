@@ -445,7 +445,10 @@ export function PennyPinchersClient() {
               ? "coin_storm"
               : ids[Math.floor(Math.random() * ids.length)];
           const def = EVENTS[id];
-          Sfx.play(id === "coin_storm" ? "win.levelup" : "win.notify");
+          // Coin Storm = loud win-stinger; Rainy Day = soft clinking
+          // coins so the wet-sidewalk vibe lands instead of a casino
+          // jingle that doesn't match the puddle aesthetic.
+          Sfx.play(id === "coin_storm" ? "win.levelup" : "coins.clink");
           return { id, endsAt: nowMs + def.durationMs };
         }
         return null;

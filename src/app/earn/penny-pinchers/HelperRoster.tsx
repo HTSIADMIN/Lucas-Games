@@ -28,15 +28,17 @@ export function HelperRoster({
           100% { box-shadow: 0 0 0 0 rgba(255,196,64,0); transform: scale(1); }
         }
       `}</style>
-      {/* Sink maxed-owned helpers to the bottom so the still-hire-able
-          set stays at the top of the list. */}
+      {/* Cheapest hire first; maxed helpers sink to the bottom. */}
       {HELPERS.slice().sort((a, b) => {
         const aOwned = counts[a.id] ?? 0;
         const bOwned = counts[b.id] ?? 0;
         const aMaxed = aOwned >= a.maxOwn;
         const bMaxed = bOwned >= b.maxOwn;
         if (aMaxed !== bMaxed) return aMaxed ? 1 : -1;
-        return 0;
+        if (aMaxed) return 0;
+        const aCost = nextHelperCost(a.id, aOwned) ?? Number.POSITIVE_INFINITY;
+        const bCost = nextHelperCost(b.id, bOwned) ?? Number.POSITIVE_INFINITY;
+        return aCost - bCost;
       }).map((h) => {
         const owned = counts[h.id] ?? 0;
         const maxed = owned >= h.maxOwn;

@@ -30,7 +30,7 @@ export function BankTokenShop({
       >
         Permanent — survives every Prestige
       </div>
-      {/* Maxed perm upgrades sink to the bottom; affordable rises. */}
+      {/* Cheapest token upgrade first; maxed perms sink to the bottom. */}
       {PERM_UPGRADES.slice().sort((a, b) => {
         const aLvl = levels[a.id] ?? 0;
         const bLvl = levels[b.id] ?? 0;
@@ -38,12 +38,9 @@ export function BankTokenShop({
         const bMaxed = bLvl >= b.maxLevel;
         if (aMaxed !== bMaxed) return aMaxed ? 1 : -1;
         if (aMaxed) return 0;
-        const aCost = nextPermUpgradeCost(a.id, aLvl);
-        const bCost = nextPermUpgradeCost(b.id, bLvl);
-        const aAff = aCost != null && bankTokens >= aCost;
-        const bAff = bCost != null && bankTokens >= bCost;
-        if (aAff !== bAff) return aAff ? -1 : 1;
-        return 0;
+        const aCost = nextPermUpgradeCost(a.id, aLvl) ?? Number.POSITIVE_INFINITY;
+        const bCost = nextPermUpgradeCost(b.id, bLvl) ?? Number.POSITIVE_INFINITY;
+        return aCost - bCost;
       }).map((u) => {
         const lvl = levels[u.id] ?? 0;
         const maxed = lvl >= u.maxLevel;

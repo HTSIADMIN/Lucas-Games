@@ -46,14 +46,10 @@ export function UpgradeShop({
   /** When set, that upgrade's card briefly flashes gold + bumps after a successful purchase. */
   recentlyBoughtId?: UpgradeId | null;
 }) {
-  // Flat sort — categories are no longer top-level groupings; instead
-  // every card carries a small category chip for kind-at-a-glance
-  // and the whole list ranks by:
-  //   1) maxed last
-  //   2) affordable next
-  //   3) catalog order otherwise
-  // so the next thing the player can actually buy is always pinned
-  // to the top of the scroll.
+  // Flat sort — categories live as little chips on each card and
+  // the list ranks strictly by next-level cost ascending so the
+  // cheapest upgrade is always at the top of the scroll. Maxed
+  // upgrades sink to the bottom regardless.
   const sorted = UPGRADES.slice().sort((a, b) => {
     const aLvl = levels[a.id] ?? 0;
     const bLvl = levels[b.id] ?? 0;
@@ -61,12 +57,9 @@ export function UpgradeShop({
     const bMaxed = bLvl >= effectiveUpgradeMaxLevel(b, perm ?? {});
     if (aMaxed !== bMaxed) return aMaxed ? 1 : -1;
     if (aMaxed) return 0;
-    const aCost = nextUpgradeCost(a.id, aLvl, perm ?? {});
-    const bCost = nextUpgradeCost(b.id, bLvl, perm ?? {});
-    const aAffordable = aCost != null && cents >= aCost;
-    const bAffordable = bCost != null && cents >= bCost;
-    if (aAffordable !== bAffordable) return aAffordable ? -1 : 1;
-    return 0;
+    const aCost = nextUpgradeCost(a.id, aLvl, perm ?? {}) ?? Number.POSITIVE_INFINITY;
+    const bCost = nextUpgradeCost(b.id, bLvl, perm ?? {}) ?? Number.POSITIVE_INFINITY;
+    return aCost - bCost;
   });
   return (
     <div className="stack pp-shop-scroll" style={{ gap: "var(--sp-2)" }}>
