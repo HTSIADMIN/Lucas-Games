@@ -52,8 +52,9 @@ import {
   streakTierFor,
   helperRatePcPerSec,
   rollSpawn,
-  rollTrait,
+  rollTraits,
   spawnIntervalMs,
+  traitMultiplier,
   unlockedCoins,
 } from "@/lib/games/penny-pinchers/engine";
 import { CoinSprite } from "./CoinSprite";
@@ -178,7 +179,11 @@ type SpawnedCoin = {
   coin: CoinId;
   /** Combined PC value of this coin (post any merges). */
   mergedPC: number;
-  trait: CoinTrait | null;
+  /** Every trait the coin is carrying — empty for plain spawns,
+   *  multi-entry when independent trait rolls land together or
+   *  when two traited coins fuse via Pile It Up. Effects compound
+   *  through traitMultiplier on click. */
+  traits: CoinTrait[];
   x: number;
   y: number;
   spawnedAt: number;
@@ -341,7 +346,7 @@ export function PennyPinchersClient() {
   // applies its sliding-window rate limit on the *count* of
   // batched clicks, and the periodic /state poll reconciles any
   // drift if a batch fails or partially drops.
-  const clickQueueRef = useRef<Array<{ coinType: CoinId; trait: CoinTrait | null; pc: number }>>([]);
+  const clickQueueRef = useRef<Array<{ coinType: CoinId; traits: CoinTrait[]; pc: number }>>([]);
   const flushTimerRef = useRef<number | null>(null);
   // Idle flush cadence — runs whenever clicks are sitting in the
   // queue with nothing else to ride along. Bumped from 400ms / 12 to
@@ -380,7 +385,7 @@ export function PennyPinchersClient() {
     }).catch(() => { /* ignore — /state poll reconciles */ });
   }, [drainClickQueue]);
 
-  const enqueueClick = useCallback((click: { coinType: CoinId; trait: CoinTrait | null; pc: number }) => {
+  const enqueueClick = useCallback((click: { coinType: CoinId; traits: CoinTrait[]; pc: number }) => {
     clickQueueRef.current.push(click);
     if (clickQueueRef.current.length >= FLUSH_AT_SIZE) {
       flushClicks();
@@ -623,13 +628,16 @@ export function PennyPinchersClient() {
           const list = unlockedCoins(upgrades);
           coin = list[list.length - 1];
         }
-        let trait = rollTrait(coin, upgrades, server.perm, server.album);
-        // Rainy Day's bonus shiny — secondary roll only when the
-        // base trait roll didn't already land something.
-        if (!trait && bonusShiny > 0 && Math.random() < bonusShiny) trait = "shiny";
+        const traits = rollTraits(coin, upgrades, server.perm, server.album);
+        // Rainy Day's bonus shiny — extra roll that ADDS shiny on
+        // top of whatever else landed (multi-trait friendly), so a
+        // shiny coin can also be cursed/bent/etc.
+        if (!traits.includes("shiny") && bonusShiny > 0 && Math.random() < bonusShiny) {
+          traits.push("shiny");
+        }
         coinSeqRef.current += 1;
         const mergedPC = coinPCValue(coin, upgrades, server.perm, server.relicEffects);
-        newSpawns.push({ id: coinSeqRef.current, coin, mergedPC, trait, x, y, spawnedAt: Date.now() });
+        newSpawns.push({ id: coinSeqRef.current, coin, mergedPC, traits, x, y, spawnedAt: Date.now() });
       }
       setCoins((prev) => [...prev, ...newSpawns]);
     }, intervalMs);
@@ -699,17 +707,24 @@ export function PennyPinchersClient() {
             const bx = cur.find((c) => c.id === bId);
             if (!ax || !bx) return cur.filter((c) => c.id !== aId && c.id !== bId);
             const baseCoin = ax.mergedPC >= bx.mergedPC ? ax.coin : bx.coin;
-            const trait =
-              ax.trait === "shiny" || bx.trait === "shiny"
-                ? "shiny"
-                : ax.trait ?? bx.trait;
+            // Merged coin inherits BOTH parents' traits — a shiny
+            // and a cursed fusing become a shiny+cursed coin whose
+            // click compounds 5× × 3× = 15× on the summed value.
+            // De-duplicated so two of the same trait don't double up.
+            const seen = new Set<string>();
+            const traits: CoinTrait[] = [];
+            for (const t of [...ax.traits, ...bx.traits]) {
+              if (seen.has(t)) continue;
+              seen.add(t);
+              traits.push(t);
+            }
             return [
               ...cur.filter((c) => c.id !== aId && c.id !== bId),
               {
                 id: fusionId,
                 coin: baseCoin,
                 mergedPC: ax.mergedPC + bx.mergedPC,
-                trait,
+                traits,
                 x: pair.centroid.x,
                 y: pair.centroid.y,
                 spawnedAt: Date.now(),
@@ -768,7 +783,7 @@ export function PennyPinchersClient() {
     // pickup itself waits for a second tap. Auto-Picker passes
     // silent=true and is allowed to bypass the gate (otherwise it
     // would just keep poking the same stuck coin forever).
-    if (coin.trait === "sticky" && !coin.firstTapAt && !opts.silent) {
+    if (coin.traits.includes("sticky") && !coin.firstTapAt && !opts.silent) {
       Sfx.play("ui.wood");
       const stampedAt = Date.now();
       setCoins((prev) =>
@@ -797,15 +812,12 @@ export function PennyPinchersClient() {
     // sparkle / colour animations carry the standout weight and
     // the loud chime drowned the regular click cadence. Bent's
     // lucky window and Cursed's spawn pause still fire here.
-    if (coin.trait === "bent") setBentLuckyUntil(Date.now() + BENT_LUCKY_MS);
-    if (coin.trait === "cursed") setCursedPauseUntil(Date.now() + CURSED_PAUSE_MS);
+    if (coin.traits.includes("bent")) setBentLuckyUntil(Date.now() + BENT_LUCKY_MS);
+    if (coin.traits.includes("cursed")) setCursedPauseUntil(Date.now() + CURSED_PAUSE_MS);
 
-    const traitMul =
-      coin.trait === "shiny" ? 5
-      : coin.trait === "ancient" ? 50
-      : coin.trait === "cursed" ? 3
-      : coin.trait === "bent" ? 0.5
-      : 1;
+    // Multi-trait: traitMultiplier folds them all together (shiny ×
+    // cursed ×bent → 5 × 3 × 0.5 = ×7.5). Mirrors the server math.
+    const traitMul = traitMultiplier(coin.traits);
     // Mirror the server's click-side multiplier stack so the
     // optimistic counter doesn't undercount what the server is
     // about to credit. prestigeMul is the +300%/+100% bonus you
@@ -814,7 +826,7 @@ export function PennyPinchersClient() {
     const prestigeMul = server && server.prestige.count > 0 ? 3 + server.prestige.count : 1;
     const optimisticPC = Math.round(coin.mergedPC * traitMul * tier.multiplier * clickMul * prestigeMul);
     setLocalCents((c) => c + optimisticPC);
-    spawnPop(coin.x, coin.y, optimisticPC, coin.trait === "shiny", coin.trait);
+    spawnPop(coin.x, coin.y, optimisticPC, coin.traits.includes("shiny"), coin.traits[0] ?? null);
     // Pulse the PC counter only on manual / auto-picker clicks —
     // helper drips already update the value smoothly and don't
     // need a visible jolt.
@@ -833,7 +845,7 @@ export function PennyPinchersClient() {
       const others = prev.filter((c) => c.id !== coin.id);
 
       // Sticky — grab the N nearest within radius.
-      if (coin.trait === "sticky") {
+      if (coin.traits.includes("sticky")) {
         const nearby = others
           .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
           .filter((e) => e.d2 <= STICKY_PICKUP_RADIUS * STICKY_PICKUP_RADIUS)
@@ -886,17 +898,18 @@ export function PennyPinchersClient() {
     // seen yet). The /state poll reconciles drift on its own
     // schedule, with the >5% threshold guard in loadState().
     const sentPC = Math.round(coin.mergedPC * tier.multiplier);
-    enqueueClick({ coinType: coin.coin, trait: coin.trait, pc: sentPC });
+    enqueueClick({ coinType: coin.coin, traits: coin.traits, pc: sentPC });
 
     // Queue collateral pickups too — each one is metered + counted
     // toward lifetime_clicks server-side via the same batch flush.
     for (const extra of collateral) {
-      const extraOptimistic = Math.round(extra.mergedPC * (extra.trait === "shiny" ? 5 : 1) * tier.multiplier * clickMul * prestigeMul);
+      const extraTraitMul = traitMultiplier(extra.traits);
+      const extraOptimistic = Math.round(extra.mergedPC * extraTraitMul * tier.multiplier * clickMul * prestigeMul);
       setLocalCents((c) => c + extraOptimistic);
-      spawnPop(extra.x, extra.y, extraOptimistic, extra.trait === "shiny", extra.trait);
+      spawnPop(extra.x, extra.y, extraOptimistic, extra.traits.includes("shiny"), extra.traits[0] ?? null);
       enqueueClick({
         coinType: extra.coin,
-        trait: extra.trait,
+        traits: extra.traits,
         pc: Math.round(extra.mergedPC * tier.multiplier),
       });
     }
@@ -1696,7 +1709,7 @@ export function PennyPinchersClient() {
             <CoinSprite
               key={c.id}
               coin={c.coin}
-              trait={c.trait}
+              traits={c.traits}
               pc={c.mergedPC}
               x={c.x}
               y={c.y}

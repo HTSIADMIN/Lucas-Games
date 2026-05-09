@@ -65,18 +65,33 @@ export function coinPCValue(
 }
 
 /**
- * Server-clamped trait multiplier. The client tells us "this was
- * shiny", we trust it but cap at the trait's maxMultiplier so a
- * tampered client can never dump more than the configured ceiling.
+ * Server-clamped trait multiplier. The client tells us which traits
+ * landed on the coin; we cap each at the trait's `maxMultiplier`
+ * and multiply them together so a multi-trait coin (e.g. shiny
+ * AND cursed) compounds — shiny ×5 × cursed ×3 = ×15 click payout.
+ *
  * Bent is special-cased to 0.5× — it pays *less* by design, the
  * tradeoff for the lucky-window buff it gives the client.
+ *
+ * Accepts a single trait or an array (back-compat with the legacy
+ * single-trait wire format). null / empty → ×1 (plain coin).
  */
-export function traitMultiplier(trait: CoinTrait | null | undefined): number {
-  if (!trait) return 1;
-  if (trait === "bent") return 0.5;
-  const def = TRAITS[trait];
-  if (!def) return 1;
-  return def.maxMultiplier;
+export function traitMultiplier(
+  traits: CoinTrait | CoinTrait[] | null | undefined,
+): number {
+  if (!traits) return 1;
+  const list = Array.isArray(traits) ? traits : [traits];
+  if (list.length === 0) return 1;
+  let mult = 1;
+  for (const t of list) {
+    if (t === "bent") {
+      mult *= 0.5;
+      continue;
+    }
+    const def = TRAITS[t];
+    if (def) mult *= def.maxMultiplier;
+  }
+  return mult;
 }
 
 /**
@@ -337,10 +352,58 @@ export function bankPayoutCents(cents: number): number {
 // ============================================================
 
 /**
- * Roll a trait for a freshly-spawned coin. Returns null when the
- * coin is plain. Sticky is a separate roll from shiny so a coin can
- * only be one or the other (shiny wins ties).
+ * Roll traits for a freshly-spawned coin. Each trait rolls
+ * independently — a coin can land plain, single-trait, or
+ * occasionally multi-trait when several rolls hit at once. Multi-
+ * trait coins are rare (each trait is ~0.5–1.5%) so two-trait
+ * combos sit around ~0.005–0.02% per spawn, which lets them feel
+ * like a "wow" moment while still happening enough to matter.
+ *
+ * Trait effects compound on click via `traitMultiplier(traits[])`.
+ *
+ * Sticky is gated to penny/nickel only (looks weird on premiums).
  */
+export function rollTraits(
+  coinType: CoinId,
+  levels: UpgradeLevels,
+  perm: PermLevels = {},
+  album: AlbumState = {},
+  relicE: RelicEffects = ZERO_EFFECTS,
+  rand: () => number = Math.random,
+): CoinTrait[] {
+  const luck = levels.lucky_crack ?? 0;
+  const permLuck = perm.lucky_streak ?? 0;
+  const out: CoinTrait[] = [];
+
+  if (rand() <
+    TRAITS.ancient.baseChance + TRAITS.ancient.perLuckLevel * luck +
+    albumTraitBonus(album, "ancient") + relicE.ancientChanceBonus) out.push("ancient");
+
+  if (rand() <
+    TRAITS.cursed.baseChance + TRAITS.cursed.perLuckLevel * luck +
+    albumTraitBonus(album, "cursed")) out.push("cursed");
+
+  if (rand() <
+    TRAITS.shiny.baseChance + TRAITS.shiny.perLuckLevel * luck +
+    0.01 * permLuck + albumTraitBonus(album, "shiny") + relicE.shinyChanceBonus) out.push("shiny");
+
+  if (rand() <
+    TRAITS.foreign.baseChance + TRAITS.foreign.perLuckLevel * luck) out.push("foreign");
+
+  if (rand() <
+    TRAITS.bent.baseChance + TRAITS.bent.perLuckLevel * luck +
+    albumTraitBonus(album, "bent")) out.push("bent");
+
+  if (coinType === "penny" || coinType === "nickel") {
+    if (rand() <
+      TRAITS.sticky.baseChance + TRAITS.sticky.perLuckLevel * luck +
+      albumTraitBonus(album, "sticky")) out.push("sticky");
+  }
+
+  return out;
+}
+
+/** @deprecated kept so legacy callers compile — use rollTraits. */
 export function rollTrait(
   coinType: CoinId,
   levels: UpgradeLevels,
@@ -349,43 +412,8 @@ export function rollTrait(
   relicE: RelicEffects = ZERO_EFFECTS,
   rand: () => number = Math.random,
 ): CoinTrait | null {
-  const luck = levels.lucky_crack ?? 0;
-  const permLuck = perm.lucky_streak ?? 0;
-
-  // Roll order matters when multiple traits could land — earlier
-  // roll wins. Rarest-first so an Ancient never gets clobbered
-  // by a cheap Bent.
-  const ancientChance =
-    TRAITS.ancient.baseChance + TRAITS.ancient.perLuckLevel * luck +
-    albumTraitBonus(album, "ancient") + relicE.ancientChanceBonus;
-  if (rand() < ancientChance) return "ancient";
-
-  const cursedChance =
-    TRAITS.cursed.baseChance + TRAITS.cursed.perLuckLevel * luck +
-    albumTraitBonus(album, "cursed");
-  if (rand() < cursedChance) return "cursed";
-
-  const shinyChance =
-    TRAITS.shiny.baseChance + TRAITS.shiny.perLuckLevel * luck +
-    0.01 * permLuck + albumTraitBonus(album, "shiny") + relicE.shinyChanceBonus;
-  if (rand() < shinyChance) return "shiny";
-
-  const foreignChance =
-    TRAITS.foreign.baseChance + TRAITS.foreign.perLuckLevel * luck;
-  if (rand() < foreignChance) return "foreign";
-
-  const bentChance =
-    TRAITS.bent.baseChance + TRAITS.bent.perLuckLevel * luck +
-    albumTraitBonus(album, "bent");
-  if (rand() < bentChance) return "bent";
-
-  // Sticky only on penny / nickel — feels weird on big coins.
-  if (coinType === "penny" || coinType === "nickel") {
-    const stickyChance = TRAITS.sticky.baseChance + TRAITS.sticky.perLuckLevel * luck +
-      albumTraitBonus(album, "sticky");
-    if (rand() < stickyChance) return "sticky";
-  }
-  return null;
+  const list = rollTraits(coinType, levels, perm, album, relicE, rand);
+  return list[0] ?? null;
 }
 
 // ============================================================

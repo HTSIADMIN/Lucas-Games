@@ -33,7 +33,10 @@ import {
 
 export type ClickInput = {
   coinType: CoinId;
-  trait: CoinTrait | null;
+  /** All traits that landed on this coin — empty for a plain spawn,
+   *  one entry for a single-trait spawn, multiple for multi-trait
+   *  spawns or coins fused via Pile It Up. */
+  traits: CoinTrait[];
   mergedPC: number | null;
 };
 
@@ -56,21 +59,40 @@ function reserveClickBudget(userId: string, now: number, count: number): number 
   return allowed;
 }
 
-/** Validate one raw click body. Returns null if it's malformed. */
+/** Validate one raw click body. Returns null if it's malformed.
+ *  Accepts either `traits: CoinTrait[]` (preferred) or the legacy
+ *  `trait: CoinTrait | null` field for older clients. */
 export function parseClickInput(raw: {
   coinType?: unknown;
   trait?: unknown;
+  traits?: unknown;
   pc?: unknown;
 }): ClickInput | null {
   const coinType = String(raw.coinType ?? "") as CoinId;
   if (!COINS[coinType]) return null;
-  let trait: CoinTrait | null = null;
-  if (typeof raw.trait === "string" && raw.trait in TRAITS) trait = raw.trait as CoinTrait;
+  // Normalise to CoinTrait[]: prefer the new traits array; fall
+  // back to the legacy single trait field; dedupe + cap the size
+  // so a tampered client can't pad a coin with 50 trait entries
+  // and inflate the click multiplier.
+  const traits: CoinTrait[] = [];
+  const seen = new Set<string>();
+  const push = (val: unknown) => {
+    if (typeof val !== "string" || !(val in TRAITS) || seen.has(val)) return;
+    seen.add(val);
+    traits.push(val as CoinTrait);
+  };
+  if (Array.isArray(raw.traits)) {
+    for (const v of raw.traits as unknown[]) push(v);
+  } else if (typeof raw.trait === "string") {
+    push(raw.trait);
+  }
+  // 6 distinct trait types — cap at that.
+  if (traits.length > 6) traits.length = 6;
   let mergedPC: number | null = null;
   if (typeof raw.pc === "number" && Number.isFinite(raw.pc) && raw.pc > 0) {
     mergedPC = Math.min(MAX_CLICK_PC, Math.floor(raw.pc));
   }
-  return { coinType, trait, mergedPC };
+  return { coinType, traits, mergedPC };
 }
 
 /** Pick `clicks` out of an arbitrary request body and validate them. */
@@ -131,23 +153,17 @@ export async function recordClicks(
     const baseValue = inp.mergedPC ?? coinPCValue(inp.coinType, upgradeLevels, permLevels, relicE);
     const pc = Math.round(
       baseValue *
-        traitMultiplier(inp.trait) *
+        traitMultiplier(inp.traits) *
         frugMul *
         albumMul *
         prestigeMul *
         relicE.clickPCMul,
     );
     totalPC += pc;
-    const albumPage =
-      inp.trait === "shiny"   ? "shiny" :
-      inp.trait === "sticky"  ? "sticky" :
-      inp.trait === "foreign" ? "foreign" :
-      inp.trait === "bent"    ? "bent" :
-      inp.trait === "cursed"  ? "cursed" :
-      inp.trait === "ancient" ? "ancient" :
-      null;
-    if (albumPage) {
-      const page = (albumIncrements[albumPage] ??= {});
+    // Multi-trait coins increment EVERY matching album page so
+    // catching a shiny+ancient counts for both collections.
+    for (const t of inp.traits) {
+      const page = (albumIncrements[t] ??= {});
       page[inp.coinType] = (page[inp.coinType] ?? 0) + 1;
     }
   }

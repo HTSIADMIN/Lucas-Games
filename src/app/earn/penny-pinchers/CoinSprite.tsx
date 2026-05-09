@@ -11,7 +11,7 @@ import { COINS, type CoinId, type CoinTrait } from "@/lib/games/penny-pinchers/c
 
 export function CoinSprite({
   coin,
-  trait,
+  traits,
   pc,
   x,
   y,
@@ -22,7 +22,9 @@ export function CoinSprite({
   onClick,
 }: {
   coin: CoinId;
-  trait: CoinTrait | null;
+  /** Every trait on the coin. The disc renders the rarest entry's
+   *  aura/halo + a small ✦ count badge if there's more than one. */
+  traits: CoinTrait[];
   /** Combined PC value of this coin (post any merges). */
   pc: number;
   x: number;
@@ -62,16 +64,18 @@ export function CoinSprite({
   const mergeBoost = Math.min(48, Math.round(Math.log2(Math.max(1, pc)) * 5));
   const size = baseSize + sizeBoost + mergeBoost;
 
-  // Trait visuals — six total now. Shiny is the marquee one,
-  // gets the rotating conic-gradient halo + sparkle particles.
-  // Ancient is even rarer and reuses Shiny's animation rig with
-  // a green-patina palette so it reads "even rarer than gold".
-  const isShiny = trait === "shiny";
-  const isAncient = trait === "ancient";
-  const isCursed = trait === "cursed";
-  const isForeign = trait === "foreign";
-  const isBent = trait === "bent";
-  const isSticky = trait === "sticky";
+  // Trait visuals — six total. We pick the RAREST trait to drive
+  // the marquee aura; multi-trait coins get a small ✦ N badge so
+  // the player notices the bonus. Shiny is the marquee one; Ancient
+  // reuses Shiny's animation rig with a green-patina palette so it
+  // reads "even rarer than gold".
+  const isShiny = traits.includes("shiny");
+  const isAncient = traits.includes("ancient");
+  const isCursed = traits.includes("cursed");
+  const isForeign = traits.includes("foreign");
+  const isBent = traits.includes("bent");
+  const isSticky = traits.includes("sticky");
+  const multiTraitCount = traits.length;
 
   const auraColor =
     isShiny   ? "rgba(255, 220, 90, 0.95)" :
@@ -109,7 +113,7 @@ export function CoinSprite({
         onClick();
       }}
       onClick={onClick}
-      aria-label={`Pick up ${def.label}${trait ? ` (${trait})` : ""}`}
+      aria-label={`Pick up ${def.label}${traits.length > 0 ? ` (${traits.join(", ")})` : ""}`}
       style={{
         position: "absolute",
         left: renderX - (size + halo) / 2,
@@ -245,6 +249,38 @@ export function CoinSprite({
           <span aria-hidden style={sparkleStyle(0.33, halo, size, isAncient)}>✧</span>
           <span aria-hidden style={sparkleStyle(0.66, halo, size, isAncient)}>✦</span>
         </>
+      )}
+      {/* Multi-trait badge — small ✦ N pill on the corner so the
+          player notices a coin carrying more than one trait. The
+          rarer the combo, the bigger the click payout (each trait
+          multiplies the payout) so this is the "wow look at that"
+          marker for fused or multi-rolled coins. */}
+      {multiTraitCount > 1 && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            right: -4,
+            top: -4,
+            minWidth: 20,
+            height: 20,
+            padding: "0 5px",
+            background: "var(--gold-300)",
+            border: "2px solid var(--ink-900)",
+            borderRadius: 999,
+            fontFamily: "var(--font-display)",
+            fontSize: 11,
+            color: "var(--ink-900)",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            lineHeight: 1,
+            boxShadow: "0 0 10px rgba(255, 200, 60, 0.85)",
+            zIndex: 2,
+          }}
+        >
+          ✦{multiTraitCount}
+        </span>
       )}
       <style>{`
         @keyframes pp-coin-spawn {
