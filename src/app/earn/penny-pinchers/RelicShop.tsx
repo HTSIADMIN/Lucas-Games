@@ -29,6 +29,8 @@ type RollResult = {
   newLevel: number;
   maxLevel: number;
   duplicateAtMax: boolean;
+  /** Frugality refunded when the roll lands on an already-maxed relic. */
+  refund: number;
 };
 
 export function RelicShop({
@@ -456,7 +458,11 @@ function RevealModal({ result, onClose }: { result: RollResult; onClose: () => v
           )}
         </div>
 
-        {/* Result card — fades in after the spin lands. */}
+        {/* Result card — invisible during spin (was opacity 0.25
+            before, which leaked the relic name/description through
+            the dim overlay so the spin felt rigged). Reserve the
+            same vertical space via visibility:hidden so the modal
+            doesn't reflow when the card pops in. */}
         <div
           style={{
             background: tone.bg,
@@ -465,9 +471,9 @@ function RevealModal({ result, onClose }: { result: RollResult; onClose: () => v
             marginBottom: "var(--sp-3)",
             color: tone.fg,
             boxShadow: revealed ? `0 0 24px ${tone.ring}` : "none",
-            opacity: revealed ? 1 : 0.25,
+            visibility: revealed ? "visible" : "hidden",
             transform: revealed ? "scale(1)" : "scale(0.96)",
-            transition: "opacity 320ms, transform 320ms, box-shadow 320ms",
+            transition: "transform 320ms, box-shadow 320ms",
           }}
         >
           <div
@@ -497,7 +503,12 @@ function RevealModal({ result, onClose }: { result: RollResult; onClose: () => v
           </div>
           <div style={{ fontFamily: "var(--font-display)", fontSize: 12 }}>
             Lv {result.newLevel} / {result.maxLevel}
-            {result.duplicateAtMax && " · already maxed"}
+            {result.duplicateAtMax && (
+              <>
+                {" · already maxed"}
+                {result.refund > 0 && ` · +${result.refund} ✓ refund`}
+              </>
+            )}
           </div>
         </div>
         <button

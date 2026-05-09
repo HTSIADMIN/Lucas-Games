@@ -50,9 +50,16 @@ export async function POST(req: Request) {
   const newLevel = Math.min(rolled.maxLevel, before + 1);
   relics[rolled.id] = newLevel;
 
+  // Half refund (rounded down) when the rolled relic is already at
+  // its max level — duplicates of a capped relic don't actually
+  // boost anything, so the player shouldn't pay full price for the
+  // bad luck. Bronze 2 → 1 back, Silver 6 → 3 back, Gold 15 → 7.
+  const refund = maxedOut ? Math.floor(def.cost / 2) : 0;
+  const netCost = def.cost - refund;
+
   const updated = await upsertPennyPinchersState({
     ...state,
-    frugality: state.frugality - def.cost,
+    frugality: state.frugality - netCost,
     relics,
     last_tick_at: new Date().toISOString(),
   });
@@ -67,6 +74,7 @@ export async function POST(req: Request) {
     newLevel,
     maxLevel: rolled.maxLevel,
     duplicateAtMax: maxedOut,
+    refund,
     frugality: updated.frugality,
   });
 }
