@@ -858,7 +858,11 @@ export function PennyPinchersClient() {
 
   async function buyUpgrade(id: UpgradeId, cost: number) {
     if (localCents < cost) return;
+    // Optimistic UI — the level pip + cost chip + progress bar all key
+    // off `server.upgrades`, so bumping it locally before the fetch
+    // makes the card snap immediately. loadState() reconciles after.
     setLocalCents((c) => c - cost);
+    setServer((s) => (s ? { ...s, upgrades: { ...s.upgrades, [id]: (s.upgrades[id] ?? 0) + 1 } } : s));
     Sfx.play("ui.click");
     try {
       const r = await fetch("/api/earn/penny-pinchers/upgrade", {
@@ -870,49 +874,57 @@ export function PennyPinchersClient() {
         // Surface the failure so the player isn't left wondering why
         // their cents went down without a level bump. Server returns
         // structured error codes (insufficient_cents, max_level, etc.)
-        // which we render via labelForUpgradeError.
+        // which we render via labelForUpgradeError. loadState() below
+        // also rolls back the optimistic level bump.
         const data = await r.json().catch(() => ({} as { error?: string }));
         const msg = labelForUpgradeError(data?.error);
         setUpgradeError(msg);
         window.setTimeout(() => setUpgradeError((cur) => (cur === msg ? null : cur)), 4000);
       }
-      await loadState(); // reconcile cents either way
+      await loadState(); // reconcile cents + level either way
     } catch { await loadState(); }
   }
 
   async function hireHelper(id: HelperId, cost: number) {
     if (localCents < cost) return;
+    // Optimistic — bump the helper count + cents now, fire-the-flash,
+    // and let loadState reconcile from the server.
     setLocalCents((c) => c - cost);
+    setServer((s) => (s ? { ...s, helpers: { ...s.helpers, [id]: (s.helpers[id] ?? 0) + 1 } } : s));
+    setRecentlyHiredId(id);
+    window.setTimeout(() => {
+      setRecentlyHiredId((cur) => (cur === id ? null : cur));
+    }, 700);
     Sfx.play("chips.handle");
     try {
-      const r = await fetch("/api/earn/penny-pinchers/hire", {
+      await fetch("/api/earn/penny-pinchers/hire", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ helperId: id }),
       });
-      if (r.ok) {
-        // Brief celebratory flash on the just-hired row.
-        setRecentlyHiredId(id);
-        window.setTimeout(() => {
-          setRecentlyHiredId((cur) => (cur === id ? null : cur));
-        }, 700);
-        await loadState();
-      } else {
-        await loadState();
-      }
+      await loadState();
     } catch { await loadState(); }
   }
 
   async function buyPermUpgrade(id: PermUpgradeId, cost: number) {
     if (!server || server.prestige.bankTokens < cost) return;
+    // Optimistic — perm level + remaining tokens reflect immediately.
+    setServer((s) => {
+      if (!s) return s;
+      return {
+        ...s,
+        perm: { ...s.perm, [id]: (s.perm[id] ?? 0) + 1 },
+        prestige: { ...s.prestige, bankTokens: s.prestige.bankTokens - cost },
+      };
+    });
     Sfx.play("ui.click");
     try {
-      const r = await fetch("/api/earn/penny-pinchers/perm-upgrade", {
+      await fetch("/api/earn/penny-pinchers/perm-upgrade", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ upgradeId: id }),
       });
-      if (r.ok) await loadState();
+      await loadState();
     } catch { await loadState(); }
   }
 
