@@ -69,7 +69,7 @@ export function RelicShop({
   }
 
   return (
-    <div className="stack" style={{ gap: "var(--sp-2)", overflowY: "auto", maxHeight: 480 }}>
+    <div className="stack pp-shop-scroll" style={{ gap: "var(--sp-2)" }}>
       <style>{`
         .pp-chest-card, .pp-relic-card {
           transition: transform 160ms, box-shadow 200ms, border-color 200ms;

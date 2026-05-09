@@ -2077,6 +2077,40 @@ img, svg, canvas {
   }
 }
 
+/* ============================================================
+   PENNY PINCHERS — shop list scroll container.
+   Used by Upgrades / Helpers / Tokens / Trophies / Album / Relics.
+   - inner padding lets the click-flash halo bleed past each card
+     without getting clipped by the scrollbox edge
+   - custom saloon-themed scrollbar (saddle thumb, parchment track)
+     replaces the default browser bar
+   ============================================================ */
+.pp-shop-scroll {
+  overflow-y: auto;
+  max-height: 480px;
+  /* horizontal slack for the gold halo on the buy-flash; vertical
+     slack so the first/last card's halo doesn't clip either */
+  padding: 8px 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--saddle-400) var(--parchment-50);
+}
+.pp-shop-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.pp-shop-scroll::-webkit-scrollbar-track {
+  background: var(--parchment-50);
+  border-left: 2px solid var(--ink-900);
+}
+.pp-shop-scroll::-webkit-scrollbar-thumb {
+  background: var(--saddle-400);
+  border: 2px solid var(--ink-900);
+  border-radius: 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.35);
+}
+.pp-shop-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--saddle-500);
+}
+
 /* Slots cash-coin polish — radial gold sheen base (set inline), a
    slow shine sweep, a fixed glint spot at the top-left, and a
    gentle scale-pulse on premium / top-tier coins so high-value

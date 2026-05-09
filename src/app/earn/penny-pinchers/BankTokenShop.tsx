@@ -16,7 +16,7 @@ export function BankTokenShop({
   recentlyBoughtId?: PermUpgradeId | null;
 }) {
   return (
-    <div className="stack" style={{ gap: "var(--sp-2)", overflowY: "auto", maxHeight: 480 }}>
+    <div className="stack pp-shop-scroll" style={{ gap: "var(--sp-2)" }}>
       <style>{`
         @keyframes pp-upgrade-bought {
           0%   { box-shadow: 0 0 0 0 rgba(255,196,64,0); transform: scale(1); }

@@ -38,7 +38,7 @@ export function AlbumPanel({ album }: { album: AlbumState }) {
     return 0;
   });
   return (
-    <div className="stack" style={{ gap: "var(--sp-3)", overflowY: "auto", maxHeight: 480 }}>
+    <div className="stack pp-shop-scroll" style={{ gap: "var(--sp-3)" }}>
       {pages.map((page) => (
         <Page key={page} page={page} album={album} />
       ))}

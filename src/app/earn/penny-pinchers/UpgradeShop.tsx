@@ -65,7 +65,7 @@ export function UpgradeShop({
     return 0;
   });
   return (
-    <div className="stack" style={{ gap: "var(--sp-2)", overflowY: "auto", maxHeight: 480 }}>
+    <div className="stack pp-shop-scroll" style={{ gap: "var(--sp-2)" }}>
       <style>{`
         @keyframes pp-shop-affordable {
           0%, 100% { box-shadow: 0 0 0 0 rgba(255,196,64,0); }

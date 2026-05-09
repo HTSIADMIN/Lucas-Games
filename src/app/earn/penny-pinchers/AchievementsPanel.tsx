@@ -9,7 +9,7 @@ export function AchievementsPanel({
 }) {
   const completed = ACHIEVEMENTS.filter((a) => unlocked.has(a.id)).length;
   return (
-    <div className="stack" style={{ gap: "var(--sp-2)", overflowY: "auto", maxHeight: 480 }}>
+    <div className="stack pp-shop-scroll" style={{ gap: "var(--sp-2)" }}>
       <div
         className="text-mute"
         style={{
