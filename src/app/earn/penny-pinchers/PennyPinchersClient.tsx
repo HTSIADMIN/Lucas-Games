@@ -1316,8 +1316,13 @@ export function PennyPinchersClient() {
               lineHeight: 1.1,
               marginTop: 4,
               marginBottom: 6,
-              color: "var(--gold-500)",
-              textShadow: "2px 2px 0 var(--gold-100)",
+              // Theme-aware so the counter inverts on dark themes —
+              // --fg flips dark/light vs panel bg, --fg-muted gives a
+              // mid-tone drop. The click pulse keeps a gold ring glow
+              // for the "money" feel, layered on top of the theme
+              // shadow.
+              color: "var(--fg)",
+              textShadow: "2px 2px 0 var(--fg-muted)",
               animation: "pp-pc-pulse 220ms ease-out",
               transformOrigin: "left center",
             }}
@@ -1327,7 +1332,7 @@ export function PennyPinchersClient() {
           <style>{`
             @keyframes pp-pc-pulse {
               0%   { transform: scale(1); }
-              35%  { transform: scale(1.12); text-shadow: 1px 1px 0 var(--gold-100), 0 0 14px rgba(255,196,64,0.85); }
+              35%  { transform: scale(1.12); text-shadow: 2px 2px 0 var(--fg-muted), 0 0 14px rgba(255,196,64,0.85); }
               100% { transform: scale(1); }
             }
           `}</style>
