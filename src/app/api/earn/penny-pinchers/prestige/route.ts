@@ -5,6 +5,7 @@ import {
   getPennyPinchersState,
   listPennyPinchersPermUpgrades,
   upsertPennyPinchersState,
+  upsertPennyPinchersUpgrade,
 } from "@/lib/db";
 import { type PermUpgradeId } from "@/lib/games/penny-pinchers/catalog";
 import { bankTokensFromCurrentCents, prestigeStartingCents, relicEffects } from "@/lib/games/penny-pinchers/engine";
@@ -38,6 +39,19 @@ export async function POST() {
   for (const u of permRows) permLevels[u.upgrade_id as PermUpgradeId] = u.level;
 
   await clearPennyPinchersRun(s.user.id);
+
+  // Vending Lifer (perm) — when owned, the next cycle starts with
+  // vending_machines already at lvl 1 (nickels unlocked) so the
+  // player isn't gated behind a fresh re-buy every prestige.
+  // Catalog promised this; before today, the auto-grant never ran
+  // and the upgrade did nothing.
+  if ((permLevels.vending_lifer ?? 0) >= 1) {
+    await upsertPennyPinchersUpgrade({
+      user_id: s.user.id,
+      upgrade_id: "vending_machines",
+      level: 1,
+    });
+  }
 
   const now = new Date().toISOString();
   const updated = await upsertPennyPinchersState({
