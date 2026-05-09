@@ -672,17 +672,27 @@ export function upgradeCurrentValueLabel(id: UpgradeId, level: number): string |
   if (level <= 0) return null;
   switch (id) {
     case "sharper_eyes": {
-      // 5% faster per level → 1 - 0.95^lvl
-      const pct = Math.round((1 - Math.pow(0.95, level)) * 100);
-      return `${pct}% faster spawns`;
+      // Show actual spawn-rate increase — interval shrinks by 5%
+      // per level but the spawn loop has a 100ms-interval floor, so
+      // levels past ~L53 don't actually fire any faster. Compute
+      // the effective interval against the floor and report rate.
+      const targetInterval = 1500 * Math.pow(0.95, level);
+      const effectiveInterval = Math.max(100, targetInterval);
+      const rateMul = 1500 / effectiveInterval; // ≥ 1
+      const pct = Math.round((rateMul - 1) * 100);
+      return pct > 0 ? `${pct}% more spawns` : "—";
     }
     case "two_finger_pickup":
-      return `+${level * 5}% nearby-grab on click`;
+      // Gameplay caps the chance at 50% (Math.min(0.5, 0.05·lvl)).
+      return `+${Math.min(50, level * 5)}% nearby-grab on click`;
     case "penny_multiplier":
       return `+${level * 10}% PC every coin`;
     case "coin_polish":
       return `+${level} PC every coin`;
     case "lucky_crack":
+      // Per-upgrade contribution is uncapped here; total shiny
+      // probability still has the natural 100% ceiling once
+      // album / relics / blessings stack on top.
       return `+${level}% shiny chance`;
     case "vending_machines":
     case "parking_lot":
@@ -692,12 +702,20 @@ export function upgradeCurrentValueLabel(id: UpgradeId, level: number): string |
       // Spawn weight = 25/15/10/8/6 base + (10/7/5/4/3) × (lvl - 1).
       // Just show the level — exact pool weight is opaque to the player.
       return level === 1 ? "Unlocked" : `Level ${level} weight`;
-    case "auto_picker":
-      return `${level} auto-click/sec`;
+    case "auto_picker": {
+      // Auto-click loop floors at 150ms interval, so the effective
+      // rate caps at ~6.67/sec regardless of level. Show the
+      // honest cap.
+      const targetInterval = 1000 / level;
+      const effectiveInterval = Math.max(150, targetInterval);
+      const rate = Math.floor(1000 / effectiveInterval);
+      return `${rate} auto-click/sec`;
+    }
     case "pile_it_up":
       return "Active";
     case "extra_hands":
-      return `+${level * 5}% extra-coin spawn`;
+      // Same 50% chance cap as Two-Finger Pickup.
+      return `+${Math.min(50, level * 5)}% extra-coin spawn`;
     default:
       return null;
   }
