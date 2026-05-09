@@ -412,17 +412,24 @@ export function PennyPinchersClient() {
       if (!r.ok) return;
       const d = (await r.json()) as StateResponse;
       setServer(d);
-      // Reconcile optimistic cents toward the server's authoritative
-      // value. If the local guess is within 5% of the server, keep
-      // it (so a fresh click doesn't get yanked back). Otherwise
-      // snap to the server, MINUS any spend that's still in flight —
-      // a poll that arrives between two rapid buys would otherwise
-      // see the server's mid-batch balance and rebound localCents
-      // upward for a frame.
+      // The HUD shows the player's optimistic count and only ever
+      // corrects UPWARD — server can be ahead of us (offline
+      // helper accrual, achievement reward, click-batch we just
+      // flushed) but it should never be ahead in the "we have less
+      // than we thought" direction during normal play. Pending
+      // clicks haven't been recorded server-side until the next
+      // flush, so localCents is the visible source of truth.
+      // Spend transactions bypass this entirely — the spend route's
+      // response calls setLocalCents(d.cents) directly.
       setLocalCents((prev) => {
         const adjusted = d.cents - inFlightSpendRef.current;
-        if (Math.abs(prev - adjusted) <= Math.max(5, d.cents * 0.05)) return prev;
-        return adjusted;
+        // Server-leading by more than the 5% / 5-PC tolerance: a
+        // helper drip / achievement reward landed we didn't account
+        // for. Snap up.
+        if (prev < adjusted - Math.max(5, d.cents * 0.05)) return adjusted;
+        // Otherwise keep the local count — the player should never
+        // see their cents flicker downward because of a poll race.
+        return prev;
       });
       // Welcome-back banner fires once on page entry only. The
       // server still flags any meaningful gap, but we ignore the

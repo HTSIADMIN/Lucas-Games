@@ -96,6 +96,18 @@ export function CoinSprite({
   return (
     <button
       type="button"
+      // pointerdown fires the moment the mouse / finger lands on
+      // the disc — onClick would require the press AND release on
+      // the same coin, which fast mouse swipes don't satisfy.
+      // preventDefault() on the pointerdown cancels the synthesised
+      // click event for the same gesture, so the bare onClick prop
+      // only fires for keyboard activation (Enter / Space) where
+      // there is no preceding pointer event.
+      onPointerDown={(e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        e.preventDefault();
+        onClick();
+      }}
       onClick={onClick}
       aria-label={`Pick up ${def.label}${trait ? ` (${trait})` : ""}`}
       style={{
@@ -109,6 +121,11 @@ export function CoinSprite({
         border: "none",
         borderRadius: "50%",
         cursor: "pointer",
+        // Suppress mobile tap-flash + drag-text-select on the disc.
+        WebkitTapHighlightColor: "transparent",
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        touchAction: "manipulation",
         opacity: mergingTo ? 0.65 : fade,
         transform: "translateZ(0)",
         // While merging, smooth-slide via CSS transitions instead
