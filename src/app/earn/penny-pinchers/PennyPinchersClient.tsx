@@ -228,6 +228,13 @@ const SYNC_POLL_MS = 10_000;
 export function PennyPinchersClient() {
   const [server, setServer] = useState<StateResponse | null>(null);
   const [localCents, setLocalCents] = useState<number>(0);
+  // Total cents the client has optimistically spent on a buy that
+  // hasn't been confirmed by the server yet. The reconcile in
+  // loadState() subtracts this from server.cents before comparing
+  // to localCents — otherwise rapid back-to-back upgrades show a
+  // visible rebound (cents flicker upward) when the first response
+  // arrives mid-second-click.
+  const inFlightSpendRef = useRef(0);
   const [coins, setCoins] = useState<SpawnedCoin[]>([]);
   const [tab, setTab] = useState<"upgrades" | "helpers" | "tokens" | "achievements" | "album" | "relics">("upgrades");
   const [welcomeBack, setWelcomeBack] = useState<number | null>(null);
@@ -405,12 +412,17 @@ export function PennyPinchersClient() {
       if (!r.ok) return;
       const d = (await r.json()) as StateResponse;
       setServer(d);
-      // Reconcile optimistic cents toward the server's authoritative value.
-      // If the local guess is within 5% of the server, keep it (so a fresh
-      // click doesn't get yanked back). Otherwise snap to the server.
+      // Reconcile optimistic cents toward the server's authoritative
+      // value. If the local guess is within 5% of the server, keep
+      // it (so a fresh click doesn't get yanked back). Otherwise
+      // snap to the server, MINUS any spend that's still in flight —
+      // a poll that arrives between two rapid buys would otherwise
+      // see the server's mid-batch balance and rebound localCents
+      // upward for a frame.
       setLocalCents((prev) => {
-        if (Math.abs(prev - d.cents) <= Math.max(5, d.cents * 0.05)) return prev;
-        return d.cents;
+        const adjusted = d.cents - inFlightSpendRef.current;
+        if (Math.abs(prev - adjusted) <= Math.max(5, d.cents * 0.05)) return prev;
+        return adjusted;
       });
       // Welcome-back banner fires once on page entry only. The
       // server still flags any meaningful gap, but we ignore the
@@ -890,6 +902,7 @@ export function PennyPinchersClient() {
     // makes the card snap immediately. loadState() reconciles after.
     setLocalCents((c) => c - cost);
     setServer((s) => (s ? { ...s, upgrades: { ...s.upgrades, [id]: (s.upgrades[id] ?? 0) + 1 } } : s));
+    inFlightSpendRef.current += cost;
     setRecentlyBoughtUpgradeId(id);
     window.setTimeout(() => {
       setRecentlyBoughtUpgradeId((cur) => (cur === id ? null : cur));
@@ -915,6 +928,7 @@ export function PennyPinchersClient() {
       }
       await loadState(); // reconcile cents + level either way
     } catch { await loadState(); }
+    finally { inFlightSpendRef.current -= cost; }
   }
 
   async function hireHelper(id: HelperId, cost: number) {
@@ -923,6 +937,7 @@ export function PennyPinchersClient() {
     // and let loadState reconcile from the server.
     setLocalCents((c) => c - cost);
     setServer((s) => (s ? { ...s, helpers: { ...s.helpers, [id]: (s.helpers[id] ?? 0) + 1 } } : s));
+    inFlightSpendRef.current += cost;
     setRecentlyHiredId(id);
     window.setTimeout(() => {
       setRecentlyHiredId((cur) => (cur === id ? null : cur));
@@ -937,6 +952,7 @@ export function PennyPinchersClient() {
       });
       await loadState();
     } catch { await loadState(); }
+    finally { inFlightSpendRef.current -= cost; }
   }
 
   async function buyPermUpgrade(id: PermUpgradeId, cost: number) {
@@ -970,6 +986,7 @@ export function PennyPinchersClient() {
     const def = BLESSINGS[id];
     if (!def || localCents < def.cost) return;
     setLocalCents((c) => c - def.cost);
+    inFlightSpendRef.current += def.cost;
     Sfx.play("ui.confirm");
     try {
       const pendingClicks = drainClickQueue();
@@ -990,7 +1007,7 @@ export function PennyPinchersClient() {
         // Hold the modal open with a "Granted!" flash on the chosen
         // blessing button before closing — dramatises the buy.
         setGrantedBlessing(id);
-        Sfx.play(d.durationMs > 0 ? "win.notify" : "coins.handle");
+        Sfx.play(d.durationMs > 0 ? "win.levelup" : "coins.handle");
         window.setTimeout(() => {
           setGrantedBlessing(null);
           setFountain(null);
@@ -1002,6 +1019,8 @@ export function PennyPinchersClient() {
       }
     } catch {
       setLocalCents((c) => c + def.cost);
+    } finally {
+      inFlightSpendRef.current -= def.cost;
     }
   }
 

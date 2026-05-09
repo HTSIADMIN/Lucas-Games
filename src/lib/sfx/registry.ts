@@ -24,7 +24,6 @@ export const SFX_REGISTRY = {
   "coins.shower":  { src: "/sfx/melodic-gold-wining_coins.wav",        volume: 0.75, throttleMs: 1000, voices: 1 },
 
   // Win stingers
-  "win.notify":    { src: "/sfx/casino-win-notification.wav",          volume: 0.7,  throttleMs: 500, voices: 1 },
   "win.big":       { src: "/sfx/score-casino-counter-big-winner.wav",  volume: 0.85, throttleMs: 2000, voices: 1 },
   "win.levelup":   { src: "/sfx/casino-achievement_level-up.wav",      volume: 0.7,  throttleMs: 1000, voices: 1 },
 
