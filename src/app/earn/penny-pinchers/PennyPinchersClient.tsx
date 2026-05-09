@@ -2758,7 +2758,7 @@ export function PennyPinchersClient() {
                 <b>+{server.prestige.tokensIfRolled.toLocaleString()} ★ Bank Tokens</b> to spend on Permanents
               </li>
               <li className="text-mute" style={{ fontSize: 13 }}>
-                Tip: each extra 25k cents you save before prestiging adds another token. Holding for 150k → 7 tokens, 250k → 11.
+                Tip: tokens follow a sqrt curve — 100k → 5 ★, 200k → 7 ★, 500k → 11 ★, 1M → 15 ★. Quick prestiges pay off; sitting past 1M earns diminishing returns.
               </li>
             </ul>
             <div className="row" style={{ gap: 8, justifyContent: "center" }}>

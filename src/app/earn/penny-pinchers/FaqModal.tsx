@@ -70,12 +70,12 @@ const SECTIONS: { title: string; lines: string[] }[] = [
     title: "Prestige",
     lines: [
       "Once you've saved 100k current cents in your pocket, you can Prestige. The cents are spent on tokens — you lose the pocket cash, your run-state upgrades, and your helpers.",
-      "Tokens scale with how much you sacrifice: 100k → 5 ★, 125k → 6 ★, 150k → 7 ★, 250k → 11 ★, 500k → 21 ★. Each extra 25k cents earns one more token.",
+      "Tokens scale with a sqrt curve: 100k → 5 ★, 200k → 7 ★, 500k → 11 ★, 1M → 15 ★, 10M → 50 ★. Crossing the threshold pays off; sitting on a fortune past 1M earns less per cent.",
       "Spend Tokens in the ★ Tokens tab on permanent upgrades that survive every future Prestige.",
       "Each Prestige adds a permanent PC multiplier on every coin pickup: first one is +300% (×4), and each subsequent +100% (×5, ×6, ...).",
-      "First Prestige earns you the ★ Prestige Club badge next to your name on the leaderboard at the bottom of the game.",
+      "Your prestige count rides the leaderboard as a ★ N Prestige badge — gold at first, then emerald (5+), ruby (10+), sapphire (15+), amethyst (20+), and diamond rainbow (25+).",
       "Higher Ceilings (perm) adds +10 to the max level of every base upgrade per level — five tiers (5, 7, 10, 14, 20★, total 56★) take Coin Value from 20 → 70, Sharper Eyes 10 → 60, the spawn unlocks 5 → 55, etc. (Pile It Up is exempt — once you own it, that's it.)",
-      "Bigger Pockets (perm) is now triangular: lvl 1 seeds 1k, lvl 5 seeds 15k, maxed seeds 55k cents into the next cycle so the grind back to the threshold is faster the more you've invested.",
+      "Bigger Pockets (perm) is quadratic: lvl 1 seeds 1k, lvl 5 seeds 25k, maxed seeds 100k cents into the next cycle so the grind back to the threshold is automatic at full ranks.",
     ],
   },
   {

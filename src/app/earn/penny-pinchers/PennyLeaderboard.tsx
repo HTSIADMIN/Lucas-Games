@@ -2,6 +2,35 @@
 
 import type { LeaderboardRow as Row } from "./PennyPinchersClient";
 
+// Per-tier prestige-tag palettes. Each step covers 5 prestiges so
+// the badge bumps up the rarity ladder as a player keeps cycling.
+// All entries use ink-on-bright so the count + word both read.
+const PRESTIGE_TAG_PALETTES: { bg: string; border: string; glow: string; fg: string }[] = [
+  // 1–4 — saloon gold (the original)
+  { bg: "linear-gradient(90deg, var(--gold-300), var(--gold-500), var(--gold-300))",
+    border: "var(--ink-900)", glow: "rgba(255,196,64,0.55)", fg: "var(--ink-900)" },
+  // 5–9 — emerald felt
+  { bg: "linear-gradient(90deg, var(--cactus-300), #2f7a3d, var(--cactus-300))",
+    border: "var(--ink-900)", glow: "rgba(80,210,120,0.55)", fg: "var(--ink-900)" },
+  // 10–14 — saloon ruby
+  { bg: "linear-gradient(90deg, var(--crimson-300), var(--crimson-500), var(--crimson-300))",
+    border: "var(--ink-900)", glow: "rgba(232,80,80,0.55)", fg: "var(--parchment-50)" },
+  // 15–19 — sky sapphire
+  { bg: "linear-gradient(90deg, var(--sky-300), var(--sky-500), var(--sky-300))",
+    border: "var(--ink-900)", glow: "rgba(95,168,211,0.55)", fg: "var(--ink-900)" },
+  // 20–24 — royal amethyst
+  { bg: "linear-gradient(90deg, #b178d8, #6a3aa6, #b178d8)",
+    border: "var(--ink-900)", glow: "rgba(160,90,210,0.55)", fg: "var(--parchment-50)" },
+  // 25+ — diamond / ink rainbow
+  { bg: "linear-gradient(90deg, var(--gold-300), var(--cactus-300), var(--sky-300), #b178d8, var(--crimson-300), var(--gold-300))",
+    border: "var(--ink-900)", glow: "rgba(255,232,168,0.7)", fg: "var(--ink-900)" },
+];
+
+function prestigeTagPalette(count: number) {
+  const tier = Math.min(PRESTIGE_TAG_PALETTES.length - 1, Math.floor((count - 1) / 5));
+  return PRESTIGE_TAG_PALETTES[tier];
+}
+
 // Top-10 panel rendered at the bottom of Penny Pinchers. Rows are
 // passed in from the parent's /state poll — no separate fetch — so
 // the page only makes one request per sync cycle.
@@ -70,27 +99,30 @@ export function PennyLeaderboard({ rows }: { rows: Row[] | null }) {
                       </div>
                       <span>{r.username}</span>
                       {r.isMe && <span className="tag-new">YOU</span>}
-                      {r.prestigeCount > 0 && (
-                        <span
-                          title={`${r.prestigeCount} Prestige${r.prestigeCount === 1 ? "" : "s"}`}
-                          aria-label={`Prestige Club member, ${r.prestigeCount} Prestiges`}
-                          style={{
-                            fontFamily: "var(--font-display)",
-                            fontSize: 9,
-                            letterSpacing: "0.06em",
-                            textTransform: "uppercase",
-                            color: "var(--ink-900)",
-                            background: "linear-gradient(90deg, var(--gold-300), var(--gold-500), var(--gold-300))",
-                            backgroundSize: "200% 100%",
-                            border: "2px solid var(--ink-900)",
-                            padding: "1px 5px",
-                            boxShadow: "0 0 8px rgba(255,196,64,0.55)",
-                            animation: "pp-rollup-tag-shine 3s linear infinite",
-                          }}
-                        >
-                          ★ Prestige Club
-                        </span>
-                      )}
+                      {r.prestigeCount > 0 && (() => {
+                        const pal = prestigeTagPalette(r.prestigeCount);
+                        return (
+                          <span
+                            title={`${r.prestigeCount} Prestige${r.prestigeCount === 1 ? "" : "s"}`}
+                            aria-label={`${r.prestigeCount} Prestige${r.prestigeCount === 1 ? "" : "s"}`}
+                            style={{
+                              fontFamily: "var(--font-display)",
+                              fontSize: 9,
+                              letterSpacing: "0.06em",
+                              textTransform: "uppercase",
+                              color: pal.fg,
+                              background: pal.bg,
+                              backgroundSize: "200% 100%",
+                              border: `2px solid ${pal.border}`,
+                              padding: "1px 5px",
+                              boxShadow: `0 0 8px ${pal.glow}`,
+                              animation: "pp-rollup-tag-shine 3s linear infinite",
+                            }}
+                          >
+                            ★ {r.prestigeCount} Prestige
+                          </span>
+                        );
+                      })()}
                     </div>
                   </td>
                   <td style={{ padding: "4px 6px", textAlign: "right" }}>{r.lifetimePCEarned.toLocaleString()}</td>

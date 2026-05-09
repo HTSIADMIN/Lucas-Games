@@ -6,7 +6,11 @@ import {
   type UpgradeCategory,
   type UpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
-import { effectiveUpgradeMaxLevel, nextUpgradeCost } from "@/lib/games/penny-pinchers/engine";
+import {
+  effectiveUpgradeMaxLevel,
+  nextUpgradeCost,
+  upgradeCurrentValueLabel,
+} from "@/lib/games/penny-pinchers/engine";
 
 const CATEGORY_LABEL: Record<UpgradeCategory, string> = {
   click: "Click",
@@ -161,12 +165,31 @@ export function UpgradeShop({
               style={{
                 fontSize: 13,
                 lineHeight: 1.35,
-                marginBottom: 8,
+                marginBottom: 6,
                 color: "var(--saddle-500)",
               }}
             >
               {u.description}
             </div>
+            {/* Currently-X — surfaces the live effect for the player's
+                current level, no description math needed. */}
+            {(() => {
+              const cur = upgradeCurrentValueLabel(u.id, lvl);
+              if (!cur) return null;
+              return (
+                <div
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 12,
+                    letterSpacing: "0.04em",
+                    color: maxed ? "var(--cactus-500)" : "var(--gold-500)",
+                    marginBottom: 8,
+                  }}
+                >
+                  Currently: {cur}
+                </div>
+              );
+            })()}
             {/* Progress bar — visual depth on partially-leveled upgrades */}
             <div
               aria-hidden

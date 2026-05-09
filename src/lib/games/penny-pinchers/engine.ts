@@ -13,7 +13,6 @@ import {
   OFFLINE_CAP_HOURS,
   PERM_UPGRADES_BY_ID,
   PRESTIGE_THRESHOLD_CENTS,
-  PRESTIGE_TOKEN_BASE,
   PRESTIGE_TOKEN_DIVISOR,
   RELICS,
   TRAITS,
@@ -543,14 +542,18 @@ export function relicEffects(relics: RelicLevels): RelicEffects {
  * The cents themselves are consumed (the prestige reset wipes them
  * either way) — the more you've saved, the more tokens you get.
  *
- *   tokens = floor(currentCents / 25_000) + 1   when above threshold
+ * Curve flattens at high cents (1M is reachable with one good
+ * session, so the token reward shouldn't keep doubling forever).
+ * Floor of sqrt(c / 4000) lands the threshold at exactly 5 tokens:
+ *
+ *   tokens = floor(sqrt(currentCents / 4000))   when above threshold
  *   tokens = 0                                  below threshold
  *
- *   100k → 5    150k → 7    250k → 11    1M → 41
+ *   100k → 5    200k → 7    300k → 8    500k → 11    1M → 15    10M → 50
  */
 export function bankTokensFromCurrentCents(currentCents: number): number {
   if (currentCents < PRESTIGE_THRESHOLD_CENTS) return 0;
-  return Math.floor(currentCents / PRESTIGE_TOKEN_DIVISOR) + PRESTIGE_TOKEN_BASE;
+  return Math.floor(Math.sqrt(currentCents / PRESTIGE_TOKEN_DIVISOR));
 }
 
 /** Whether the player has hit the threshold to prestige. */
@@ -579,14 +582,15 @@ export function nextPermUpgradeCost(upgradeId: PermUpgradeId, currentLevel: numb
 /**
  * Starting cents for a fresh Prestige cycle, given perm upgrades.
  *
- * Bigger Pockets is now triangular — at level N the seed is
- * 1000 × N × (N+1) / 2 PC. So lvl 1 = 1k, lvl 5 = 15k, lvl 10 = 55k.
- * Each rank you buy adds visibly more on top of the previous.
+ * Bigger Pockets is quadratic — seed = 1000 × level² PC. Slow at
+ * the bottom, snaps to a clean 100k at maxed (lvl 10):
+ *   L1 1k  ·  L2 4k  ·  L3 9k  ·  L4 16k  ·  L5 25k
+ *   L6 36k ·  L7 49k ·  L8 64k ·  L9 81k  ·  L10 100k
  */
 export function prestigeStartingCents(perm: PermLevels): number {
   const lvl = perm.bigger_pockets ?? 0;
   if (lvl <= 0) return 0;
-  return 1000 * (lvl * (lvl + 1)) / 2;
+  return 1000 * lvl * lvl;
 }
 
 // ============================================================
@@ -642,6 +646,70 @@ export function detectNewUnlocks(
     if (CONDITIONS[def.id](snapshot)) out.push(def.id);
   }
   return out;
+}
+
+// ============================================================
+// CURRENT-VALUE LABELS
+//
+// Each card surfaces "Currently X" under the description so the
+// player can see what their levels actually do without doing the
+// math. Returns null when the upgrade is at level 0 (or the value
+// has no useful per-level read, e.g. binary unlocks at level 0).
+// ============================================================
+
+export function upgradeCurrentValueLabel(id: UpgradeId, level: number): string | null {
+  if (level <= 0) return null;
+  switch (id) {
+    case "sharper_eyes": {
+      // 5% faster per level → 1 - 0.95^lvl
+      const pct = Math.round((1 - Math.pow(0.95, level)) * 100);
+      return `${pct}% faster spawns`;
+    }
+    case "two_finger_pickup":
+      return `+${level * 5}% nearby-grab on click`;
+    case "penny_multiplier":
+      return `+${level * 10}% PC every coin`;
+    case "lucky_crack":
+      return `+${level}% shiny chance`;
+    case "vending_machines":
+    case "parking_lot":
+    case "laundry_day":
+    case "boardwalk":
+    case "grandpa_jar":
+      // Spawn weight = 25/15/10/8/6 base + (10/7/5/4/3) × (lvl - 1).
+      // Just show the level — exact pool weight is opaque to the player.
+      return level === 1 ? "Unlocked" : `Level ${level} weight`;
+    case "auto_picker":
+      return `${level} auto-click/sec`;
+    case "pile_it_up":
+      return "Active";
+    case "extra_hands":
+      return `+${level * 5}% extra-coin spawn`;
+    default:
+      return null;
+  }
+}
+
+export function permUpgradeCurrentValueLabel(id: PermUpgradeId, level: number): string | null {
+  if (level <= 0) return null;
+  switch (id) {
+    case "bigger_pockets":
+      return `Seeds ${(1000 * level * level).toLocaleString()} PC each prestige`;
+    case "practice_eyes":
+      return "Pennies +5 PC";
+    case "vending_lifer":
+      return "Nickels unlocked at start";
+    case "old_hand":
+      return `${OFFLINE_CAP_HOURS + level}h offline cap`;
+    case "lucky_streak":
+      return `+${level}% shiny`;
+    case "generous_helpers":
+      return `+${level * 25}% helper PC/sec`;
+    case "higher_ceilings":
+      return `+${level * 10} max levels per upgrade`;
+    default:
+      return null;
+  }
 }
 
 /** Coins the player has unlocked (i.e. has at least 1 level in the unlock upgrade). */

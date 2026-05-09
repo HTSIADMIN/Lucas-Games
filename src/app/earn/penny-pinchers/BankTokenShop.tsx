@@ -1,7 +1,7 @@
 "use client";
 
 import { PERM_UPGRADES, type PermUpgradeId } from "@/lib/games/penny-pinchers/catalog";
-import { nextPermUpgradeCost } from "@/lib/games/penny-pinchers/engine";
+import { nextPermUpgradeCost, permUpgradeCurrentValueLabel } from "@/lib/games/penny-pinchers/engine";
 
 export function BankTokenShop({
   levels,
@@ -91,9 +91,26 @@ export function BankTokenShop({
                 Lv {lvl}/{u.maxLevel}
               </span>
             </div>
-            <div className="text-mute" style={{ fontSize: 13, lineHeight: 1.35, marginBottom: 8, color: "var(--saddle-500)" }}>
+            <div className="text-mute" style={{ fontSize: 13, lineHeight: 1.35, marginBottom: 6, color: "var(--saddle-500)" }}>
               {u.description}
             </div>
+            {(() => {
+              const cur = permUpgradeCurrentValueLabel(u.id, lvl);
+              if (!cur) return null;
+              return (
+                <div
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 12,
+                    letterSpacing: "0.04em",
+                    color: maxed ? "var(--cactus-500)" : "var(--gold-500)",
+                    marginBottom: 8,
+                  }}
+                >
+                  Currently: {cur}
+                </div>
+              );
+            })()}
             <div
               aria-hidden
               style={{

@@ -551,24 +551,22 @@ export const FRUGALITY_MAX = 50;
 export const PRESTIGE_THRESHOLD_CENTS = 100_000;
 
 /**
- * Linear payout tied to the cents you spend at prestige time. Casual
- * players who tap the threshold get a few tokens; players who save
- * up significantly more get rewarded with each 25k-cent tier they
- * cross.
+ * Square-root payout tied to the cents spent at prestige time. The
+ * earlier linear curve (floor(c / 25k) + 1) compounded too fast — a
+ * 1M-cent prestige paid out 41 tokens, which made grinding to the
+ * 100k threshold feel like a loser's move. Sqrt flattens the high
+ * end while keeping the threshold floor at 5 tokens.
  *
- *   tokens = floor(currentCents / 25_000) + 1
+ *   tokens = floor(sqrt(currentCents / 4_000))
  *
  *   100k →  5 tokens
- *   125k →  6 tokens
- *   150k →  7 tokens
- *   200k →  9 tokens
- *   250k → 11 tokens
- *   500k → 21 tokens
- *   1M   → 41 tokens
+ *   200k →  7 tokens
+ *   300k →  8 tokens
+ *   500k → 11 tokens
+ *   1M   → 15 tokens
+ *   10M  → 50 tokens
  */
-export const PRESTIGE_TOKEN_DIVISOR = 25_000;
-/** Floor token grant at the threshold (added on top of the divisor). */
-export const PRESTIGE_TOKEN_BASE = 1;
+export const PRESTIGE_TOKEN_DIVISOR = 4_000;
 
 /** @deprecated kept for legacy props on the wire — see PRESTIGE_THRESHOLD_CENTS. */
 export const PRESTIGE_THRESHOLD_PC = PRESTIGE_THRESHOLD_CENTS;
@@ -594,15 +592,10 @@ export type PermUpgradeDef = {
 };
 
 export const PERM_UPGRADES: readonly PermUpgradeDef[] = [
-  // Triangular scaling — each new level adds (lvl × 1,000) PC on
-  // top of the previous tier, so the seed grows faster the deeper
-  // you go. Total at lvl N = 1000 × N × (N+1) / 2.
-  //   L1: 1k    L2: 3k    L3: 6k    L4: 10k   L5: 15k
-  //   L6: 21k   L7: 28k   L8: 36k   L9: 45k   L10: 55k
-  // Lvl 10 maxed seeds 55k cents into a fresh prestige cycle —
-  // about half the new 100k threshold, so it kickstarts the next
-  // run without trivialising it.
-  { id: "bigger_pockets",   label: "Bigger Pockets",   description: "Seed each Prestige with +1,000 PC × level (triangular). Lvl 1 → +1k, lvl 5 → +15k, maxed → +55k.",   baseCost: 1, costMultiplier: 1.6, maxLevel: 10 },
+  // Quadratic scaling — seeds 1000 × level² PC into the next
+  // prestige cycle. Card shows the actual current seed instead of
+  // restating the formula in copy. Lvl 1=1k, lvl 5=25k, lvl 10=100k.
+  { id: "bigger_pockets",   label: "Bigger Pockets",   description: "Seed each Prestige with starting PC.",   baseCost: 1, costMultiplier: 1.6, maxLevel: 10 },
   { id: "practice_eyes",    label: "Practice Eyes",    description: "Pennies are worth +5 PC permanently — applies before Penny Multiplier scaling.", baseCost: 3, costMultiplier: 1, maxLevel: 1 },
   { id: "vending_lifer",    label: "Vending Lifer",    description: "Start each Roll-Up with Check Vending Machines already at level 1 (nickels unlocked).", baseCost: 5, costMultiplier: 1, maxLevel: 1 },
   { id: "old_hand",         label: "Old Hand",         description: "Helpers keep generating PC for an extra hour while you're away per level.",        baseCost: 2, costMultiplier: 1.6, maxLevel: 8 },
