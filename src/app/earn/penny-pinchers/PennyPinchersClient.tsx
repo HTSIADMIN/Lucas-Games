@@ -1463,6 +1463,12 @@ export function PennyPinchersClient() {
             overflow: "hidden",
             border: "3px solid var(--ink-900)",
             cursor: "crosshair",
+            // Rapid-fire clicking would otherwise drag-select coin labels
+            // and the +PC pops; disabling text selection inside the arena
+            // (and the iOS long-press callout) keeps the click stream clean.
+            userSelect: "none",
+            WebkitUserSelect: "none",
+            WebkitTouchCallout: "none",
           }}
         >
           {/* Event-atmosphere layer — sits below coins via z-index 0
