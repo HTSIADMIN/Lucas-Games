@@ -40,6 +40,7 @@ export type UpgradeId =
   | "sharper_eyes"
   | "two_finger_pickup"
   | "penny_multiplier"
+  | "coin_polish"
   | "lucky_crack"
   | "vending_machines"
   | "parking_lot"
@@ -87,6 +88,10 @@ export const UPGRADES: readonly UpgradeDef[] = [
   // Same upgrade_id retained so existing per-user rows carry over
   // their level on deploy.
   { id: "penny_multiplier",  label: "Coin Value",          description: "+10% PC on every coin per level — keeps the denominations in proportion.", category: "value", baseCost: 50, costMultiplier: 1.45, maxLevel: 20 },
+  // Flat-bonus counterpart to Coin Value. Capped at 5 and exempt from
+  // Higher Ceilings — a hard ceiling so a tiny denomination (penny)
+  // can't be turned into a power-fountain by stacking +1's.
+  { id: "coin_polish",       label: "Coin Polish",         description: "+1 PC on every coin per level. Hard cap at 5.", category: "value", baseCost: 1_000, costMultiplier: 2.2, maxLevel: 5, ceilingExempt: true },
   { id: "lucky_crack",       label: "Lucky Sidewalk Crack", description: "+1% chance per level for a coin to spawn shiny (5×).", category: "value",  baseCost: 500,   costMultiplier: 1.7,  maxLevel: 10 },
 
   // Spawn — unlock new coin tiers, then pump their weight

@@ -119,7 +119,7 @@ export function PennyLeaderboard({ rows }: { rows: Row[] | null }) {
                               animation: "pp-rollup-tag-shine 3s linear infinite",
                             }}
                           >
-                            ★ {r.prestigeCount} Prestige
+                            ★ Prestige {r.prestigeCount}
                           </span>
                         );
                       })()}

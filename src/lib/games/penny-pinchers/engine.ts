@@ -51,12 +51,17 @@ export function coinPCValue(
   // upgrade_id is unchanged so existing rows persist.
   const coinValueLvl = levels.penny_multiplier ?? 0;
   const valueMul = 1 + 0.1 * coinValueLvl;
+  // Coin Polish — flat +1 PC per level, capped at 5. Stacks on top
+  // of the multiplier so it punches above its weight on pennies
+  // without inflating dollar payouts past their pecking order.
+  const polishLvl = levels.coin_polish ?? 0;
+  const polishBonus = polishLvl;
   // Practice Eyes (perm) is penny-only — kept as a flat +5 because
   // that's the only denom 5 PC actually moves the needle on.
   const permBonus = coinType === "penny" ? (perm.practice_eyes ?? 0) * 5 : 0;
   // Fortune's Eye (relic) — flat bonus stacked across every coin.
   const relicBoost = relicE.coinBaseBonus;
-  return Math.round(base * valueMul) + permBonus + relicBoost;
+  return Math.round(base * valueMul) + polishBonus + permBonus + relicBoost;
 }
 
 /**
@@ -669,6 +674,8 @@ export function upgradeCurrentValueLabel(id: UpgradeId, level: number): string |
       return `+${level * 5}% nearby-grab on click`;
     case "penny_multiplier":
       return `+${level * 10}% PC every coin`;
+    case "coin_polish":
+      return `+${level} PC every coin`;
     case "lucky_crack":
       return `+${level}% shiny chance`;
     case "vending_machines":
