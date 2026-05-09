@@ -14,14 +14,14 @@ import {
 import {
   ACHIEVEMENTS_BY_ID,
   BANK_PC_PER_WALLET_CENT,
-  PRESTIGE_THRESHOLD_PC,
+  PRESTIGE_THRESHOLD_CENTS,
   type AchievementId,
   type HelperId,
   type PermUpgradeId,
   type UpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
 import {
-  bankTokensFromPrestige,
+  bankTokensFromCurrentCents,
   detectNewUnlocks,
   helperRatePcPerSec,
   offlineCapHours,
@@ -242,8 +242,11 @@ export async function GET() {
     prestige: {
       count: state.prestige_count,
       bankTokens: state.bank_tokens,
-      thresholdPC: PRESTIGE_THRESHOLD_PC,
-      tokensIfRolled: bankTokensFromPrestige(state.lifetime_pc_earned),
+      // The wire-side `thresholdPC` field name is preserved for
+      // compatibility with the existing client; its value is now the
+      // cents threshold (the lifetime PC threshold is gone).
+      thresholdPC: PRESTIGE_THRESHOLD_CENTS,
+      tokensIfRolled: bankTokensFromCurrentCents(state.cents),
       lifetimeBanked: state.lifetime_banked_cents,
     },
     achievements: {

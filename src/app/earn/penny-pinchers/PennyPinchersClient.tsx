@@ -115,6 +115,7 @@ type StateResponse = {
     stormChanceBonus: number;
     ancientChanceBonus: number;
     coinBaseBonus: number;
+    returnFrugalityBonus: number;
   };
   walletBalance: number;
   leaderboard: LeaderboardRow[];
@@ -1135,8 +1136,12 @@ export function PennyPinchersClient() {
   const tweenedRate = tweenedRateLive;
   const tweenedClicks = tweenedClicksLive;
   const now = Date.now();
-  const canRoll = server.lifetimePCEarned >= server.prestige.thresholdPC && server.prestige.tokensIfRolled > 0;
-  const lifetimeProgress = Math.min(1, server.lifetimePCEarned / server.prestige.thresholdPC);
+  // Prestige is now gated on CURRENT cents (the cents you cash in
+  // when you prestige), not lifetime PC. Tokens scale with how
+  // much you've saved at the moment of prestige — so the bar
+  // tracks current cents vs the threshold.
+  const canRoll = localCents >= server.prestige.thresholdPC && server.prestige.tokensIfRolled > 0;
+  const lifetimeProgress = Math.min(1, localCents / server.prestige.thresholdPC);
   const projectedPayout = Math.floor(localCents / server.bank.pcPerWalletCent);
 
   return (
@@ -1466,7 +1471,9 @@ export function PennyPinchersClient() {
               onClick={() => setPrestigeOpen(true)}
               style={{ width: "100%" }}
             >
-              {canRoll ? "Prestige →" : `${(server.lifetimePCEarned / 1000).toFixed(0)}k / ${(PRESTIGE_THRESHOLD_PC / 1000).toFixed(0)}k PC`}
+              {canRoll
+                ? "Prestige →"
+                : `${(localCents / 1000).toFixed(0)}k / ${(PRESTIGE_THRESHOLD_PC / 1000).toFixed(0)}k cents`}
             </button>
           </div>
           <div
@@ -2732,10 +2739,12 @@ export function PennyPinchersClient() {
               Prestige?
             </div>
             <p style={{ marginBottom: "var(--sp-3)", color: "var(--ink-900)" }}>
-              Cash in your career and start fresh. You&rsquo;ll lose:
+              Cash in your pocket and start fresh. You&rsquo;ll trade:
             </p>
             <ul style={{ margin: "0 0 var(--sp-3) 16px", color: "var(--ink-900)" }}>
-              <li>{Math.floor(localCents).toLocaleString()} unbanked Pinch Cents</li>
+              <li>
+                <b>{Math.floor(localCents).toLocaleString()} Pinch Cents</b> in your pocket (sacrificed for the tokens)
+              </li>
               <li>Every run upgrade you&rsquo;ve bought this cycle</li>
               <li>Every helper you&rsquo;ve hired this cycle</li>
             </ul>
@@ -2747,6 +2756,9 @@ export function PennyPinchersClient() {
               <li>Every Permanent upgrade in the Tokens shop</li>
               <li>
                 <b>+{server.prestige.tokensIfRolled.toLocaleString()} ★ Bank Tokens</b> to spend on Permanents
+              </li>
+              <li className="text-mute" style={{ fontSize: 13 }}>
+                Tip: each extra 25k cents you save before prestiging adds another token. Holding for 150k → 7 tokens, 250k → 11.
               </li>
             </ul>
             <div className="row" style={{ gap: 8, justifyContent: "center" }}>

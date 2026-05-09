@@ -4,7 +4,6 @@
 import {
   ACHIEVEMENTS,
   BANK_PC_PER_WALLET_CENT,
-  BANK_TOKEN_DIVISOR,
   CHESTS,
   COINS,
   COIN_ORDER,
@@ -13,7 +12,9 @@ import {
   MERGE_PROXIMITY_PX,
   OFFLINE_CAP_HOURS,
   PERM_UPGRADES_BY_ID,
-  PRESTIGE_THRESHOLD_PC,
+  PRESTIGE_THRESHOLD_CENTS,
+  PRESTIGE_TOKEN_BASE,
+  PRESTIGE_TOKEN_DIVISOR,
   RELICS,
   TRAITS,
   UPGRADES_BY_ID,
@@ -271,11 +272,16 @@ export function offlinePCAccrued(
  * The Higher Ceilings perm upgrade adds +10 to the max level of every
  * base upgrade per level. Single source of truth for "what's the
  * effective ceiling on this run upgrade for this player."
+ *
+ * Upgrades flagged `ceilingExempt` (Pile It Up) are binary unlocks —
+ * Higher Ceilings doesn't apply, so the player can't waste cents
+ * "buying" the merging upgrade ten extra times.
  */
 export function effectiveUpgradeMaxLevel(
-  upgrade: { maxLevel: number },
+  upgrade: { maxLevel: number; ceilingExempt?: boolean },
   perm: PermLevels = {},
 ): number {
+  if (upgrade.ceilingExempt) return upgrade.maxLevel;
   return upgrade.maxLevel + (perm.higher_ceilings ?? 0) * 10;
 }
 
@@ -467,21 +473,25 @@ export function rollRelicFromChest(
 
 /**
  * Aggregated effect bundle from owned relics. Effects are
- * additive within a relic (level 3 of Lucky Charm = +3% shiny)
- * and cumulative across relics. Consumers apply each field where
- * relevant — click endpoint reads clickPCMul, spawn loop reads
+ * additive within a relic (level 3 of Lucky Charm = +9% shiny at 3×
+ * tuning) and cumulative across relics. Consumers apply each field
+ * where relevant — click endpoint reads clickPCMul, spawn loop reads
  * spawnSpeedMul, etc.
+ *
+ * All coefficients were tripled in the Phase 4 rebalance — Frugality
+ * is hard to come by, so each chest needs to land an effect the
+ * player feels.
  */
 export type RelicEffects = {
   /** Additive bonus to spawn shiny chance. */
   shinyChanceBonus: number;
-  /** Multiplier on helper PC/sec (1 + Σ 0.10 per level of helping_hand). */
+  /** Multiplier on helper PC/sec (1 + Σ 0.30 per level of helping_hand). */
   helperRateMul: number;
   /** Multiplier on every click PC. */
   clickPCMul: number;
   /** Multiplier on spawn interval (<1 = faster). */
   spawnSpeedMul: number;
-  /** Bonus PC seeded at the start of each Roll-Up. */
+  /** Bonus PC seeded at the start of each Prestige cycle. */
   prestigeStartBonusPC: number;
   /** Multiplier on Bank-It wallet ¢ payout. */
   bankPayoutMul: number;
@@ -491,6 +501,8 @@ export type RelicEffects = {
   ancientChanceBonus: number;
   /** Flat PC added to every coin's base value (stacks with Penny Multiplier). */
   coinBaseBonus: number;
+  /** Extra Frugality awarded on a Lost Wallet "Return It" (stacks on the base +1). */
+  returnFrugalityBonus: number;
 };
 
 const ZERO_EFFECTS: RelicEffects = {
@@ -503,20 +515,22 @@ const ZERO_EFFECTS: RelicEffects = {
   stormChanceBonus: 0,
   ancientChanceBonus: 0,
   coinBaseBonus: 0,
+  returnFrugalityBonus: 0,
 };
 
 export function relicEffects(relics: RelicLevels): RelicEffects {
   const e: RelicEffects = { ...ZERO_EFFECTS };
   const lvl = (id: RelicId) => relics[id] ?? 0;
-  e.shinyChanceBonus    += 0.01  * lvl("lucky_charm");
-  e.helperRateMul       += 0.10  * lvl("helping_hand");
-  e.clickPCMul          += 0.10  * lvl("midas_thumb");
-  e.spawnSpeedMul       *= Math.pow(0.95, lvl("fast_fingers"));
-  e.prestigeStartBonusPC += 1000 * lvl("thick_pockets");
-  e.bankPayoutMul       += 0.05  * lvl("merchant_seal");
-  e.stormChanceBonus    += 0.01  * lvl("rainmaker");
-  e.ancientChanceBonus  += 0.0005 * lvl("ancient_idol");
-  e.coinBaseBonus       += 5     * lvl("fortunes_eye");
+  e.shinyChanceBonus    += 0.03   * lvl("lucky_charm");
+  e.helperRateMul       += 0.30   * lvl("helping_hand");
+  e.clickPCMul          += 0.30   * lvl("midas_thumb");
+  e.spawnSpeedMul       *= Math.pow(0.85, lvl("fast_fingers"));
+  e.prestigeStartBonusPC += 3000  * lvl("thick_pockets");
+  e.bankPayoutMul       += 0.15   * lvl("merchant_seal");
+  e.stormChanceBonus    += 0.03   * lvl("rainmaker");
+  e.ancientChanceBonus  += 0.0015 * lvl("ancient_idol");
+  e.coinBaseBonus       += 15     * lvl("fortunes_eye");
+  e.returnFrugalityBonus += 1     * lvl("saints_mark");
   return e;
 }
 
@@ -524,15 +538,34 @@ export function relicEffects(relics: RelicLevels): RelicEffects {
 // PRESTIGE
 // ============================================================
 
-/** Bank Tokens awarded for a Roll-It-Up at this lifetime PC. */
-export function bankTokensFromPrestige(lifetimePCEarned: number): number {
-  if (lifetimePCEarned < PRESTIGE_THRESHOLD_PC) return 0;
-  return Math.floor(Math.sqrt(lifetimePCEarned / BANK_TOKEN_DIVISOR));
+/**
+ * Bank Tokens awarded for prestiging with `currentCents` in pocket.
+ * The cents themselves are consumed (the prestige reset wipes them
+ * either way) — the more you've saved, the more tokens you get.
+ *
+ *   tokens = floor(currentCents / 25_000) + 1   when above threshold
+ *   tokens = 0                                  below threshold
+ *
+ *   100k → 5    150k → 7    250k → 11    1M → 41
+ */
+export function bankTokensFromCurrentCents(currentCents: number): number {
+  if (currentCents < PRESTIGE_THRESHOLD_CENTS) return 0;
+  return Math.floor(currentCents / PRESTIGE_TOKEN_DIVISOR) + PRESTIGE_TOKEN_BASE;
 }
 
 /** Whether the player has hit the threshold to prestige. */
-export function canPrestige(lifetimePCEarned: number): boolean {
-  return lifetimePCEarned >= PRESTIGE_THRESHOLD_PC;
+export function canPrestige(currentCents: number): boolean {
+  return currentCents >= PRESTIGE_THRESHOLD_CENTS;
+}
+
+/**
+ * Legacy adapter — the wire still exposes a `tokensIfRolled` field
+ * used by older clients. Returns the same number as
+ * `bankTokensFromCurrentCents` so the response stays consistent.
+ * @deprecated prefer `bankTokensFromCurrentCents`.
+ */
+export function bankTokensFromPrestige(currentCents: number): number {
+  return bankTokensFromCurrentCents(currentCents);
 }
 
 /** Bank Token cost to take a perm upgrade from `currentLevel` to `currentLevel + 1`. */
@@ -544,11 +577,16 @@ export function nextPermUpgradeCost(upgradeId: PermUpgradeId, currentLevel: numb
 }
 
 /**
- * Starting cents for a fresh Roll-Up cycle, given perm upgrades.
- * Bigger Pockets puts +1k PC in the player's pocket per level.
+ * Starting cents for a fresh Prestige cycle, given perm upgrades.
+ *
+ * Bigger Pockets is now triangular — at level N the seed is
+ * 1000 × N × (N+1) / 2 PC. So lvl 1 = 1k, lvl 5 = 15k, lvl 10 = 55k.
+ * Each rank you buy adds visibly more on top of the previous.
  */
 export function prestigeStartingCents(perm: PermLevels): number {
-  return (perm.bigger_pockets ?? 0) * 1_000;
+  const lvl = perm.bigger_pockets ?? 0;
+  if (lvl <= 0) return 0;
+  return 1000 * (lvl * (lvl + 1)) / 2;
 }
 
 // ============================================================

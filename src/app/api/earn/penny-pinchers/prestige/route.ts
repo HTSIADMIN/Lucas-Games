@@ -7,15 +7,18 @@ import {
   upsertPennyPinchersState,
 } from "@/lib/db";
 import { type PermUpgradeId } from "@/lib/games/penny-pinchers/catalog";
-import { bankTokensFromPrestige, prestigeStartingCents, relicEffects } from "@/lib/games/penny-pinchers/engine";
+import { bankTokensFromCurrentCents, prestigeStartingCents, relicEffects } from "@/lib/games/penny-pinchers/engine";
 
 export const runtime = "nodejs";
 
 // POST /api/earn/penny-pinchers/prestige
 //
 // Wipes the player's per-run state (cents, run upgrades, helpers)
-// and awards Bank Tokens proportional to lifetime PC earned. Perm
-// upgrades survive — they're what the new tokens get spent on.
+// and awards Bank Tokens proportional to the current cents the
+// player chooses to sacrifice. The cents themselves get reset to
+// the Bigger Pockets seed (which scales triangularly with that
+// perm upgrade) so the trade is "spend pocket cents → tokens".
+// Perm upgrades survive — they're what the new tokens get spent on.
 export async function POST() {
   const s = await readSession();
   if (!s) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -23,7 +26,7 @@ export async function POST() {
   const state = await getPennyPinchersState(s.user.id);
   if (!state) return NextResponse.json({ error: "no_state" }, { status: 400 });
 
-  const tokens = bankTokensFromPrestige(state.lifetime_pc_earned);
+  const tokens = bankTokensFromCurrentCents(state.cents);
   if (tokens <= 0) {
     return NextResponse.json({ error: "below_threshold" }, { status: 400 });
   }
@@ -41,7 +44,9 @@ export async function POST() {
     ...state,
     cents: prestigeStartingCents(permLevels) +
       relicEffects(state.relics as Parameters<typeof relicEffects>[0]).prestigeStartBonusPC,
-    lifetime_pc_earned: 0,           // resets so the next prestige is earned fresh
+    // Reset lifetime tally so the leaderboard's lifetime number
+    // tracks the post-prestige cycle.
+    lifetime_pc_earned: 0,
     lifetime_clicks: state.lifetime_clicks, // career clicks survive — feels weird to lose them
     last_tick_at: now,
     prestige_count: state.prestige_count + 1,

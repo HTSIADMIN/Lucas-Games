@@ -65,6 +65,12 @@ export type UpgradeDef = {
    * coin's spawn weight.
    */
   unlocksCoin?: CoinId;
+  /**
+   * When true, the Higher Ceilings perm upgrade does NOT extend this
+   * upgrade's max level. Used for binary unlocks (Pile It Up — owning
+   * it twice does nothing).
+   */
+  ceilingExempt?: boolean;
 };
 
 export const UPGRADES: readonly UpgradeDef[] = [
@@ -97,7 +103,7 @@ export const UPGRADES: readonly UpgradeDef[] = [
   // coins that sit close to each other auto-fuse into a single
   // coin whose value is the sum of both — chains keep growing
   // until something despawns or you click them.
-  { id: "pile_it_up",        label: "Pile It Up",             description: "Coins near each other auto-merge into a single bigger coin (sums their value, resets the timer). Chains can grow huge.", category: "automation", baseCost: 500, costMultiplier: 1.0, maxLevel: 1 },
+  { id: "pile_it_up",        label: "Pile It Up",             description: "Coins near each other auto-merge into a single bigger coin (sums their value, resets the timer). Chains can grow huge.", category: "automation", baseCost: 500, costMultiplier: 1.0, maxLevel: 1, ceilingExempt: true },
 
   // Extra Hands — chance for a bonus coin alongside each spawn.
   { id: "extra_hands",       label: "Extra Hands",            description: "+5% chance per level that each spawn drops an extra coin alongside it.", category: "spawn", baseCost: 350, costMultiplier: 1.6, maxLevel: 10 },
@@ -441,7 +447,8 @@ export type RelicId =
   | "merchant_seal"
   | "rainmaker"
   | "ancient_idol"
-  | "fortunes_eye";
+  | "fortunes_eye"
+  | "saints_mark";
 
 export type RelicDef = {
   id: RelicId;
@@ -451,16 +458,25 @@ export type RelicDef = {
   maxLevel: number;
 };
 
+// Relic effects rebalanced to 3× their original strength —
+// Frugality is hard to earn (mostly Lost Wallet returns + a couple
+// of milestone trophies) so each chest-roll outcome needs to feel
+// like it earned the cost.
 export const RELICS: readonly RelicDef[] = [
-  { id: "lucky_charm",   label: "Lucky Charm",   description: "+1% shiny chance per level.",                                      rarity: "common",    maxLevel: 5 },
-  { id: "helping_hand",  label: "Helping Hand",  description: "+10% helper PC/sec per level.",                                    rarity: "common",    maxLevel: 5 },
-  { id: "midas_thumb",   label: "Midas Thumb",   description: "+10% PC on every click per level.",                                rarity: "uncommon",  maxLevel: 5 },
-  { id: "fast_fingers",  label: "Fast Fingers",  description: "Coins spawn 5% faster per level.",                                 rarity: "uncommon",  maxLevel: 5 },
-  { id: "thick_pockets", label: "Thick Pockets", description: "+1,000 PC starting after every Roll-Up per level.",                rarity: "rare",      maxLevel: 5 },
-  { id: "merchant_seal", label: "Merchant Seal", description: "+5% wallet ¢ on every Bank-It per level.",                         rarity: "rare",      maxLevel: 5 },
-  { id: "rainmaker",     label: "Rainmaker",     description: "+1% per level chance for a Coin Storm to start each poll.",        rarity: "epic",      maxLevel: 5 },
-  { id: "ancient_idol",  label: "Ancient Idol",  description: "+0.05% Ancient-coin spawn chance per level.",                      rarity: "epic",      maxLevel: 3 },
-  { id: "fortunes_eye",  label: "Fortune's Eye", description: "Every coin is worth +5 PC permanently per level (stacks with everything).", rarity: "legendary", maxLevel: 3 },
+  { id: "lucky_charm",   label: "Lucky Charm",   description: "+3% shiny chance per level.",                                      rarity: "common",    maxLevel: 5 },
+  { id: "helping_hand",  label: "Helping Hand",  description: "+30% helper PC/sec per level.",                                    rarity: "common",    maxLevel: 5 },
+  { id: "midas_thumb",   label: "Midas Thumb",   description: "+30% PC on every click per level.",                                rarity: "uncommon",  maxLevel: 5 },
+  { id: "fast_fingers",  label: "Fast Fingers",  description: "Coins spawn 15% faster per level.",                                rarity: "uncommon",  maxLevel: 5 },
+  { id: "thick_pockets", label: "Thick Pockets", description: "+3,000 PC starting after every Prestige per level.",               rarity: "rare",      maxLevel: 5 },
+  { id: "merchant_seal", label: "Merchant Seal", description: "+15% wallet ¢ on every Bank-It per level.",                        rarity: "rare",      maxLevel: 5 },
+  // New — directly addresses the Frugality grind. Each Lost Wallet
+  // 'Return It' grants +1 base Frugality; this stacks an additional
+  // +1 per level on top, so a maxed Saint's Mark turns each return
+  // into +6 Frugality.
+  { id: "saints_mark",   label: "Saint's Mark",  description: "Returning a Lost Wallet awards +1 extra Frugality per level (on top of the base +1).", rarity: "rare",  maxLevel: 5 },
+  { id: "rainmaker",     label: "Rainmaker",     description: "+3% per level chance for a Coin Storm to start each poll.",        rarity: "epic",      maxLevel: 5 },
+  { id: "ancient_idol",  label: "Ancient Idol",  description: "+0.15% Ancient-coin spawn chance per level.",                      rarity: "epic",      maxLevel: 3 },
+  { id: "fortunes_eye",  label: "Fortune's Eye", description: "Every coin is worth +15 PC permanently per level (stacks with everything).", rarity: "legendary", maxLevel: 3 },
 ];
 
 export const RELICS_BY_ID: Record<RelicId, RelicDef> = Object.fromEntries(
@@ -520,29 +536,44 @@ export const FRUGALITY_MIN = -50;
 export const FRUGALITY_MAX = 50;
 
 // ============================================================
-// PRESTIGE — Phase 3a
+// PRESTIGE — Phase 3a (reworked Phase 4)
 //
-// "Roll It Up" wipes session state (cents + helpers + run upgrades)
-// and awards Bank Tokens proportional to lifetime PC earned. Tokens
-// buy entries in PERM_UPGRADES below — those survive every reset.
+// "Prestige" wipes session state (cents + helpers + run upgrades)
+// and awards Bank Tokens proportional to the cents you cash in. The
+// trigger is now `current cents` (not lifetime PC) — you have to
+// grind a wallet's worth of coins into your pocket and decide
+// whether to bank them for wallet ¢ OR sacrifice them for tokens.
+// Tokens buy entries in PERM_UPGRADES below — those survive every
+// reset.
 // ============================================================
 
-/** Minimum lifetime PC earned before the prestige button unlocks. */
-export const PRESTIGE_THRESHOLD_PC = 1_000_000;
+/** Minimum current cents required before the prestige button unlocks. */
+export const PRESTIGE_THRESHOLD_CENTS = 100_000;
 
 /**
- * Soft-curve token formula. We want a casual player who reaches the
- * 1M threshold to get a couple of tokens (motivation), and a
- * dedicated player at 100M to get ~30 — enough to make perm upgrades
- * meaningful without trivialising them.
+ * Linear payout tied to the cents you spend at prestige time. Casual
+ * players who tap the threshold get a few tokens; players who save
+ * up significantly more get rewarded with each 25k-cent tier they
+ * cross.
  *
- *   tokens = floor(sqrt(lifetimePC / 10_000))
+ *   tokens = floor(currentCents / 25_000) + 1
  *
- *   1M     →  10 tokens
- *   10M    →  31 tokens
- *   100M   →  100 tokens
+ *   100k →  5 tokens
+ *   125k →  6 tokens
+ *   150k →  7 tokens
+ *   200k →  9 tokens
+ *   250k → 11 tokens
+ *   500k → 21 tokens
+ *   1M   → 41 tokens
  */
-export const BANK_TOKEN_DIVISOR = 10_000;
+export const PRESTIGE_TOKEN_DIVISOR = 25_000;
+/** Floor token grant at the threshold (added on top of the divisor). */
+export const PRESTIGE_TOKEN_BASE = 1;
+
+/** @deprecated kept for legacy props on the wire — see PRESTIGE_THRESHOLD_CENTS. */
+export const PRESTIGE_THRESHOLD_PC = PRESTIGE_THRESHOLD_CENTS;
+/** @deprecated kept for legacy clients — see PRESTIGE_TOKEN_DIVISOR. */
+export const BANK_TOKEN_DIVISOR = PRESTIGE_TOKEN_DIVISOR;
 
 export type PermUpgradeId =
   | "bigger_pockets"
@@ -563,7 +594,15 @@ export type PermUpgradeDef = {
 };
 
 export const PERM_UPGRADES: readonly PermUpgradeDef[] = [
-  { id: "bigger_pockets",   label: "Bigger Pockets",   description: "Start each Roll-Up with +1,000 PC already in your pocket per level.",   baseCost: 1, costMultiplier: 1.6, maxLevel: 10 },
+  // Triangular scaling — each new level adds (lvl × 1,000) PC on
+  // top of the previous tier, so the seed grows faster the deeper
+  // you go. Total at lvl N = 1000 × N × (N+1) / 2.
+  //   L1: 1k    L2: 3k    L3: 6k    L4: 10k   L5: 15k
+  //   L6: 21k   L7: 28k   L8: 36k   L9: 45k   L10: 55k
+  // Lvl 10 maxed seeds 55k cents into a fresh prestige cycle —
+  // about half the new 100k threshold, so it kickstarts the next
+  // run without trivialising it.
+  { id: "bigger_pockets",   label: "Bigger Pockets",   description: "Seed each Prestige with +1,000 PC × level (triangular). Lvl 1 → +1k, lvl 5 → +15k, maxed → +55k.",   baseCost: 1, costMultiplier: 1.6, maxLevel: 10 },
   { id: "practice_eyes",    label: "Practice Eyes",    description: "Pennies are worth +5 PC permanently — applies before Penny Multiplier scaling.", baseCost: 3, costMultiplier: 1, maxLevel: 1 },
   { id: "vending_lifer",    label: "Vending Lifer",    description: "Start each Roll-Up with Check Vending Machines already at level 1 (nickels unlocked).", baseCost: 5, costMultiplier: 1, maxLevel: 1 },
   { id: "old_hand",         label: "Old Hand",         description: "Helpers keep generating PC for an extra hour while you're away per level.",        baseCost: 2, costMultiplier: 1.6, maxLevel: 8 },

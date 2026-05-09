@@ -10,6 +10,7 @@ import {
   LOST_WALLET_KEEP_WEALTH_PCT,
   LOST_WALLET_RETURN_FRUGALITY,
 } from "@/lib/games/penny-pinchers/catalog";
+import { relicEffects } from "@/lib/games/penny-pinchers/engine";
 
 export const runtime = "nodejs";
 
@@ -36,7 +37,14 @@ export async function POST(req: Request) {
   const state = await getPennyPinchersState(s.user.id);
   if (!state) return NextResponse.json({ error: "no_state" }, { status: 400 });
 
-  const delta = choice === "return" ? LOST_WALLET_RETURN_FRUGALITY : LOST_WALLET_KEEP_FRUGALITY;
+  // Saint's Mark relic adds extra Frugality on returns — stacks on
+  // top of the base +1 from LOST_WALLET_RETURN_FRUGALITY.
+  const relicE = relicEffects(state.relics as Parameters<typeof relicEffects>[0]);
+  const returnBonus = choice === "return" ? relicE.returnFrugalityBonus : 0;
+  const delta =
+    choice === "return"
+      ? LOST_WALLET_RETURN_FRUGALITY + returnBonus
+      : LOST_WALLET_KEEP_FRUGALITY;
   // Keep-the-Change scales with current wealth — finding a fat
   // wallet on the late-game sidewalk should pay better than one
   // by a broke beginner. Floor + 15% of cents, capped 50k PC.
