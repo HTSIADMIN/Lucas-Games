@@ -1,22 +1,7 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
-import { COINS, type CoinId, type CoinTrait } from "@/lib/games/penny-pinchers/catalog";
-
-// Signature colour per trait — drives the dot-row markers and the
-// outer rainbow ring on multi-trait coins so the stacked combo
-// reads at a glance.
-const TRAIT_COLOR: Record<CoinTrait, string> = {
-  shiny:     "#f5c842",
-  ancient:   "#5fa17a",
-  cursed:    "#dc5050",
-  foreign:   "#5fa8d3",
-  bent:      "#a0a0a0",
-  sticky:    "#ff82c8",
-  lightning: "#ffe14d",
-  frosted:   "#9adcff",
-  lucky:     "#5cd277",
-};
+import { COINS, TRAIT_COLOR, type CoinId, type CoinTrait } from "@/lib/games/penny-pinchers/catalog";
 
 /**
  * Multi-color drop-shadow glow built from the stacked trait

@@ -228,6 +228,21 @@ export const TRAITS: Record<CoinTrait, TraitDef> = {
   lucky:     { id: "lucky",     maxMultiplier: 4,  baseChance: 0.005,  perLuckLevel: 0.002,  label: "Lucky"     },
 };
 
+/** Signature colour per trait — single source of truth used by the
+ *  CoinSprite multi-trait dot pill, the AlbumPanel page accent, and
+ *  any future UI that needs to brand a trait visually. */
+export const TRAIT_COLOR: Record<CoinTrait, string> = {
+  shiny:     "#f5c842",
+  ancient:   "#5fa17a",
+  cursed:    "#dc5050",
+  foreign:   "#5fa8d3",
+  bent:      "#a0a0a0",
+  sticky:    "#ff82c8",
+  lightning: "#ffe14d",
+  frosted:   "#9adcff",
+  lucky:     "#5cd277",
+};
+
 /** Bent's lucky-window duration after click. */
 export const BENT_LUCKY_MS = 5_000;
 /** Bent's flat shiny boost during the lucky window. */
