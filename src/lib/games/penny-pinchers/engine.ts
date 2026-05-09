@@ -125,37 +125,50 @@ export function prestigePCMultiplier(prestigeCount: number): number {
 // COIN ALBUM — Phase 2d
 // ============================================================
 
-export type AlbumPage = "shiny" | "sticky" | "foreign" | "bent" | "cursed" | "ancient";
+export type AlbumPage =
+  | "shiny" | "sticky" | "foreign" | "bent" | "cursed" | "ancient"
+  | "lightning" | "frosted" | "lucky";
 export type AlbumState = Partial<Record<AlbumPage, Partial<Record<CoinId, number>>>>;
+
+const ALL_DENOMS: readonly CoinId[] = ["penny", "nickel", "dime", "quarter", "half", "dollar"];
 
 /** Coin denominations that participate in each page. */
 export const ALBUM_PAGE_COINS: Record<AlbumPage, readonly CoinId[]> = {
-  shiny:   ["penny", "nickel", "dime", "quarter", "half", "dollar"],
-  sticky:  ["penny", "nickel"],
-  foreign: ["penny", "nickel", "dime", "quarter", "half", "dollar"],
-  bent:    ["penny", "nickel", "dime", "quarter", "half", "dollar"],
-  cursed:  ["penny", "nickel", "dime", "quarter", "half", "dollar"],
-  ancient: ["penny", "nickel", "dime", "quarter", "half", "dollar"],
+  shiny:     ALL_DENOMS,
+  sticky:    ["penny", "nickel"],
+  foreign:   ALL_DENOMS,
+  bent:      ALL_DENOMS,
+  cursed:    ALL_DENOMS,
+  ancient:   ALL_DENOMS,
+  lightning: ALL_DENOMS,
+  frosted:   ALL_DENOMS,
+  lucky:     ALL_DENOMS,
 };
 
 /** Per-slot bonus added to the relevant trait chance (or PC bonus for foreign). */
 const ALBUM_SLOT_BONUS: Record<AlbumPage, number> = {
-  shiny:   0.005,
-  sticky:  0.01,
-  foreign: 0.005,   // PC bonus, not trait chance
-  bent:    0.005,   // +0.5% bent chance per slot
-  cursed:  0.003,   // +0.3% cursed chance per slot
-  ancient: 0.0005,  // +0.05% ancient chance per slot
+  shiny:     0.005,
+  sticky:    0.01,
+  foreign:   0.005,   // PC bonus, not trait chance
+  bent:      0.005,   // +0.5% bent chance per slot
+  cursed:    0.003,   // +0.3% cursed chance per slot
+  ancient:   0.0005,  // +0.05% ancient chance per slot
+  lightning: 0.003,
+  frosted:   0.005,
+  lucky:     0.005,
 };
 
 /** Bonus added when a page is fully complete (every coin collected at least once). */
 const ALBUM_PAGE_COMPLETE_BONUS: Record<AlbumPage, number> = {
-  shiny:   0.05,
-  sticky:  0.03,
-  foreign: 0.05,
-  bent:    0.05,
-  cursed:  0.03,
-  ancient: 0.005,
+  shiny:     0.05,
+  sticky:    0.03,
+  foreign:   0.05,
+  bent:      0.05,
+  cursed:    0.03,
+  ancient:   0.005,
+  lightning: 0.03,
+  frosted:   0.05,
+  lucky:     0.05,
 };
 
 /** Number of distinct coin slots filled on a page (0..page length). */
@@ -393,6 +406,18 @@ export function rollTraits(
   if (rand() <
     TRAITS.bent.baseChance + TRAITS.bent.perLuckLevel * luck +
     albumTraitBonus(album, "bent")) out.push("bent");
+
+  if (rand() <
+    TRAITS.lightning.baseChance + TRAITS.lightning.perLuckLevel * luck +
+    albumTraitBonus(album, "lightning")) out.push("lightning");
+
+  if (rand() <
+    TRAITS.frosted.baseChance + TRAITS.frosted.perLuckLevel * luck +
+    albumTraitBonus(album, "frosted")) out.push("frosted");
+
+  if (rand() <
+    TRAITS.lucky.baseChance + TRAITS.lucky.perLuckLevel * luck +
+    albumTraitBonus(album, "lucky")) out.push("lucky");
 
   if (coinType === "penny" || coinType === "nickel") {
     if (rand() <

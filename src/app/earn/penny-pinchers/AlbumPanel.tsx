@@ -11,21 +11,27 @@ import {
 } from "@/lib/games/penny-pinchers/engine";
 
 const PAGE_LABEL: Record<AlbumPage, string> = {
-  shiny:   "Shiny",
-  sticky:  "Sticky",
-  foreign: "Foreign",
-  bent:    "Bent",
-  cursed:  "Cursed",
-  ancient: "Ancient",
+  shiny:     "Shiny",
+  sticky:    "Sticky",
+  foreign:   "Foreign",
+  bent:      "Bent",
+  cursed:    "Cursed",
+  ancient:   "Ancient",
+  lightning: "Lightning",
+  frosted:   "Frosted",
+  lucky:     "Lucky",
 };
 
 const PAGE_BLURB: Record<AlbumPage, string> = {
-  shiny:   "Each filled slot adds +0.5% shiny chance. Complete the page for an extra +5%.",
-  sticky:  "Each filled slot adds +1% sticky chance. Complete the page for an extra +3%.",
-  foreign: "Each filled slot adds +0.5% PC on every click. Complete the page for an extra +5%.",
-  bent:    "Each filled slot adds +0.5% bent-coin chance. Complete the page for an extra +5%.",
-  cursed:  "Each filled slot adds +0.3% cursed-coin chance. Complete the page for an extra +3%.",
-  ancient: "Each filled slot adds +0.05% ancient-coin chance. Complete the page for an extra +0.5%.",
+  shiny:     "Each filled slot adds +0.5% shiny chance. Complete the page for an extra +5%.",
+  sticky:    "Each filled slot adds +1% sticky chance. Complete the page for an extra +3%.",
+  foreign:   "Each filled slot adds +0.5% PC on every click. Complete the page for an extra +5%.",
+  bent:      "Each filled slot adds +0.5% bent-coin chance. Complete the page for an extra +5%.",
+  cursed:    "Each filled slot adds +0.3% cursed-coin chance. Complete the page for an extra +3%.",
+  ancient:   "Each filled slot adds +0.05% ancient-coin chance. Complete the page for an extra +0.5%.",
+  lightning: "Each filled slot adds +0.3% lightning chance. Complete the page for an extra +3%.",
+  frosted:   "Each filled slot adds +0.5% frosted chance. Complete the page for an extra +5%.",
+  lucky:     "Each filled slot adds +0.5% lucky chance. Complete the page for an extra +5%.",
 };
 
 export function AlbumPanel({ album }: { album: AlbumState }) {
@@ -90,12 +96,15 @@ function Slot({ page, coin, count }: { page: AlbumPage; coin: CoinId; count: num
   const got = count > 0;
   const def = COINS[coin];
   const ringColor =
-    page === "shiny"   ? "#f5c842" :
-    page === "sticky"  ? "#78dcff" :
-    page === "foreign" ? "#a8d4ff" :
-    page === "bent"    ? "#a0a0a0" :
-    page === "cursed"  ? "#dc5050" :
-                         "#78dcb4"; // ancient
+    page === "shiny"     ? "#f5c842" :
+    page === "sticky"    ? "#ff82c8" : // bubblegum pink
+    page === "foreign"   ? "#a8d4ff" :
+    page === "bent"      ? "#a0a0a0" :
+    page === "cursed"    ? "#dc5050" :
+    page === "lightning" ? "#ffe14d" :
+    page === "frosted"   ? "#9adcff" :
+    page === "lucky"     ? "#5cd277" :
+                           "#78dcb4"; // ancient
   return (
     <div
       title={`${def.label} · ${count}`}

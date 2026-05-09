@@ -175,7 +175,16 @@ export const BANK_HOUSE_CUT = 0; // 0 = bank everything; raise later if we want 
 // dump unlimited PC.
 // ============================================================
 
-export type CoinTrait = "shiny" | "sticky" | "bent" | "foreign" | "ancient" | "cursed";
+export type CoinTrait =
+  | "shiny"
+  | "sticky"
+  | "bent"
+  | "foreign"
+  | "ancient"
+  | "cursed"
+  | "lightning"
+  | "frosted"
+  | "lucky";
 
 export type TraitDef = {
   id: CoinTrait;
@@ -202,7 +211,16 @@ export const TRAITS: Record<CoinTrait, TraitDef> = {
   // Ancient: extremely rare, 50× payout, no other effect.
   ancient: { id: "ancient", maxMultiplier: 50, baseChance: 0.0005, perLuckLevel: 0.0003, label: "Ancient" },
   // Cursed: 3× value but pauses spawns for 5s after collecting.
-  cursed:  { id: "cursed",  maxMultiplier: 3,  baseChance: 0.004, perLuckLevel: 0.001, label: "Cursed"  },
+  cursed:    { id: "cursed",    maxMultiplier: 3,  baseChance: 0.004,  perLuckLevel: 0.001,  label: "Cursed"    },
+  // Lightning: 8× pay AND a guaranteed chain-grab to one nearby
+  // coin within LIGHTNING_RADIUS — like a guaranteed Two-Finger.
+  lightning: { id: "lightning", maxMultiplier: 8,  baseChance: 0.003,  perLuckLevel: 0.001,  label: "Lightning" },
+  // Frosted: 2× pay; coin sits on screen FROSTED_LIFETIME_BONUS_MS
+  // longer so you have more time to merge or click it.
+  frosted:   { id: "frosted",   maxMultiplier: 2,  baseChance: 0.008,  perLuckLevel: 0.003,  label: "Frosted"   },
+  // Lucky: 4× pay; on click, opens an 8s window with +20% shiny
+  // chance (stronger sibling of Bent's lucky window).
+  lucky:     { id: "lucky",     maxMultiplier: 4,  baseChance: 0.005,  perLuckLevel: 0.002,  label: "Lucky"     },
 };
 
 /** Bent's lucky-window duration after click. */
@@ -211,6 +229,14 @@ export const BENT_LUCKY_MS = 5_000;
 export const BENT_LUCKY_SHINY_BOOST = 0.10;
 /** Cursed's spawn-pause duration after click. */
 export const CURSED_PAUSE_MS = 5_000;
+/** Lucky's stronger lucky-window — longer + bigger shiny boost. */
+export const LUCKY_DURATION_MS = 8_000;
+export const LUCKY_SHINY_BOOST = 0.20;
+/** Lightning's chain-grab radius (px) — wider than Two-Finger. */
+export const LIGHTNING_RADIUS = 220;
+/** Frosted coins last this much longer on screen than the default
+ *  COIN_LIFETIME_MS (declared in the client). */
+export const FROSTED_LIFETIME_BONUS_MS = 3_000;
 
 /** Number of nearby coins a sticky-click also picks up. */
 export const STICKY_PICKUP_COUNT = 2;

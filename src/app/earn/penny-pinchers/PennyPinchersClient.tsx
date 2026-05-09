@@ -19,6 +19,10 @@ import {
   AUTO_PICKER_PER_SEC,
   BENT_LUCKY_MS,
   BENT_LUCKY_SHINY_BOOST,
+  FROSTED_LIFETIME_BONUS_MS,
+  LIGHTNING_RADIUS,
+  LUCKY_DURATION_MS,
+  LUCKY_SHINY_BOOST,
   BLESSINGS,
   COUCH_CHANCE_PER_POLL,
   COUCH_CUSHIONS,
@@ -283,6 +287,12 @@ export function PennyPinchersClient() {
   const [frenzyEndsAt, setFrenzyEndsAt] = useState<number | null>(null);
   /** Bent's lucky-window timer — boosts shiny chance for BENT_LUCKY_MS. */
   const [bentLuckyUntil, setBentLuckyUntil] = useState<number | null>(null);
+  /** Lucky's bigger lucky-window — bigger boost, longer window than Bent. */
+  const [luckyBoostUntil, setLuckyBoostUntil] = useState<number | null>(null);
+  /** When true, the Auto-Picker upgrade's tick loop is suspended.
+   *  Lets the player stop the auto-clicks during a Pile-It-Up run
+   *  so big merges aren't poached by a stray auto-grab. */
+  const [autoPickerPaused, setAutoPickerPaused] = useState(false);
   /** Cursed's spawn-pause timer — pauses spawns for CURSED_PAUSE_MS. */
   const [cursedPauseUntil, setCursedPauseUntil] = useState<number | null>(null);
   const popSeqRef = useRef(0);
@@ -573,6 +583,7 @@ export function PennyPinchersClient() {
   const hasGreedy = activeBlessings.some((b) => b.id === "greedy_spawns");
   const frenzyActive = frenzyEndsAt != null && frenzyEndsAt > Date.now();
   const bentLucky = bentLuckyUntil != null && bentLuckyUntil > Date.now();
+  const luckyBoost = luckyBoostUntil != null && luckyBoostUntil > Date.now();
   const cursedPause = cursedPauseUntil != null && cursedPauseUntil > Date.now();
   const eventInterval = eventDef ? baseIntervalMs * eventDef.spawnMultiplier : baseIntervalMs;
   const intervalMs = Math.max(
@@ -590,7 +601,8 @@ export function PennyPinchersClient() {
   const bonusShiny =
     (eventDef?.bonusShinyChance ?? 0) +
     (hasLucky ? 0.1 : 0) +
-    (bentLucky ? BENT_LUCKY_SHINY_BOOST : 0);
+    (bentLucky ? BENT_LUCKY_SHINY_BOOST : 0) +
+    (luckyBoost ? LUCKY_SHINY_BOOST : 0);
   useEffect(() => {
     if (!server) return;
     const t = window.setInterval(() => {
@@ -653,7 +665,7 @@ export function PennyPinchersClient() {
   clickCoinRef.current = clickCoin;
   const autoPickerLevel = upgrades.auto_picker ?? 0;
   useEffect(() => {
-    if (!server || autoPickerLevel <= 0) return;
+    if (!server || autoPickerLevel <= 0 || autoPickerPaused) return;
     const intervalMs = Math.max(150, Math.floor(1000 / (AUTO_PICKER_PER_SEC * autoPickerLevel)));
     const t = window.setInterval(() => {
       let target: SpawnedCoin | null = null;
@@ -672,7 +684,7 @@ export function PennyPinchersClient() {
       }
     }, intervalMs);
     return () => window.clearInterval(t);
-  }, [server, autoPickerLevel, spawnGrab]);
+  }, [server, autoPickerLevel, autoPickerPaused, spawnGrab]);
 
   // Merge proximity loop — only runs when "pile_it_up" is owned.
   // Any two coins within MERGE_PROXIMITY_PX fuse into a single
@@ -814,6 +826,10 @@ export function PennyPinchersClient() {
     // lucky window and Cursed's spawn pause still fire here.
     if (coin.traits.includes("bent")) setBentLuckyUntil(Date.now() + BENT_LUCKY_MS);
     if (coin.traits.includes("cursed")) setCursedPauseUntil(Date.now() + CURSED_PAUSE_MS);
+    // Lucky's lucky-window — bigger sibling of Bent's. The
+    // shiny-chance boost stacks additively on top of any other
+    // active boost via the bonusShiny computation above.
+    if (coin.traits.includes("lucky")) setLuckyBoostUntil(Date.now() + LUCKY_DURATION_MS);
 
     // Multi-trait: traitMultiplier folds them all together (shiny ×
     // cursed ×bent → 5 × 3 × 0.5 = ×7.5). Mirrors the server math.
@@ -872,6 +888,25 @@ export function PennyPinchersClient() {
             collateral.push(extra.c);
             twoFingerExtra = extra.c;
           }
+        }
+      }
+
+      // Lightning — guaranteed chain-grab to the nearest coin
+      // within LIGHTNING_RADIUS. Same shape as the Two-Finger arm
+      // but no probability roll, bigger reach, and visualised with
+      // the existing pinch ring on both ends.
+      if (coin.traits.includes("lightning")) {
+        const taken = new Set(collateral.map((c) => c.id));
+        const arc = others
+          .filter((c) => !taken.has(c.id))
+          .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
+          .filter((e) => e.d2 <= LIGHTNING_RADIUS * LIGHTNING_RADIUS)
+          .sort((a, b) => a.d2 - b.d2)[0];
+        if (arc) {
+          collateral.push(arc.c);
+          // Reuse the twoFingerExtra hook for the visual ring; it's
+          // the same "chain pickup" feel.
+          if (!twoFingerExtra) twoFingerExtra = arc.c;
         }
       }
 
@@ -1714,7 +1749,7 @@ export function PennyPinchersClient() {
               x={c.x}
               y={c.y}
               spawnedAt={c.spawnedAt}
-              lifetimeMs={COIN_LIFETIME_MS}
+              lifetimeMs={COIN_LIFETIME_MS + (c.traits.includes("frosted") ? FROSTED_LIFETIME_BONUS_MS : 0)}
               mergingTo={c.mergingTo}
               firstTapAt={c.firstTapAt}
               onClick={() => clickCoin(c)}
@@ -2175,6 +2210,24 @@ export function PennyPinchersClient() {
             </div>
           );
         })}
+        {/* Auto-Picker pause toggle — pinned to the far-right via
+            margin-left:auto so it sits opposite the "Unlocked
+            coins" label. Hidden when Auto-Picker hasn't been
+            bought yet (no point showing a control with nothing to
+            pause). Useful for Pile-It-Up runs where you don't
+            want auto-clicks to swipe a coin you're trying to
+            merge. */}
+        {autoPickerLevel > 0 && (
+          <button
+            type="button"
+            className={`btn btn-sm ${autoPickerPaused ? "btn-ghost" : ""}`}
+            onClick={() => setAutoPickerPaused((p) => !p)}
+            aria-pressed={autoPickerPaused}
+            style={{ marginLeft: "auto" }}
+          >
+            {autoPickerPaused ? "▶ Resume Auto-Picker" : "⏸ Pause Auto-Picker"}
+          </button>
+        )}
       </div>
 
       <PennyLeaderboard rows={server?.leaderboard ?? null} />

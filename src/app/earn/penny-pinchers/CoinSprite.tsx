@@ -75,23 +75,36 @@ export function CoinSprite({
   const isForeign = traits.includes("foreign");
   const isBent = traits.includes("bent");
   const isSticky = traits.includes("sticky");
+  const isLightning = traits.includes("lightning");
+  const isFrosted = traits.includes("frosted");
+  const isLucky = traits.includes("lucky");
   const multiTraitCount = traits.length;
 
+  // Aura color picks the rarest trait the coin is carrying — multi-
+  // trait coins still get a single primary aura on the disc itself
+  // and the additional halos render in their own conditional blocks
+  // below. Sticky was cyan; flipped to bubblegum pink to fit the
+  // 'sticky like gum' read.
   const auraColor =
-    isShiny   ? "rgba(255, 220, 90, 0.95)" :
-    isAncient ? "rgba(120, 220, 160, 0.95)" :
-    isCursed  ? "rgba(220, 90, 90, 0.95)" :
-    isForeign ? "rgba(140, 200, 255, 0.85)" :
-    isBent    ? "rgba(180, 180, 180, 0.65)" :
-    isSticky  ? "rgba(120, 220, 255, 0.75)" :
+    isAncient   ? "rgba(120, 220, 160, 0.95)" :
+    isLightning ? "rgba(255, 230, 90, 1)" :
+    isShiny     ? "rgba(255, 220, 90, 0.95)" :
+    isLucky     ? "rgba(120, 220, 110, 0.9)" :
+    isCursed    ? "rgba(220, 90, 90, 0.95)" :
+    isFrosted   ? "rgba(170, 220, 255, 0.9)" :
+    isForeign   ? "rgba(140, 200, 255, 0.85)" :
+    isBent      ? "rgba(180, 180, 180, 0.65)" :
+    isSticky    ? "rgba(255, 130, 200, 0.85)" :
     null;
 
   // Halo room for big-aura traits.
   const halo =
-    isShiny || isAncient ? 32 :
-    isCursed              ? 22 :
-    isForeign             ? 18 :
-    isSticky              ? 18 :
+    isShiny || isAncient || isLightning ? 32 :
+    isCursed                            ? 22 :
+    isLucky                             ? 22 :
+    isFrosted                           ? 20 :
+    isForeign                           ? 18 :
+    isSticky                            ? 18 :
     0;
 
   // Bent tilts the disc instead of orbiting it.
@@ -189,6 +202,51 @@ export function CoinSprite({
           }}
         />
       )}
+      {/* Lightning electric crackle — yellow halo with quick flicker. */}
+      {isLightning && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            background:
+              "conic-gradient(from 0deg, rgba(255,255,180,1), rgba(255,210,40,0.0) 25%, rgba(255,255,180,1) 50%, rgba(255,210,40,0.0) 75%, rgba(255,255,180,1))",
+            filter: "blur(6px)",
+            animation: "pp-coin-lightning-flicker 0.4s steps(4) infinite",
+          }}
+        />
+      )}
+      {/* Frosted icy glow — pale blue, gentle pulse. */}
+      {isFrosted && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 2,
+            borderRadius: "50%",
+            background:
+              "radial-gradient(circle, rgba(170,220,255,0.7) 0%, rgba(120,200,255,0.0) 70%)",
+            filter: "blur(4px)",
+            animation: "pp-coin-frosted-pulse 1.6s ease-in-out infinite",
+          }}
+        />
+      )}
+      {/* Lucky verdant glow — green halo with a slow rotate. */}
+      {isLucky && (
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "50%",
+            background:
+              "conic-gradient(from 0deg, rgba(140,240,160,0.8), rgba(60,180,90,0.0) 50%, rgba(140,240,160,0.8))",
+            filter: "blur(5px)",
+            animation: "pp-coin-halo-spin 3.2s linear infinite",
+          }}
+        />
+      )}
       {/* Coin disc */}
       <span
         aria-hidden
@@ -202,13 +260,19 @@ export function CoinSprite({
             ? "radial-gradient(circle at 35% 30%, #b9e5c4 0%, #5fa17a 55%, #2d6240 100%)"
             : isCursed
             ? "radial-gradient(circle at 35% 30%, #e0a0a0 0%, #a04040 55%, #4a0a0a 100%)"
+            : isSticky
+            ? "radial-gradient(circle at 35% 30%, #ffd0e6 0%, #ff82c8 55%, #b8366f 100%)"
             : `radial-gradient(circle at 35% 30%, ${lighten(def.color, tarnish)} 0%, ${tarnishHex(def.color, tarnish)} 55%, ${def.edge} 100%)`,
           border: `3px solid ${
-            isShiny   ? "#f5c842" :
-            isAncient ? "#3d8a4d" :
-            isCursed  ? "#7a1a1a" :
-            isForeign ? "#3d6f9a" :
-            isBent    ? "#7a7a7a" :
+            isAncient   ? "#3d8a4d" :
+            isLightning ? "#c89018" :
+            isShiny     ? "#f5c842" :
+            isLucky     ? "#2a8a40" :
+            isCursed    ? "#7a1a1a" :
+            isFrosted   ? "#3d8acc" :
+            isForeign   ? "#3d6f9a" :
+            isBent      ? "#7a7a7a" :
+            isSticky    ? "#d83a8a" :
             def.edge
           }`,
           borderRadius: "50%",
@@ -324,6 +388,16 @@ export function CoinSprite({
         @keyframes pp-coin-bent-tilt {
           0%, 100% { transform: rotate(-14deg); }
           50%      { transform: rotate(-9deg); }
+        }
+        @keyframes pp-coin-lightning-flicker {
+          0%, 100% { opacity: 0.85; transform: rotate(0deg); }
+          25%      { opacity: 0.4;  transform: rotate(90deg); }
+          50%      { opacity: 1;    transform: rotate(180deg); }
+          75%      { opacity: 0.55; transform: rotate(270deg); }
+        }
+        @keyframes pp-coin-frosted-pulse {
+          0%, 100% { transform: scale(0.95); opacity: 0.55; }
+          50%      { transform: scale(1.08); opacity: 0.85; }
         }
         @keyframes pp-coin-sticky-skew {
           0%   { transform: skewX(0)   rotate(0)    translateY(0); }
