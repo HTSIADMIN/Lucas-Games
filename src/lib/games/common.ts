@@ -5,9 +5,14 @@ import { insertGameSession, settleGameSession } from "@/lib/db";
 
 export const MIN_BET = 100;
 /** Hard ceiling on a single bet across every server-RNG game.
- *  Wallet balances are bigint at the DB level so we have plenty of
- *  headroom. 100B is the agreed cap. */
-export const MAX_BET = 100_000_000_000;
+ *  Wallet balances + every game-session bet/payout column are bigint
+ *  so the DB has effectively unlimited headroom. The cap is just a
+ *  sanity guard — set it well above the current top-balance player
+ *  and high enough that slot Boomtown payouts (~25× bet) still fit
+ *  in JS Number.MAX_SAFE_INTEGER (≈9.007e15). 10 T leaves plenty of
+ *  room: 10 T bet × 25× win = 250 T, still ~36 K× under the safe
+ *  integer ceiling. */
+export const MAX_BET = 10_000_000_000_000;
 
 export function validateBet(bet: unknown): { ok: true; bet: number } | { ok: false; error: string } {
   if (typeof bet !== "number" || !Number.isFinite(bet) || !Number.isInteger(bet)) {
