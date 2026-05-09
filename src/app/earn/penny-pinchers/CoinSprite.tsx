@@ -19,28 +19,34 @@ const TRAIT_COLOR: Record<CoinTrait, string> = {
 };
 
 /**
- * Build a conic-gradient string that cycles through every trait's
- * signature colour, evenly spaced around the disc. With 2 traits
- * you get a halved gradient; with 5 you get a 5-way colour wheel.
- * Each band has a sliver of fade at its edges so the bands blend
- * smoothly instead of reading as hard pie slices.
+ * Build a conic-gradient string with HARD-EDGED pie-slice segments,
+ * one per stacked trait in its signature colour. Reads like a
+ * pixel-art crest rim instead of a smooth rainbow blur — each
+ * arc is its own clean band so the player can identify which
+ * traits are riding on the coin without a tooltip.
  */
 function multiTraitGradient(traits: CoinTrait[]): string {
   const stops: string[] = [];
   const slice = 360 / traits.length;
   traits.forEach((t, i) => {
     const c = TRAIT_COLOR[t];
-    const start = i * slice;
-    const end = (i + 1) * slice;
-    // 8% fade-in / fade-out at each band edge so adjacent colours
-    // blend in a halo rather than collide as hard arcs.
-    const fade = slice * 0.08;
-    stops.push(`${c} ${start + fade}deg`);
-    stops.push(`${c} ${end - fade}deg`);
+    stops.push(`${c} ${i * slice}deg`, `${c} ${(i + 1) * slice}deg`);
   });
-  // Loop back to the first colour at 360deg so the gradient closes.
-  stops.push(`${TRAIT_COLOR[traits[0]]} 360deg`);
-  return `conic-gradient(from 0deg, ${stops.join(", ")})`;
+  // Start at the top so the first trait crowns the disc.
+  return `conic-gradient(from -90deg, ${stops.join(", ")})`;
+}
+
+/**
+ * Multi-color drop-shadow glow built from the stacked trait
+ * palette. Up to three layered shadows (one per first three
+ * traits) spread out at increasing radius so the coin "lifts" off
+ * the play area with a halo that hints at which traits combined.
+ */
+function multiTraitGlow(traits: CoinTrait[]): string {
+  const c1 = TRAIT_COLOR[traits[0]];
+  const c2 = TRAIT_COLOR[traits[1] ?? traits[0]];
+  const c3 = TRAIT_COLOR[traits[2] ?? traits[traits.length - 1]];
+  return `0 0 14px ${c1}, 0 0 22px ${c2}66, 0 0 36px ${c3}40`;
 }
 
 // Single spawned coin in the play area. Renders a chunky pixel-style
@@ -324,11 +330,16 @@ export function CoinSprite({
           // Bent's tilt is now part of the wobble animation; non-bent
           // ambient animations handle their own transforms too.
           transform: undefined,
-          boxShadow: auraColor
-            ? isShiny || isAncient
-              ? `0 0 0 3px ${auraColor}, 0 0 26px ${auraColor}, inset 0 0 14px rgba(255,250,180,0.55), 2px 2px 0 rgba(0,0,0,0.4)`
-              : `0 0 0 3px ${auraColor}, 0 0 18px ${auraColor}, 2px 2px 0 rgba(0,0,0,0.4)`
-            : "2px 2px 0 rgba(0,0,0,0.4)",
+          boxShadow: multiTraitCount > 1
+            // Multi-trait coin: stacked glow built from the first
+            // few trait colours so the disc lifts off the play
+            // area with a halo that hints at the combo.
+            ? `${multiTraitGlow(traits)}, 2px 2px 0 rgba(0,0,0,0.4)`
+            : auraColor
+              ? isShiny || isAncient
+                ? `0 0 0 3px ${auraColor}, 0 0 26px ${auraColor}, inset 0 0 14px rgba(255,250,180,0.55), 2px 2px 0 rgba(0,0,0,0.4)`
+                : `0 0 0 3px ${auraColor}, 0 0 18px ${auraColor}, 2px 2px 0 rgba(0,0,0,0.4)`
+              : "2px 2px 0 rgba(0,0,0,0.4)",
           animation: isSticky && firstTapAt
             ? "pp-coin-sticky-skew 360ms cubic-bezier(.2,.8,.3,1.4) forwards"
             : isShiny || isAncient
@@ -354,80 +365,29 @@ export function CoinSprite({
           <span aria-hidden style={sparkleStyle(0.66, halo, size, isAncient)}>✦</span>
         </>
       )}
-      {/* Multi-trait outer ring — rainbow conic gradient that
-          cycles through each stacked trait's signature colour and
-          slowly rotates. Sits OUTSIDE every per-trait halo so it
-          reads as the "this is a stacked coin" frame without
-          stepping on the individual auras inside. */}
+      {/* Multi-trait crest rim — static, sharp-edged conic gradient
+          painted as a ~5px ring around the disc. Each stacked
+          trait gets a clean pie-slice in its signature colour
+          (gold for shiny, pink for sticky, jade for ancient...),
+          so the rim reads like a heraldic crest of all the
+          traits the coin is carrying. No rotation, no blur — the
+          per-trait inner halos already do the kinetic work. The
+          ink-black inner stroke separates the gradient from the
+          disc body so the colours pop instead of bleeding. */}
       {multiTraitCount > 1 && (
         <span
           aria-hidden
           style={{
             position: "absolute",
-            inset: -3,
+            inset: -2,
             borderRadius: "50%",
-            padding: 3,
             background: multiTraitGradient(traits),
-            // Mask carves out the centre so only the rim shows —
-            // gradient becomes a 3px ring, not a filled disc.
-            WebkitMask: "radial-gradient(circle, transparent calc(50% - 3px), black calc(50% - 3px))",
-            mask: "radial-gradient(circle, transparent calc(50% - 3px), black calc(50% - 3px))",
-            filter: "drop-shadow(0 0 6px rgba(255, 200, 60, 0.55))",
-            animation: "pp-coin-multi-ring 5s linear infinite",
+            WebkitMask: "radial-gradient(circle, transparent calc(50% - 5px), black calc(50% - 5px), black calc(50% - 1px), transparent calc(50% - 1px))",
+            mask: "radial-gradient(circle, transparent calc(50% - 5px), black calc(50% - 5px), black calc(50% - 1px), transparent calc(50% - 1px))",
             zIndex: 1,
             pointerEvents: "none",
           }}
         />
-      )}
-      {/* Trait dot row — one small disc per stacked trait in its
-          signature colour, anchored to the bottom-right corner.
-          Replaces the generic '✦N' pill so the player can SEE
-          which traits are riding on this coin (gold = shiny, pink
-          = sticky, etc.) instead of just the count. */}
-      {multiTraitCount > 1 && (
-        <span
-          aria-hidden
-          style={{
-            position: "absolute",
-            right: -4,
-            bottom: -4,
-            display: "inline-flex",
-            gap: 2,
-            padding: "3px 4px",
-            background: "rgba(26, 15, 8, 0.85)",
-            border: "2px solid var(--ink-900)",
-            borderRadius: 999,
-            zIndex: 2,
-          }}
-        >
-          {traits.slice(0, 5).map((t) => (
-            <span
-              key={t}
-              title={t}
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: TRAIT_COLOR[t],
-                border: "1px solid rgba(0,0,0,0.35)",
-                boxShadow: `0 0 4px ${TRAIT_COLOR[t]}`,
-              }}
-            />
-          ))}
-          {traits.length > 5 && (
-            <span
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 9,
-                color: "var(--gold-300)",
-                lineHeight: "8px",
-                marginLeft: 2,
-              }}
-            >
-              +{traits.length - 5}
-            </span>
-          )}
-        </span>
       )}
       <style>{`
         @keyframes pp-coin-spawn {
@@ -481,9 +441,6 @@ export function CoinSprite({
         @keyframes pp-coin-frosted-pulse {
           0%, 100% { transform: scale(0.95); opacity: 0.55; }
           50%      { transform: scale(1.08); opacity: 0.85; }
-        }
-        @keyframes pp-coin-multi-ring {
-          to { transform: rotate(360deg); }
         }
         @keyframes pp-coin-sticky-skew {
           0%   { transform: skewX(0)   rotate(0)    translateY(0); }
