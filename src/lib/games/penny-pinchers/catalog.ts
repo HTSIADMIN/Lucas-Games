@@ -104,12 +104,17 @@ export const UPGRADES: readonly UpgradeDef[] = [
   { id: "coin_polish",       label: "Coin Polish",         description: "+1 PC on every coin per level. Hard cap at 5.", category: "value", baseCost: 25, costMultiplier: 1, maxLevel: 5, ceilingExempt: true, costSchedule: [25, 50, 200, 500, 1000] },
   { id: "lucky_crack",       label: "Lucky Sidewalk Crack", description: "+1% chance per level for a coin to spawn shiny (5×).", category: "value",  baseCost: 500,   costMultiplier: 1.7,  maxLevel: 10 },
 
-  // Spawn — unlock new coin tiers, then pump their weight
-  { id: "vending_machines",  label: "Check Vending Machines", description: "Adds nickels to the spawn pool. Higher levels make them more common.", category: "spawn", baseCost: 250,    costMultiplier: 2.0, maxLevel: 5, unlocksCoin: "nickel" },
-  { id: "parking_lot",       label: "Parking Lot Sweep",      description: "Adds dimes. Higher levels = more common.",          category: "spawn",  baseCost: 2_500,  costMultiplier: 2.2, maxLevel: 5, unlocksCoin: "dime" },
-  { id: "laundry_day",       label: "Laundry Day Jackpot",    description: "Adds quarters. Higher levels = more common.",       category: "spawn",  baseCost: 25_000, costMultiplier: 2.4, maxLevel: 5, unlocksCoin: "quarter" },
-  { id: "boardwalk",         label: "Boardwalk Tip Jar",      description: "Adds half dollars. Higher levels = more common.",   category: "spawn",  baseCost: 250_000, costMultiplier: 2.5, maxLevel: 5, unlocksCoin: "half" },
-  { id: "grandpa_jar",       label: "Grandpa's Coin Jar",     description: "Adds rare dollar coins. Higher levels = more common.", category: "spawn", baseCost: 2_500_000, costMultiplier: 2.7, maxLevel: 5, unlocksCoin: "dollar" },
+  // Spawn — unlock new coin tiers, then pump their weight. Marked
+  // ceilingExempt because the per-level weight bump is flat (+10
+  // nickel, +7 dime, etc) while the cost compounds geometrically;
+  // anything past lvl 5 is a deeply diminishing-return bloat.
+  // Higher Ceilings stays useful elsewhere — Coin Value, Sharper
+  // Eyes, Lucky Crack, Two-Finger, Extra Hands, Auto-Picker.
+  { id: "vending_machines",  label: "Check Vending Machines", description: "Adds nickels to the spawn pool. Higher levels make them more common.", category: "spawn", baseCost: 250,    costMultiplier: 2.0, maxLevel: 5, unlocksCoin: "nickel",  ceilingExempt: true },
+  { id: "parking_lot",       label: "Parking Lot Sweep",      description: "Adds dimes. Higher levels = more common.",          category: "spawn",  baseCost: 2_500,  costMultiplier: 2.2, maxLevel: 5, unlocksCoin: "dime",    ceilingExempt: true },
+  { id: "laundry_day",       label: "Laundry Day Jackpot",    description: "Adds quarters. Higher levels = more common.",       category: "spawn",  baseCost: 25_000, costMultiplier: 2.4, maxLevel: 5, unlocksCoin: "quarter", ceilingExempt: true },
+  { id: "boardwalk",         label: "Boardwalk Tip Jar",      description: "Adds half dollars. Higher levels = more common.",   category: "spawn",  baseCost: 250_000, costMultiplier: 2.5, maxLevel: 5, unlocksCoin: "half",    ceilingExempt: true },
+  { id: "grandpa_jar",       label: "Grandpa's Coin Jar",     description: "Adds rare dollar coins. Higher levels = more common.", category: "spawn", baseCost: 2_500_000, costMultiplier: 2.7, maxLevel: 5, unlocksCoin: "dollar", ceilingExempt: true },
 
   // Automation foundation
   { id: "auto_picker",       label: "Auto-Picker",            description: "Auto-clicks a random coin once per second per level.", category: "automation", baseCost: 5_000, costMultiplier: 3.0, maxLevel: 5 },
