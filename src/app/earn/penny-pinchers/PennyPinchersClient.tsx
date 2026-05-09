@@ -1421,20 +1421,83 @@ export function PennyPinchersClient() {
           <div className="text-mute" style={{ fontSize: 11 }}>
             Helpers: {Math.round(tweenedRate).toLocaleString()} PC/sec · Lifetime clicks {Math.round(tweenedClicks).toLocaleString()}
           </div>
-          <div
-            style={{
-              marginTop: 4,
-              fontFamily: "var(--font-display)",
-              fontSize: 11,
-              color: server.frugality > 0
-                ? "var(--cactus-500)"
-                : server.frugality < 0
-                ? "var(--crimson-500)"
-                : "var(--saddle-400)",
-            }}
-          >
-            {server.frugality > 0 ? "✓" : server.frugality < 0 ? "✗" : "·"} Frugality {server.frugality > 0 ? `+${server.frugality}` : server.frugality}
-          </div>
+          {/* Frugality badge — pulled out into its own pill because
+              it's hard to earn, persists across runs, and the
+              previous tiny line buried the only +PC stat the player
+              actually controls. Shows the live click bonus the
+              points are converting to (+0.5% PC each per point). */}
+          {(() => {
+            const f = server.frugality;
+            const pos = f > 0;
+            const neg = f < 0;
+            const pcBonusPct = pos ? (f * 0.5).toFixed(1) : "0.0";
+            const accent = pos
+              ? "var(--cactus-500)"
+              : neg
+              ? "var(--crimson-500)"
+              : "var(--saddle-400)";
+            const bg = pos
+              ? "rgba(60, 130, 70, 0.15)"
+              : neg
+              ? "rgba(180, 60, 60, 0.15)"
+              : "var(--parchment-200)";
+            return (
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: "6px 10px",
+                  border: `2px solid ${accent}`,
+                  background: bg,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontFamily: "var(--font-display)",
+                  color: "var(--ink-900)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 14,
+                    color: accent,
+                    letterSpacing: "var(--ls-loose)",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {pos ? "✓" : neg ? "✗" : "·"} Frugality
+                </span>
+                <span
+                  style={{
+                    fontSize: 16,
+                    color: accent,
+                    fontWeight: "bold",
+                  }}
+                >
+                  {pos ? `+${f}` : f}
+                </span>
+                {pos && (
+                  <span
+                    className="text-mute"
+                    style={{
+                      fontSize: 10,
+                      letterSpacing: "0.04em",
+                      marginLeft: "auto",
+                      color: "var(--saddle-500)",
+                    }}
+                  >
+                    +{pcBonusPct}% PC every click
+                  </span>
+                )}
+                {!pos && !neg && (
+                  <span
+                    className="text-mute"
+                    style={{ fontSize: 10, marginLeft: "auto", color: "var(--saddle-500)" }}
+                  >
+                    Earn through wallets, fountain &amp; cushions
+                  </span>
+                )}
+              </div>
+            );
+          })()}
           {(() => {
             // Always render — even at rest the bar shows "0 / 5 → Warm"
             // so the player has a persistent target rather than a panel
