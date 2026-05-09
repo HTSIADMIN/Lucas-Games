@@ -19,24 +19,6 @@ const TRAIT_COLOR: Record<CoinTrait, string> = {
 };
 
 /**
- * Build a conic-gradient string with HARD-EDGED pie-slice segments,
- * one per stacked trait in its signature colour. Reads like a
- * pixel-art crest rim instead of a smooth rainbow blur — each
- * arc is its own clean band so the player can identify which
- * traits are riding on the coin without a tooltip.
- */
-function multiTraitGradient(traits: CoinTrait[]): string {
-  const stops: string[] = [];
-  const slice = 360 / traits.length;
-  traits.forEach((t, i) => {
-    const c = TRAIT_COLOR[t];
-    stops.push(`${c} ${i * slice}deg`, `${c} ${(i + 1) * slice}deg`);
-  });
-  // Start at the top so the first trait crowns the disc.
-  return `conic-gradient(from -90deg, ${stops.join(", ")})`;
-}
-
-/**
  * Multi-color drop-shadow glow built from the stacked trait
  * palette. Up to three layered shadows (one per first three
  * traits) spread out at increasing radius so the coin "lifts" off
@@ -248,20 +230,43 @@ export function CoinSprite({
           }}
         />
       )}
-      {/* Lightning electric crackle — yellow halo with quick flicker. */}
+      {/* Lightning — same smooth halo rotation as Shiny, just in
+          lightning yellow, with a separate ⚡ glyph that flashes
+          briefly every couple seconds. The "always-on" base reads
+          as "this coin is electric"; the zap punctuates it. */}
       {isLightning && (
-        <span
-          aria-hidden
-          style={{
-            position: "absolute",
-            inset: 0,
-            borderRadius: "50%",
-            background:
-              "conic-gradient(from 0deg, rgba(255,255,180,1), rgba(255,210,40,0.0) 25%, rgba(255,255,180,1) 50%, rgba(255,210,40,0.0) 75%, rgba(255,255,180,1))",
-            filter: "blur(6px)",
-            animation: "pp-coin-lightning-flicker 1.4s steps(4) infinite",
-          }}
-        />
+        <>
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: "50%",
+              background:
+                "conic-gradient(from 0deg, rgba(255,255,200,1), rgba(255,220,60,0.0) 30%, rgba(255,255,200,1) 50%, rgba(255,220,60,0.0) 80%, rgba(255,255,200,1))",
+              filter: "blur(7px)",
+              animation: "pp-coin-halo-spin 4.5s linear infinite",
+            }}
+          />
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              fontSize: Math.round(size * 0.48),
+              color: "rgba(255, 250, 150, 0.95)",
+              textShadow: "0 0 6px rgba(255,210,40,1), 0 0 14px rgba(255,210,40,0.85)",
+              pointerEvents: "none",
+              opacity: 0,
+              animation: "pp-coin-lightning-zap 2.8s ease-in-out infinite",
+              zIndex: 1,
+            }}
+          >
+            ⚡
+          </span>
+        </>
       )}
       {/* Frosted icy glow — pale blue, gentle pulse. */}
       {isFrosted && (
@@ -365,29 +370,57 @@ export function CoinSprite({
           <span aria-hidden style={sparkleStyle(0.66, halo, size, isAncient)}>✦</span>
         </>
       )}
-      {/* Multi-trait crest rim — static, sharp-edged conic gradient
-          painted as a ~5px ring around the disc. Each stacked
-          trait gets a clean pie-slice in its signature colour
-          (gold for shiny, pink for sticky, jade for ancient...),
-          so the rim reads like a heraldic crest of all the
-          traits the coin is carrying. No rotation, no blur — the
-          per-trait inner halos already do the kinetic work. The
-          ink-black inner stroke separates the gradient from the
-          disc body so the colours pop instead of bleeding. */}
+      {/* Trait-dot row — bottom-right corner pill, one 8px coloured
+          dot per stacked trait in its signature colour with its
+          own glow. Capped at 5 with a '+N' tail for absurd combos.
+          Tooltip on each dot names the trait. Reads at a glance
+          as 'gold + green + pink = shiny + lucky + sticky' instead
+          of just a count. */}
       {multiTraitCount > 1 && (
         <span
           aria-hidden
           style={{
             position: "absolute",
-            inset: -2,
-            borderRadius: "50%",
-            background: multiTraitGradient(traits),
-            WebkitMask: "radial-gradient(circle, transparent calc(50% - 5px), black calc(50% - 5px), black calc(50% - 1px), transparent calc(50% - 1px))",
-            mask: "radial-gradient(circle, transparent calc(50% - 5px), black calc(50% - 5px), black calc(50% - 1px), transparent calc(50% - 1px))",
-            zIndex: 1,
-            pointerEvents: "none",
+            right: -4,
+            bottom: -4,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 3,
+            padding: "3px 5px",
+            background: "rgba(26, 15, 8, 0.9)",
+            border: "2px solid var(--ink-900)",
+            borderRadius: 999,
+            zIndex: 2,
           }}
-        />
+        >
+          {traits.slice(0, 5).map((t) => (
+            <span
+              key={t}
+              title={t}
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: TRAIT_COLOR[t],
+                border: "1px solid rgba(0,0,0,0.45)",
+                boxShadow: `0 0 5px ${TRAIT_COLOR[t]}`,
+              }}
+            />
+          ))}
+          {traits.length > 5 && (
+            <span
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 9,
+                color: "var(--gold-300)",
+                lineHeight: "8px",
+                marginLeft: 1,
+              }}
+            >
+              +{traits.length - 5}
+            </span>
+          )}
+        </span>
       )}
       <style>{`
         @keyframes pp-coin-spawn {
@@ -432,11 +465,14 @@ export function CoinSprite({
           0%, 100% { transform: rotate(-14deg); }
           50%      { transform: rotate(-9deg); }
         }
-        @keyframes pp-coin-lightning-flicker {
-          0%, 100% { opacity: 0.85; transform: rotate(0deg); }
-          25%      { opacity: 0.4;  transform: rotate(90deg); }
-          50%      { opacity: 1;    transform: rotate(180deg); }
-          75%      { opacity: 0.55; transform: rotate(270deg); }
+        @keyframes pp-coin-lightning-zap {
+          /* Mostly invisible, with a quick double-flash of the bolt
+             every cycle — like a real-life storm flicker. */
+          0%, 35%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+          40%           { opacity: 1; transform: translate(-50%, -50%) scale(1.25); }
+          48%           { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+          54%           { opacity: 0.85; transform: translate(-50%, -50%) scale(1.1); }
+          62%           { opacity: 0; transform: translate(-50%, -50%) scale(1); }
         }
         @keyframes pp-coin-frosted-pulse {
           0%, 100% { transform: scale(0.95); opacity: 0.55; }
