@@ -1242,13 +1242,13 @@ export function PennyPinchersClient() {
         <div
           className="panel"
           style={{
-            padding: "var(--sp-3) var(--sp-4)",
-            flex: "1 1 220px",
-            minWidth: 220,
+            padding: "var(--sp-4) var(--sp-5)",
+            flex: "2 1 340px",
+            minWidth: 280,
           }}
         >
           <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-            <div className="text-mute" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <div className="text-mute" style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
               Pinch Cents
             </div>
             <button
@@ -1284,9 +1284,12 @@ export function PennyPinchersClient() {
             key={pcPulseKey}
             style={{
               fontFamily: "var(--font-display)",
-              fontSize: 28,
+              fontSize: 40,
+              lineHeight: 1.1,
+              marginTop: 4,
+              marginBottom: 6,
               color: "var(--gold-500)",
-              textShadow: "1px 1px 0 var(--gold-100)",
+              textShadow: "2px 2px 0 var(--gold-100)",
               animation: "pp-pc-pulse 220ms ease-out",
               transformOrigin: "left center",
             }}
@@ -1317,12 +1320,17 @@ export function PennyPinchersClient() {
           >
             {server.frugality > 0 ? "✓" : server.frugality < 0 ? "✗" : "·"} Frugality {server.frugality > 0 ? `+${server.frugality}` : server.frugality}
           </div>
-          {streakCount > 0 && (() => {
+          {(() => {
+            // Always render — even at rest the bar shows "0 / 5 → Warm"
+            // so the player has a persistent target rather than a panel
+            // that pops in and out as they tap.
             const tier = streakTierFor(streakClicksRef.current, now);
             const nextTier = STREAK_TIERS.find((t) => t.threshold > tier.threshold);
             const max = nextTier ? nextTier.threshold : tier.threshold;
             const pct = nextTier ? Math.min(100, (streakCount / max) * 100) : 100;
             const isFrenzy = frenzyEndsAt != null && frenzyEndsAt > now;
+            const idle = streakCount === 0;
+            const label = idle ? "Idle" : tier.label;
             return (
               <div
                 style={{
@@ -1335,11 +1343,15 @@ export function PennyPinchersClient() {
                   color: "var(--ink-900)",
                   letterSpacing: "0.05em",
                   textTransform: "uppercase",
+                  opacity: idle ? 0.75 : 1,
+                  transition: "opacity 200ms",
                 }}
               >
                 <div className="row" style={{ justifyContent: "space-between" }}>
-                  <span>Pinch Streak · {tier.label}</span>
-                  <span style={{ color: "var(--gold-500)" }}>{tier.multiplier}×</span>
+                  <span>Pinch Streak · {label}</span>
+                  <span style={{ color: idle ? "var(--saddle-400)" : "var(--gold-500)" }}>
+                    {tier.multiplier}×
+                  </span>
                 </div>
                 <div
                   style={{
@@ -1358,93 +1370,95 @@ export function PennyPinchersClient() {
                     }}
                   />
                 </div>
+                <div
+                  className="text-mute"
+                  style={{ fontSize: 9, marginTop: 2, letterSpacing: "0.04em", textTransform: "none" }}
+                >
+                  {nextTier
+                    ? `${streakCount} / ${nextTier.threshold} → ${nextTier.label}`
+                    : `${streakCount} clicks · max tier`}
+                </div>
               </div>
             );
           })()}
         </div>
-        <div
-          className="panel"
-          style={{
-            padding: "var(--sp-3) var(--sp-4)",
-            flex: "1 1 260px",
-            minWidth: 260,
-            background: projectedPayout > 0 ? "var(--surface-highlight)" : undefined,
-            animation: projectedPayout > 0 ? "pp-bank-ready 1.6s ease-in-out infinite" : undefined,
-          }}
-        >
-          <div className="text-mute" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-            Bank It
-          </div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)" }}>
-            ≈ {projectedPayout.toLocaleString()} ¢
-          </div>
-          <button
-            type="button"
-            className="btn btn-sm"
-            disabled={projectedPayout <= 0}
-            onClick={bank}
-            style={{ marginTop: 6, width: "100%" }}
-          >
-            {projectedPayout > 0 ? "Bank It" : "Need more PC"}
-          </button>
-          <style>{`
-            @keyframes pp-bank-ready {
-              0%, 100% { box-shadow: var(--sh-card-rest, 0 0 0 0 transparent); }
-              50%      { box-shadow: 0 0 0 4px rgba(255,196,64,0.55), 0 0 22px rgba(255,196,64,0.7); }
-            }
-          `}</style>
-        </div>
-        <div
-          className="panel"
-          style={{
-            padding: "var(--sp-3) var(--sp-4)",
-            flex: "1 1 240px",
-            minWidth: 240,
-            background: canRoll ? "var(--surface-highlight)" : undefined,
-            border: canRoll ? "3px solid var(--gold-300)" : undefined,
-          }}
-        >
-          <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-            <div className="text-mute" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Roll It Up
-            </div>
-            <div className="text-mute" style={{ fontSize: 11 }}>
-              ×{server.prestige.count} · {server.prestige.bankTokens.toLocaleString()} ★
-            </div>
-          </div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "var(--ink-900)" }}>
-            {canRoll
-              ? `+${server.prestige.tokensIfRolled.toLocaleString()} ★ Tokens`
-              : `${Math.round(lifetimeProgress * 100)}% to next prestige`}
-          </div>
+        {/* Right column — Prestige (Roll It Up) on top, Bank It tucked
+            beneath. Stacking these saves a row of horizontal real estate
+            and pairs the two outflow actions visually. */}
+        <div className="stack" style={{ flex: "1 1 260px", minWidth: 260, gap: "var(--sp-3)" }}>
           <div
+            className="panel"
             style={{
-              height: 6,
-              background: "var(--parchment-200)",
-              border: "2px solid var(--ink-900)",
-              marginTop: 4,
-              marginBottom: 6,
-              overflow: "hidden",
+              padding: "var(--sp-3) var(--sp-4)",
+              background: canRoll ? "var(--surface-highlight)" : undefined,
+              border: canRoll ? "3px solid var(--gold-300)" : undefined,
             }}
           >
+            <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+              <div className="text-mute" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                Prestige
+              </div>
+              <div className="text-mute" style={{ fontSize: 11 }}>
+                ×{server.prestige.count} · {server.prestige.bankTokens.toLocaleString()} ★
+              </div>
+            </div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "var(--ink-900)" }}>
+              {canRoll
+                ? `+${server.prestige.tokensIfRolled.toLocaleString()} ★ Tokens`
+                : `${Math.round(lifetimeProgress * 100)}% to next prestige`}
+            </div>
             <div
               style={{
-                width: `${Math.round(lifetimeProgress * 100)}%`,
-                height: "100%",
-                background: canRoll ? "var(--gold-500)" : "var(--cactus-300)",
-                transition: "width 400ms var(--ease-out)",
+                height: 6,
+                background: "var(--parchment-200)",
+                border: "2px solid var(--ink-900)",
+                marginTop: 4,
+                marginBottom: 6,
+                overflow: "hidden",
               }}
-            />
+            >
+              <div
+                style={{
+                  width: `${Math.round(lifetimeProgress * 100)}%`,
+                  height: "100%",
+                  background: canRoll ? "var(--gold-500)" : "var(--cactus-300)",
+                  transition: "width 400ms var(--ease-out)",
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={!canRoll}
+              onClick={() => setPrestigeOpen(true)}
+              style={{ width: "100%" }}
+            >
+              {canRoll ? "Prestige →" : `${(server.lifetimePCEarned / 1000).toFixed(0)}k / ${(PRESTIGE_THRESHOLD_PC / 1000).toFixed(0)}k PC`}
+            </button>
           </div>
-          <button
-            type="button"
-            className="btn btn-sm"
-            disabled={!canRoll}
-            onClick={() => setPrestigeOpen(true)}
-            style={{ width: "100%" }}
+          <div
+            className="panel"
+            style={{
+              padding: "var(--sp-3) var(--sp-4)",
+              background: projectedPayout > 0 ? "var(--surface-highlight)" : undefined,
+            }}
           >
-            {canRoll ? "Roll It Up →" : `${(server.lifetimePCEarned / 1000).toFixed(0)}k / ${(PRESTIGE_THRESHOLD_PC / 1000).toFixed(0)}k PC`}
-          </button>
+            <div className="text-mute" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              Bank It
+            </div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)" }}>
+              ≈ {projectedPayout.toLocaleString()} ¢
+            </div>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={projectedPayout <= 0}
+              onClick={bank}
+              style={{ marginTop: 6, width: "100%" }}
+            >
+              {projectedPayout > 0 ? "Bank It" : "Need more PC"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2647,7 +2661,7 @@ export function PennyPinchersClient() {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Roll It Up"
+          aria-label="Prestige"
           onClick={() => setPrestigeOpen(false)}
           style={{
             position: "fixed",
@@ -2682,7 +2696,7 @@ export function PennyPinchersClient() {
                 textAlign: "center",
               }}
             >
-              Roll It Up?
+              Prestige?
             </div>
             <p style={{ marginBottom: "var(--sp-3)", color: "var(--ink-900)" }}>
               Cash in your career and start fresh. You&rsquo;ll lose:
@@ -2715,7 +2729,7 @@ export function PennyPinchersClient() {
                 className="btn btn-primary"
                 onClick={rollItUp}
               >
-                Roll It Up
+                Prestige
               </button>
             </div>
           </div>

@@ -40,7 +40,7 @@ export function PennyLeaderboard({ rows }: { rows: Row[] | null }) {
                 <th style={{ textAlign: "right", padding: "4px 6px" }}>Lifetime PC</th>
                 <th style={{ textAlign: "right", padding: "4px 6px" }}>Wallet ¢</th>
                 <th style={{ textAlign: "right", padding: "4px 6px" }}>Clicks</th>
-                <th style={{ textAlign: "right", padding: "4px 6px" }}>Roll-Ups</th>
+                <th style={{ textAlign: "right", padding: "4px 6px" }}>Prestiges</th>
                 <th style={{ textAlign: "right", padding: "4px 6px" }}>Frugality</th>
               </tr>
             </thead>
@@ -72,8 +72,8 @@ export function PennyLeaderboard({ rows }: { rows: Row[] | null }) {
                       {r.isMe && <span className="tag-new">YOU</span>}
                       {r.prestigeCount > 0 && (
                         <span
-                          title={`${r.prestigeCount} Roll-Up${r.prestigeCount === 1 ? "" : "s"}`}
-                          aria-label={`Roll-Up Club member, ${r.prestigeCount} Roll-Ups`}
+                          title={`${r.prestigeCount} Prestige${r.prestigeCount === 1 ? "" : "s"}`}
+                          aria-label={`Prestige Club member, ${r.prestigeCount} Prestiges`}
                           style={{
                             fontFamily: "var(--font-display)",
                             fontSize: 9,
@@ -88,7 +88,7 @@ export function PennyLeaderboard({ rows }: { rows: Row[] | null }) {
                             animation: "pp-rollup-tag-shine 3s linear infinite",
                           }}
                         >
-                          ★ Roll-Up Club
+                          ★ Prestige Club
                         </span>
                       )}
                     </div>

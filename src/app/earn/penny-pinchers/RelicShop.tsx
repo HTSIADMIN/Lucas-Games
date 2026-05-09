@@ -88,7 +88,7 @@ export function RelicShop({
         className="text-mute"
         style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", paddingLeft: 4 }}
       >
-        Spend Frugality on chests · keeps relics through Roll-Up
+        Spend Frugality on chests · keeps relics through Prestige
       </div>
 
       {/* Chest cards */}

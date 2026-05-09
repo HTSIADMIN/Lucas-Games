@@ -28,7 +28,7 @@ export function BankTokenShop({
         className="text-mute"
         style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", paddingLeft: 4 }}
       >
-        Permanent — survives every Roll It Up
+        Permanent — survives every Prestige
       </div>
       {/* Maxed perm upgrades sink to the bottom; affordable rises. */}
       {PERM_UPGRADES.slice().sort((a, b) => {

@@ -46,7 +46,7 @@ const SECTIONS: { title: string; lines: string[] }[] = [
       "Picking up a trait coin records it on the matching album page. Six pages, one per trait — Shiny, Sticky, Foreign, Bent, Cursed, Ancient.",
       "Each filled slot grants a small spawn-chance bonus for that trait; completing a page grants a bigger one.",
       "Bonuses: Shiny +0.5%/slot, +5% complete · Sticky +1% / +3% · Foreign +0.5% / +5% PC on every click · Bent +0.5% / +5% · Cursed +0.3% / +3% · Ancient +0.05% / +0.5%.",
-      "The album survives Roll It Up — it's the lifetime collection meta.",
+      "The album survives Prestige — it's the lifetime collection meta.",
     ],
   },
   {
@@ -55,7 +55,7 @@ const SECTIONS: { title: string; lines: string[] }[] = [
       "Open the Relics tab. Spend Frugality on chests — Bronze (2), Silver (6), Gold (15) — server rolls a random relic by tier rarity.",
       "Nine relics across common → legendary, each with up to 3-5 levels. Duplicates level up the relic you already own.",
       "Effects stack with everything else. Highlights: Lucky Charm (shiny chance), Midas Thumb (click PC), Helping Hand (helper rate), Rainmaker (Coin Storm trigger), Fortune's Eye (every coin worth +5 PC permanently per level).",
-      "Relics persist through Roll It Up — they're the long-game power curve. Save your wallet returns.",
+      "Relics persist through Prestige — they're the long-game power curve. Save your wallet returns.",
     ],
   },
   {
@@ -67,13 +67,13 @@ const SECTIONS: { title: string; lines: string[] }[] = [
     ],
   },
   {
-    title: "Roll It Up (Prestige)",
+    title: "Prestige",
     lines: [
-      "Once you've earned 1M lifetime PC, you can Roll It Up. This wipes your run-state cents, upgrades, and helpers.",
+      "Once you've earned 1M lifetime PC, you can Prestige. This wipes your run-state cents, upgrades, and helpers.",
       "In return you get ★ Bank Tokens (a soft sqrt curve — 1M earns 10, 10M earns 31, 100M earns 100).",
-      "Spend Tokens in the ★ Tokens tab on permanent upgrades that survive every future Roll-Up.",
-      "Each Roll-Up adds a permanent PC multiplier on every coin pickup: first one is +300% (×4), and each subsequent +100% (×5, ×6, ...).",
-      "First Roll-Up earns you the ★ Roll-Up Club badge next to your name on the leaderboard at the bottom of the game.",
+      "Spend Tokens in the ★ Tokens tab on permanent upgrades that survive every future Prestige.",
+      "Each Prestige adds a permanent PC multiplier on every coin pickup: first one is +300% (×4), and each subsequent +100% (×5, ×6, ...).",
+      "First Prestige earns you the ★ Prestige Club badge next to your name on the leaderboard at the bottom of the game.",
       "Higher Ceilings (perm) adds +10 to the max level of every base upgrade per level — five tiers (5, 7, 10, 14, 20★, total 56★) take Coin Value from 20 → 70, Sharper Eyes 10 → 60, the spawn unlocks 5 → 55, etc.",
     ],
   },
