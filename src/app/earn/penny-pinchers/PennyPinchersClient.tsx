@@ -335,8 +335,16 @@ export function PennyPinchersClient() {
   // drift if a batch fails or partially drops.
   const clickQueueRef = useRef<Array<{ coinType: CoinId; trait: CoinTrait | null; pc: number }>>([]);
   const flushTimerRef = useRef<number | null>(null);
-  const FLUSH_INTERVAL_MS = 400;
-  const FLUSH_AT_SIZE = 12;
+  // Idle flush cadence — runs whenever clicks are sitting in the
+  // queue with nothing else to ride along. Bumped from 400ms / 12 to
+  // 2500ms / 25 since spend actions now drain the queue too — the
+  // periodic flush only matters when the player is just clicking
+  // (no buys), which we can let coast for a couple of seconds. Cuts
+  // sustained-click traffic to ~1 req/2.5s instead of ~2 req/sec.
+  // Size threshold matches the server's MAX_CLICKS_PER_SEC = 25 so a
+  // single batch never exceeds the rate-limit budget.
+  const FLUSH_INTERVAL_MS = 2500;
+  const FLUSH_AT_SIZE = 25;
 
   /**
    * Drain whatever's in the queue and cancel any pending flush timer.
