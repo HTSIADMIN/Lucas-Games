@@ -76,22 +76,23 @@ export function BetInput({
         </button>
       </div>
 
-      {/* Amount display — pinned to a cream "cash drawer" paper bg so
-          the dark-gold value text stays legible on every theme. The
-          theme-aware --parchment-50 flips dark on dark themes, which
-          dropped the gold value to ~2:1 contrast. */}
+      {/* Amount display — theme-aware so dark themes invert: deepest
+          panel tone for bg, lightest fg colour for the value text,
+          fg-muted for the 'COINS' label and the value's drop shadow.
+          Light themes get the same triple, just flipped (cream bg,
+          ink value, mid-brown shadow). */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          background: "#fef6e4",
-          border: "3px solid #1a0f08",
+          background: "var(--bg-deep)",
+          border: "3px solid var(--fg)",
           padding: "var(--sp-2) var(--sp-3)",
           width: "100%",
         }}
       >
-        <span className="currency" style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-tiny)", letterSpacing: "var(--ls-loose)", color: "#6b3f24" }}>
+        <span className="currency" style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-tiny)", letterSpacing: "var(--ls-loose)", color: "var(--fg-muted)" }}>
           COINS
         </span>
         <input
@@ -112,8 +113,8 @@ export function BetInput({
             boxShadow: "none",
             fontFamily: "var(--font-display)",
             fontSize: "var(--fs-h3)",
-            color: "#c8941d",
-            textShadow: "2px 2px 0 #ffe9a8",
+            color: "var(--fg)",
+            textShadow: "2px 2px 0 var(--fg-muted)",
             textAlign: "center",
             width: "100%",
             outline: "none",
