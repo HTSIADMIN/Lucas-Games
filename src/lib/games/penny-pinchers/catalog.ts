@@ -72,6 +72,13 @@ export type UpgradeDef = {
    * it twice does nothing).
    */
   ceilingExempt?: boolean;
+  /**
+   * Explicit per-level cost ladder. When set, overrides
+   * baseCost / costMultiplier — index 0 is the cost for L1, index N
+   * is the cost for L(N+1). Used by short capped upgrades whose
+   * authored ramp doesn't fit a clean geometric formula.
+   */
+  costSchedule?: readonly number[];
 };
 
 export const UPGRADES: readonly UpgradeDef[] = [
@@ -88,10 +95,13 @@ export const UPGRADES: readonly UpgradeDef[] = [
   // Same upgrade_id retained so existing per-user rows carry over
   // their level on deploy.
   { id: "penny_multiplier",  label: "Coin Value",          description: "+10% PC on every coin per level — keeps the denominations in proportion.", category: "value", baseCost: 50, costMultiplier: 1.45, maxLevel: 20 },
-  // Flat-bonus counterpart to Coin Value. Capped at 5 and exempt from
-  // Higher Ceilings — a hard ceiling so a tiny denomination (penny)
-  // can't be turned into a power-fountain by stacking +1's.
-  { id: "coin_polish",       label: "Coin Polish",         description: "+1 PC on every coin per level. Hard cap at 5.", category: "value", baseCost: 1_000, costMultiplier: 2.2, maxLevel: 5, ceilingExempt: true },
+  // Flat-bonus counterpart to Coin Value. Cheap starter — 25 PC for
+  // the first level so a player can stack a couple of +1's right
+  // away — but ramps fast at the top (last rank is 1k). Capped at
+  // 5 and exempt from Higher Ceilings — a hard ceiling so a tiny
+  // denomination (penny) can't be turned into a power-fountain by
+  // stacking +1's. costSchedule overrides the geometric formula.
+  { id: "coin_polish",       label: "Coin Polish",         description: "+1 PC on every coin per level. Hard cap at 5.", category: "value", baseCost: 25, costMultiplier: 1, maxLevel: 5, ceilingExempt: true, costSchedule: [25, 50, 200, 500, 1000] },
   { id: "lucky_crack",       label: "Lucky Sidewalk Crack", description: "+1% chance per level for a coin to spawn shiny (5×).", category: "value",  baseCost: 500,   costMultiplier: 1.7,  maxLevel: 10 },
 
   // Spawn — unlock new coin tiers, then pump their weight

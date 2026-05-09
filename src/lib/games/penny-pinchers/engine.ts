@@ -298,6 +298,12 @@ export function nextUpgradeCost(
   const def = UPGRADES_BY_ID[upgradeId];
   if (!def) return null;
   if (currentLevel >= effectiveUpgradeMaxLevel(def, perm)) return null;
+  // costSchedule overrides the geometric formula. Index N is the
+  // cost to take the upgrade to level (N+1), so currentLevel itself
+  // is the index. Falls back to formula past the schedule's end.
+  if (def.costSchedule && currentLevel < def.costSchedule.length) {
+    return def.costSchedule[currentLevel];
+  }
   return Math.ceil(def.baseCost * Math.pow(def.costMultiplier, currentLevel));
 }
 
