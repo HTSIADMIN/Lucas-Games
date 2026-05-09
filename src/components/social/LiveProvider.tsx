@@ -35,8 +35,21 @@ export type LiveBet = {
   at: number;
 };
 
+type Me = {
+  id: string;
+  username: string;
+  avatarColor: string;
+  initials: string;
+  frame?: string | null;
+  hat?: string | null;
+};
+
 type LiveCtx = {
   ready: boolean;
+  /** The current user's profile (null when anonymous). Exposes the
+   *  same fields LiveProvider was already given as a prop so pills
+   *  / drawers don't have to re-thread it from the server. */
+  me: Me | null;
   presence: PresenceMember[];
   bets: LiveBet[];
   chat: ChatMessagePublic[];
@@ -46,6 +59,7 @@ type LiveCtx = {
 
 const Ctx = createContext<LiveCtx>({
   ready: false,
+  me: null,
   presence: [],
   bets: [],
   chat: [],
@@ -286,8 +300,8 @@ export function LiveProvider({
   }, [me, snapshot]);
 
   const value = useMemo(
-    () => ({ ready, presence, bets, chat, championId, pushChat }),
-    [ready, presence, bets, chat, championId],
+    () => ({ ready, me, presence, bets, chat, championId, pushChat }),
+    [ready, me, presence, bets, chat, championId],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

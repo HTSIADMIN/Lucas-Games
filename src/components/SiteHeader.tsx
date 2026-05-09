@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ProfileButton } from "@/components/social/ProfileButton";
+import { HeaderProfilePill } from "@/components/HeaderProfilePill";
 import { SfxControls } from "@/components/SfxControls";
 import { MobileNavMenu } from "@/components/MobileNavMenu";
 import { WhatsNewButton } from "@/components/WhatsNewButton";
@@ -49,8 +49,8 @@ export function SiteHeader({
           <Link href="/shop" aria-current={current === "shop" ? "page" : undefined}>
             Shop
           </Link>
-          <ProfileButton />
         </nav>
+        <HeaderProfilePill />
       </div>
       <MobileNavMenu current={current} />
     </header>
