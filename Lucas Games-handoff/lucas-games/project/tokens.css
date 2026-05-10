@@ -79,6 +79,15 @@
   --surface:       var(--parchment-100);
   --surface-edge:  var(--saddle-300);
   --surface-panel: var(--saddle-200);
+  /* Subtle accent shade for "highlighted" backgrounds (Bank It
+     ready, leaderboard your-row, helper PC/sec chip, affordable
+     cards). Per-theme tuned so dark themes don't show bright cream
+     against a dark panel. */
+  --surface-highlight: var(--gold-100);
+  /* Drop shadow under chip-shaped UI (roulette bet chips, etc).
+     Lighter on light themes, darker on dark themes so the chip
+     reads as raised instead of disappearing into the bg. */
+  --chip-shadow:   rgba(0, 0, 0, 0.4);
   --fg:            var(--ink-900);
   --fg-muted:      var(--saddle-400);
   --fg-dim:        var(--saddle-300);
@@ -176,6 +185,8 @@
   --bg-lift:      #f1d9b3;
   --surface:      #f1d9b3;
   --surface-edge: #8a8077;
+  --surface-highlight: #ffe2a3;
+  --chip-shadow:  rgba(0, 0, 0, 0.4);
   --fg-muted:     #6b3f24;
   --fg-dim:       #8a8077;
 }
@@ -186,6 +197,8 @@
   --bg-lift:      #5a3a78;
   --surface:      #5a1a1a;
   --surface-edge: #8b3a3a;
+  --surface-highlight: #7a2828;
+  --chip-shadow:  rgba(0, 0, 0, 0.6);
   --fg:           #fef6e4;
   --fg-muted:     #f1d9b3;
   --fg-dim:       #d4a574;
@@ -200,12 +213,88 @@
   --bg-lift:      #3d2418;
   --surface:      #2a1810;
   --surface-edge: #4a2818;
+  --surface-highlight: #4a2c14;
+  --chip-shadow:  rgba(0, 0, 0, 0.7);
   --fg:           #fef6e4;
   --fg-muted:     #d4a574;
   --fg-dim:       #a87545;
   --fg-on-wood:   #fef6e4;
   --stroke:       #1a0f08;
   --stroke-soft:  #3d2418;
+}
+
+[data-theme="emerald"] {
+  --bg:           #0f2e1a;
+  --bg-deep:      #061a0e;
+  --bg-lift:      #1a4d2e;
+  --surface:      #1a4d2e;
+  --surface-edge: #5a8a3e;
+  --surface-highlight: #2a6840;
+  --chip-shadow:  rgba(0, 0, 0, 0.65);
+  --fg:           #f4ecdc;
+  --fg-muted:     #a0c890;
+  --fg-dim:       #6ba84f;
+  --fg-on-wood:   #f4ecdc;
+  --stroke:       #061a0e;
+  --stroke-soft:  #2a5a3e;
+}
+
+[data-theme="royal"] {
+  --bg:           #1a0f2e;
+  --bg-deep:      #0a0418;
+  --bg-lift:      #3a1f5e;
+  --surface:      #2a1545;
+  --surface-edge: #7a5510;
+  --surface-highlight: #3a2068;
+  --chip-shadow:  rgba(0, 0, 0, 0.65);
+  --fg:           #fff7e6;
+  --fg-muted:     #d4b8e8;
+  --fg-dim:       #a888c0;
+  --fg-on-wood:   #fff7e6;
+  --stroke:       #0a0418;
+  --stroke-soft:  #3a1f5e;
+}
+
+[data-theme="crimson"] {
+  --bg:           #0a0408;
+  --bg-deep:      #1a0a08;
+  --bg-lift:      #5a0a0a;
+  --surface:      #4a0a0a;
+  --surface-edge: #8b1a1a;
+  --surface-highlight: #5a1818;
+  --chip-shadow:  rgba(0, 0, 0, 0.7);
+  --fg:           #fef6e4;
+  --fg-muted:     #ffb888;
+  --fg-dim:       #c83838;
+  --fg-on-wood:   #fef6e4;
+  --stroke:       #0a0408;
+  --stroke-soft:  #2a0a08;
+}
+
+[data-theme="ice"] {
+  --bg:           #d8e8f0;
+  --bg-deep:      #b8d4e0;
+  --bg-lift:      #e8f4f8;
+  --surface:      #e8f4f8;
+  --surface-edge: #5fa8d3;
+  --surface-highlight: #c8e0ec;
+  --chip-shadow:  rgba(13, 58, 90, 0.3);
+  --fg:           #0d3a5a;
+  --fg-muted:     #2c6a8e;
+  --fg-dim:       #5a8aaa;
+  --fg-on-wood:   #0d3a5a;
+  --stroke:       #0d3a5a;
+  --stroke-soft:  #5fa8d3;
+}
+
+[data-theme="highnoon"] {
+  --bg:           #fef9e0;
+  --bg-deep:      #ffe9a8;
+  --bg-lift:      #fff7d0;
+  --surface:      #fff7d0;
+  --surface-edge: #c8941d;
+  /* Light theme — keep highlight subtly warmer than the body. */
+  --surface-highlight: #ffe9a8;
 }
 
 /* ============================================================
