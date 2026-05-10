@@ -9,9 +9,53 @@ import { IdleTimeout } from "@/components/IdleTimeout";
 import { BrokeModal } from "@/components/BrokeModal";
 import { WhatsNewModal } from "@/components/WhatsNewModal";
 
+// metadataBase resolves relative URLs in openGraph + twitter image
+// fields. Prefer the site URL set in env (production), fall back to
+// the Vercel preview URL, and fall back again to localhost so dev
+// build doesn't warn.
+const siteOrigin = (() => {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicit) return explicit;
+  const vercel = process.env.VERCEL_URL;
+  if (vercel) return `https://${vercel}`;
+  return "http://localhost:3000";
+})();
+
 export const metadata: Metadata = {
-  title: "Lucas Games",
-  description: "A pixel saloon for the wild west of mini-games.",
+  metadataBase: new URL(siteOrigin),
+  title: {
+    default: "Lucas Games",
+    template: "%s · Lucas Games",
+  },
+  description:
+    "A pixel-saloon casino of free-to-play mini-games — slots, blackjack, plinko, daily spin, and the Penny Pinchers clicker. Spin, slot, click, win.",
+  applicationName: "Lucas Games",
+  // Next.js auto-discovers /app/icon.svg; this opts the favicon
+  // into the metadata pipeline so older browsers also pick it up.
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
+  // The /app/opengraph-image.tsx route generates the 1200×630 card —
+  // Next.js plumbs it into both `openGraph.images` and
+  // `twitter.images` automatically. We just set the metadata
+  // surrounding it.
+  openGraph: {
+    title: "Lucas Games — Pixel Saloon",
+    description:
+      "A wild-west casino of free-to-play mini-games. Spin · Slot · Click · Win.",
+    siteName: "Lucas Games",
+    type: "website",
+    locale: "en_US",
+    url: siteOrigin,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Lucas Games — Pixel Saloon",
+    description:
+      "A wild-west casino of free-to-play mini-games. Spin · Slot · Click · Win.",
+  },
 };
 
 export const viewport: Viewport = {
