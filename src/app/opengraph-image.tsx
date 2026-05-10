@@ -2,10 +2,16 @@ import { ImageResponse } from "next/og";
 
 // Open Graph card for chat / social link previews. 1200×630.
 //
-// Fonts: VT323 fetched at request time from Google Fonts so the
-// card uses the same monospaced pixel-display typeface the site UI
-// falls back to (after the local M6X11). next/og can't bundle the
-// site's M6X11 directly, so VT323 is the deliberate match.
+// Self-contained — no external font / image fetches at request
+// time. An earlier version pulled VT323 from Google Fonts on every
+// scrape, which ate Discord's tight OG-scrape timeout and caused
+// the card to fail. Now renders entirely with Satori's bundled
+// sans + CSS visual elements, so the route is essentially as
+// stable as a static PNG.
+//
+// To swap in a designer-made banner instead, delete this file and
+// drop a 1200×630 image at `src/app/opengraph-image.png` — Next.js
+// auto-uses it.
 
 export const runtime = "edge";
 export const contentType = "image/png";
@@ -28,27 +34,7 @@ const COINS: {
   { id: "dollar",  label: "$1",  face: "#e8c468", rim: "#7a5510", inner: "#c89a2a", ink: "#3a2408" },
 ];
 
-/**
- * Pull a TTF/WOFF buffer for a Google-hosted font. The CSS API
- * returns @font-face rules with a single src URL we extract and
- * fetch directly. Mozilla UA forces the woff2 / TTF that Satori
- * understands instead of the variable WOFF2 served to modern
- * browsers (which Satori doesn't support).
- */
-async function loadGoogleFont(family: string): Promise<ArrayBuffer> {
-  const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}&display=swap`;
-  const css = await fetch(cssUrl, {
-    headers: { "User-Agent": "Mozilla/5.0 (Linux x86_64) AppleWebKit/537.36" },
-  }).then((r) => r.text());
-  const match = css.match(/src:\s*url\((.+?)\)\s*format/);
-  if (!match) throw new Error(`Could not extract font URL for ${family}`);
-  const buffer = await fetch(match[1]).then((r) => r.arrayBuffer());
-  return buffer;
-}
-
 export default async function OGImage() {
-  const vt323 = await loadGoogleFont("VT323");
-
   return new ImageResponse(
     (
       <div
@@ -68,7 +54,6 @@ export default async function OGImage() {
           //      light at the wordmark height.
           background:
             "repeating-linear-gradient(90deg, transparent 0 95px, rgba(0,0,0,0.18) 95px 96px), repeating-linear-gradient(45deg, rgba(0,0,0,0.05) 0 6px, transparent 6px 14px), radial-gradient(ellipse at 50% 32%, rgba(255, 232, 168, 0.22) 0%, transparent 56%), linear-gradient(180deg, #4a2818 0%, #2a1810 100%)",
-          fontFamily: "VT323",
           position: "relative",
         }}
       >
@@ -217,12 +202,7 @@ export default async function OGImage() {
         </div>
       </div>
     ),
-    {
-      ...size,
-      fonts: [
-        { name: "VT323", data: vt323, style: "normal", weight: 400 },
-      ],
-    },
+    { ...size },
   );
 }
 
