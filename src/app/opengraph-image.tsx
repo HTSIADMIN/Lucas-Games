@@ -2,30 +2,16 @@ import { ImageResponse } from "next/og";
 
 // Open Graph card for chat / social link previews. 1200×630.
 //
-// Composition: two-row vertical stack centered in the card.
-//   • LUCAS / GAMES — the words split onto two lines as a giant
-//     show-poster wordmark, gold ink-shadowed text on dark wood.
-//   • A "PIXEL SALOON" divider with star bullets and gold rules
-//     anchoring the brand axis.
-//   • Six coin discs fanned along the bottom in an arc, in their
-//     real per-denomination colours so the card reads as
-//     'this is a casino of mini-games' at a glance.
-//   • A muted parchment tagline on the bottom edge.
-//
-// No frame ornament, no inner box — just typography + atmosphere.
+// Fonts: VT323 fetched at request time from Google Fonts so the
+// card uses the same monospaced pixel-display typeface the site UI
+// falls back to (after the local M6X11). next/og can't bundle the
+// site's M6X11 directly, so VT323 is the deliberate match.
 
 export const runtime = "edge";
 export const contentType = "image/png";
 export const size = { width: 1200, height: 630 };
 export const alt = "Lucas Games — Pixel Saloon";
 
-// Per-denomination palettes. Each coin gets a face colour, a rim
-// edge, and a darker shade used for the inner gradient stop so
-// the disc reads as a 3D coin rather than a flat circle.
-//
-// Penny is bronzed; nickel/dime/quarter/half walk a cooler silver
-// scale (slightly cooler & lighter as the denomination climbs);
-// dollar is the marquee Sacajawea gold.
 const COINS: {
   id: string;
   label: string;
@@ -42,7 +28,27 @@ const COINS: {
   { id: "dollar",  label: "$1",  face: "#e8c468", rim: "#7a5510", inner: "#c89a2a", ink: "#3a2408" },
 ];
 
+/**
+ * Pull a TTF/WOFF buffer for a Google-hosted font. The CSS API
+ * returns @font-face rules with a single src URL we extract and
+ * fetch directly. Mozilla UA forces the woff2 / TTF that Satori
+ * understands instead of the variable WOFF2 served to modern
+ * browsers (which Satori doesn't support).
+ */
+async function loadGoogleFont(family: string): Promise<ArrayBuffer> {
+  const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}&display=swap`;
+  const css = await fetch(cssUrl, {
+    headers: { "User-Agent": "Mozilla/5.0 (Linux x86_64) AppleWebKit/537.36" },
+  }).then((r) => r.text());
+  const match = css.match(/src:\s*url\((.+?)\)\s*format/);
+  if (!match) throw new Error(`Could not extract font URL for ${family}`);
+  const buffer = await fetch(match[1]).then((r) => r.arrayBuffer());
+  return buffer;
+}
+
 export default async function OGImage() {
+  const vt323 = await loadGoogleFont("VT323");
+
   return new ImageResponse(
     (
       <div
@@ -54,43 +60,44 @@ export default async function OGImage() {
           alignItems: "center",
           justifyContent: "center",
           color: "#fef6e4",
-          // Saloon background — three layers stacked:
-          //   1. Vertical plank stripes (faint, every 96px) for a
-          //      barn-wood feel.
-          //   2. Diagonal pinstripe weave so the surface doesn't
-          //      read as flat poster paper.
-          //   3. Saddle-brown vertical gradient with a soft amber
-          //      glow at the wordmark height.
+          // Layered saloon backdrop:
+          //   1. Vertical plank stripes every 96px — barn-wood feel.
+          //   2. 45° pinstripe weave at low opacity — texture so
+          //      the surface isn't flat poster paper.
+          //   3. Saddle vertical gradient with a soft amber pin-
+          //      light at the wordmark height.
           background:
             "repeating-linear-gradient(90deg, transparent 0 95px, rgba(0,0,0,0.18) 95px 96px), repeating-linear-gradient(45deg, rgba(0,0,0,0.05) 0 6px, transparent 6px 14px), radial-gradient(ellipse at 50% 32%, rgba(255, 232, 168, 0.22) 0%, transparent 56%), linear-gradient(180deg, #4a2818 0%, #2a1810 100%)",
+          fontFamily: "VT323",
           position: "relative",
         }}
       >
-        {/* Wordmark — LUCAS and GAMES stacked on two lines as a
-            show-poster brand. Each word fits the card with room
-            to breathe instead of squeezing onto one line that
-            overflows. The ink drop shadow + golden inner glow
-            give the letters the 'carved into wood' read. */}
+        {/* Wordmark stack — LUCAS / GAMES on two lines as a show-
+            poster brand. Each word fits the card with breathing
+            room. The ink-step + cream highlight + golden glow
+            sells the 'old-saloon sign' feel without the title
+            looking like flat web text. */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             lineHeight: 0.92,
-            marginBottom: 28,
+            marginBottom: 24,
           }}
         >
           {(["LUCAS", "GAMES"] as const).map((word, idx) => (
             <div
               key={word}
               style={{
-                fontSize: 188,
-                fontWeight: 900,
+                fontSize: 192,
                 color: "#f5c842",
-                letterSpacing: 6,
+                letterSpacing: 8,
+                // Step shadow stacks for a chunky pixel drop +
+                // soft golden bloom behind it.
                 textShadow:
-                  "10px 10px 0 #1a0f08, -1px -1px 0 #fff2a8, 0 0 28px rgba(245, 200, 66, 0.45)",
-                marginTop: idx === 0 ? 0 : -8,
+                  "8px 8px 0 #1a0f08, 0 0 28px rgba(245, 200, 66, 0.55)",
+                marginTop: idx === 0 ? 0 : -22,
               }}
             >
               {word}
@@ -98,55 +105,48 @@ export default async function OGImage() {
           ))}
         </div>
 
-        {/* Divider line + PIXEL SALOON caption. Two short gold
-            rules flanking the centre text + star bullets. Anchors
-            the wordmark in a horizontal axis instead of letting
-            it float free above the coins. */}
+        {/* Divider — '★ PIXEL SALOON ★' flanked by thin gold
+            rules. Anchors the wordmark in a horizontal axis. */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: 18,
-            marginBottom: 16,
+            marginBottom: 18,
           }}
         >
           <Rule width={140} />
-          <Star size={20} />
+          <Star size={22} />
           <div
             style={{
-              fontSize: 28,
+              fontSize: 36,
               color: "#fef6e4",
-              letterSpacing: 12,
-              textTransform: "uppercase",
+              letterSpacing: 14,
             }}
           >
-            Pixel Saloon
+            PIXEL SALOON
           </div>
-          <Star size={20} />
+          <Star size={22} />
           <Rule width={140} />
         </div>
 
-        {/* Coin spread — 6 distinct disc faces fanned along the
-            bottom arc. Per-coin tilt + arc-lift give it the
-            'hand-tossed across the felt' read. Gradient layering:
-            small soft pin-light at top-left, radial body shading
-            from face → inner → rim. Inset rim + drop shadow
-            mirror the in-game CoinSprite so the OG matches the
-            real play area. */}
+        {/* Coin spread — 6 distinct disc faces fanned along an
+            arc. Per-coin tilt + arc-lift give the 'hand-tossed
+            on the felt' look. Two-stop radial body + small soft
+            top-left pin-light + inset rim shadows mirror the
+            in-game CoinSprite. */}
         <div
           style={{
             display: "flex",
             alignItems: "flex-end",
             justifyContent: "center",
-            marginTop: 8,
+            marginTop: 6,
           }}
         >
           {COINS.map((c, i) => {
-            // 6-coin arc: outer coins lift highest, centre coins
-            // hug the baseline. Tilt is symmetric around centre.
             const arcLift = [50, 22, 4, 4, 22, 50][i];
             const tilt = (i - 2.5) * 5;
-            const SIZE = 138;
+            const SIZE = 130;
             return (
               <div
                 key={c.id}
@@ -158,9 +158,6 @@ export default async function OGImage() {
                   transform: `rotate(${tilt}deg)`,
                   borderRadius: "50%",
                   border: `5px solid ${c.rim}`,
-                  // Two-stop radial: face colour for the outer
-                  // 60%, inner darker for the deep core. Reads as
-                  // a struck coin face under flat light.
                   background: `radial-gradient(circle at 50% 55%, ${c.inner} 0%, ${c.face} 45%, ${c.face} 100%)`,
                   display: "flex",
                   alignItems: "center",
@@ -170,10 +167,6 @@ export default async function OGImage() {
                     "inset 0 -8px 0 rgba(0,0,0,0.32), inset 0 8px 0 rgba(255,255,255,0.4), 6px 9px 0 rgba(0,0,0,0.55)",
                 }}
               >
-                {/* Pin-light highlight at the top-left — small soft
-                    circle that sells the 3D-coin read without
-                    drowning the body colour the way a full white
-                    centre stop would. */}
                 <div
                   style={{
                     position: "absolute",
@@ -188,13 +181,10 @@ export default async function OGImage() {
                 />
                 <div
                   style={{
-                    fontSize: 38,
-                    fontWeight: 900,
+                    fontSize: 44,
                     color: c.ink,
                     letterSpacing: 1,
-                    // Subtle white shadow lifts the label off the
-                    // disc face on the lighter denominations.
-                    textShadow: "1px 1px 0 rgba(255,255,255,0.55)",
+                    textShadow: "1px 1px 0 rgba(255,255,255,0.5)",
                   }}
                 >
                   {c.label}
@@ -204,24 +194,35 @@ export default async function OGImage() {
           })}
         </div>
 
-        {/* Tagline — single muted line pinned to the bottom edge,
-            below the coin arc. Letter-spaced so it reads as
-            small-caps signage. */}
+        {/* Tagline — high-contrast cream text on a slim ink pill so
+            it reads cleanly against the dark wood without competing
+            with the wordmark. Was saddle-tan #d4a574 which buried
+            into the planks; cream + pill background fixes that. */}
         <div
           style={{
             position: "absolute",
-            bottom: 32,
-            fontSize: 22,
-            color: "#d4a574",
-            letterSpacing: 4,
-            textTransform: "uppercase",
+            bottom: 28,
+            display: "flex",
+            alignItems: "center",
+            padding: "8px 22px",
+            background: "rgba(26, 15, 8, 0.7)",
+            border: "2px solid rgba(245, 200, 66, 0.45)",
+            borderRadius: 999,
+            fontSize: 26,
+            color: "#fef6e4",
+            letterSpacing: 6,
           }}
         >
-          A casino of mini-games · spin · slot · click · win
+          A CASINO OF MINI-GAMES · SPIN · SLOT · CLICK · WIN
         </div>
       </div>
     ),
-    { ...size },
+    {
+      ...size,
+      fonts: [
+        { name: "VT323", data: vt323, style: "normal", weight: 400 },
+      ],
+    },
   );
 }
 
@@ -239,10 +240,7 @@ function Rule({ width }: { width: number }) {
   );
 }
 
-/**
- * 5-pointed star drawn with a clip-path polygon. Used as bullets
- * around the divider caption.
- */
+/** 5-pointed star drawn with a clip-path polygon. Bullets the divider. */
 function Star({ size }: { size: number }) {
   return (
     <div
