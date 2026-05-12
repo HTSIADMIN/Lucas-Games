@@ -108,6 +108,9 @@ export const upsertPennyPinchersPermUpgrade  = impl.upsertPennyPinchersPermUpgra
 export const clearPennyPinchersRun           = impl.clearPennyPinchersRun;
 export const listPennyPinchersAchievements   = impl.listPennyPinchersAchievements;
 export const insertPennyPinchersAchievements = impl.insertPennyPinchersAchievements;
+// Local-first blob persistence.
+export const getPennyPinchersBlob            = impl.getPennyPinchersBlob;
+export const savePennyPinchersBlob           = impl.savePennyPinchersBlob;
 
 export const getSlotsMeter           = impl.getSlotsMeter;
 export const setSlotsMeter           = impl.setSlotsMeter;

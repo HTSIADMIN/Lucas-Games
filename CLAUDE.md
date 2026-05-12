@@ -53,22 +53,40 @@ Top-level layout:
 
 [`AppSnapshotProvider`](src/components/AppSnapshotProvider.tsx) polls every 10s via `useVisibleInterval` (paused on hidden tabs), refires on `visibilitychange`, and exposes `useAppSnapshot()` to header fixtures, the event ticker, FreeGamesButton, the DailyChallenges launcher badge, and `LiveProvider`. Realtime channels still push instantly; the snapshot only carries the HTTP fallback. Game clients can call `refresh()` to force an immediate re-fetch after a wallet-affecting action, or dispatch the legacy `lg:balance` window event to update the cached balance without a fetch.
 
-## Penny Pinchers click batcher
+## Penny Pinchers — local-first architecture (May 2026)
 
-The clicker's per-tap server hit was untenable at Auto-Picker rates (~25/sec). [`recordClicks.ts`](src/lib/games/penny-pinchers/recordClicks.ts) is the server-side helper every click + spend route now funnels through:
+The clicker used to round-trip every click + spend to the server, batched through `recordClicks.ts`. That architecture is gone. Penny Pinchers is now **client-authoritative** — the browser owns the entire simulation, the server is dumb persistence + the wallet bridge.
 
-- The dedicated `/click` route accepts both single bodies (`{ coinType, traits, pc }`) and batched (`{ clicks: [...] }`).
-- The five spend routes (`/upgrade`, `/hire`, `/perm-upgrade`, `/bank`, `/blessing`) also accept a `clicks` field — when set, they flush the player's pending click queue *in the same HTTP packet as the purchase*. Eliminates the stale-cents race where a buy POST overtakes a click flush and gets rejected for insufficient PC.
-- A module-scope sliding-window rate limit (`MAX_CLICKS_PER_SEC = 25`) is shared across all routes for the same user, so spamming buys doesn't grant extra click budget.
-- Server `pp_record_clicks` RPC (migration `0032`) does the cents bump + lifetime counters + album increments atomically.
+### How it works
 
-Client side, [PennyPinchersClient.tsx](src/app/earn/penny-pinchers/PennyPinchersClient.tsx) batches with:
+- The full game state is a single `PennyPinchersGameState` blob defined in [`engine.ts`](src/lib/games/penny-pinchers/engine.ts). Every action (click, buy upgrade, hire helper, prestige, etc.) is a pure mutation function (`applyClick`, `applyBuyUpgrade`, …) that takes a state and returns a new state. The client wires these into the React state machine; **zero network round-trips on play**.
+- Persistence: only **four** server routes remain.
 
-- `FLUSH_INTERVAL_MS = 2500`, `FLUSH_AT_SIZE = 25` — idle flush every 2.5s, immediate flush at 25 queued clicks (matches server's per-second budget so a single POST never exceeds the rate-limit).
-- `drainClickQueue()` returns the queue without sending — buy actions piggyback the drained clicks onto their own POST body.
-- `visibilitychange` + unmount both flush so a navigation mid-batch doesn't drop PC.
+| Route | Purpose |
+|-------|---------|
+| `GET /api/earn/penny-pinchers/load` | Returns the player's `state_blob`. On first read per user, seeds the blob from the legacy normalized rows (`penny_pinchers_state / _upgrades / _helpers / _perm_upgrades / _achievements`) so existing players keep their progress. |
+| `POST /api/earn/penny-pinchers/save` | Accepts the full state blob and writes it. No validation beyond shape — local-first means trusted client. |
+| `POST /api/earn/penny-pinchers/bank` | The only server-authoritative action. Accepts the state blob, runs `applyBank` server-side, credits the wallet ledger atomically with the save, returns new state + new wallet balance. |
+| `GET /api/earn/penny-pinchers/leaderboard` | Read-only top-10. Polled separately on a slow cadence (30s). |
 
-Net effect: ~25 req/s sustained click traffic dropped to ~1 req per 2.5s, with zero stale-cents purchase failures.
+The legacy `/click /upgrade /hire /perm-upgrade /blessing /cushion /relic-chest /prestige /state /wallet` routes and `recordClicks.ts` were all deleted. So was the click batcher (`FLUSH_INTERVAL_MS`, `drainClickQueue`, etc.) — every action is a synchronous local state mutation now.
+
+### Save loop
+
+[PennyPinchersClient.tsx](src/app/earn/penny-pinchers/PennyPinchersClient.tsx) owns the simulation:
+
+- **Save every 10 seconds** if the state is dirty (via `useVisibleInterval` so hidden tabs don't hammer the server). A `SaveChip` component in the right-column stack shows the countdown ("Saves in 7s") with a brief "Saved" pulse on success and "Save failed — retrying" if a save fails.
+- **Forced save** on every bank (server-authoritative) and on tab-hide / `beforeunload` via `navigator.sendBeacon` so closing the laptop never loses progress.
+- **localStorage mirror** (`pp:state:v1`) on every save attempt. On next mount, whichever of (server blob, local mirror) was saved more recently wins — phone → laptop → tablet stay in sync automatically.
+- **Offline accrual** is now client-side: `applyOfflineAccrual` runs on load, credits the helper PC earned during the gap (capped by `offlineCapHours`), and pops the welcome-back banner if the gap was ≥ 60s.
+
+### Schema
+
+Migration `0040_penny_pinchers_state_blob` added `state_blob jsonb` + `last_saved_at timestamptz` to `penny_pinchers_state`. The legacy normalized tables stay populated by historical data — they're read once per user (by `/load`) to seed the blob, then go cold. Don't write to them in new code.
+
+### Security model
+
+Per the project's stated scope (private play among friends), there is **no anti-cheat** on the save path. If a tampered client sends `cents: 10_000_000_000`, the server happily saves it and the next `/bank` credits the wallet accordingly. If that ever needs to change, add validation in [bank/route.ts](src/app/api/earn/penny-pinchers/bank/route.ts) — it's the only chokepoint that matters because it's the sole route that touches the wallet ledger.
 
 ## Recent UI overhauls (April–May 2026)
 
@@ -265,4 +283,4 @@ Source: [src/app/api/earn/status/route.ts](src/app/api/earn/status/route.ts), [s
 - **One poll per concern** — if you need `balance / event / earn / dailyClaimable / chat / bets`, consume `useAppSnapshot()` instead of fetching directly. Never add a new global poll without checking whether it can fold into the snapshot.
 - **All fetches that loop go through `useVisibleInterval`** — bare `setInterval` keeps hammering hidden tabs. Use the hook so polling pauses cleanly.
 - **Free games are special** — the six slugs in `FREE_GAMES` get `<FreeGamesButton>` automatically via `<GameShell>`. To add another, add it to `FREE_GAMES` and (if it has a cooldown) extend `/api/earn/status` + the snapshot endpoint.
-- **Penny Pinchers spend routes flush clicks** — when adding a new spend endpoint, accept `body.clicks` and call `applyPendingClicksFromBody(userId, body)` before processing the spend. Skipping it brings back the stale-cents race.
+- **Penny Pinchers is local-first** — every gameplay action is a pure mutation function in [`engine.ts`](src/lib/games/penny-pinchers/engine.ts) (`applyClick`, `applyBuyUpgrade`, …). The client wires them via `mutate(applyXxx)` for instant updates; the autosave loop persists. Don't add new server routes for in-game actions — extend the engine and let the next `/save` carry it through. Only `bank` touches the wallet ledger.

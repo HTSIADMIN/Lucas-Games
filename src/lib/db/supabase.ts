@@ -578,6 +578,63 @@ export async function clearPennyPinchersRun(userId: string): Promise<void> {
   await client().from("penny_pinchers_upgrades").delete().eq("user_id", userId);
   await client().from("penny_pinchers_helpers").delete().eq("user_id", userId);
 }
+
+// ============ PENNY PINCHERS — LOCAL-FIRST BLOB ============
+// New persistence path for the client-authoritative simulation.
+// The blob holds the full game state; the legacy normalized tables
+// above stay populated by historical data but are only read once
+// per user (by getPennyPinchersBlob) when state_blob is still null.
+//
+// Returns null only if the row doesn't exist OR if both state_blob
+// is null AND there's no legacy data to seed from. The /load route
+// then hands back a freshGameState() instead.
+export async function getPennyPinchersBlob(userId: string): Promise<{
+  blob: Record<string, unknown> | null;
+  lastSavedAt: string | null;
+}> {
+  const { data, error } = await client()
+    .from("penny_pinchers_state")
+    .select("state_blob, last_saved_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(`getPennyPinchersBlob: ${error.message}`);
+  return {
+    blob: (data?.state_blob as Record<string, unknown> | null) ?? null,
+    lastSavedAt: (data?.last_saved_at as string | null) ?? null,
+  };
+}
+
+export async function savePennyPinchersBlob(
+  userId: string,
+  blob: Record<string, unknown>,
+  nowIso: string = new Date().toISOString(),
+): Promise<void> {
+  // Upsert on the existing penny_pinchers_state row. Includes a
+  // backstop for the legacy NOT NULL columns from migration 0025
+  // so a brand-new row (no normalized history) can still be created
+  // by the blob path alone.
+  const { error } = await client()
+    .from("penny_pinchers_state")
+    .upsert(
+      {
+        user_id: userId,
+        state_blob: blob,
+        last_saved_at: nowIso,
+        // Legacy columns that have NOT NULL defaults — we still
+        // populate them so the row inserts cleanly. Reads
+        // through getPennyPinchersBlob ignore them.
+        cents: typeof blob.cents === "number" ? blob.cents : 0,
+        lifetime_clicks: typeof blob.lifetimeClicks === "number" ? blob.lifetimeClicks : 0,
+        lifetime_pc_earned: typeof blob.lifetimePCEarned === "number" ? blob.lifetimePCEarned : 0,
+        prestige_count: typeof blob.prestigeCount === "number" ? blob.prestigeCount : 0,
+        bank_tokens: typeof blob.bankTokens === "number" ? blob.bankTokens : 0,
+        lifetime_banked_cents: typeof blob.lifetimeBankedCents === "number" ? blob.lifetimeBankedCents : 0,
+        frugality: typeof blob.frugality === "number" ? blob.frugality : 0,
+      },
+      { onConflict: "user_id" },
+    );
+  if (error) throw new Error(`savePennyPinchersBlob: ${error.message}`);
+}
 // ============ ARCADE UPGRADES ============
 export async function listArcadeUpgrades(
   userId: string,

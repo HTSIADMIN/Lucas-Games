@@ -3,10 +3,15 @@
 
 import {
   ACHIEVEMENTS,
+  ACHIEVEMENTS_BY_ID,
   BANK_PC_PER_WALLET_CENT,
+  BLESSINGS,
   CHESTS,
   COINS,
   COIN_ORDER,
+  CUSHION_LOOT,
+  FRUGALITY_MAX,
+  FRUGALITY_MIN,
   FRUGALITY_PC_PER_POINT,
   HELPERS_BY_ID,
   MERGE_PROXIMITY_PX,
@@ -18,9 +23,11 @@ import {
   TRAITS,
   UPGRADES_BY_ID,
   type AchievementId,
+  type BlessingId,
   type ChestTier,
   type CoinId,
   type CoinTrait,
+  type CushionLootId,
   type HelperId,
   type PermUpgradeId,
   type RelicDef,
@@ -844,3 +851,486 @@ export function unlockedCoins(levels: UpgradeLevels): CoinId[] {
   }
   return list;
 }
+
+// ============================================================
+// LOCAL-FIRST GAME STATE
+//
+// The browser owns the live simulation. This is the persisted shape
+// the client tracks in memory and ships up to /save every 10s.
+//
+// One blob, all the data — no more normalized tables for active
+// play. The legacy penny_pinchers_state / _upgrades / _helpers /
+// _perm_upgrades tables are read once on first /load per user (to
+// seed the blob from historical data) and then go cold.
+// ============================================================
+
+/** Current persisted game state. Schema version is stamped so we can
+ *  evolve the shape safely in future migrations — bump VERSION and
+ *  branch in `migrateLoadedState` if needed. */
+export const PENNY_PINCHERS_STATE_VERSION = 1 as const;
+
+export type PennyPinchersGameState = {
+  version: typeof PENNY_PINCHERS_STATE_VERSION;
+  /** Pinch Cents in pocket (the click currency). */
+  cents: number;
+  lifetimeClicks: number;
+  lifetimePCEarned: number;
+  /** UNIX ms — used to compute offline helper accrual on load. */
+  lastTickAt: number | null;
+  /** UNIX ms of the most recent /bank action (cosmetic stat only). */
+  lastBankAt: number | null;
+  dailyBankedCents: number;
+  /** YYYY-MM-DD UTC — rolls over the daily counter when changed. */
+  dailyBankedDay: string | null;
+  prestigeCount: number;
+  bankTokens: number;
+  lifetimeBankedCents: number;
+  lastPrestigeAt: number | null;
+  frugality: number;
+  /** Run upgrades — keyed by UpgradeId. Wiped on prestige. */
+  upgrades: Partial<Record<UpgradeId, number>>;
+  /** Run helpers — keyed by HelperId. Wiped on prestige. */
+  helpers: Partial<Record<HelperId, number>>;
+  /** Permanent upgrades — keyed by PermUpgradeId. Survives prestige. */
+  perm: Partial<Record<PermUpgradeId, number>>;
+  /** Coin album — per-trait per-coin pickup counts. Survives prestige. */
+  album: AlbumState;
+  /** Relics — keyed by RelicId. Survives prestige. */
+  relics: RelicLevels;
+  /** Unlocked achievement ids. */
+  achievementsUnlocked: AchievementId[];
+};
+
+export function freshGameState(): PennyPinchersGameState {
+  return {
+    version: PENNY_PINCHERS_STATE_VERSION,
+    cents: 0,
+    lifetimeClicks: 0,
+    lifetimePCEarned: 0,
+    lastTickAt: null,
+    lastBankAt: null,
+    dailyBankedCents: 0,
+    dailyBankedDay: null,
+    prestigeCount: 0,
+    bankTokens: 0,
+    lifetimeBankedCents: 0,
+    lastPrestigeAt: null,
+    frugality: 0,
+    upgrades: {},
+    helpers: {},
+    perm: {},
+    album: {},
+    relics: {},
+    achievementsUnlocked: [],
+  };
+}
+
+// ============================================================
+// PURE MUTATIONS
+//
+// Every action the client takes — click a coin, buy an upgrade,
+// hire a helper, prestige, bank, etc. — is a pure function that
+// reads a state and returns a new state. The client wires these
+// into a reducer; the server uses them for /bank validation.
+// ============================================================
+
+/** Result of a mutation that might be rejected (insufficient funds, max level, etc).
+ *  Discriminated by `ok` so TypeScript narrows cleanly after `if (!r.ok) return;`. */
+export type MutationResult<Extra extends Record<string, unknown> = Record<string, never>> =
+  | ({ ok: true; state: PennyPinchersGameState } & Extra)
+  | { ok: false; error: string };
+
+/** Bump lifetime click + PC counters, credit cents, increment album. */
+export function applyClick(
+  state: PennyPinchersGameState,
+  click: { coinType: CoinId; traits: CoinTrait[]; mergedPC?: number | null },
+): PennyPinchersGameState {
+  const relicE = relicEffects(state.relics);
+  const base = click.mergedPC ?? coinPCValue(click.coinType, state.upgrades, state.perm, relicE);
+  const pc = Math.round(
+    base *
+      traitMultiplier(click.traits) *
+      frugalityPCMultiplier(state.frugality) *
+      albumPCBonus(state.album) *
+      prestigePCMultiplier(state.prestigeCount) *
+      relicE.clickPCMul,
+  );
+  const album: AlbumState = { ...state.album };
+  for (const t of click.traits) {
+    const page = { ...(album[t] ?? {}) } as Partial<Record<CoinId, number>>;
+    page[click.coinType] = (page[click.coinType] ?? 0) + 1;
+    album[t] = page;
+  }
+  return {
+    ...state,
+    cents: state.cents + pc,
+    lifetimeClicks: state.lifetimeClicks + 1,
+    lifetimePCEarned: state.lifetimePCEarned + pc,
+    lastTickAt: Date.now(),
+    album,
+  };
+}
+
+export function applyBuyUpgrade(
+  state: PennyPinchersGameState,
+  upgradeId: UpgradeId,
+): MutationResult<{ newLevel: number; cost: number }> {
+  const def = UPGRADES_BY_ID[upgradeId];
+  if (!def) return { ok: false, error: "bad_upgrade" };
+  const currentLevel = state.upgrades[upgradeId] ?? 0;
+  if (currentLevel >= effectiveUpgradeMaxLevel(def, state.perm)) return { ok: false, error: "max_level" };
+  const cost = nextUpgradeCost(upgradeId, currentLevel, state.perm);
+  if (cost == null) return { ok: false, error: "max_level" };
+  if (state.cents < cost) return { ok: false, error: "insufficient_cents" };
+  const newLevel = currentLevel + 1;
+  return {
+    ok: true,
+    state: {
+      ...state,
+      cents: state.cents - cost,
+      upgrades: { ...state.upgrades, [upgradeId]: newLevel },
+    },
+    newLevel,
+    cost,
+  };
+}
+
+export function applyHireHelper(
+  state: PennyPinchersGameState,
+  helperId: HelperId,
+): MutationResult<{ newCount: number; cost: number }> {
+  if (!HELPERS_BY_ID[helperId]) return { ok: false, error: "bad_helper" };
+  const currentCount = state.helpers[helperId] ?? 0;
+  const cost = nextHelperCost(helperId, currentCount);
+  if (cost == null) return { ok: false, error: "max_owned" };
+  if (state.cents < cost) return { ok: false, error: "insufficient_cents" };
+  const newCount = currentCount + 1;
+  return {
+    ok: true,
+    state: {
+      ...state,
+      cents: state.cents - cost,
+      helpers: { ...state.helpers, [helperId]: newCount },
+      // Stamp lastTickAt so a brand-new helper doesn't back-credit
+      // time when it didn't yet exist.
+      lastTickAt: Date.now(),
+    },
+    newCount,
+    cost,
+  };
+}
+
+export function applyBuyPermUpgrade(
+  state: PennyPinchersGameState,
+  upgradeId: PermUpgradeId,
+): MutationResult<{ newLevel: number; cost: number; frugalityGained: number }> {
+  if (!PERM_UPGRADES_BY_ID[upgradeId]) return { ok: false, error: "bad_upgrade" };
+  const currentLevel = state.perm[upgradeId] ?? 0;
+  const cost = nextPermUpgradeCost(upgradeId, currentLevel);
+  if (cost == null) return { ok: false, error: "max_level" };
+  if (state.bankTokens < cost) return { ok: false, error: "insufficient_tokens" };
+  const newLevel = currentLevel + 1;
+  // Prestige Tithe — each rank instantly grants Frugality equal
+  // to current prestige count, capped at +50.
+  const frugalityGrant =
+    upgradeId === "prestige_tithe"
+      ? Math.max(0, Math.min(FRUGALITY_MAX - state.frugality, state.prestigeCount))
+      : 0;
+  return {
+    ok: true,
+    state: {
+      ...state,
+      bankTokens: state.bankTokens - cost,
+      perm: { ...state.perm, [upgradeId]: newLevel },
+      frugality: state.frugality + frugalityGrant,
+    },
+    newLevel,
+    cost,
+    frugalityGained: frugalityGrant,
+  };
+}
+
+export function applyBuyBlessing(
+  state: PennyPinchersGameState,
+  blessingId: BlessingId,
+): MutationResult<{ cost: number; durationMs: number; frugalityGained: number }> {
+  const def = BLESSINGS[blessingId];
+  if (!def) return { ok: false, error: "bad_blessing" };
+  if (state.cents < def.cost) return { ok: false, error: "insufficient_cents" };
+  const frugalityGain = def.frugality ?? 0;
+  const newFrugality = Math.min(FRUGALITY_MAX, state.frugality + frugalityGain);
+  return {
+    ok: true,
+    state: {
+      ...state,
+      cents: state.cents - def.cost,
+      frugality: newFrugality,
+      lastTickAt: Date.now(),
+    },
+    cost: def.cost,
+    durationMs: def.durationMs,
+    frugalityGained: newFrugality - state.frugality,
+  };
+}
+
+export function applyResolveLostWallet(
+  state: PennyPinchersGameState,
+  choice: "return" | "keep",
+): PennyPinchersGameState & { pcGain: number } {
+  const relicE = relicEffects(state.relics);
+  const returnBonus = choice === "return" ? relicE.returnFrugalityBonus : 0;
+  // Inline the constants — engine.ts can't import from a file that
+  // imports back from engine.ts indirectly, so the constants we
+  // need are local to the catalog and we use them by name.
+  const LOST_WALLET_KEEP_FRUGALITY = -1;
+  const LOST_WALLET_RETURN_FRUGALITY = 1;
+  const LOST_WALLET_KEEP_PC = 500;
+  const LOST_WALLET_KEEP_WEALTH_PCT = 0.15;
+  const LOST_WALLET_KEEP_MAX_PC = 50_000;
+  const delta =
+    choice === "return"
+      ? LOST_WALLET_RETURN_FRUGALITY + returnBonus
+      : LOST_WALLET_KEEP_FRUGALITY;
+  const pcGain =
+    choice === "keep"
+      ? Math.min(
+          LOST_WALLET_KEEP_MAX_PC,
+          LOST_WALLET_KEEP_PC + Math.floor(state.cents * LOST_WALLET_KEEP_WEALTH_PCT),
+        )
+      : 0;
+  const nextFrugality = Math.min(FRUGALITY_MAX, Math.max(FRUGALITY_MIN, state.frugality + delta));
+  return {
+    ...state,
+    cents: state.cents + pcGain,
+    lifetimePCEarned: state.lifetimePCEarned + pcGain,
+    frugality: nextFrugality,
+    lastTickAt: Date.now(),
+    pcGain,
+  };
+}
+
+/** Roll one cushion's loot using the supplied RNG. */
+export function applyCushionFlip(
+  state: PennyPinchersGameState,
+  rand01: () => number,
+): { state: PennyPinchersGameState; lootId: CushionLootId; label: string; pcGain: number; tier: "lint" | "low" | "mid" | "high" | "jackpot"; frugalityGained: number } {
+  const totalWeight = CUSHION_LOOT.reduce((sum, e) => sum + e.weight, 0);
+  let r = rand01() * totalWeight;
+  let pick: typeof CUSHION_LOOT[number] = CUSHION_LOOT[0];
+  for (const entry of CUSHION_LOOT) {
+    r -= entry.weight;
+    if (r < 0) { pick = entry; break; }
+  }
+  const pcGain = Math.round(pick.pc * frugalityPCMultiplier(state.frugality));
+  const frugalityGain = pick.frugality ?? 0;
+  const newFrugality = Math.min(FRUGALITY_MAX, state.frugality + frugalityGain);
+  return {
+    state: {
+      ...state,
+      cents: state.cents + pcGain,
+      lifetimePCEarned: state.lifetimePCEarned + pcGain,
+      lifetimeClicks: state.lifetimeClicks + 1,
+      frugality: newFrugality,
+      lastTickAt: Date.now(),
+    },
+    lootId: pick.id,
+    label: pick.label,
+    pcGain,
+    tier: pick.tier,
+    frugalityGained: newFrugality - state.frugality,
+  };
+}
+
+/** Roll a relic chest, charge Frugality, level up the rolled relic.
+ *  Half-refunds on a maxed-out duplicate. */
+export function applyOpenChest(
+  state: PennyPinchersGameState,
+  tier: ChestTier,
+  rand01: () => number,
+): MutationResult<{ relicId: RelicId; label: string; rarity: string; description: string; newLevel: number; maxLevel: number; duplicateAtMax: boolean; refund: number }> {
+  const def = CHESTS[tier];
+  if (!def) return { ok: false, error: "bad_tier" };
+  if (state.frugality < def.cost) return { ok: false, error: "insufficient_frugality" };
+  const rolled = rollRelicFromChest(tier, rand01);
+  if (!rolled) return { ok: false, error: "roll_failed" };
+  const relics: RelicLevels = { ...state.relics };
+  const before = relics[rolled.id] ?? 0;
+  const maxedOut = before >= rolled.maxLevel;
+  const newLevel = Math.min(rolled.maxLevel, before + 1);
+  relics[rolled.id] = newLevel;
+  const refund = maxedOut ? Math.floor(def.cost / 2) : 0;
+  const netCost = def.cost - refund;
+  return {
+    ok: true,
+    state: {
+      ...state,
+      frugality: state.frugality - netCost,
+      relics,
+      lastTickAt: Date.now(),
+    },
+    relicId: rolled.id,
+    label: rolled.label,
+    rarity: rolled.rarity,
+    description: rolled.description,
+    newLevel,
+    maxLevel: rolled.maxLevel,
+    duplicateAtMax: maxedOut,
+    refund,
+  };
+}
+
+/** Roll It Up — wipe run state, award Bank Tokens proportional to cents sacrificed. */
+export function applyPrestige(
+  state: PennyPinchersGameState,
+): MutationResult<{ awarded: number }> {
+  const tokens = bankTokensFromCurrentCents(state.cents, state.prestigeCount);
+  if (tokens <= 0) return { ok: false, error: "below_threshold" };
+  const now = Date.now();
+  const relicE = relicEffects(state.relics);
+  const seededCents = prestigeStartingCents(state.perm) + relicE.prestigeStartBonusPC;
+  const newPrestigeCount = state.prestigeCount + 1;
+  // Vending Lifer — auto-grant vending_machines L1 in the new run.
+  const upgrades: Partial<Record<UpgradeId, number>> = {};
+  if ((state.perm.vending_lifer ?? 0) >= 1) upgrades.vending_machines = 1;
+  return {
+    ok: true,
+    state: {
+      ...state,
+      cents: seededCents,
+      lifetimePCEarned: 0,
+      // Career clicks survive — feels weird to lose them.
+      lifetimeClicks: state.lifetimeClicks,
+      upgrades,
+      helpers: {},
+      prestigeCount: newPrestigeCount,
+      bankTokens: state.bankTokens + tokens,
+      lastPrestigeAt: now,
+      lastTickAt: now,
+    },
+    awarded: tokens,
+  };
+}
+
+/** Bank PC → wallet ¢. Returns payout + new state with cents drained. */
+export function applyBank(
+  state: PennyPinchersGameState,
+  nowMs: number = Date.now(),
+): MutationResult<{ payoutCents: number; pcConsumed: number }> {
+  if (state.cents <= 0) return { ok: false, error: "no_cents" };
+  const relicE = relicEffects(state.relics);
+  const payoutCents = Math.max(
+    0,
+    Math.round(bankPayoutCents(state.cents) * relicE.bankPayoutMul),
+  );
+  if (payoutCents <= 0) return { ok: false, error: "no_cents" };
+  // BANK_PC_PER_WALLET_CENT is the conversion rate. Round UP so we
+  // never undercharge the player.
+  const pcConsumed = Math.min(state.cents, payoutCents * 4); // 4 = BANK_PC_PER_WALLET_CENT
+  const remainingPC = Math.max(0, state.cents - pcConsumed);
+  const todayUtc = new Date(nowMs).toISOString().slice(0, 10);
+  const dailyBankedSoFar = state.dailyBankedDay === todayUtc ? state.dailyBankedCents : 0;
+  return {
+    ok: true,
+    state: {
+      ...state,
+      cents: remainingPC,
+      lastTickAt: nowMs,
+      lastBankAt: nowMs,
+      dailyBankedCents: dailyBankedSoFar + payoutCents,
+      dailyBankedDay: todayUtc,
+      lifetimeBankedCents: state.lifetimeBankedCents + payoutCents,
+    },
+    payoutCents,
+    pcConsumed,
+  };
+}
+
+/** Credit helper PC earned while the tab was hidden / the user was
+ *  offline. Capped by `offlineCapHours` (extended by Old Hand). */
+export function applyOfflineAccrual(
+  state: PennyPinchersGameState,
+  nowMs: number = Date.now(),
+): { state: PennyPinchersGameState; accrued: number } {
+  if (state.lastTickAt == null) {
+    return {
+      state: { ...state, lastTickAt: nowMs },
+      accrued: 0,
+    };
+  }
+  const relicE = relicEffects(state.relics);
+  const rate = helperRatePcPerSec(state.helpers, state.perm, relicE);
+  const accrued = offlinePCAccrued(rate, new Date(state.lastTickAt), state.perm, new Date(nowMs));
+  if (accrued <= 0) {
+    return { state: { ...state, lastTickAt: nowMs }, accrued: 0 };
+  }
+  return {
+    state: {
+      ...state,
+      cents: state.cents + accrued,
+      lifetimePCEarned: state.lifetimePCEarned + accrued,
+      lastTickAt: nowMs,
+    },
+    accrued,
+  };
+}
+
+/** Detect any newly-unlocked achievements + credit their bank-token
+ *  + frugality rewards. Pure: returns the new state + the ids that
+ *  just unlocked so the caller can pop toasts. */
+export function applyAchievementSweep(
+  state: PennyPinchersGameState,
+): { state: PennyPinchersGameState; newlyUnlocked: AchievementId[] } {
+  const already = new Set(state.achievementsUnlocked);
+  const newly = detectNewUnlocks(
+    {
+      lifetimeClicks: state.lifetimeClicks,
+      prestigeCount: state.prestigeCount,
+      lifetimeBankedCents: state.lifetimeBankedCents,
+      frugality: state.frugality,
+      helpers: state.helpers,
+      upgrades: state.upgrades,
+      album: state.album,
+      relics: state.relics,
+    },
+    already,
+  );
+  if (newly.length === 0) return { state, newlyUnlocked: [] };
+  let tokenReward = 0;
+  let frugalityReward = 0;
+  for (const id of newly) {
+    const def = ACHIEVEMENTS_BY_ID[id];
+    if (!def) continue;
+    tokenReward += def.reward;
+    frugalityReward += def.frugalityReward ?? 0;
+  }
+  return {
+    state: {
+      ...state,
+      bankTokens: state.bankTokens + tokenReward,
+      frugality: Math.min(FRUGALITY_MAX, state.frugality + frugalityReward),
+      achievementsUnlocked: [...state.achievementsUnlocked, ...newly],
+    },
+    newlyUnlocked: newly,
+  };
+}
+
+/** Recover from a load that has a missing or malformed shape.
+ *  Always returns a complete, well-formed state. Future schema
+ *  versions branch here based on `loaded.version`. */
+export function migrateLoadedState(loaded: unknown): PennyPinchersGameState {
+  const fresh = freshGameState();
+  if (!loaded || typeof loaded !== "object") return fresh;
+  const raw = loaded as Partial<PennyPinchersGameState>;
+  return {
+    ...fresh,
+    ...raw,
+    version: PENNY_PINCHERS_STATE_VERSION,
+    upgrades: { ...fresh.upgrades, ...(raw.upgrades ?? {}) },
+    helpers: { ...fresh.helpers, ...(raw.helpers ?? {}) },
+    perm: { ...fresh.perm, ...(raw.perm ?? {}) },
+    album: { ...fresh.album, ...(raw.album ?? {}) },
+    relics: { ...fresh.relics, ...(raw.relics ?? {}) },
+    achievementsUnlocked: Array.isArray(raw.achievementsUnlocked) ? raw.achievementsUnlocked : [],
+  };
+}
+

@@ -20,7 +20,10 @@ const RARITY_COLOR: Record<RelicRarity, { ring: string; bg: string; fg: string }
   legendary: { ring: "#f5c842", bg: "var(--gold-300)",      fg: "var(--ink-900)" },
 };
 
-type RollResult = {
+/** Result of opening a chest. Parent computes this via the engine
+ *  (applyOpenChest) and hands it back so RelicShop can drive the
+ *  spin animation. */
+export type ChestRollResult = {
   tier: ChestTier;
   relicId: RelicId;
   label: string;
@@ -36,37 +39,26 @@ type RollResult = {
 export function RelicShop({
   frugality,
   relics,
-  onPurchased,
+  onBuyChest,
 }: {
   frugality: number;
   relics: Record<string, number>;
-  onPurchased: () => void;
+  /** Runs the chest roll on the parent's game state and returns
+   *  the result for the spin animation. Returns null if the buy
+   *  was rejected (e.g. not enough Frugality). */
+  onBuyChest: (tier: ChestTier) => ChestRollResult | null;
 }) {
   const [busy, setBusy] = useState<ChestTier | null>(null);
-  const [reveal, setReveal] = useState<RollResult | null>(null);
+  const [reveal, setReveal] = useState<ChestRollResult | null>(null);
 
-  async function buyChest(tier: ChestTier) {
+  function buyChest(tier: ChestTier) {
     if (busy) return;
     const cost = CHESTS[tier].cost;
     if (frugality < cost) return;
     setBusy(tier);
     Sfx.play("pack.open");
-    try {
-      const r = await fetch("/api/earn/penny-pinchers/relic-chest", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tier }),
-      });
-      if (r.ok) {
-        const d = (await r.json()) as RollResult;
-        setReveal(d);
-        // Win SFX moved into RevealModal so it fires WHEN the spin
-        // strip lands — not the moment the response arrives (which
-        // was 2.5s before the visual reveal, so the sound felt
-        // detached). RevealModal also picks the sound by rarity.
-        onPurchased();
-      }
-    } catch { /* ignore — sync poll reconciles */ }
+    const result = onBuyChest(tier);
+    if (result) setReveal(result);
     setBusy(null);
   }
 
@@ -211,7 +203,7 @@ const STRIP_VIEWPORT_W = 320;   // px wide reveal viewport
 const SPIN_DURATION_MS = 2800;
 const SPIN_REVEAL_DELAY_MS = SPIN_DURATION_MS + 200;
 
-function RevealModal({ result, onClose }: { result: RollResult; onClose: () => void }) {
+function RevealModal({ result, onClose }: { result: ChestRollResult; onClose: () => void }) {
   const tone = RARITY_COLOR[result.rarity];
   const def = RELICS_BY_ID[result.relicId];
   const [revealed, setRevealed] = useState(false);

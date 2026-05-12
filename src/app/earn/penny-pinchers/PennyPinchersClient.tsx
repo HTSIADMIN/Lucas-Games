@@ -5,6 +5,7 @@ import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import * as Sfx from "@/lib/sfx";
 import {
   ACHIEVEMENTS_BY_ID,
+  BANK_PC_PER_WALLET_CENT,
   COINS,
   COIN_ORDER,
   EVENTS,
@@ -26,7 +27,6 @@ import {
   COUCH_CHANCE_PER_POLL,
   COUCH_CUSHIONS,
   COUCH_LIFETIME_MS,
-  CUSHION_LOOT,
   CURSED_PAUSE_MS,
   FOUNTAIN_CHANCE_PER_POLL,
   FOUNTAIN_LIFETIME_MS,
@@ -37,28 +37,46 @@ import {
   STREAK_TIERS,
   STICKY_PICKUP_COUNT,
   STICKY_PICKUP_RADIUS,
-  TRAITS,
   TWO_FINGER_RADIUS,
   type BlessingId,
   type AchievementId,
+  type ChestTier,
   type CoinId,
   type CoinTrait,
   type EventId,
   type HelperId,
   type PermUpgradeId,
+  type RelicRarity,
   type UpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
 import {
+  applyAchievementSweep,
+  applyBuyBlessing,
+  applyBuyPermUpgrade,
+  applyBuyUpgrade,
+  applyClick,
+  applyCushionFlip,
+  applyHireHelper,
+  applyOfflineAccrual,
+  applyOpenChest,
+  applyPrestige,
+  applyResolveLostWallet,
+  bankTokensFromCurrentCents,
   coinPCValue,
   findMergePair,
-  pruneStreakWindow,
-  streakTierFor,
+  freshGameState,
   helperRatePcPerSec,
+  migrateLoadedState,
+  nextPrestigeThreshold,
+  offlineCapHours,
+  pruneStreakWindow,
+  relicEffects,
   rollSpawn,
   rollTraits,
   spawnIntervalMs,
-  traitMultiplier,
+  streakTierFor,
   unlockedCoins,
+  type PennyPinchersGameState,
 } from "@/lib/games/penny-pinchers/engine";
 import { CoinSprite } from "./CoinSprite";
 import { UpgradeShop } from "./UpgradeShop";
@@ -67,63 +85,47 @@ import { BankTokenShop } from "./BankTokenShop";
 import { AchievementsPanel } from "./AchievementsPanel";
 import { AlbumPanel } from "./AlbumPanel";
 import { FaqModal } from "./FaqModal";
-import { RelicShop } from "./RelicShop";
+import { RelicShop, type ChestRollResult } from "./RelicShop";
 import { PennyLeaderboard } from "./PennyLeaderboard";
-import type { AlbumState } from "@/lib/games/penny-pinchers/engine";
 
-// Penny Pinchers — main client. Coins spawn as absolutely-positioned
-// DOM elements inside a play area; clicking them dispatches a server
-// validate-and-credit, with optimistic local cents updates so the UI
-// feels instant even on a flaky connection.
+// Penny Pinchers — local-first client. The browser owns the entire
+// simulation: every action (click, buy, hire, prestige, etc.) is a
+// pure mutation against a single PennyPinchersGameState that lives
+// in memory. Zero network round-trips during play.
 //
-// Server is the source of truth for `cents` — we re-poll every ~6s
-// (paused on hidden tabs by useVisibleInterval) so any drift between
-// optimistic local state and the server settles automatically.
+// Persistence:
+//   • Mount: GET /load — fetches the latest blob from the server
+//     (or seeds it from legacy normalized rows on first read), then
+//     compares against localStorage and picks whichever is newer.
+//   • Every 10s while visible: POST /save — pushes the full state
+//     blob to the server if anything has changed since last save.
+//   • Tab hide / beforeunload: navigator.sendBeacon to /save so
+//     closing the tab never loses progress.
+//   • Every mutation: localStorage.setItem mirrors the state, so a
+//     failed save POST is recovered on next mount.
+//   • Bank: POST /bank with the full state — the only server-
+//     authoritative action (credits the wallet ledger atomically
+//     with the state save).
+//
+// Cookie Clicker model with a wallet bridge. No server-side click
+// rate limit, no batched-click queue, no optimistic flicker.
 
-type StateResponse = {
-  serverNow: number;
-  cents: number;
-  lifetimeClicks: number;
-  lifetimePCEarned: number;
-  upgrades: Record<string, number>;
-  helpers: Record<string, number>;
-  perm: Partial<Record<PermUpgradeId, number>>;
-  helperRatePerSec: number;
-  offlineAccruedJustNow: number;
-  welcomeBackPC: number;
-  offlineCapHours: number;
-  bank: {
-    pcPerWalletCent: number;
-  };
-  prestige: {
-    count: number;
-    bankTokens: number;
-    thresholdPC: number;
-    tokensIfRolled: number;
-    lifetimeBanked: number;
-  };
-  achievements: {
-    unlocked: AchievementId[];
-    newlyUnlocked: AchievementId[];
-  };
-  frugality: number;
-  album: AlbumState;
-  relics: Record<string, number>;
-  relicEffects: {
-    shinyChanceBonus: number;
-    helperRateMul: number;
-    clickPCMul: number;
-    spawnSpeedMul: number;
-    prestigeStartBonusPC: number;
-    bankPayoutMul: number;
-    stormChanceBonus: number;
-    ancientChanceBonus: number;
-    coinBaseBonus: number;
-    returnFrugalityBonus: number;
-    mergeSpeedMul: number;
-  };
+/** localStorage key for the mirrored state blob. Versioned so we
+ *  can change the shape later without crashing on stale data. */
+const LOCAL_STORAGE_KEY = "pp:state:v1";
+
+/** Save cadence + UI countdown. Saves only fire when state is
+ *  actually dirty since the last save (no busy traffic for an idle
+ *  player). The countdown chip on screen always ticks so the user
+ *  knows the autosave is alive. */
+const SAVE_INTERVAL_SEC = 10;
+
+type LoadResponse = {
+  ok: true;
+  state: PennyPinchersGameState;
+  lastSavedAt: string | null;
   walletBalance: number;
-  leaderboard: LeaderboardRow[];
+  serverNow: number;
 };
 
 export type LeaderboardRow = {
@@ -232,18 +234,28 @@ function useTween(target: number, durationMs = 700): number {
 const COIN_LIFETIME_MS = 11_000;
 /** How long two coins slide toward each other before fusing. */
 const MERGE_SLIDE_MS = 280;
-const SYNC_POLL_MS = 10_000;
+/** Leaderboard refresh cadence — separate from save loop, lazy. */
+const LEADERBOARD_POLL_MS = 30_000;
 
 export function PennyPinchersClient() {
-  const [server, setServer] = useState<StateResponse | null>(null);
-  const [localCents, setLocalCents] = useState<number>(0);
-  // Total cents the client has optimistically spent on a buy that
-  // hasn't been confirmed by the server yet. The reconcile in
-  // loadState() subtracts this from server.cents before comparing
-  // to localCents — otherwise rapid back-to-back upgrades show a
-  // visible rebound (cents flicker upward) when the first response
-  // arrives mid-second-click.
-  const inFlightSpendRef = useRef(0);
+  // The game state — single source of truth for everything that
+  // persists. The /save endpoint stores this exact shape.
+  const [state, setState] = useState<PennyPinchersGameState | null>(null);
+  /** Mirrored ref so synchronous handlers (clickCoin etc.) can read
+   *  the latest state without waiting for React to flush. */
+  const stateRef = useRef<PennyPinchersGameState | null>(null);
+  useEffect(() => { stateRef.current = state; }, [state]);
+
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
+
+  // Save-loop state — drives the countdown chip + status toast.
+  const [saveCountdown, setSaveCountdown] = useState<number>(SAVE_INTERVAL_SEC);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  /** Bumped on every state mutation; consumed by the save loop. */
+  const dirtyRef = useRef<boolean>(false);
+
   const [coins, setCoins] = useState<SpawnedCoin[]>([]);
   const [tab, setTab] = useState<"upgrades" | "helpers" | "tokens" | "achievements" | "album" | "relics">("upgrades");
   const [welcomeBack, setWelcomeBack] = useState<number | null>(null);
@@ -342,232 +354,344 @@ export function PennyPinchersClient() {
       setGrabs((prev) => prev.filter((g) => g.id !== id));
     }, 480);
   }, []);
-  /** True until the first /state load resolves — keeps the
-   *  welcome-back banner restricted to "you just opened the page"
-   *  rather than firing every 60s+ poll. */
-  const firstLoadRef = useRef(true);
-
   const playRef = useRef<HTMLDivElement | null>(null);
   const coinSeqRef = useRef(0);
 
-  // Click batching — queue every pickup for ~400ms then send the
-  // whole batch in one POST. Cuts request volume from ~25/sec
-  // during Auto-Picker bursts down to ~2-3/sec. The server still
-  // applies its sliding-window rate limit on the *count* of
-  // batched clicks, and the periodic /state poll reconciles any
-  // drift if a batch fails or partially drops.
-  const clickQueueRef = useRef<Array<{ coinType: CoinId; traits: CoinTrait[]; pc: number }>>([]);
-  const flushTimerRef = useRef<number | null>(null);
-  // Idle flush cadence — runs whenever clicks are sitting in the
-  // queue with nothing else to ride along. Bumped from 400ms / 12 to
-  // 2500ms / 25 since spend actions now drain the queue too — the
-  // periodic flush only matters when the player is just clicking
-  // (no buys), which we can let coast for a couple of seconds. Cuts
-  // sustained-click traffic to ~1 req/2.5s instead of ~2 req/sec.
-  // Size threshold matches the server's MAX_CLICKS_PER_SEC = 25 so a
-  // single batch never exceeds the rate-limit budget.
-  const FLUSH_INTERVAL_MS = 2500;
-  const FLUSH_AT_SIZE = 25;
+  // ----------------------------------------------------------------
+  // PERSISTENCE — load on mount, save every 10s + on hide / unload
+  // ----------------------------------------------------------------
 
-  /**
-   * Drain whatever's in the queue and cancel any pending flush timer.
-   * Returns the clicks so callers can either POST them on their own
-   * (the periodic flushClicks) or piggyback them on a spend request
-   * (buyUpgrade / hireHelper / etc — closes the stale-cents race).
-   */
-  const drainClickQueue = useCallback(() => {
-    if (flushTimerRef.current != null) {
-      window.clearTimeout(flushTimerRef.current);
-      flushTimerRef.current = null;
-    }
-    const queue = clickQueueRef.current;
-    if (queue.length === 0) return [] as typeof queue;
-    return queue.splice(0, queue.length);
+  /** Write current state to localStorage. Synchronous, fail-safe —
+   *  caller doesn't have to await. Mirrored on every save attempt
+   *  so a failed POST is recovered on the next mount. */
+  const mirrorLocal = useCallback((s: PennyPinchersGameState) => {
+    try {
+      localStorage.setItem(
+        LOCAL_STORAGE_KEY,
+        JSON.stringify({ state: s, savedAt: Date.now() }),
+      );
+    } catch { /* quota / SecurityError — skip */ }
   }, []);
 
-  const flushClicks = useCallback(() => {
-    const clicks = drainClickQueue();
-    if (clicks.length === 0) return;
-    void fetch("/api/earn/penny-pinchers/click", {
+  /** POST the current state to /save. When `useBeacon=true` we send
+   *  via navigator.sendBeacon so a tab-close fires-and-forgets the
+   *  packet (regular fetch is aborted by the browser on unload). */
+  const saveNow = useCallback((useBeacon = false): boolean => {
+    const s = stateRef.current;
+    if (!s) return false;
+    mirrorLocal(s);
+    const body = JSON.stringify({ state: s });
+    if (useBeacon && typeof navigator !== "undefined" && navigator.sendBeacon) {
+      const ok = navigator.sendBeacon(
+        "/api/earn/penny-pinchers/save",
+        new Blob([body], { type: "application/json" }),
+      );
+      if (ok) dirtyRef.current = false;
+      return ok;
+    }
+    setSaveStatus("saving");
+    void fetch("/api/earn/penny-pinchers/save", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ clicks }),
-    }).catch(() => { /* ignore — /state poll reconciles */ });
-  }, [drainClickQueue]);
+      body,
+      keepalive: true,
+    })
+      .then((r) => {
+        if (r.ok) {
+          dirtyRef.current = false;
+          setSaveStatus("saved");
+          setLastSavedAt(new Date().toISOString());
+          // Drop the "Saved" pulse after a moment so the chip
+          // returns to plain ticking countdown.
+          window.setTimeout(() => {
+            setSaveStatus((cur) => (cur === "saved" ? "idle" : cur));
+          }, 1500);
+        } else {
+          setSaveStatus("failed");
+        }
+      })
+      .catch(() => setSaveStatus("failed"));
+    return true;
+  }, [mirrorLocal]);
 
-  const enqueueClick = useCallback((click: { coinType: CoinId; traits: CoinTrait[]; pc: number }) => {
-    clickQueueRef.current.push(click);
-    if (clickQueueRef.current.length >= FLUSH_AT_SIZE) {
-      flushClicks();
-      return;
-    }
-    if (flushTimerRef.current == null) {
-      flushTimerRef.current = window.setTimeout(() => {
-        flushTimerRef.current = null;
-        flushClicks();
-      }, FLUSH_INTERVAL_MS);
-    }
-  }, [flushClicks]);
-
-  // Flush on unmount + when the tab is hidden so we don't lose
-  // pending PC if the user navigates away mid-batch.
+  // Load on mount. Picks the newer of (server blob, localStorage
+  // mirror) — phone → laptop sync wants the freshest write to win.
+  // Applies offline helper accrual and shows the welcome-back banner.
+  const firstLoadRef = useRef(true);
   useEffect(() => {
-    const onHide = () => { if (document.hidden) flushClicks(); };
-    document.addEventListener("visibilitychange", onHide);
-    return () => {
-      document.removeEventListener("visibilitychange", onHide);
-      flushClicks();
-    };
-  }, [flushClicks]);
+    let cancelled = false;
+    void (async () => {
+      let serverState: PennyPinchersGameState | null = null;
+      let serverSavedAtMs = 0;
+      let serverWallet = 0;
+      try {
+        const r = await fetch("/api/earn/penny-pinchers/load");
+        if (r.ok) {
+          const d = (await r.json()) as LoadResponse;
+          serverState = migrateLoadedState(d.state);
+          serverSavedAtMs = d.lastSavedAt ? new Date(d.lastSavedAt).getTime() : 0;
+          serverWallet = d.walletBalance;
+          if (!cancelled) setLastSavedAt(d.lastSavedAt);
+        }
+      } catch { /* offline — fall back to local */ }
 
-  // Pull initial state + sync poll
-  const loadState = useCallback(async () => {
-    try {
-      const r = await fetch("/api/earn/penny-pinchers/state");
-      if (!r.ok) return;
-      const d = (await r.json()) as StateResponse;
-      setServer(d);
-      // The HUD shows the player's optimistic count and only ever
-      // corrects UPWARD — server can be ahead of us (offline
-      // helper accrual, achievement reward, click-batch we just
-      // flushed) but it should never be ahead in the "we have less
-      // than we thought" direction during normal play. Pending
-      // clicks haven't been recorded server-side until the next
-      // flush, so localCents is the visible source of truth.
-      // Spend transactions bypass this entirely — the spend route's
-      // response calls setLocalCents(d.cents) directly.
-      setLocalCents((prev) => {
-        const adjusted = d.cents - inFlightSpendRef.current;
-        // Server-leading by more than the 5% / 5-PC tolerance: a
-        // helper drip / achievement reward landed we didn't account
-        // for. Snap up.
-        if (prev < adjusted - Math.max(5, d.cents * 0.05)) return adjusted;
-        // Otherwise keep the local count — the player should never
-        // see their cents flicker downward because of a poll race.
-        return prev;
-      });
-      // Welcome-back banner fires once on page entry only. The
-      // server still flags any meaningful gap, but we ignore the
-      // flag after the first load so background polls don't pop it.
+      let localState: PennyPinchersGameState | null = null;
+      let localSavedAtMs = 0;
+      try {
+        const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { state: unknown; savedAt: number };
+          localState = migrateLoadedState(parsed.state);
+          localSavedAtMs = parsed.savedAt;
+        }
+      } catch { /* malformed local; ignore */ }
+
+      // Pick the most-recent save. If the local mirror is newer than
+      // the server (player banked progress, closed tab before save
+      // completed, then re-opened), local wins.
+      let chosen: PennyPinchersGameState;
+      if (localState && localSavedAtMs > serverSavedAtMs) chosen = localState;
+      else if (serverState) chosen = serverState;
+      else if (localState) chosen = localState;
+      else chosen = freshGameState();
+
+      // Apply offline helper accrual once we've picked the winning
+      // save. Welcome-back banner only fires on the very first load
+      // AND only when the player has been away for ≥ 60s of real
+      // wall-clock time — otherwise every page open would pop the
+      // banner with a fractional accrual.
+      const { state: accrued, accrued: pcGained } = applyOfflineAccrual(chosen);
+      if (cancelled) return;
+      stateRef.current = accrued;
+      setState(accrued);
+      setWalletBalance(serverWallet);
       if (firstLoadRef.current) {
         firstLoadRef.current = false;
-        if (d.welcomeBackPC > 0) {
-          setWelcomeBack(d.welcomeBackPC);
+        const gapMs = chosen.lastTickAt ? Date.now() - chosen.lastTickAt : 0;
+        if (pcGained > 0 && gapMs >= 60_000) {
+          setWelcomeBack(pcGained);
           window.setTimeout(() => setWelcomeBack(null), 6000);
         }
       }
-      // Achievement unlock toasts — chime + show one card per unlock.
-      // Toasts auto-dismiss after 6s. Tokens are already credited
-      // server-side (state.prestige.bankTokens reflects the bonus).
-      // Event roll — only when nothing's already running. Lost
-      // Wallet rolls separately so a Coin Storm and a wallet can
-      // coexist (one's an event, one's a sprite).
-      const nowMs = Date.now();
-      setActiveEvent((current) => {
-        if (current && current.endsAt > nowMs) return current;
-        // Rainmaker relic adds a flat per-poll chance for ANY
-        // event to start (it's tagged as Coin Storm in the
-        // selection logic below — that's the relic's flavour).
-        const stormBonus = d.relicEffects.stormChanceBonus ?? 0;
-        if (Math.random() < EVENT_START_CHANCE_PER_POLL + stormBonus) {
-          const ids = Object.keys(EVENTS) as EventId[];
-          // Bias toward Coin Storm proportional to the bonus so a
-          // maxed-Rainmaker player actually sees more storms,
-          // not just more Rainy Days.
-          const id: EventId =
-            stormBonus > 0 && Math.random() < 0.5 + stormBonus * 5
-              ? "coin_storm"
-              : ids[Math.floor(Math.random() * ids.length)];
-          const def = EVENTS[id];
-          // Coin Storm = loud win-stinger; Rainy Day = soft clinking
-          // coins so the wet-sidewalk vibe lands instead of a casino
-          // jingle that doesn't match the puddle aesthetic.
-          Sfx.play(id === "coin_storm" ? "win.levelup" : "coins.clink");
-          return { id, endsAt: nowMs + def.durationMs };
-        }
-        return null;
-      });
-      // Prune blessings that have expired since last poll.
-      setActiveBlessings((bs) => bs.filter((b) => b.endsAt > nowMs));
-      setFountain((current) => {
-        if (current && nowMs - current.spawnedAt < FOUNTAIN_LIFETIME_MS) return current;
-        if (Math.random() < FOUNTAIN_CHANCE_PER_POLL) {
-          const playEl = playRef.current;
-          if (!playEl) return null;
-          const rect = playEl.getBoundingClientRect();
-          const pad = 70;
-          fountainSeqRef.current += 1;
-          return {
-            id: fountainSeqRef.current,
-            x: pad + Math.random() * Math.max(0, rect.width - pad * 2),
-            y: pad + Math.random() * Math.max(0, rect.height - pad * 2),
-            spawnedAt: nowMs,
-          };
-        }
-        return null;
-      });
-      setCouch((current) => {
-        if (current && nowMs - current.spawnedAt < COUCH_LIFETIME_MS) return current;
-        if (Math.random() < COUCH_CHANCE_PER_POLL) {
-          const playEl = playRef.current;
-          if (!playEl) return null;
-          const rect = playEl.getBoundingClientRect();
-          const pad = 80;
-          couchSeqRef.current += 1;
-          return {
-            id: couchSeqRef.current,
-            x: pad + Math.random() * Math.max(0, rect.width - pad * 2),
-            y: pad + Math.random() * Math.max(0, rect.height - pad * 2),
-            spawnedAt: nowMs,
-          };
-        }
-        return null;
-      });
-      setLostWallet((current) => {
-        if (current && nowMs - current.spawnedAt < LOST_WALLET_LIFETIME_MS) return current;
-        if (Math.random() < LOST_WALLET_CHANCE_PER_POLL) {
-          const playEl = playRef.current;
-          if (!playEl) return null;
-          const rect = playEl.getBoundingClientRect();
-          const pad = 60;
-          lostWalletSeqRef.current += 1;
-          return {
-            id: lostWalletSeqRef.current,
-            x: pad + Math.random() * Math.max(0, rect.width - pad * 2),
-            y: pad + Math.random() * Math.max(0, rect.height - pad * 2),
-            spawnedAt: nowMs,
-          };
-        }
-        return null;
-      });
-      if (d.achievements.newlyUnlocked.length > 0) {
-        Sfx.play("win.levelup");
-        const ids = d.achievements.newlyUnlocked;
-        setAchievementToasts((prev) => [...prev, ...ids]);
-        const dismiss = window.setTimeout(() => {
-          setAchievementToasts((prev) => prev.filter((id) => !ids.includes(id)));
-        }, 6000);
-        // best-effort cleanup — clearing on unmount is overkill for a one-shot
-        void dismiss;
+      // If we just credited offline accrual, persist immediately so
+      // a refresh doesn't double-credit by re-reading the same
+      // stale lastTickAt.
+      if (pcGained > 0) {
+        dirtyRef.current = true;
+        // Don't block UI on this — save loop will pick it up next
+        // tick if it doesn't land synchronously.
+        saveNow(false);
       }
-    } catch {
-      /* network blip — try again next tick */
-    }
-  }, []);
-  useVisibleInterval(loadState, SYNC_POLL_MS);
+    })();
+    return () => { cancelled = true; };
+  }, [saveNow]);
 
-  // Real-time helper accrual. The server is the source of truth on
-  // each /state poll, but in between polls we drip the rate locally
-  // so the PC counter visibly ticks instead of jumping every 5s.
-  // The next poll's reconcile in `loadState` snaps anything that
-  // drifted more than ~5%.
+  // Save loop — countdown chip ticks every second; when it hits 0
+  // and the state is dirty, fire a save and reset. Paused on hidden
+  // tabs via useVisibleInterval so a stale background tab doesn't
+  // hammer the server.
+  useVisibleInterval(useCallback(() => {
+    setSaveCountdown((c) => {
+      if (c <= 1) {
+        if (dirtyRef.current) saveNow();
+        return SAVE_INTERVAL_SEC;
+      }
+      return c - 1;
+    });
+  }, [saveNow]), 1000);
+
+  // Tab-hide / before-unload — flush any pending dirty state via
+  // sendBeacon so a navigation away doesn't lose progress.
+  useEffect(() => {
+    const onHide = () => {
+      if (document.hidden && dirtyRef.current) saveNow(true);
+    };
+    const onUnload = () => {
+      if (dirtyRef.current) saveNow(true);
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("beforeunload", onUnload);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("beforeunload", onUnload);
+    };
+  }, [saveNow]);
+
+  // ----------------------------------------------------------------
+  // STATE MUTATION HELPER + DERIVED `server` SHAPE
+  // ----------------------------------------------------------------
+
+  /** Run a pure mutation on the live state. Bumps dirty flag,
+   *  sweeps achievements, fires unlock toasts. Returns the resulting
+   *  state so the caller can use derived values (e.g. cents delta
+   *  for a pop animation). */
+  const mutate = useCallback(
+    (mutator: (cur: PennyPinchersGameState) => PennyPinchersGameState | null): PennyPinchersGameState | null => {
+      const cur = stateRef.current;
+      if (!cur) return null;
+      const after = mutator(cur);
+      if (!after) return null;
+      const { state: swept, newlyUnlocked } = applyAchievementSweep(after);
+      stateRef.current = swept;
+      setState(swept);
+      dirtyRef.current = true;
+      if (newlyUnlocked.length > 0) {
+        Sfx.play("win.levelup");
+        setAchievementToasts((prev) => [...prev, ...newlyUnlocked]);
+        window.setTimeout(() => {
+          setAchievementToasts((prev) => prev.filter((id) => !newlyUnlocked.includes(id)));
+        }, 6000);
+      }
+      return swept;
+    },
+    [],
+  );
+
+  /** Current PC in pocket — read by JSX + every spend handler. All
+   *  cents mutations go through `mutate(applyXxx)`; this alias is
+   *  read-only. */
+  const localCents = state?.cents ?? 0;
+
+  // Memoised `server`-shaped view of the state. Keeps the JSX
+  // reading `server.upgrades` / `server.prestige.thresholdPC` /
+  // `server.relicEffects.*` unchanged.
+  const server = useMemo(() => {
+    if (!state) return null;
+    const relicE = relicEffects(state.relics);
+    return {
+      cents: state.cents,
+      lifetimeClicks: state.lifetimeClicks,
+      lifetimePCEarned: state.lifetimePCEarned,
+      upgrades: state.upgrades as Record<UpgradeId, number>,
+      helpers: state.helpers as Record<HelperId, number>,
+      perm: state.perm,
+      helperRatePerSec: helperRatePcPerSec(state.helpers, state.perm, relicE),
+      offlineCapHours: offlineCapHours(state.perm),
+      bank: { pcPerWalletCent: BANK_PC_PER_WALLET_CENT },
+      prestige: {
+        count: state.prestigeCount,
+        bankTokens: state.bankTokens,
+        thresholdPC: nextPrestigeThreshold(state.prestigeCount),
+        tokensIfRolled: bankTokensFromCurrentCents(state.cents, state.prestigeCount),
+        lifetimeBanked: state.lifetimeBankedCents,
+      },
+      achievements: { unlocked: state.achievementsUnlocked },
+      frugality: state.frugality,
+      album: state.album,
+      relics: state.relics as Record<string, number>,
+      relicEffects: relicE,
+      walletBalance,
+      leaderboard,
+    };
+  }, [state, walletBalance, leaderboard]);
+
+  // Pull the public Penny Pinchers leaderboard on a slow cadence —
+  // not part of the critical state path. Paused on hidden tabs.
+  const loadLeaderboard = useCallback(async () => {
+    try {
+      const r = await fetch("/api/earn/penny-pinchers/leaderboard");
+      if (!r.ok) return;
+      const d = (await r.json()) as { ok: boolean; rows: LeaderboardRow[] };
+      if (d.ok) setLeaderboard(d.rows);
+    } catch { /* non-fatal */ }
+  }, []);
+  useVisibleInterval(loadLeaderboard, LEADERBOARD_POLL_MS);
+  useEffect(() => { void loadLeaderboard(); }, [loadLeaderboard]);
+
+  // Random event rolls — unchanged from the old /state-poll cadence,
+  // just driven by a local interval now. Coin Storm / Rainy Day,
+  // wishing fountain, couch dive, lost wallet all roll here.
+  useVisibleInterval(useCallback(() => {
+    const nowMs = Date.now();
+    setActiveEvent((current) => {
+      if (current && current.endsAt > nowMs) return current;
+      const stormBonus = stateRef.current ? relicEffects(stateRef.current.relics).stormChanceBonus : 0;
+      if (Math.random() < EVENT_START_CHANCE_PER_POLL + stormBonus) {
+        const ids = Object.keys(EVENTS) as EventId[];
+        const id: EventId =
+          stormBonus > 0 && Math.random() < 0.5 + stormBonus * 5
+            ? "coin_storm"
+            : ids[Math.floor(Math.random() * ids.length)];
+        const def = EVENTS[id];
+        Sfx.play(id === "coin_storm" ? "win.levelup" : "coins.clink");
+        return { id, endsAt: nowMs + def.durationMs };
+      }
+      return null;
+    });
+    setActiveBlessings((bs) => bs.filter((b) => b.endsAt > nowMs));
+    setFountain((current) => {
+      if (current && nowMs - current.spawnedAt < FOUNTAIN_LIFETIME_MS) return current;
+      if (Math.random() < FOUNTAIN_CHANCE_PER_POLL) {
+        const playEl = playRef.current;
+        if (!playEl) return null;
+        const rect = playEl.getBoundingClientRect();
+        const pad = 70;
+        fountainSeqRef.current += 1;
+        return {
+          id: fountainSeqRef.current,
+          x: pad + Math.random() * Math.max(0, rect.width - pad * 2),
+          y: pad + Math.random() * Math.max(0, rect.height - pad * 2),
+          spawnedAt: nowMs,
+        };
+      }
+      return null;
+    });
+    setCouch((current) => {
+      if (current && nowMs - current.spawnedAt < COUCH_LIFETIME_MS) return current;
+      if (Math.random() < COUCH_CHANCE_PER_POLL) {
+        const playEl = playRef.current;
+        if (!playEl) return null;
+        const rect = playEl.getBoundingClientRect();
+        const pad = 80;
+        couchSeqRef.current += 1;
+        return {
+          id: couchSeqRef.current,
+          x: pad + Math.random() * Math.max(0, rect.width - pad * 2),
+          y: pad + Math.random() * Math.max(0, rect.height - pad * 2),
+          spawnedAt: nowMs,
+        };
+      }
+      return null;
+    });
+    setLostWallet((current) => {
+      if (current && nowMs - current.spawnedAt < LOST_WALLET_LIFETIME_MS) return current;
+      if (Math.random() < LOST_WALLET_CHANCE_PER_POLL) {
+        const playEl = playRef.current;
+        if (!playEl) return null;
+        const rect = playEl.getBoundingClientRect();
+        const pad = 60;
+        lostWalletSeqRef.current += 1;
+        return {
+          id: lostWalletSeqRef.current,
+          x: pad + Math.random() * Math.max(0, rect.width - pad * 2),
+          y: pad + Math.random() * Math.max(0, rect.height - pad * 2),
+          spawnedAt: nowMs,
+        };
+      }
+      return null;
+    });
+  }, []), 6_000);
+
+  // Helper PC accrual — drip cents into local state every 100ms
+  // so the counter visibly ticks. Each tick bumps lifetimePCEarned
+  // + lastTickAt too (used by the offline-accrual math on next load).
   const helperRate = server?.helperRatePerSec ?? 0;
   useEffect(() => {
     if (helperRate <= 0) return;
     const tickMs = 100;
     const perTick = (helperRate * tickMs) / 1000;
     const t = window.setInterval(() => {
-      setLocalCents((c) => c + perTick);
+      const cur = stateRef.current;
+      if (!cur) return;
+      const next: PennyPinchersGameState = {
+        ...cur,
+        cents: cur.cents + perTick,
+        lifetimePCEarned: cur.lifetimePCEarned + perTick,
+        lastTickAt: Date.now(),
+      };
+      stateRef.current = next;
+      setState(next);
+      dirtyRef.current = true;
     }, tickMs);
     return () => window.clearInterval(t);
   }, [helperRate]);
@@ -584,7 +708,6 @@ export function PennyPinchersClient() {
   const frenzyActive = frenzyEndsAt != null && frenzyEndsAt > Date.now();
   const bentLucky = bentLuckyUntil != null && bentLuckyUntil > Date.now();
   const luckyBoost = luckyBoostUntil != null && luckyBoostUntil > Date.now();
-  const cursedPause = cursedPauseUntil != null && cursedPauseUntil > Date.now();
   const eventInterval = eventDef ? baseIntervalMs * eventDef.spawnMultiplier : baseIntervalMs;
   const intervalMs = Math.max(
     100,
@@ -784,22 +907,9 @@ export function PennyPinchersClient() {
     return () => window.clearInterval(t);
   }, []);
 
-  // Helpers tick — local optimistic counter so the player sees their
-  // PC accrue smoothly while the server reconciles every 6s.
-  useEffect(() => {
-    if (!server || server.helperRatePerSec <= 0) return;
-    const t = window.setInterval(() => {
-      setLocalCents((c) => c + server.helperRatePerSec / 4);
-    }, 250);
-    return () => window.clearInterval(t);
-  }, [server]);
-
-  async function clickCoin(coin: SpawnedCoin, opts: { silent?: boolean } = {}) {
-    // Sticky-coin two-tap gate. First tap on a sticky coin stamps
-    // firstTapAt so the sprite skews + plays a "stuck" sound; the
-    // pickup itself waits for a second tap. Auto-Picker passes
-    // silent=true and is allowed to bypass the gate (otherwise it
-    // would just keep poking the same stuck coin forever).
+  function clickCoin(coin: SpawnedCoin, opts: { silent?: boolean } = {}) {
+    // Sticky two-tap gate — first tap stamps `firstTapAt`, second
+    // tap actually picks up. Auto-Picker (silent=true) bypasses it.
     if (coin.traits.includes("sticky") && !coin.firstTapAt && !opts.silent) {
       Sfx.play("ui.wood");
       const stampedAt = Date.now();
@@ -809,63 +919,45 @@ export function PennyPinchersClient() {
       return;
     }
 
-    // Slots reel-stop tick — chunky wood click that reads as
-    // "the coin landed" without the long melodic tail of coin.drop.
     if (!opts.silent) Sfx.play("ui.wood");
 
-    // Pinch Streak tracking — record the click + recompute the
-    // active tier. Frenzy ignites once we cross the top threshold.
+    // Pinch Streak window — record click, ignite Frenzy if we cross
+    // the top tier.
     const nowClick = Date.now();
-    const window = pruneStreakWindow([...streakClicksRef.current, nowClick], nowClick);
-    streakClicksRef.current = window;
-    setStreakCount(window.length);
-    const tier = streakTierFor(window, nowClick);
+    const win = pruneStreakWindow([...streakClicksRef.current, nowClick], nowClick);
+    streakClicksRef.current = win;
+    setStreakCount(win.length);
+    const tier = streakTierFor(win, nowClick);
     if (tier.threshold >= FRENZY_THRESHOLD && (frenzyEndsAt == null || frenzyEndsAt < nowClick)) {
       Sfx.play("coins.shower");
       setFrenzyEndsAt(nowClick + FRENZY_DURATION_MS);
     }
 
-    // Rare-coin pickups deliberately stay quiet — the halo /
-    // sparkle / colour animations carry the standout weight and
-    // the loud chime drowned the regular click cadence. Bent's
-    // lucky window and Cursed's spawn pause still fire here.
+    // Trait-driven client buffs/penalties.
     if (coin.traits.includes("bent")) setBentLuckyUntil(Date.now() + BENT_LUCKY_MS);
     if (coin.traits.includes("cursed")) setCursedPauseUntil(Date.now() + CURSED_PAUSE_MS);
-    // Lucky's lucky-window — bigger sibling of Bent's. The
-    // shiny-chance boost stacks additively on top of any other
-    // active boost via the bonusShiny computation above.
     if (coin.traits.includes("lucky")) setLuckyBoostUntil(Date.now() + LUCKY_DURATION_MS);
 
-    // Multi-trait: traitMultiplier folds them all together (shiny ×
-    // cursed ×bent → 5 × 3 × 0.5 = ×7.5). Mirrors the server math.
-    const traitMul = traitMultiplier(coin.traits);
-    // Mirror the server's click-side multiplier stack so the
-    // optimistic counter doesn't undercount what the server is
-    // about to credit. prestigeMul is the +300%/+100% bonus you
-    // earn on every click after Roll-Up.
-    const clickMul = server?.relicEffects.clickPCMul ?? 1;
-    const prestigeMul = server && server.prestige.count > 0 ? 3 + server.prestige.count : 1;
-    const optimisticPC = Math.round(coin.mergedPC * traitMul * tier.multiplier * clickMul * prestigeMul);
-    setLocalCents((c) => c + optimisticPC);
-    spawnPop(coin.x, coin.y, optimisticPC, coin.traits.includes("shiny"), coin.traits[0] ?? null);
-    // Pulse the PC counter only on manual / auto-picker clicks —
-    // helper drips already update the value smoothly and don't
-    // need a visible jolt.
+    // Streak-adjusted merged PC — pass to applyClick which folds in
+    // trait, frugality, album, prestige, and relic multipliers.
+    const streakAdjustedPC = Math.round(coin.mergedPC * tier.multiplier);
+    const cur = stateRef.current;
+    if (!cur) return;
+    const afterPrimary = applyClick(cur, {
+      coinType: coin.coin,
+      traits: coin.traits,
+      mergedPC: streakAdjustedPC,
+    });
+    const primaryGained = afterPrimary.cents - cur.cents;
+    spawnPop(coin.x, coin.y, primaryGained, coin.traits.includes("shiny"), coin.traits[0] ?? null);
     setPcPulseKey((k) => k + 1);
 
-    // Two-Finger Pickup + Sticky both add "collateral" pickups —
-    // extra coins this single click is going to grab. They share the
-    // same downstream code path (optimistic PC + pop + server click)
-    // so adding a second source is just adding to the list.
+    // Collateral pickups — Sticky / Two-Finger / Lightning all share
+    // the same shape.
     const collateral: SpawnedCoin[] = [];
-    /** When set, Two-Finger fired and grabbed this coin alongside
-     *  the primary — used to drop a cyan pinch ring on both ends
-     *  after the state update settles. */
     let twoFingerExtra: SpawnedCoin | null = null;
     setCoins((prev) => {
       const others = prev.filter((c) => c.id !== coin.id);
-
-      // Sticky — grab the N nearest within radius.
       if (coin.traits.includes("sticky")) {
         const nearby = others
           .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
@@ -875,11 +967,7 @@ export function PennyPinchersClient() {
           .map((e) => e.c);
         collateral.push(...nearby);
       }
-
-      // Two-Finger Pickup — 5% per level chance to grab one extra
-      // coin within a generous radius. Independent of sticky, but
-      // we exclude anything already grabbed so we don't double-pop.
-      const tfLevel = upgrades.two_finger_pickup ?? 0;
+      const tfLevel = (afterPrimary.upgrades.two_finger_pickup ?? 0);
       if (tfLevel > 0) {
         const chance = Math.min(0.5, 0.05 * tfLevel);
         if (Math.random() < chance) {
@@ -895,11 +983,6 @@ export function PennyPinchersClient() {
           }
         }
       }
-
-      // Lightning — guaranteed chain-grab to the nearest coin
-      // within LIGHTNING_RADIUS. Same shape as the Two-Finger arm
-      // but no probability roll, bigger reach, and visualised with
-      // the existing pinch ring on both ends.
       if (coin.traits.includes("lightning")) {
         const taken = new Set(collateral.map((c) => c.id));
         const arc = others
@@ -909,216 +992,128 @@ export function PennyPinchersClient() {
           .sort((a, b) => a.d2 - b.d2)[0];
         if (arc) {
           collateral.push(arc.c);
-          // Reuse the twoFingerExtra hook for the visual ring; it's
-          // the same "chain pickup" feel.
           if (!twoFingerExtra) twoFingerExtra = arc.c;
         }
       }
-
       const removeIds = new Set([coin.id, ...collateral.map((c) => c.id)]);
       return prev.filter((c) => !removeIds.has(c.id));
     });
-    // Visual feedback for Two-Finger: drop a cyan pinch ring on the
-    // primary and the swept-in extra so the player can see exactly
-    // which two coins the upgrade just caught.
     if (twoFingerExtra) {
       spawnGrab(coin.x, coin.y, "twofinger");
       const tfx = twoFingerExtra as SpawnedCoin;
       spawnGrab(tfx.x, tfx.y, "twofinger");
     }
 
-    // We send the *streak-multiplied merged PC* as the `pc` field;
-    // server clamps to MAX_CLICK_PC and stacks trait + frugality
-    // on top so a tampered client can't cheese the cap.
-    //
-    // Important: we do NOT snap localCents to the server response
-    // on click. The local helper-tick interval is moving forward
-    // every 100ms, so snapping would visibly bounce the counter
-    // backwards (helpers had already credited PC the server hadn't
-    // seen yet). The /state poll reconciles drift on its own
-    // schedule, with the >5% threshold guard in loadState().
-    const sentPC = Math.round(coin.mergedPC * tier.multiplier);
-    enqueueClick({ coinType: coin.coin, traits: coin.traits, pc: sentPC });
-
-    // Queue collateral pickups too — each one is metered + counted
-    // toward lifetime_clicks server-side via the same batch flush.
+    // Fold every collateral click into the same state mutation so
+    // achievement sweep runs once at the end + we save once.
+    let working = afterPrimary;
     for (const extra of collateral) {
-      const extraTraitMul = traitMultiplier(extra.traits);
-      const extraOptimistic = Math.round(extra.mergedPC * extraTraitMul * tier.multiplier * clickMul * prestigeMul);
-      setLocalCents((c) => c + extraOptimistic);
-      spawnPop(extra.x, extra.y, extraOptimistic, extra.traits.includes("shiny"), extra.traits[0] ?? null);
-      enqueueClick({
+      const extraAdj = Math.round(extra.mergedPC * tier.multiplier);
+      const next = applyClick(working, {
         coinType: extra.coin,
         traits: extra.traits,
-        pc: Math.round(extra.mergedPC * tier.multiplier),
+        mergedPC: extraAdj,
       });
+      const extraGained = next.cents - working.cents;
+      spawnPop(extra.x, extra.y, extraGained, extra.traits.includes("shiny"), extra.traits[0] ?? null);
+      working = next;
     }
+
+    // Commit the final state — achievement sweep + dirty bump live
+    // inside `mutate`.
+    mutate(() => working);
   }
 
-  async function buyUpgrade(id: UpgradeId, cost: number) {
-    if (localCents < cost) return;
-    // Optimistic UI — the level pip + cost chip + progress bar all key
-    // off `server.upgrades`, so bumping it locally before the fetch
-    // makes the card snap immediately. loadState() reconciles after.
-    setLocalCents((c) => c - cost);
-    setServer((s) => (s ? { ...s, upgrades: { ...s.upgrades, [id]: (s.upgrades[id] ?? 0) + 1 } } : s));
-    inFlightSpendRef.current += cost;
+  function buyUpgrade(id: UpgradeId, cost: number) {
+    void cost; // cost is recomputed inside applyBuyUpgrade
+    const cur = stateRef.current;
+    if (!cur) return;
+    const result = applyBuyUpgrade(cur, id);
+    if (!result.ok) {
+      const msg = labelForUpgradeError(result.error);
+      setUpgradeError(msg);
+      window.setTimeout(() => setUpgradeError((c) => (c === msg ? null : c)), 4000);
+      return;
+    }
+    mutate(() => result.state);
     setRecentlyBoughtUpgradeId(id);
     window.setTimeout(() => {
-      setRecentlyBoughtUpgradeId((cur) => (cur === id ? null : cur));
+      setRecentlyBoughtUpgradeId((c) => (c === id ? null : c));
     }, 700);
     Sfx.play("ui.click");
-    try {
-      const pendingClicks = drainClickQueue();
-      const r = await fetch("/api/earn/penny-pinchers/upgrade", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ upgradeId: id, clicks: pendingClicks }),
-      });
-      if (!r.ok) {
-        // Surface the failure so the player isn't left wondering why
-        // their cents went down without a level bump. Server returns
-        // structured error codes (insufficient_cents, max_level, etc.)
-        // which we render via labelForUpgradeError. loadState() below
-        // also rolls back the optimistic level bump.
-        const data = await r.json().catch(() => ({} as { error?: string }));
-        const msg = labelForUpgradeError(data?.error);
-        setUpgradeError(msg);
-        window.setTimeout(() => setUpgradeError((cur) => (cur === msg ? null : cur)), 4000);
-      }
-      await loadState(); // reconcile cents + level either way
-    } catch { await loadState(); }
-    finally { inFlightSpendRef.current -= cost; }
   }
 
-  async function hireHelper(id: HelperId, cost: number) {
-    if (localCents < cost) return;
-    // Optimistic — bump the helper count + cents now, fire-the-flash,
-    // and let loadState reconcile from the server.
-    setLocalCents((c) => c - cost);
-    setServer((s) => (s ? { ...s, helpers: { ...s.helpers, [id]: (s.helpers[id] ?? 0) + 1 } } : s));
-    inFlightSpendRef.current += cost;
+  function hireHelper(id: HelperId, cost: number) {
+    void cost;
+    const cur = stateRef.current;
+    if (!cur) return;
+    const result = applyHireHelper(cur, id);
+    if (!result.ok) return;
+    mutate(() => result.state);
     setRecentlyHiredId(id);
     window.setTimeout(() => {
-      setRecentlyHiredId((cur) => (cur === id ? null : cur));
+      setRecentlyHiredId((c) => (c === id ? null : c));
     }, 700);
     Sfx.play("chips.handle");
-    try {
-      const pendingClicks = drainClickQueue();
-      await fetch("/api/earn/penny-pinchers/hire", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ helperId: id, clicks: pendingClicks }),
-      });
-      await loadState();
-    } catch { await loadState(); }
-    finally { inFlightSpendRef.current -= cost; }
   }
 
-  async function buyPermUpgrade(id: PermUpgradeId, cost: number) {
-    if (!server || server.prestige.bankTokens < cost) return;
-    // Optimistic — perm level + remaining tokens reflect immediately.
-    setServer((s) => {
-      if (!s) return s;
-      return {
-        ...s,
-        perm: { ...s.perm, [id]: (s.perm[id] ?? 0) + 1 },
-        prestige: { ...s.prestige, bankTokens: s.prestige.bankTokens - cost },
-      };
-    });
+  function buyPermUpgrade(id: PermUpgradeId, cost: number) {
+    void cost;
+    const cur = stateRef.current;
+    if (!cur) return;
+    const result = applyBuyPermUpgrade(cur, id);
+    if (!result.ok) return;
+    mutate(() => result.state);
     setRecentlyBoughtPermId(id);
     window.setTimeout(() => {
-      setRecentlyBoughtPermId((cur) => (cur === id ? null : cur));
+      setRecentlyBoughtPermId((c) => (c === id ? null : c));
     }, 700);
     Sfx.play("ui.click");
-    try {
-      const pendingClicks = drainClickQueue();
-      await fetch("/api/earn/penny-pinchers/perm-upgrade", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ upgradeId: id, clicks: pendingClicks }),
-      });
-      await loadState();
-    } catch { await loadState(); }
   }
 
-  async function buyBlessing(id: BlessingId) {
+  function buyBlessing(id: BlessingId) {
     const def = BLESSINGS[id];
-    if (!def || localCents < def.cost) return;
-    setLocalCents((c) => c - def.cost);
-    inFlightSpendRef.current += def.cost;
-    Sfx.play("ui.confirm");
-    try {
-      const pendingClicks = drainClickQueue();
-      const r = await fetch("/api/earn/penny-pinchers/blessing", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ blessingId: id, clicks: pendingClicks }),
-      });
-      if (r.ok) {
-        const d = (await r.json()) as { durationMs: number; cents: number; frugalityGained?: number };
-        setLocalCents(d.cents);
-        // Only stack a buff if there's actually a duration. The
-        // frugal_toss option has durationMs=0 — it's a Frugality
-        // grant, not a timed buff — so skip the active list.
-        if (d.durationMs > 0) {
-          setActiveBlessings((bs) => [...bs, { id, endsAt: Date.now() + d.durationMs }]);
-        }
-        // Hold the modal open with a "Granted!" flash on the chosen
-        // blessing button before closing — dramatises the buy.
-        setGrantedBlessing(id);
-        Sfx.play(d.durationMs > 0 ? "win.levelup" : "coins.handle");
-        window.setTimeout(() => {
-          setGrantedBlessing(null);
-          setFountain(null);
-          setFountainModalOpen(false);
-        }, 850);
-      } else {
-        // Refund optimistic on rejection.
-        setLocalCents((c) => c + def.cost);
-      }
-    } catch {
-      setLocalCents((c) => c + def.cost);
-    } finally {
-      inFlightSpendRef.current -= def.cost;
+    if (!def) return;
+    const cur = stateRef.current;
+    if (!cur) return;
+    const result = applyBuyBlessing(cur, id);
+    if (!result.ok) return;
+    mutate(() => result.state);
+    if (def.durationMs > 0) {
+      setActiveBlessings((bs) => [...bs, { id, endsAt: Date.now() + def.durationMs }]);
     }
+    setGrantedBlessing(id);
+    Sfx.play(def.durationMs > 0 ? "win.levelup" : "coins.handle");
+    window.setTimeout(() => {
+      setGrantedBlessing(null);
+      setFountain(null);
+      setFountainModalOpen(false);
+    }, 850);
   }
 
-  async function flipCushion(idx: number) {
+  function flipCushion(idx: number) {
     if (cushionReveals.some((c) => c.idx === idx)) return;
     Sfx.play("ui.wood");
-    try {
-      const r = await fetch("/api/earn/penny-pinchers/cushion", { method: "POST" });
-      if (!r.ok) return;
-      const d = (await r.json()) as {
-        loot: string;
-        label: string;
-        pcGain: number;
-        cents: number;
-        frugalityGained?: number;
-      };
-      setLocalCents(d.cents);
-      // Map the rolled loot id back to its catalog entry so the
-      // reveal card knows what tier theme to apply (drives card
-      // colour + glow + reveal SFX). Server response stays small.
-      const def = CUSHION_LOOT.find((c) => c.id === d.loot);
-      setCushionReveals((prev) => [
-        ...prev,
-        {
-          idx,
-          lootId: d.loot,
-          label: d.label,
-          pcGain: d.pcGain,
-          revealedAt: Date.now(),
-          tier: def?.tier ?? "low",
-          frugalityGained: d.frugalityGained ?? 0,
-        },
-      ]);
-      if (def?.tier === "jackpot") Sfx.play("win.big");
-      else if (def?.tier === "high") Sfx.play("coins.shower");
-      else if (d.pcGain > 0) Sfx.play("coin.drop");
-      else Sfx.play("ui.soft"); // lint — quiet acknowledgement
-    } catch { /* ignore */ }
+    const cur = stateRef.current;
+    if (!cur) return;
+    const roll = applyCushionFlip(cur, Math.random);
+    mutate(() => roll.state);
+    setCushionReveals((prev) => [
+      ...prev,
+      {
+        idx,
+        lootId: roll.lootId,
+        label: roll.label,
+        pcGain: roll.pcGain,
+        revealedAt: Date.now(),
+        tier: roll.tier,
+        frugalityGained: roll.frugalityGained,
+      },
+    ]);
+    if (roll.tier === "jackpot") Sfx.play("win.big");
+    else if (roll.tier === "high") Sfx.play("coins.shower");
+    else if (roll.pcGain > 0) Sfx.play("coin.drop");
+    else Sfx.play("ui.soft");
   }
 
   function closeCouch() {
@@ -1127,73 +1122,102 @@ export function PennyPinchersClient() {
     setCushionReveals([]);
   }
 
-  async function resolveLostWallet(choice: "return" | "keep") {
+  function resolveLostWallet(choice: "return" | "keep") {
     if (walletModalChoice === "submitting") return;
     setWalletModalChoice("submitting");
-    if (choice === "keep") {
-      // Optimistic — server will reconcile on next sync.
-      setLocalCents((c) => c + Math.min(
-        LOST_WALLET_KEEP_MAX_PC,
-        LOST_WALLET_KEEP_PC + Math.floor(c * LOST_WALLET_KEEP_WEALTH_PCT),
-      ));
-      Sfx.play("coins.shower");
-    } else {
-      Sfx.play("ui.confirm");
+    const cur = stateRef.current;
+    if (!cur) {
+      setWalletModalChoice(null);
+      setLostWallet(null);
+      return;
     }
-    try {
-      await fetch("/api/earn/penny-pinchers/wallet", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ choice }),
-      });
-    } catch { /* swallow — sync poll reconciles */ }
+    const next = applyResolveLostWallet(cur, choice);
+    mutate(() => next);
+    Sfx.play(choice === "keep" ? "coins.shower" : "ui.confirm");
     setWalletModalChoice(null);
     setLostWallet(null);
-    await loadState();
   }
 
-  async function rollItUp() {
+  function rollItUp() {
     Sfx.play("chips.stack");
-    try {
-      const r = await fetch("/api/earn/penny-pinchers/prestige", { method: "POST" });
-      if (r.ok) {
-        const d = (await r.json()) as { awarded?: number };
-        setPrestigeOpen(false);
-        // Wipe local coin state too — fresh play area, fresh PC.
-        setCoins([]);
-        // Celebration flash + coin-shower sfx so a Roll-Up feels
-        // like the milestone it is. Auto-dismisses after 2.5s.
-        Sfx.play("coins.shower");
-        setPrestigeCelebration(d.awarded ?? 0);
-        window.setTimeout(() => setPrestigeCelebration(null), 2500);
-        await loadState();
-      }
-    } catch { await loadState(); }
+    const cur = stateRef.current;
+    if (!cur) return;
+    const result = applyPrestige(cur);
+    if (!result.ok) return;
+    mutate(() => result.state);
+    setPrestigeOpen(false);
+    setCoins([]);
+    Sfx.play("coins.shower");
+    setPrestigeCelebration(result.awarded);
+    window.setTimeout(() => setPrestigeCelebration(null), 2500);
   }
 
+  /** Bank It — server-authoritative because it touches the wallet
+   *  ledger. Posts the current state blob; server runs `applyBank`,
+   *  credits wallet, saves state, returns new state + payout. */
   async function bank() {
+    const cur = stateRef.current;
+    if (!cur || cur.cents <= 0) return;
     Sfx.play("chips.stack");
     try {
-      const pendingClicks = drainClickQueue();
+      // Make sure the very latest state is what the server sees —
+      // mirror to localStorage first so a hard crash mid-POST still
+      // recovers the right snapshot on next mount.
+      mirrorLocal(cur);
       const r = await fetch("/api/earn/penny-pinchers/bank", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ clicks: pendingClicks }),
+        body: JSON.stringify({ state: cur }),
       });
-      if (r.ok) {
-        const d = (await r.json()) as { payoutCents: number; remainingPC: number };
-        // Tell the global LiveBalance to refresh
-        window.dispatchEvent(new CustomEvent("lg:balance", { detail: undefined }));
-        setLocalCents(d.remainingPC);
-        // Fire a small coin-shower celebration so the moment lands.
-        Sfx.play("coins.shower");
-        setBankCelebration(d.payoutCents);
-        window.setTimeout(() => setBankCelebration(null), 1600);
-        await loadState();
-      } else {
-        await loadState();
+      if (!r.ok) return;
+      const d = (await r.json()) as {
+        payoutCents: number;
+        state: PennyPinchersGameState;
+        walletBalance: number;
+      };
+      window.dispatchEvent(new CustomEvent("lg:balance", { detail: undefined }));
+      const swept = applyAchievementSweep(d.state);
+      stateRef.current = swept.state;
+      setState(swept.state);
+      setWalletBalance(d.walletBalance);
+      // Bank just persisted the state server-side; no need to mark
+      // dirty (server already has the latest).
+      dirtyRef.current = false;
+      setLastSavedAt(new Date().toISOString());
+      if (swept.newlyUnlocked.length > 0) {
+        Sfx.play("win.levelup");
+        setAchievementToasts((prev) => [...prev, ...swept.newlyUnlocked]);
+        window.setTimeout(() => {
+          setAchievementToasts((prev) =>
+            prev.filter((id) => !swept.newlyUnlocked.includes(id)),
+          );
+        }, 6000);
       }
-    } catch { await loadState(); }
+      Sfx.play("coins.shower");
+      setBankCelebration(d.payoutCents);
+      window.setTimeout(() => setBankCelebration(null), 1600);
+    } catch { /* offline — try again on next click */ }
+  }
+
+  /** Buy a relic chest — called by the RelicShop child. Runs the
+   *  roll locally and returns the result so the modal can spin. */
+  function buyChest(tier: ChestTier): ChestRollResult | null {
+    const cur = stateRef.current;
+    if (!cur) return null;
+    const result = applyOpenChest(cur, tier, Math.random);
+    if (!result.ok) return null;
+    mutate(() => result.state);
+    return {
+      tier,
+      relicId: result.relicId,
+      label: result.label,
+      rarity: result.rarity as RelicRarity,
+      description: result.description,
+      newLevel: result.newLevel,
+      maxLevel: result.maxLevel,
+      duplicateAtMax: result.duplicateAtMax,
+      refund: result.refund,
+    };
   }
 
   // Smooth-tween the HUD numbers so they count up instead of
@@ -1644,6 +1668,14 @@ export function PennyPinchersClient() {
               {projectedPayout > 0 ? "Bank It" : "Need more PC"}
             </button>
           </div>
+          {/* Save status chip — countdown to next autosave + transient
+              Saved / Failed pulse. Tells the player their progress is
+              persisting even though every action is instant locally. */}
+          <SaveChip
+            countdown={saveCountdown}
+            status={saveStatus}
+            lastSavedAt={lastSavedAt}
+          />
         </div>
       </div>
 
@@ -2226,7 +2258,7 @@ export function PennyPinchersClient() {
             <RelicShop
               frugality={server.frugality}
               relics={server.relics}
-              onPurchased={() => void loadState()}
+              onBuyChest={buyChest}
             />
           )}
         </div>
@@ -3167,17 +3199,117 @@ function CouchSprite() {
   );
 }
 
-/** Render a server-side upgrade-purchase error code as a player-
- *  facing string. Falls back to a generic message for anything we
- *  haven't enumerated. */
+/** Render a buy-rejection code as a player-facing string. The
+ *  engine returns these from applyBuyUpgrade when a buy is invalid
+ *  (which, since the client gates affordability locally, only
+ *  happens on weird edge cases like a torn-state race). */
 function labelForUpgradeError(code: string | undefined | null): string {
   switch (code) {
     case "insufficient_cents": return "Not enough PC for this upgrade.";
     case "max_level":          return "This upgrade is already at max level.";
     case "bad_upgrade":        return "Unknown upgrade.";
-    case "rpc_failed":         return "Server error — your PC wasn't charged.";
-    case "config_missing":     return "Server is misconfigured. Try again shortly.";
     default:                   return "Couldn't buy that upgrade. Try again.";
   }
+}
+
+/** Save-status chip — autosave countdown + transient Saved / Failed
+ *  states. Sits in the right-column stack under the Bank It panel.
+ *  Gives the player a visible signal that their progress is being
+ *  persisted across devices, even though every action feels instant. */
+function SaveChip({
+  countdown,
+  status,
+  lastSavedAt,
+}: {
+  countdown: number;
+  status: "idle" | "saving" | "saved" | "failed";
+  lastSavedAt: string | null;
+}) {
+  const failed = status === "failed";
+  const saved = status === "saved";
+  const saving = status === "saving";
+  const accent = failed
+    ? "var(--crimson-500)"
+    : saved
+    ? "var(--cactus-500)"
+    : saving
+    ? "var(--gold-500)"
+    : "var(--saddle-300)";
+  const bg = failed
+    ? "rgba(180, 60, 60, 0.12)"
+    : saved
+    ? "rgba(60, 130, 70, 0.14)"
+    : "var(--parchment-200)";
+  const label = failed
+    ? "Save failed — retrying"
+    : saved
+    ? "Saved"
+    : saving
+    ? "Saving…"
+    : `Saves in ${countdown}s`;
+  const lastSavedText = (() => {
+    if (!lastSavedAt) return "Not yet saved";
+    try {
+      const dt = new Date(lastSavedAt);
+      const mins = Math.floor((Date.now() - dt.getTime()) / 60000);
+      if (mins < 1) return "Saved seconds ago";
+      if (mins === 1) return "Saved 1 min ago";
+      if (mins < 60) return `Saved ${mins} min ago`;
+      const hrs = Math.floor(mins / 60);
+      return hrs === 1 ? "Saved 1 hr ago" : `Saved ${hrs} hr ago`;
+    } catch { return "Saved recently"; }
+  })();
+  return (
+    <div
+      style={{
+        padding: "6px 10px",
+        background: bg,
+        border: `2px solid ${accent}`,
+        fontFamily: "var(--font-display)",
+        color: "var(--ink-900)",
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        transition: "background 200ms, border-color 200ms",
+        animation: saved ? "pp-save-pulse 1.5s ease-out" : undefined,
+      }}
+      title={lastSavedText}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: accent,
+          boxShadow: saved ? `0 0 8px ${accent}` : undefined,
+          animation: saving ? "pp-save-blink 0.9s ease-in-out infinite" : undefined,
+        }}
+      />
+      <span
+        style={{
+          fontSize: 11,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          color: accent,
+          flex: 1,
+        }}
+      >
+        Autosave
+      </span>
+      <span style={{ fontSize: 12, color: "var(--ink-900)" }}>{label}</span>
+      <style>{`
+        @keyframes pp-save-pulse {
+          0%   { box-shadow: 0 0 0 0 rgba(95, 161, 122, 0.6); }
+          70%  { box-shadow: 0 0 0 6px rgba(95, 161, 122, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(95, 161, 122, 0); }
+        }
+        @keyframes pp-save-blink {
+          0%, 100% { opacity: 0.45; }
+          50%      { opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
 }
 

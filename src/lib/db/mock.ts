@@ -453,6 +453,75 @@ export async function clearPennyPinchersRun(userId: string): Promise<void> {
   d.penny_pinchers_helpers = d.penny_pinchers_helpers.filter((h) => h.user_id !== userId);
   commit();
 }
+
+// ============ PENNY PINCHERS — LOCAL-FIRST BLOB ============
+// Mock backstore for the JSON-file db. The blob is stored on the
+// existing state row via two extra fields. Falling back to null
+// when there's no row triggers the seed-from-legacy path in the
+// /load route (which itself works in mock mode via the existing
+// upsert helpers).
+export async function getPennyPinchersBlob(userId: string): Promise<{
+  blob: Record<string, unknown> | null;
+  lastSavedAt: string | null;
+}> {
+  const row = db().penny_pinchers_state.find((s) => s.user_id === userId) as
+    | (PennyPinchersState & { state_blob?: Record<string, unknown> | null; last_saved_at?: string | null })
+    | undefined;
+  return {
+    blob: row?.state_blob ?? null,
+    lastSavedAt: row?.last_saved_at ?? null,
+  };
+}
+
+export async function savePennyPinchersBlob(
+  userId: string,
+  blob: Record<string, unknown>,
+  nowIso: string = new Date().toISOString(),
+): Promise<void> {
+  const d = db();
+  const idx = d.penny_pinchers_state.findIndex((s) => s.user_id === userId);
+  if (idx >= 0) {
+    const row = d.penny_pinchers_state[idx] as PennyPinchersState & {
+      state_blob?: Record<string, unknown> | null;
+      last_saved_at?: string | null;
+    };
+    row.state_blob = blob;
+    row.last_saved_at = nowIso;
+    // Keep the legacy scalar columns roughly in sync so any code
+    // still reading them (leaderboard) gets sensible numbers.
+    if (typeof blob.cents === "number") row.cents = blob.cents;
+    if (typeof blob.lifetimeClicks === "number") row.lifetime_clicks = blob.lifetimeClicks;
+    if (typeof blob.lifetimePCEarned === "number") row.lifetime_pc_earned = blob.lifetimePCEarned;
+    if (typeof blob.prestigeCount === "number") row.prestige_count = blob.prestigeCount;
+    if (typeof blob.bankTokens === "number") row.bank_tokens = blob.bankTokens;
+    if (typeof blob.lifetimeBankedCents === "number") row.lifetime_banked_cents = blob.lifetimeBankedCents;
+    if (typeof blob.frugality === "number") row.frugality = blob.frugality;
+  } else {
+    d.penny_pinchers_state.push({
+      user_id: userId,
+      cents: typeof blob.cents === "number" ? blob.cents : 0,
+      lifetime_clicks: typeof blob.lifetimeClicks === "number" ? blob.lifetimeClicks : 0,
+      lifetime_pc_earned: typeof blob.lifetimePCEarned === "number" ? blob.lifetimePCEarned : 0,
+      last_tick_at: null,
+      last_bank_at: null,
+      daily_banked_cents: 0,
+      daily_banked_day: null,
+      prestige_count: typeof blob.prestigeCount === "number" ? blob.prestigeCount : 0,
+      bank_tokens: typeof blob.bankTokens === "number" ? blob.bankTokens : 0,
+      lifetime_banked_cents: typeof blob.lifetimeBankedCents === "number" ? blob.lifetimeBankedCents : 0,
+      last_prestige_at: null,
+      frugality: typeof blob.frugality === "number" ? blob.frugality : 0,
+      album: {},
+      relics: {},
+      created_at: nowIso,
+      // Cast widens the row shape for the new fields the type
+      // doesn't yet know about.
+      state_blob: blob,
+      last_saved_at: nowIso,
+    } as PennyPinchersState & { state_blob: Record<string, unknown>; last_saved_at: string });
+  }
+  commit();
+}
 export async function listPennyPinchersAchievements(userId: string): Promise<PennyPinchersAchievement[]> {
   return db().penny_pinchers_achievements.filter((a) => a.user_id === userId);
 }
