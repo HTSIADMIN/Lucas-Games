@@ -610,9 +610,15 @@ export async function savePennyPinchersBlob(
   nowIso: string = new Date().toISOString(),
 ): Promise<void> {
   // Upsert on the existing penny_pinchers_state row. Includes a
-  // backstop for the legacy NOT NULL columns from migration 0025
-  // so a brand-new row (no normalized history) can still be created
-  // by the blob path alone.
+  // backstop for the legacy NOT NULL bigint columns from migration
+  // 0025 so a brand-new row (no normalized history) can still be
+  // inserted. Math.floor every numeric — the helper-tick loop in
+  // the client carries fractional PC in memory (perTick = rate/10
+  // = e.g. 0.5 per 100 ms), but Postgres rejects a float on bigint
+  // ("invalid input syntax for type bigint: '136170859.5'"). The
+  // blob itself preserves the float for next load.
+  const intOr = (v: unknown, fallback = 0): number =>
+    typeof v === "number" && Number.isFinite(v) ? Math.floor(v) : fallback;
   const { error } = await client()
     .from("penny_pinchers_state")
     .upsert(
@@ -620,16 +626,13 @@ export async function savePennyPinchersBlob(
         user_id: userId,
         state_blob: blob,
         last_saved_at: nowIso,
-        // Legacy columns that have NOT NULL defaults — we still
-        // populate them so the row inserts cleanly. Reads
-        // through getPennyPinchersBlob ignore them.
-        cents: typeof blob.cents === "number" ? blob.cents : 0,
-        lifetime_clicks: typeof blob.lifetimeClicks === "number" ? blob.lifetimeClicks : 0,
-        lifetime_pc_earned: typeof blob.lifetimePCEarned === "number" ? blob.lifetimePCEarned : 0,
-        prestige_count: typeof blob.prestigeCount === "number" ? blob.prestigeCount : 0,
-        bank_tokens: typeof blob.bankTokens === "number" ? blob.bankTokens : 0,
-        lifetime_banked_cents: typeof blob.lifetimeBankedCents === "number" ? blob.lifetimeBankedCents : 0,
-        frugality: typeof blob.frugality === "number" ? blob.frugality : 0,
+        cents: intOr(blob.cents),
+        lifetime_clicks: intOr(blob.lifetimeClicks),
+        lifetime_pc_earned: intOr(blob.lifetimePCEarned),
+        prestige_count: intOr(blob.prestigeCount),
+        bank_tokens: intOr(blob.bankTokens),
+        lifetime_banked_cents: intOr(blob.lifetimeBankedCents),
+        frugality: intOr(blob.frugality),
       },
       { onConflict: "user_id" },
     );

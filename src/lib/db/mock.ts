@@ -478,6 +478,11 @@ export async function savePennyPinchersBlob(
   blob: Record<string, unknown>,
   nowIso: string = new Date().toISOString(),
 ): Promise<void> {
+  // Math.floor every numeric for bigint-shaped column parity with
+  // the Supabase backend — keeps the JSON-file mock honest if a
+  // local dev hits a fractional drip.
+  const intOr = (v: unknown, fallback = 0): number =>
+    typeof v === "number" && Number.isFinite(v) ? Math.floor(v) : fallback;
   const d = db();
   const idx = d.penny_pinchers_state.findIndex((s) => s.user_id === userId);
   if (idx >= 0) {
@@ -487,35 +492,31 @@ export async function savePennyPinchersBlob(
     };
     row.state_blob = blob;
     row.last_saved_at = nowIso;
-    // Keep the legacy scalar columns roughly in sync so any code
-    // still reading them (leaderboard) gets sensible numbers.
-    if (typeof blob.cents === "number") row.cents = blob.cents;
-    if (typeof blob.lifetimeClicks === "number") row.lifetime_clicks = blob.lifetimeClicks;
-    if (typeof blob.lifetimePCEarned === "number") row.lifetime_pc_earned = blob.lifetimePCEarned;
-    if (typeof blob.prestigeCount === "number") row.prestige_count = blob.prestigeCount;
-    if (typeof blob.bankTokens === "number") row.bank_tokens = blob.bankTokens;
-    if (typeof blob.lifetimeBankedCents === "number") row.lifetime_banked_cents = blob.lifetimeBankedCents;
-    if (typeof blob.frugality === "number") row.frugality = blob.frugality;
+    row.cents = intOr(blob.cents);
+    row.lifetime_clicks = intOr(blob.lifetimeClicks);
+    row.lifetime_pc_earned = intOr(blob.lifetimePCEarned);
+    row.prestige_count = intOr(blob.prestigeCount);
+    row.bank_tokens = intOr(blob.bankTokens);
+    row.lifetime_banked_cents = intOr(blob.lifetimeBankedCents);
+    row.frugality = intOr(blob.frugality);
   } else {
     d.penny_pinchers_state.push({
       user_id: userId,
-      cents: typeof blob.cents === "number" ? blob.cents : 0,
-      lifetime_clicks: typeof blob.lifetimeClicks === "number" ? blob.lifetimeClicks : 0,
-      lifetime_pc_earned: typeof blob.lifetimePCEarned === "number" ? blob.lifetimePCEarned : 0,
+      cents: intOr(blob.cents),
+      lifetime_clicks: intOr(blob.lifetimeClicks),
+      lifetime_pc_earned: intOr(blob.lifetimePCEarned),
       last_tick_at: null,
       last_bank_at: null,
       daily_banked_cents: 0,
       daily_banked_day: null,
-      prestige_count: typeof blob.prestigeCount === "number" ? blob.prestigeCount : 0,
-      bank_tokens: typeof blob.bankTokens === "number" ? blob.bankTokens : 0,
-      lifetime_banked_cents: typeof blob.lifetimeBankedCents === "number" ? blob.lifetimeBankedCents : 0,
+      prestige_count: intOr(blob.prestigeCount),
+      bank_tokens: intOr(blob.bankTokens),
+      lifetime_banked_cents: intOr(blob.lifetimeBankedCents),
       last_prestige_at: null,
-      frugality: typeof blob.frugality === "number" ? blob.frugality : 0,
+      frugality: intOr(blob.frugality),
       album: {},
       relics: {},
       created_at: nowIso,
-      // Cast widens the row shape for the new fields the type
-      // doesn't yet know about.
       state_blob: blob,
       last_saved_at: nowIso,
     } as PennyPinchersState & { state_blob: Record<string, unknown>; last_saved_at: string });
