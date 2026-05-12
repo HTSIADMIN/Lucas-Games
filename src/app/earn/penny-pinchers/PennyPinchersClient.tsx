@@ -726,76 +726,147 @@ export function PennyPinchersClient() {
     (hasLucky ? 0.1 : 0) +
     (bentLucky ? BENT_LUCKY_SHINY_BOOST : 0) +
     (luckyBoost ? LUCKY_SHINY_BOOST : 0);
-  // Coin spawner — runs at `intervalMs` cadence. Effect deps are
-  // intentionally NOT keyed on `server` (which is a useMemo derived
-  // from `state` and gets a fresh reference on every helper-tick).
-  // Instead the callback pulls the live state from `stateRef.current`
-  // each tick, so upgrade / perm / album / relic changes mid-run
-  // are picked up without tearing down + recreating the interval
-  // every 100 ms (which is what was killing all coin spawns).
+  // Coin spawner — fully ref-driven, self-scheduling. The effect
+  // mounts ONCE per game session (deps: just [isLoaded]) and runs a
+  // setTimeout chain that re-reads its parameters from a ref before
+  // each spawn. This makes the spawn cadence completely independent
+  // of React state churn — helper drips (every 100 ms), saves
+  // (every 10 s), event polls, etc. no longer tear down + restart
+  // the interval, which was causing "spawn fast → pause → spawn
+  // fast → pause" bursts synced with the autosave timer.
   const isLoaded = state != null;
+  const spawnInputsRef = useRef({
+    intervalMs,
+    upgrades,
+    burstSize,
+    bonusShiny,
+    hasGreedy,
+    cursedPauseUntil,
+  });
+  useEffect(() => {
+    spawnInputsRef.current = {
+      intervalMs,
+      upgrades,
+      burstSize,
+      bonusShiny,
+      hasGreedy,
+      cursedPauseUntil,
+    };
+  });
   useEffect(() => {
     if (!isLoaded) return;
-    const t = window.setInterval(() => {
-      if (cursedPauseUntil != null && cursedPauseUntil > Date.now()) return;
-      const cur = stateRef.current;
-      if (!cur) return;
-      const playEl = playRef.current;
-      if (!playEl) return;
-      const rect = playEl.getBoundingClientRect();
-      const pad = 40;
-      const newSpawns: SpawnedCoin[] = [];
-      const count = burstSize;
-      // Extra Hands: each base spawn rolls a chance to drop an
-      // extra coin alongside it.
-      const extraHandsLevel = upgrades.extra_hands ?? 0;
-      let total = count;
-      for (let k = 0; k < count; k++) {
-        if (Math.random() < Math.min(0.5, 0.05 * extraHandsLevel)) total++;
-      }
-      const curRelicE = relicEffects(cur.relics);
-      for (let i = 0; i < total; i++) {
-        const x = pad + Math.random() * Math.max(0, rect.width - pad * 2);
-        const y = pad + Math.random() * Math.max(0, rect.height - pad * 2);
-        let coin = rollSpawn(upgrades);
-        if (hasGreedy && Math.random() < 0.5) {
-          const list = unlockedCoins(upgrades);
-          coin = list[list.length - 1];
+    let tid: number | null = null;
+    let cancelled = false;
+    const schedule = (delay: number) => {
+      tid = window.setTimeout(() => {
+        if (cancelled) return;
+        const params = spawnInputsRef.current;
+        const cur = stateRef.current;
+        const playEl = playRef.current;
+        // Cursed pause: don't spawn, but keep the chain alive.
+        if (
+          params.cursedPauseUntil != null &&
+          params.cursedPauseUntil > Date.now()
+        ) {
+          schedule(params.intervalMs);
+          return;
         }
-        const traits = rollTraits(coin, upgrades, cur.perm, cur.album);
-        if (!traits.includes("shiny") && bonusShiny > 0 && Math.random() < bonusShiny) {
-          traits.push("shiny");
+        if (!cur || !playEl) {
+          schedule(params.intervalMs);
+          return;
         }
-        coinSeqRef.current += 1;
-        const mergedPC = coinPCValue(coin, upgrades, cur.perm, curRelicE);
-        newSpawns.push({ id: coinSeqRef.current, coin, mergedPC, traits, x, y, spawnedAt: Date.now() });
-      }
-      setCoins((prev) => [...prev, ...newSpawns]);
-    }, intervalMs);
-    return () => window.clearInterval(t);
-  }, [isLoaded, intervalMs, upgrades, burstSize, bonusShiny, hasGreedy, cursedPauseUntil]);
+        const rect = playEl.getBoundingClientRect();
+        const pad = 40;
+        const newSpawns: SpawnedCoin[] = [];
+        const baseCount = params.burstSize;
+        const extraHandsLevel = params.upgrades.extra_hands ?? 0;
+        let total = baseCount;
+        for (let k = 0; k < baseCount; k++) {
+          if (Math.random() < Math.min(0.5, 0.05 * extraHandsLevel)) total++;
+        }
+        const curRelicE = relicEffects(cur.relics);
+        for (let i = 0; i < total; i++) {
+          const x = pad + Math.random() * Math.max(0, rect.width - pad * 2);
+          const y = pad + Math.random() * Math.max(0, rect.height - pad * 2);
+          let coin = rollSpawn(params.upgrades);
+          if (params.hasGreedy && Math.random() < 0.5) {
+            const list = unlockedCoins(params.upgrades);
+            coin = list[list.length - 1];
+          }
+          const traits = rollTraits(coin, params.upgrades, cur.perm, cur.album);
+          if (
+            !traits.includes("shiny") &&
+            params.bonusShiny > 0 &&
+            Math.random() < params.bonusShiny
+          ) {
+            traits.push("shiny");
+          }
+          coinSeqRef.current += 1;
+          const mergedPC = coinPCValue(coin, params.upgrades, cur.perm, curRelicE);
+          newSpawns.push({
+            id: coinSeqRef.current,
+            coin,
+            mergedPC,
+            traits,
+            x,
+            y,
+            spawnedAt: Date.now(),
+          });
+        }
+        setCoins((prev) => [...prev, ...newSpawns]);
+        schedule(params.intervalMs);
+      }, delay);
+    };
+    schedule(spawnInputsRef.current.intervalMs);
+    return () => {
+      cancelled = true;
+      if (tid != null) window.clearTimeout(tid);
+    };
+  }, [isLoaded]);
 
-  // Auto-Picker — same dep-stability fix as the spawn effect.
+  // Auto-Picker — also self-scheduling so a level / pause flip
+  // doesn't restart the timer in a way that delays the next pick.
   const clickCoinRef = useRef<typeof clickCoin>(clickCoin);
   clickCoinRef.current = clickCoin;
   const autoPickerLevel = upgrades.auto_picker ?? 0;
+  const autoPickerRef = useRef({ level: autoPickerLevel, paused: autoPickerPaused });
   useEffect(() => {
-    if (!isLoaded || autoPickerLevel <= 0 || autoPickerPaused) return;
-    const intervalMs = Math.max(150, Math.floor(1000 / (AUTO_PICKER_PER_SEC * autoPickerLevel)));
-    const t = window.setInterval(() => {
-      let target: SpawnedCoin | null = null;
-      setCoins((prev) => {
-        if (prev.length > 0) target = prev[Math.floor(Math.random() * prev.length)];
-        return prev;
-      });
-      if (target) {
-        const t2 = target as SpawnedCoin;
-        spawnGrab(t2.x, t2.y, "auto");
-        void clickCoinRef.current(t2, { silent: true });
-      }
-    }, intervalMs);
-    return () => window.clearInterval(t);
-  }, [isLoaded, autoPickerLevel, autoPickerPaused, spawnGrab]);
+    autoPickerRef.current = { level: autoPickerLevel, paused: autoPickerPaused };
+  });
+  useEffect(() => {
+    if (!isLoaded) return;
+    let tid: number | null = null;
+    let cancelled = false;
+    const schedule = (delay: number) => {
+      tid = window.setTimeout(() => {
+        if (cancelled) return;
+        const { level, paused } = autoPickerRef.current;
+        if (level <= 0 || paused) {
+          // Re-check at the base cadence — when the player flips
+          // the toggle back on, we'll resume within ~500ms.
+          schedule(500);
+          return;
+        }
+        let target: SpawnedCoin | null = null;
+        setCoins((prev) => {
+          if (prev.length > 0) target = prev[Math.floor(Math.random() * prev.length)];
+          return prev;
+        });
+        if (target) {
+          const t2 = target as SpawnedCoin;
+          spawnGrab(t2.x, t2.y, "auto");
+          void clickCoinRef.current(t2, { silent: true });
+        }
+        const pickIntervalMs = Math.max(150, Math.floor(1000 / (AUTO_PICKER_PER_SEC * level)));
+        schedule(pickIntervalMs);
+      }, delay);
+    };
+    schedule(500);
+    return () => {
+      cancelled = true;
+      if (tid != null) window.clearTimeout(tid);
+    };
+  }, [isLoaded, spawnGrab]);
 
   // Merge proximity loop — only runs when "pile_it_up" is owned.
   // Any two coins within MERGE_PROXIMITY_PX fuse into a single
