@@ -20,6 +20,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: "2026-05-13-chest-icons",
+    version: "1.6.3",
+    date: "2026-05-13",
+    title: "Penny Pinchers: chest tiles get treasure icons",
+    notes: [
+      "Bronze, Silver and Gold chests now show up as actual chest icons in the relic shop — wood and bronze, dark wood and silver, then a gold chest with a red gem in the lock plate and sparkles around it.",
+      "Affordable chests bob gently and the cost pill pulses green so it's easier to spot what you can buy. The Gold chest also has its own glow so it stands out as the big-ticket option.",
+      "Tiles are bigger and the section header is clearer — chests should feel like the main thing to click on the relics page.",
+    ],
+  },
+  {
     id: "2026-05-13-relic-icons",
     version: "1.6.2",
     date: "2026-05-13",

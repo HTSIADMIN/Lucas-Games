@@ -265,6 +265,108 @@ function RelicIcon({ id, size = 48 }: { id: RelicId; size?: number }) {
   return null;
 }
 
+/**
+ * Treasure-chest glyphs, one per tier. Same chunky pixel-art ruleset
+ * as RelicIcon — axis-aligned shapes, flat fills, hard outline. Each
+ * tier reuses the same chest silhouette so the progression is read
+ * by trim/material (wood → silver → gold + gems + sparkles), not by
+ * a wholly different shape.
+ */
+function ChestIcon({ tier, size = 64 }: { tier: ChestTier; size?: number }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    style: { display: "block" },
+    "aria-hidden": true as const,
+  };
+  if (tier === "bronze") {
+    // Wooden chest with bronze bands and corner studs.
+    return (
+      <svg {...common}>
+        <ellipse cx="12" cy="21.5" rx="9" ry="1.2" fill={ICON_OUTLINE} opacity="0.4" />
+        <rect x="3" y="11" width="18" height="9.5" fill="#8a5a2a" stroke={ICON_OUTLINE} strokeWidth="1.4" />
+        <rect x="3" y="6" width="18" height="5.5" fill="#8a5a2a" stroke={ICON_OUTLINE} strokeWidth="1.4" />
+        <rect x="3.5" y="6.5" width="17" height="0.6" fill="#a87038" />
+        <rect x="3.5" y="11.6" width="17" height="0.5" fill="#a87038" />
+        <rect x="3" y="14" width="18" height="0.5" fill="#6a4020" />
+        <rect x="3" y="18" width="18" height="0.5" fill="#6a4020" />
+        <rect x="3" y="11" width="18" height="1.5" fill="#a86838" stroke={ICON_OUTLINE} strokeWidth="0.5" />
+        <rect x="3" y="11.2" width="18" height="0.3" fill="#d49060" />
+        <rect x="3" y="15" width="18" height="1" fill="#a86838" stroke={ICON_OUTLINE} strokeWidth="0.5" />
+        <rect x="10.4" y="11" width="3.2" height="4.2" fill="#a86838" stroke={ICON_OUTLINE} strokeWidth="0.7" />
+        <rect x="11.5" y="12.3" width="1" height="1.2" fill={ICON_OUTLINE} />
+        <rect x="11.2" y="13.2" width="1.6" height="0.6" fill={ICON_OUTLINE} />
+        <rect x="3.4" y="6.4" width="1.4" height="1.4" fill="#a86838" stroke={ICON_OUTLINE} strokeWidth="0.4" />
+        <rect x="19.2" y="6.4" width="1.4" height="1.4" fill="#a86838" stroke={ICON_OUTLINE} strokeWidth="0.4" />
+        <rect x="3.4" y="18.6" width="1.4" height="1.4" fill="#a86838" stroke={ICON_OUTLINE} strokeWidth="0.4" />
+        <rect x="19.2" y="18.6" width="1.4" height="1.4" fill="#a86838" stroke={ICON_OUTLINE} strokeWidth="0.4" />
+      </svg>
+    );
+  }
+  if (tier === "silver") {
+    // Dark wood chest with silver bands and brighter studs.
+    return (
+      <svg {...common}>
+        <ellipse cx="12" cy="21.5" rx="9" ry="1.2" fill={ICON_OUTLINE} opacity="0.4" />
+        <rect x="3" y="11" width="18" height="9.5" fill="#6a4020" stroke={ICON_OUTLINE} strokeWidth="1.4" />
+        <rect x="3" y="6" width="18" height="5.5" fill="#6a4020" stroke={ICON_OUTLINE} strokeWidth="1.4" />
+        <rect x="3.5" y="6.5" width="17" height="0.6" fill="#8a5a2a" />
+        <rect x="3.5" y="11.6" width="17" height="0.5" fill="#8a5a2a" />
+        <rect x="3" y="8.5" width="18" height="0.4" fill="#5a3a1a" />
+        <rect x="3" y="14" width="18" height="0.4" fill="#5a3a1a" />
+        <rect x="3" y="18" width="18" height="0.4" fill="#5a3a1a" />
+        <rect x="3" y="11" width="18" height="1.5" fill="#c0c4c8" stroke={ICON_OUTLINE} strokeWidth="0.5" />
+        <rect x="3" y="11.2" width="18" height="0.3" fill="#e8eaee" />
+        <rect x="3" y="15" width="18" height="1" fill="#c0c4c8" stroke={ICON_OUTLINE} strokeWidth="0.5" />
+        <rect x="3" y="8" width="18" height="1" fill="#c0c4c8" stroke={ICON_OUTLINE} strokeWidth="0.5" />
+        <rect x="9.8" y="10.5" width="4.4" height="5" fill="#c0c4c8" stroke={ICON_OUTLINE} strokeWidth="0.8" />
+        <rect x="9.8" y="10.7" width="4.4" height="0.5" fill="#e8eaee" />
+        <rect x="11.5" y="12.4" width="1" height="1.2" fill={ICON_OUTLINE} />
+        <rect x="11.2" y="13.3" width="1.6" height="0.6" fill={ICON_OUTLINE} />
+        <rect x="3.4" y="6.4" width="1.6" height="1.6" fill="#c0c4c8" stroke={ICON_OUTLINE} strokeWidth="0.4" />
+        <rect x="19" y="6.4" width="1.6" height="1.6" fill="#c0c4c8" stroke={ICON_OUTLINE} strokeWidth="0.4" />
+        <rect x="3.4" y="18.4" width="1.6" height="1.6" fill="#c0c4c8" stroke={ICON_OUTLINE} strokeWidth="0.4" />
+        <rect x="19" y="18.4" width="1.6" height="1.6" fill="#c0c4c8" stroke={ICON_OUTLINE} strokeWidth="0.4" />
+      </svg>
+    );
+  }
+  // Gold chest — richer wood, gold bands, gemmed lock, sparkles
+  // around the silhouette.
+  return (
+    <svg {...common}>
+      <polygon points="1.5,5 2.1,6.6 3.6,6.6 2.1,7 1.5,8.6 0.9,7 -0.6,6.6 0.9,6.6" fill="#fff8a2" />
+      <polygon points="22.5,3.5 23.1,5 24.4,5 23.1,5.4 22.5,6.8 21.9,5.4 20.6,5 21.9,5" fill="#fff8a2" />
+      <polygon points="2,18.5 2.6,19.8 3.8,19.8 2.6,20.2 2,21.4 1.4,20.2 0.2,19.8 1.4,19.8" fill="#fff8a2" />
+      <polygon points="22,19 22.5,20.2 23.6,20.2 22.5,20.6 22,21.8 21.5,20.6 20.4,20.2 21.5,20.2" fill="#fff8a2" />
+      <ellipse cx="12" cy="21.5" rx="9.5" ry="1.4" fill={ICON_OUTLINE} opacity="0.4" />
+      <rect x="3" y="11" width="18" height="9.5" fill="#8a5a2a" stroke={ICON_OUTLINE} strokeWidth="1.4" />
+      <rect x="3" y="6" width="18" height="5.5" fill="#8a5a2a" stroke={ICON_OUTLINE} strokeWidth="1.4" />
+      <rect x="3.5" y="6.5" width="17" height="0.6" fill="#a87038" />
+      <rect x="3.5" y="11.6" width="17" height="0.5" fill="#a87038" />
+      <rect x="3" y="8.5" width="18" height="0.4" fill="#6a4020" />
+      <rect x="3" y="14" width="18" height="0.4" fill="#6a4020" />
+      <rect x="3" y="18" width="18" height="0.4" fill="#6a4020" />
+      <rect x="3" y="11" width="18" height="1.7" fill="#e8c468" stroke={ICON_OUTLINE} strokeWidth="0.5" />
+      <rect x="3" y="11.2" width="18" height="0.4" fill="#fff8a2" />
+      <rect x="3" y="15" width="18" height="1.2" fill="#e8c468" stroke={ICON_OUTLINE} strokeWidth="0.5" />
+      <rect x="3" y="15.2" width="18" height="0.3" fill="#fff8a2" />
+      <rect x="3" y="8" width="18" height="1.2" fill="#e8c468" stroke={ICON_OUTLINE} strokeWidth="0.5" />
+      <rect x="3" y="8.1" width="18" height="0.3" fill="#fff8a2" />
+      <rect x="9.4" y="10" width="5.2" height="6" fill="#e8c468" stroke={ICON_OUTLINE} strokeWidth="0.8" />
+      <rect x="9.4" y="10.2" width="5.2" height="0.4" fill="#fff8a2" />
+      <polygon points="12,10.8 13.4,12.8 12,15 10.6,12.8" fill="#c8392a" stroke={ICON_OUTLINE} strokeWidth="0.5" strokeLinejoin="miter" />
+      <rect x="11.5" y="11.4" width="0.6" height="0.6" fill="#fff8a2" />
+      <rect x="3.4" y="6.4" width="1.6" height="1.6" fill="#e8c468" stroke={ICON_OUTLINE} strokeWidth="0.4" />
+      <rect x="19" y="6.4" width="1.6" height="1.6" fill="#e8c468" stroke={ICON_OUTLINE} strokeWidth="0.4" />
+      <rect x="3.4" y="18.4" width="1.6" height="1.6" fill="#e8c468" stroke={ICON_OUTLINE} strokeWidth="0.4" />
+      <rect x="19" y="18.4" width="1.6" height="1.6" fill="#e8c468" stroke={ICON_OUTLINE} strokeWidth="0.4" />
+      <rect x="3.6" y="6.6" width="0.6" height="0.6" fill="#fff8a2" />
+      <rect x="19.2" y="6.6" width="0.6" height="0.6" fill="#fff8a2" />
+    </svg>
+  );
+}
+
 /** Result of opening a chest. Parent computes this via the engine
  *  (applyOpenChest) and hands it back so RelicShop can drive the
  *  spin animation. */
@@ -321,53 +423,123 @@ export function RelicShop({
           transform: translateY(0);
           box-shadow: 0 0 0 2px var(--gold-300), 0 2px 6px rgba(0,0,0,0.2);
         }
+        @keyframes pp-chest-bob {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(-2px); }
+        }
+        @keyframes pp-chest-gold-glow {
+          0%, 100% { filter: drop-shadow(0 0 3px rgba(245,200,66,0.55)); }
+          50%      { filter: drop-shadow(0 0 10px rgba(245,200,66,1)); }
+        }
+        @keyframes pp-chest-cost-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(95,161,122,0.35); }
+          50%      { box-shadow: 0 0 0 4px rgba(95,161,122,0); }
+        }
+        .pp-chest-glyph.is-ready {
+          animation: pp-chest-bob 2.4s ease-in-out infinite;
+        }
+        .pp-chest-card.pp-chest-gold .pp-chest-glyph.is-ready {
+          animation:
+            pp-chest-bob 2.4s ease-in-out infinite,
+            pp-chest-gold-glow 2.2s ease-in-out infinite;
+        }
+        .pp-chest-cost.is-ready {
+          animation: pp-chest-cost-pulse 2.4s ease-in-out infinite;
+        }
       `}</style>
       <div
-        className="text-mute"
-        style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", paddingLeft: 4 }}
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: 12,
+          color: "var(--ink-900)",
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          paddingLeft: 4,
+        }}
       >
-        Spend Frugality on chests · keeps relics through Prestige
+        Spend Frugality · Chests
+      </div>
+      <div
+        className="text-mute"
+        style={{ fontSize: 10, paddingLeft: 4, marginTop: -4 }}
+      >
+        Relics survive Prestige.
       </div>
 
-      {/* Chest cards */}
+      {/* Chest tiles — icon-led so each tier reads as a treasure
+          chest first, descriptors second. */}
       {(Object.keys(CHESTS) as ChestTier[]).map((tier) => {
         const def = CHESTS[tier];
         const affordable = frugality >= def.cost;
+        const ready = affordable && busy == null;
         return (
           <button
             key={tier}
             type="button"
             disabled={!affordable || busy != null}
             onClick={() => buyChest(tier)}
-            className="pp-chest-card"
+            className={`pp-chest-card${tier === "gold" ? " pp-chest-gold" : ""}`}
             style={{
               textAlign: "left",
+              display: "flex",
+              gap: "var(--sp-3)",
+              alignItems: "center",
               background: affordable
                 ? tier === "gold" ? "var(--gold-100)"
                 : tier === "silver" ? "var(--parchment-100)"
                 : "var(--parchment-200)"
                 : "var(--parchment-200)",
-              border: `2px solid ${
+              border: `3px solid ${
                 tier === "gold"   ? "var(--gold-300)"
-              : tier === "silver" ? "var(--saddle-300)"
+              : tier === "silver" ? "#9aa0aa"
               :                     "var(--saddle-300)"
               }`,
+              boxShadow: tier === "gold" && affordable
+                ? "inset 0 0 0 1px var(--gold-500), 0 2px 0 1px rgba(245,200,66,0.4)"
+                : "inset 0 0 0 1px rgba(0,0,0,0.05)",
               padding: "10px 12px",
-              cursor: affordable && busy == null ? "pointer" : "default",
+              cursor: ready ? "pointer" : "default",
               color: "var(--ink-900)",
-              opacity: affordable ? 1 : 0.6,
+              opacity: affordable ? 1 : 0.55,
+              minHeight: 80,
             }}
           >
-            <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-              <span style={{ fontFamily: "var(--font-display)", fontSize: 14 }}>
-                {def.label}
-              </span>
-              <span style={{ fontFamily: "var(--font-display)", fontSize: 12, color: "var(--cactus-500)" }}>
-                {def.cost} ✓
-              </span>
+            <div
+              className={`pp-chest-glyph${ready ? " is-ready" : ""}`}
+              style={{ flex: "0 0 64px", display: "grid", placeItems: "center" }}
+            >
+              <ChestIcon tier={tier} size={64} />
             </div>
-            <div className="text-mute" style={{ fontSize: 11, marginTop: 2 }}>
-              {summariseWeights(def.weights)}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="row" style={{ justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 16,
+                    color: tier === "gold" ? "var(--gold-700)" : "var(--ink-900)",
+                    textShadow: tier === "gold" ? "1px 1px 0 rgba(0,0,0,0.18)" : "none",
+                  }}
+                >
+                  {def.label}
+                </span>
+                <span
+                  className={`pp-chest-cost${ready ? " is-ready" : ""}`}
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 14,
+                    color: affordable ? "var(--cactus-500)" : "var(--saddle-400)",
+                    padding: "3px 8px",
+                    background: affordable ? "rgba(95,161,122,0.18)" : "rgba(0,0,0,0.03)",
+                    border: `2px solid ${affordable ? "var(--cactus-300)" : "var(--saddle-300)"}`,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {def.cost} ✓
+                </span>
+              </div>
+              <div className="text-mute" style={{ fontSize: 11, marginTop: 4, lineHeight: 1.35 }}>
+                {summariseWeights(def.weights)}
+              </div>
             </div>
           </button>
         );
