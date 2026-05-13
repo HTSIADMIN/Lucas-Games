@@ -20,6 +20,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: "2026-05-13-relic-icons",
+    version: "1.6.2",
+    date: "2026-05-13",
+    title: "Penny Pinchers: relics get artifact icons",
+    notes: [
+      "The relic shop now shows each relic as a chunky pixel-art artifact icon — horseshoe, tiki bust, eye of providence, lightning bolt, and friends — instead of a plain coloured card.",
+      "Owned-relic rows are slimmer and the description sits right next to the icon plinth so the shop scans faster.",
+      "Chest spins and the reveal modal both show the new icons too — every step from buy to payoff feels more relic-y.",
+    ],
+  },
+  {
     id: "2026-05-13-prestige-tithe-rework",
     version: "1.6.1",
     date: "2026-05-13",
