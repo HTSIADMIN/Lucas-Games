@@ -674,6 +674,22 @@ export function bankTokensFromPrestige(currentCents: number, prestigeCount: numb
   return bankTokensFromCurrentCents(currentCents, prestigeCount);
 }
 
+/**
+ * Prestige Tithe — Frugality multiplier applied on every prestige.
+ * Level → multiplier: 1=0.5, 2=0.6, 3=0.7, 4=0.8, 5=1.0.
+ * Returns 0 when the upgrade isn't owned.
+ */
+export function prestigeTitheMultiplier(level: number): number {
+  switch (level) {
+    case 1: return 0.5;
+    case 2: return 0.6;
+    case 3: return 0.7;
+    case 4: return 0.8;
+    case 5: return 1.0;
+    default: return 0;
+  }
+}
+
 /** Bank Token cost to take a perm upgrade from `currentLevel` to `currentLevel + 1`. */
 export function nextPermUpgradeCost(upgradeId: PermUpgradeId, currentLevel: number): number | null {
   const def = PERM_UPGRADES_BY_ID[upgradeId];
@@ -831,7 +847,7 @@ export function permUpgradeCurrentValueLabel(id: PermUpgradeId, level: number): 
     case "higher_ceilings":
       return `+${level * 10} max levels per upgrade`;
     case "prestige_tithe":
-      return `${level} purchase${level === 1 ? "" : "s"} · +Frugality = prestige count each`;
+      return `${prestigeTitheMultiplier(level)}× Frugality on every prestige`;
     default:
       return null;
   }
@@ -1030,23 +1046,16 @@ export function applyBuyPermUpgrade(
   if (cost == null) return { ok: false, error: "max_level" };
   if (state.bankTokens < cost) return { ok: false, error: "insufficient_tokens" };
   const newLevel = currentLevel + 1;
-  // Prestige Tithe — each rank instantly grants Frugality equal
-  // to current prestige count, capped at +50.
-  const frugalityGrant =
-    upgradeId === "prestige_tithe"
-      ? Math.max(0, Math.min(FRUGALITY_MAX - state.frugality, state.prestigeCount))
-      : 0;
   return {
     ok: true,
     state: {
       ...state,
       bankTokens: state.bankTokens - cost,
       perm: { ...state.perm, [upgradeId]: newLevel },
-      frugality: state.frugality + frugalityGrant,
     },
     newLevel,
     cost,
-    frugalityGained: frugalityGrant,
+    frugalityGained: 0,
   };
 }
 
@@ -1182,13 +1191,22 @@ export function applyOpenChest(
 /** Roll It Up — wipe run state, award Bank Tokens proportional to cents sacrificed. */
 export function applyPrestige(
   state: PennyPinchersGameState,
-): MutationResult<{ awarded: number }> {
+): MutationResult<{ awarded: number; frugalityGained: number }> {
   const tokens = bankTokensFromCurrentCents(state.cents, state.prestigeCount);
   if (tokens <= 0) return { ok: false, error: "below_threshold" };
   const now = Date.now();
   const relicE = relicEffects(state.relics);
   const seededCents = prestigeStartingCents(state.perm) + relicE.prestigeStartBonusPC;
   const newPrestigeCount = state.prestigeCount + 1;
+  // Prestige Tithe — Frugality grant scales with prestige count
+  // and the upgrade's multiplier (L1 0.5× → L5 1.0×), capped at
+  // FRUGALITY_MAX. Uses the post-increment prestige count so the
+  // grant reflects the prestige just achieved.
+  const titheMul = prestigeTitheMultiplier(state.perm.prestige_tithe ?? 0);
+  const frugalityGained = Math.max(
+    0,
+    Math.min(FRUGALITY_MAX - state.frugality, Math.floor(newPrestigeCount * titheMul)),
+  );
   // Vending Lifer — auto-grant vending_machines L1 in the new run.
   const upgrades: Partial<Record<UpgradeId, number>> = {};
   if ((state.perm.vending_lifer ?? 0) >= 1) upgrades.vending_machines = 1;
@@ -1204,10 +1222,12 @@ export function applyPrestige(
       helpers: {},
       prestigeCount: newPrestigeCount,
       bankTokens: state.bankTokens + tokens,
+      frugality: state.frugality + frugalityGained,
       lastPrestigeAt: now,
       lastTickAt: now,
     },
     awarded: tokens,
+    frugalityGained,
   };
 }
 

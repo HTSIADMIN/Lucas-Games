@@ -20,6 +20,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: "2026-05-13-prestige-tithe-rework",
+    version: "1.6.1",
+    date: "2026-05-13",
+    title: "Penny Pinchers: Prestige Tithe rework",
+    notes: [
+      "Prestige Tithe is now a permanent multiplier on every Roll It Up, not a one-shot purchase bonus.",
+      "Each rank scales the Frugality grant: L1 0.5×, L2 0.6×, L3 0.7×, L4 0.8×, L5 1.0× — applied to your prestige count.",
+      "Example: prestige #10 with L5 Tithe drops a full +10 Frugality on the way out. Frugality cap of +50 still applies.",
+    ],
+  },
+  {
     id: "2026-05-05-changelog-v3",
     version: "1.6.0",
     date: "2026-05-05",

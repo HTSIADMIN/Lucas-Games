@@ -673,12 +673,12 @@ export const PERM_UPGRADES: readonly PermUpgradeDef[] = [
   // etc. Cost ramp is base 5 × 1.4^lvl rounded up: 5, 7, 10,
   // 14, 20★ — total 56★ for full extension.
   { id: "higher_ceilings",  label: "Higher Ceilings",  description: "+10 to the max level of every base upgrade per level. Stacks across all run upgrades — go deeper on what you like.", baseCost: 5, costMultiplier: 1.4, maxLevel: 5 },
-  // Each rank instantly grants Frugality equal to your current
-  // prestige count. Encourages prestige loops on top of the
-  // tiered threshold scaling — a high-prestige player can dump
-  // tokens for guaranteed Frugality instead of fishing through
-  // wallets / fountain / cushions.
-  { id: "prestige_tithe",   label: "Prestige Tithe",   description: "Each level instantly grants Frugality equal to your current prestige count.", baseCost: 4, costMultiplier: 1.7, maxLevel: 5 },
+  // Each rank multiplies Frugality gained on every Roll It Up by
+  // a factor that scales 0.5× (L1) → 1.0× (L5). Gain on a prestige
+  // is floor(newPrestigeCount × multiplier), capped at FRUGALITY_MAX.
+  // Rewards committed prestige loops instead of paying out as a
+  // one-shot purchase bonus.
+  { id: "prestige_tithe",   label: "Prestige Tithe",   description: "Each prestige grants Frugality equal to your prestige count × this upgrade's multiplier (L1 0.5× → L5 1.0×).", baseCost: 4, costMultiplier: 1.7, maxLevel: 5 },
 ];
 
 export const PERM_UPGRADES_BY_ID: Record<PermUpgradeId, PermUpgradeDef> = Object.fromEntries(

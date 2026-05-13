@@ -76,7 +76,7 @@ const SECTIONS: { title: string; lines: string[] }[] = [
       "Your prestige count rides the leaderboard as a ★ N Prestige badge — gold at first, then emerald (5+), ruby (10+), sapphire (15+), amethyst (20+), and diamond rainbow (25+).",
       "Higher Ceilings (perm) adds +10 to the max level of every base upgrade per level — five tiers (5, 7, 10, 14, 20★, total 56★) take Coin Value from 20 → 70, Sharper Eyes 10 → 60, etc. Spawn unlocks (Vending / Parking / Laundry / Boardwalk / Grandpa) and Pile It Up are exempt because their meaningful work is the first 5 ranks.",
       "Bigger Pockets (perm) is quadratic: lvl 1 seeds 1k, lvl 5 seeds 25k, maxed seeds 100k cents into the next cycle so the grind back to the first-prestige threshold is automatic at full ranks.",
-      "Prestige Tithe (perm, 5★ × 1.7^lvl) is the new payoff for high-prestige players — each rank instantly grants Frugality equal to your current prestige count, capped at +50.",
+      "Prestige Tithe (perm, 5★ × 1.7^lvl) is the new payoff for high-prestige players — each rank multiplies Frugality gained on every Roll It Up (L1 0.5× → L5 1.0×). The grant is floor(prestige count × multiplier), capped at +50.",
     ],
   },
   {
