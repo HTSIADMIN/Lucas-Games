@@ -259,6 +259,11 @@ export function PennyPinchersClient() {
   const dirtyRef = useRef<boolean>(false);
 
   const [coins, setCoins] = useState<SpawnedCoin[]>([]);
+  // Mirror so click handlers can read the live coin list without
+  // waiting for React's setState updater (which runs async during
+  // the commit phase — breaks Two-Finger collateral PC credit).
+  const coinsRef = useRef<SpawnedCoin[]>([]);
+  useEffect(() => { coinsRef.current = coins; }, [coins]);
   const [tab, setTab] = useState<"upgrades" | "helpers" | "tokens" | "achievements" | "album" | "relics">("upgrades");
   const [welcomeBack, setWelcomeBack] = useState<number | null>(null);
   const [prestigeOpen, setPrestigeOpen] = useState(false);
@@ -1013,60 +1018,72 @@ export function PennyPinchersClient() {
     spawnPop(coin.x, coin.y, primaryGained, coin.traits.includes("shiny"), coin.traits[0] ?? null);
     setPcPulseKey((k) => k + 1);
 
-    // Collateral pickups — Sticky / Two-Finger / Lightning all share
-    // the same shape.
+    // Collateral pickups — Sticky / Two-Finger / Lightning all
+    // share the same shape. We compute the list SYNCHRONOUSLY from
+    // `coinsRef.current` (NOT from inside setCoins, whose updater
+    // runs async during React's commit — which was silently
+    // dropping Two-Finger PC credits because the for-loop below
+    // executed before the updater populated `collateral`).
+    const live = coinsRef.current;
+    const others = live.filter((c) => c.id !== coin.id);
     const collateral: SpawnedCoin[] = [];
     let twoFingerExtra: SpawnedCoin | null = null;
-    setCoins((prev) => {
-      const others = prev.filter((c) => c.id !== coin.id);
-      if (coin.traits.includes("sticky")) {
-        const nearby = others
-          .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
-          .filter((e) => e.d2 <= STICKY_PICKUP_RADIUS * STICKY_PICKUP_RADIUS)
-          .sort((a, b) => a.d2 - b.d2)
-          .slice(0, STICKY_PICKUP_COUNT)
-          .map((e) => e.c);
-        collateral.push(...nearby);
-      }
-      const tfLevel = (afterPrimary.upgrades.two_finger_pickup ?? 0);
-      if (tfLevel > 0) {
-        const chance = Math.min(0.5, 0.05 * tfLevel);
-        if (Math.random() < chance) {
-          const taken = new Set(collateral.map((c) => c.id));
-          const extra = others
-            .filter((c) => !taken.has(c.id))
-            .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
-            .filter((e) => e.d2 <= TWO_FINGER_RADIUS * TWO_FINGER_RADIUS)
-            .sort((a, b) => a.d2 - b.d2)[0];
-          if (extra) {
-            collateral.push(extra.c);
-            twoFingerExtra = extra.c;
-          }
-        }
-      }
-      if (coin.traits.includes("lightning")) {
-        const taken = new Set(collateral.map((c) => c.id));
-        const arc = others
-          .filter((c) => !taken.has(c.id))
-          .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
-          .filter((e) => e.d2 <= LIGHTNING_RADIUS * LIGHTNING_RADIUS)
-          .sort((a, b) => a.d2 - b.d2)[0];
-        if (arc) {
-          collateral.push(arc.c);
-          if (!twoFingerExtra) twoFingerExtra = arc.c;
-        }
-      }
-      const removeIds = new Set([coin.id, ...collateral.map((c) => c.id)]);
-      return prev.filter((c) => !removeIds.has(c.id));
-    });
-    if (twoFingerExtra) {
-      spawnGrab(coin.x, coin.y, "twofinger");
-      const tfx = twoFingerExtra as SpawnedCoin;
-      spawnGrab(tfx.x, tfx.y, "twofinger");
+
+    if (coin.traits.includes("sticky")) {
+      const nearby = others
+        .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
+        .filter((e) => e.d2 <= STICKY_PICKUP_RADIUS * STICKY_PICKUP_RADIUS)
+        .sort((a, b) => a.d2 - b.d2)
+        .slice(0, STICKY_PICKUP_COUNT)
+        .map((e) => e.c);
+      collateral.push(...nearby);
     }
 
-    // Fold every collateral click into the same state mutation so
-    // achievement sweep runs once at the end + we save once.
+    const tfLevel = (afterPrimary.upgrades.two_finger_pickup ?? 0);
+    if (tfLevel > 0) {
+      const chance = Math.min(0.5, 0.05 * tfLevel);
+      if (Math.random() < chance) {
+        const taken = new Set(collateral.map((c) => c.id));
+        const extra = others
+          .filter((c) => !taken.has(c.id))
+          .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
+          .filter((e) => e.d2 <= TWO_FINGER_RADIUS * TWO_FINGER_RADIUS)
+          .sort((a, b) => a.d2 - b.d2)[0];
+        if (extra) {
+          collateral.push(extra.c);
+          twoFingerExtra = extra.c;
+        }
+      }
+    }
+
+    if (coin.traits.includes("lightning")) {
+      const taken = new Set(collateral.map((c) => c.id));
+      const arc = others
+        .filter((c) => !taken.has(c.id))
+        .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
+        .filter((e) => e.d2 <= LIGHTNING_RADIUS * LIGHTNING_RADIUS)
+        .sort((a, b) => a.d2 - b.d2)[0];
+      if (arc) {
+        collateral.push(arc.c);
+        if (!twoFingerExtra) twoFingerExtra = arc.c;
+      }
+    }
+
+    // Removal happens once — synchronous, deterministic, based on
+    // the collateral list we just built.
+    if (collateral.length > 0 || coin.id != null) {
+      const removeIds = new Set([coin.id, ...collateral.map((c) => c.id)]);
+      setCoins((prev) => prev.filter((c) => !removeIds.has(c.id)));
+    }
+
+    if (twoFingerExtra) {
+      spawnGrab(coin.x, coin.y, "twofinger");
+      spawnGrab(twoFingerExtra.x, twoFingerExtra.y, "twofinger");
+    }
+
+    // Apply every collateral pickup through the engine — credits PC,
+    // bumps lifetime counters, increments album. One final mutate
+    // commits the lot so achievements only sweep once.
     let working = afterPrimary;
     for (const extra of collateral) {
       const extraAdj = Math.round(extra.mergedPC * tier.multiplier);
@@ -1079,9 +1096,14 @@ export function PennyPinchersClient() {
       spawnPop(extra.x, extra.y, extraGained, extra.traits.includes("shiny"), extra.traits[0] ?? null);
       working = next;
     }
+    // Extra pickup chime — a quick clink for each collateral coin so
+    // the player can HEAR the chain-grab landing on top of the base
+    // wood click that fired for the primary. Throttle on the SFX
+    // registry keeps a 5-coin sticky sweep from machine-gunning.
+    if (collateral.length > 0 && !opts.silent) {
+      Sfx.play("coins.clink");
+    }
 
-    // Commit the final state — achievement sweep + dirty bump live
-    // inside `mutate`.
     mutate(() => working);
   }
 
