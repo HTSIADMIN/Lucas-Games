@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   UPGRADES,
   type PermUpgradeId,
@@ -35,12 +36,17 @@ export function UpgradeShop({
   levels,
   cents,
   onBuy,
+  onBuyMax,
   perm,
   recentlyBoughtId,
 }: {
   levels: Record<UpgradeId, number> | Partial<Record<UpgradeId, number>>;
   cents: number;
   onBuy: (id: UpgradeId, cost: number) => void;
+  /** Greedy max-buy — buys the cheapest affordable upgrade in a loop
+   *  until nothing is affordable. Parent runs the engine mutation and
+   *  returns a summary of what landed (or null if nothing was bought). */
+  onBuyMax?: () => { bought: number; spent: number } | null;
   /** Higher Ceilings (perm) extends the per-upgrade max levels. */
   perm?: Partial<Record<PermUpgradeId, number>>;
   /** When set, that upgrade's card briefly flashes gold + bumps after a successful purchase. */
@@ -61,8 +67,81 @@ export function UpgradeShop({
     const bCost = nextUpgradeCost(b.id, bLvl, perm ?? {}) ?? Number.POSITIVE_INFINITY;
     return aCost - bCost;
   });
+
+  // Cheapest upgrade currently in reach — gates the Max Buy button.
+  const cheapestAffordable = (() => {
+    let cheapest = Number.POSITIVE_INFINITY;
+    for (const u of UPGRADES) {
+      const lvl = levels[u.id] ?? 0;
+      if (lvl >= effectiveUpgradeMaxLevel(u, perm ?? {})) continue;
+      const c = nextUpgradeCost(u.id, lvl, perm ?? {});
+      if (c == null || c > cents) continue;
+      if (c < cheapest) cheapest = c;
+    }
+    return cheapest === Number.POSITIVE_INFINITY ? null : cheapest;
+  })();
+
+  const [toast, setToast] = useState<{ bought: number; spent: number } | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 3000);
+    return () => window.clearTimeout(id);
+  }, [toast]);
+
+  function handleBuyMax() {
+    if (!onBuyMax) return;
+    const result = onBuyMax();
+    if (result && result.bought > 0) setToast(result);
+  }
+
   return (
     <div className="stack pp-shop-scroll" style={{ gap: "var(--sp-2)" }}>
+      {onBuyMax && (
+        <div
+          className="row"
+          style={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 8,
+            minHeight: 30,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 11,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: toast ? "var(--cactus-500)" : "var(--saddle-400)",
+              transition: "color 200ms",
+            }}
+          >
+            {toast
+              ? `Bought ${toast.bought} for ${toast.spent.toLocaleString()} PC`
+              : "Cheapest first · stops when broke"}
+          </span>
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={cheapestAffordable == null}
+            onClick={handleBuyMax}
+            style={{
+              animation:
+                cheapestAffordable != null && !toast
+                  ? "pp-maxbuy-pulse 1.8s ease-in-out infinite"
+                  : undefined,
+            }}
+          >
+            ⚡ Max Buy
+          </button>
+        </div>
+      )}
+      <style>{`
+        @keyframes pp-maxbuy-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(255,196,64,0); }
+          50%      { box-shadow: 0 0 0 2px rgba(255,196,64,0.55), 0 0 12px rgba(255,196,64,0.45); }
+        }
+      `}</style>
       <style>{`
         @keyframes pp-shop-affordable {
           0%, 100% { box-shadow: 0 0 0 0 rgba(255,196,64,0); }

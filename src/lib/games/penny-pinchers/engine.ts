@@ -21,6 +21,7 @@ import {
   PRESTIGE_TOKEN_DIVISOR,
   RELICS,
   TRAITS,
+  UPGRADES,
   UPGRADES_BY_ID,
   type AchievementId,
   type BlessingId,
@@ -1009,6 +1010,42 @@ export function applyBuyUpgrade(
     newLevel,
     cost,
   };
+}
+
+/** Greedy "max buy" — repeatedly buys the cheapest currently-affordable
+ *  upgrade until nothing is affordable (or every upgrade is maxed).
+ *  Cheapest-first means a player can pour a billion PC into this and
+ *  watch every available upgrade climb together, not just dump it all
+ *  into one expensive lane. Iteration cap (5,000) is a defensive floor
+ *  against runaway behaviour — the worst real case is ~900 buys
+ *  (13 upgrades × ~70 levels max with Higher Ceilings). */
+export function applyBuyMaxUpgrades(
+  state: PennyPinchersGameState,
+): { state: PennyPinchersGameState; bought: number; spent: number } {
+  let working = state;
+  let bought = 0;
+  let spent = 0;
+  for (let i = 0; i < 5_000; i++) {
+    let cheapestId: UpgradeId | null = null;
+    let cheapestCost = Number.POSITIVE_INFINITY;
+    for (const def of UPGRADES) {
+      const lvl = working.upgrades[def.id] ?? 0;
+      if (lvl >= effectiveUpgradeMaxLevel(def, working.perm)) continue;
+      const cost = nextUpgradeCost(def.id, lvl, working.perm);
+      if (cost == null || cost > working.cents) continue;
+      if (cost < cheapestCost) {
+        cheapestCost = cost;
+        cheapestId = def.id;
+      }
+    }
+    if (!cheapestId) break;
+    const result = applyBuyUpgrade(working, cheapestId);
+    if (!result.ok) break;
+    working = result.state;
+    bought += 1;
+    spent += result.cost;
+  }
+  return { state: working, bought, spent };
 }
 
 export function applyHireHelper(

@@ -53,6 +53,7 @@ import {
   applyAchievementSweep,
   applyBuyBlessing,
   applyBuyPermUpgrade,
+  applyBuyMaxUpgrades,
   applyBuyUpgrade,
   applyClick,
   applyCushionFlip,
@@ -1100,6 +1101,20 @@ export function PennyPinchersClient() {
       setRecentlyBoughtUpgradeId((c) => (c === id ? null : c));
     }, 700);
     Sfx.play("ui.click");
+  }
+
+  /** Greedy max-buy on the Upgrades tab. Runs the engine helper once
+   *  (single state mutation, single render, single save-dirty mark)
+   *  and returns the summary so the shop can flash a "Bought N for X
+   *  PC" toast. */
+  function buyMaxUpgrades(): { bought: number; spent: number } | null {
+    const cur = stateRef.current;
+    if (!cur) return null;
+    const result = applyBuyMaxUpgrades(cur);
+    if (result.bought <= 0) return null;
+    mutate(() => result.state);
+    Sfx.play("chips.stack");
+    return { bought: result.bought, spent: result.spent };
   }
 
   function hireHelper(id: HelperId, cost: number) {
@@ -2290,6 +2305,7 @@ export function PennyPinchersClient() {
               levels={upgrades}
               cents={localCents}
               onBuy={buyUpgrade}
+              onBuyMax={buyMaxUpgrades}
               perm={server.perm}
               recentlyBoughtId={recentlyBoughtUpgradeId}
             />
