@@ -668,7 +668,20 @@ export type PermUpgradeId =
   | "lucky_streak"
   | "generous_helpers"
   | "higher_ceilings"
-  | "prestige_tithe";
+  | "prestige_tithe"
+  // Boomtown Investments — late-game scaling tier. Each one multiplies
+  // into PC output (compounding stacks become enormous), absorbing
+  // tokens long after the core perms have all maxed out.
+  | "mint_master"
+  | "prestige_mastery"
+  | "industrial_workforce"
+  | "streak_conductor"
+  | "surge_tides"
+  | "greedy_spawns"
+  | "click_cascade"
+  | "compound_interest"
+  | "treasure_vault"
+  | "wealth_apotheosis";
 
 export type PermUpgradeDef = {
   id: PermUpgradeId;
@@ -677,6 +690,10 @@ export type PermUpgradeDef = {
   baseCost: number;
   costMultiplier: number;
   maxLevel: number;
+  /** Section grouping in the Bank Token shop. Missing = core /
+   *  early-game; "boomtown" = late-game scaling investments that
+   *  absorb tokens long after the core perms have maxed. */
+  tier?: "boomtown";
 };
 
 export const PERM_UPGRADES: readonly PermUpgradeDef[] = [
@@ -701,6 +718,44 @@ export const PERM_UPGRADES: readonly PermUpgradeDef[] = [
   // Rewards committed prestige loops instead of paying out as a
   // one-shot purchase bonus.
   { id: "prestige_tithe",   label: "Prestige Tithe",   description: "Each prestige grants Frugality equal to your prestige count × this upgrade's multiplier (L1 0.5× → L5 1.0×).", baseCost: 4, costMultiplier: 1.7, maxLevel: 5 },
+
+  // ============================================================
+  // BOOMTOWN INVESTMENTS — late-game token sinks
+  //
+  // Designed for players past prestige ~10 who have already maxed
+  // the core perms above and have tokens piling up. Most of these
+  // are compounding multipliers — stacking Mint Master + Industrial
+  // Workforce + Prestige Mastery at modest levels is enough to push
+  // PC output orders of magnitude past the base curve.
+  // ============================================================
+  // Mint Master — × 1.25 per level on every coin's base PC (compounds).
+  // L5=×3.05, L10=×9.31, L20=×86.7.
+  { id: "mint_master",          label: "Mint Master",          description: "Every coin is minted richer — +25% base PC per level (multiplicative). L10 ≈ ×9.3, L20 ≈ ×87.", baseCost: 24, costMultiplier: 1.7,  maxLevel: 20, tier: "boomtown" },
+  // Prestige Mastery — boosts the per-prestige PC multiplier additively.
+  // At P37 your base is ×40; L10 turns that into ×240, L15 into ×340.
+  { id: "prestige_mastery",     label: "Prestige Mastery",     description: "Adds +50% to your prestige PC multiplier per level. Stacks on top of the standard +100%/prestige curve.", baseCost: 40, costMultiplier: 1.8,  maxLevel: 15, tier: "boomtown" },
+  // Industrial Workforce — × 1.5 per level on helper PC/sec.
+  // L10=×57.6, L18=×1477.
+  { id: "industrial_workforce", label: "Industrial Workforce", description: "Every helper produces +50% PC/sec per level (multiplicative). Idle income scales like dynamite.", baseCost: 28, costMultiplier: 1.7,  maxLevel: 18, tier: "boomtown" },
+  // Pinch Streak Conductor — amplifies the streak tier bonus over
+  // base. tier_mul becomes 1 + (tier_mul - 1) × (1 + 0.25 × lvl).
+  { id: "streak_conductor",     label: "Streak Conductor",     description: "Each Pinch Streak tier (Warm / Hot / Money Frenzy) gains +25% multiplier per level. L10 doubles Hot, triples Money Frenzy.", baseCost: 16, costMultiplier: 1.65, maxLevel: 15, tier: "boomtown" },
+  // Surge Tides — events both more frequent and longer.
+  { id: "surge_tides",          label: "Surge Tides",          description: "Random events (Coin Storm, Rainy Day) trigger +10% more often and last +10% longer per level. Stacks with the Rainmaker relic.", baseCost: 32, costMultiplier: 1.7,  maxLevel: 15, tier: "boomtown" },
+  // Greedy Spawns — chance per spawn to drop a free extra coin.
+  // Caps at 60% (L20).
+  { id: "greedy_spawns",        label: "Greedy Spawns",        description: "+3% chance per level for each spawn to drop an extra free coin. Caps at 60%. Stacks with Extra Hands.", baseCost: 24, costMultiplier: 1.6,  maxLevel: 20, tier: "boomtown" },
+  // Click Cascade — like Two-Finger Pickup but permanent. Chance
+  // to immediately grab a nearby coin too. Caps at 60% (L12).
+  { id: "click_cascade",        label: "Click Cascade",        description: "Every click has +5% chance per level to instantly chain-grab a nearby coin. L10 = 50% chain rate, L12 = 60%.", baseCost: 64, costMultiplier: 1.9,  maxLevel: 12, tier: "boomtown" },
+  // Compound Interest — passive PC/sec from your token reserve.
+  // PC/sec += sqrt(bankTokens) × 50 × level.
+  { id: "compound_interest",    label: "Compound Interest",    description: "Prestige Points generate idle PC: +√(points)·50·level PC/sec. Your reserve literally prints money.", baseCost: 20, costMultiplier: 1.6,  maxLevel: 20, tier: "boomtown" },
+  // Treasure Vault — × 1.25 per level on tokens awarded per prestige.
+  { id: "treasure_vault",       label: "Treasure Vault",       description: "Prestige Points earned per Roll It Up × 1.25 per level (multiplicative). L5 ≈ ×3.05, L10 ≈ ×9.31.", baseCost: 80, costMultiplier: 2.0,  maxLevel: 10, tier: "boomtown" },
+  // Wealth Apotheosis — turns lifetime PC into a click multiplier.
+  // +1% click PC per (10M lifetime × level). Capped at +500% per level.
+  { id: "wealth_apotheosis",    label: "Wealth Apotheosis",    description: "Your lifetime ¢ banked amplifies every click — +1% click PC per (1M lifetime banked × level). Capped at +500% per level. Persists through every Prestige.", baseCost: 48, costMultiplier: 1.75, maxLevel: 15, tier: "boomtown" },
 ];
 
 export const PERM_UPGRADES_BY_ID: Record<PermUpgradeId, PermUpgradeDef> = Object.fromEntries(

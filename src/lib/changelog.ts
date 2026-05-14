@@ -20,6 +20,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: "2026-05-14-boomtown-investments",
+    version: "1.7.0",
+    date: "2026-05-14",
+    title: "Penny Pinchers: Boomtown Investments — 10 new late-game token upgrades",
+    notes: [
+      "New permanent upgrade tier in the Bank Token shop — 10 endgame perks aimed at players past prestige ~10 whose tokens were piling up with nothing to spend them on.",
+      "Mint Master, Prestige Mastery and Industrial Workforce are the big compound multipliers: each level multiplies coin value, prestige multiplier or helper PC/sec. Stacking even modest levels lifts PC output by an order of magnitude.",
+      "Streak Conductor amplifies every Pinch Streak tier. Surge Tides makes events more frequent and longer. Greedy Spawns drops free extra coins. Click Cascade chain-grabs nearby coins.",
+      "Compound Interest pays passive PC/sec scaled by your token reserve — your bank account literally prints money while you click.",
+      "Treasure Vault multiplies your token gain per prestige (so the whole tier feeds back into itself). Wealth Apotheosis turns lifetime ¢ banked into a permanent click multiplier.",
+      "Costs are tuned to absorb tokens for thousands of prestiges — cheap L1s buyable today, geometric scaling that bites hard at L10+.",
+    ],
+  },
+  {
     id: "2026-05-13-chest-icons",
     version: "1.6.3",
     date: "2026-05-13",

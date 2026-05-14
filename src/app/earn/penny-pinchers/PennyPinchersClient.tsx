@@ -63,10 +63,14 @@ import {
   applyOpenChest,
   applyPrestige,
   applyResolveLostWallet,
+  applyStreakConductor,
   bankTokensFromCurrentCents,
+  clickCascadeChance,
   coinPCValue,
+  compoundInterestPcPerSec,
   findMergePair,
   freshGameState,
+  greedySpawnsChance,
   helperRatePcPerSec,
   migrateLoadedState,
   nextPrestigeThreshold,
@@ -77,6 +81,8 @@ import {
   rollTraits,
   spawnIntervalMs,
   streakTierFor,
+  surgeTidesChanceMul,
+  surgeTidesDurationMul,
   unlockedCoins,
   type PennyPinchersGameState,
 } from "@/lib/games/penny-pinchers/engine";
@@ -643,8 +649,13 @@ export function PennyPinchersClient() {
     const nowMs = Date.now();
     setActiveEvent((current) => {
       if (current && current.endsAt > nowMs) return current;
-      const stormBonus = stateRef.current ? relicEffects(stateRef.current.relics).stormChanceBonus : 0;
-      if (Math.random() < EVENT_START_CHANCE_PER_POLL + stormBonus) {
+      const cur = stateRef.current;
+      const stormBonus = cur ? relicEffects(cur.relics).stormChanceBonus : 0;
+      // Surge Tides (Boomtown) — bumps event start chance by +10%/lvl
+      // and stretches the active duration by +10%/lvl.
+      const surgeChanceMul = cur ? surgeTidesChanceMul(cur.perm) : 1;
+      const surgeDurationMul = cur ? surgeTidesDurationMul(cur.perm) : 1;
+      if (Math.random() < (EVENT_START_CHANCE_PER_POLL + stormBonus) * surgeChanceMul) {
         const ids = Object.keys(EVENTS) as EventId[];
         const id: EventId =
           stormBonus > 0 && Math.random() < 0.5 + stormBonus * 5
@@ -652,7 +663,7 @@ export function PennyPinchersClient() {
             : ids[Math.floor(Math.random() * ids.length)];
         const def = EVENTS[id];
         Sfx.play(id === "coin_storm" ? "win.levelup" : "coins.clink");
-        return { id, endsAt: nowMs + def.durationMs };
+        return { id, endsAt: nowMs + Math.round(def.durationMs * surgeDurationMul) };
       }
       return null;
     });
@@ -713,11 +724,15 @@ export function PennyPinchersClient() {
   // Helper PC accrual — drip cents into local state every 100ms
   // so the counter visibly ticks. Each tick bumps lifetimePCEarned
   // + lastTickAt too (used by the offline-accrual math on next load).
+  // Compound Interest (Boomtown) folds its passive PC/sec in here so
+  // it shares the same accrual cadence + save loop.
   const helperRate = server?.helperRatePerSec ?? 0;
+  const interestRate = state ? compoundInterestPcPerSec(state.perm, state.bankTokens) : 0;
+  const idleRate = helperRate + interestRate;
   useEffect(() => {
-    if (helperRate <= 0) return;
+    if (idleRate <= 0) return;
     const tickMs = 100;
-    const perTick = (helperRate * tickMs) / 1000;
+    const perTick = (idleRate * tickMs) / 1000;
     const t = window.setInterval(() => {
       const cur = stateRef.current;
       if (!cur) return;
@@ -732,7 +747,7 @@ export function PennyPinchersClient() {
       dirtyRef.current = true;
     }, tickMs);
     return () => window.clearInterval(t);
-  }, [helperRate]);
+  }, [idleRate]);
 
   // Coin spawner — applies the active event's spawn-rate multiplier
   // and bonus shiny chance so Coin Storm rains coins and Rainy Day
@@ -828,9 +843,13 @@ export function PennyPinchersClient() {
         const newSpawns: SpawnedCoin[] = [];
         const baseCount = params.burstSize;
         const extraHandsLevel = params.upgrades.extra_hands ?? 0;
+        // Greedy Spawns (Boomtown) rolls independently per base spawn,
+        // so it stacks additively with Extra Hands.
+        const greedyPermChance = greedySpawnsChance(cur.perm);
         let total = baseCount;
         for (let k = 0; k < baseCount; k++) {
           if (Math.random() < Math.min(0.5, 0.05 * extraHandsLevel)) total++;
+          if (greedyPermChance > 0 && Math.random() < greedyPermChance) total++;
         }
         // Cap burst at the remaining headroom so a Coin Storm or
         // Frenzy tick doesn't blow past the on-screen ceiling.
@@ -1051,9 +1070,13 @@ export function PennyPinchersClient() {
 
     // Streak-adjusted merged PC — pass to applyClick which folds in
     // trait, frugality, album, prestige, and relic multipliers.
-    const streakAdjustedPC = Math.round(coin.mergedPC * tier.multiplier);
+    // Streak Conductor (Boomtown) amplifies the bonus above 1× per
+    // tier — so a maxed conductor turns Money Frenzy into a 4× or
+    // higher multiplier on top of the base 2×.
     const cur = stateRef.current;
     if (!cur) return;
+    const conductedMul = applyStreakConductor(tier.multiplier, cur.perm);
+    const streakAdjustedPC = Math.round(coin.mergedPC * conductedMul);
     const afterPrimary = applyClick(cur, {
       coinType: coin.coin,
       traits: coin.traits,
@@ -1101,6 +1124,24 @@ export function PennyPinchersClient() {
       }
     }
 
+    // Click Cascade (Boomtown) — permanent version of Two-Finger
+    // Pickup. Each level adds a 5% chance to chain-grab a nearby
+    // coin; rolls independently so it can stack with TFP on the
+    // same click.
+    const cascadeChance = clickCascadeChance(afterPrimary.perm);
+    if (cascadeChance > 0 && Math.random() < cascadeChance) {
+      const taken = new Set(collateral.map((c) => c.id));
+      const extra = others
+        .filter((c) => !taken.has(c.id))
+        .map((c) => ({ c, d2: (c.x - coin.x) ** 2 + (c.y - coin.y) ** 2 }))
+        .filter((e) => e.d2 <= TWO_FINGER_RADIUS * TWO_FINGER_RADIUS)
+        .sort((a, b) => a.d2 - b.d2)[0];
+      if (extra) {
+        collateral.push(extra.c);
+        if (!twoFingerExtra) twoFingerExtra = extra.c;
+      }
+    }
+
     if (coin.traits.includes("lightning")) {
       const taken = new Set(collateral.map((c) => c.id));
       const arc = others
@@ -1131,7 +1172,7 @@ export function PennyPinchersClient() {
     // commits the lot so achievements only sweep once.
     let working = afterPrimary;
     for (const extra of collateral) {
-      const extraAdj = Math.round(extra.mergedPC * tier.multiplier);
+      const extraAdj = Math.round(extra.mergedPC * conductedMul);
       const next = applyClick(working, {
         coinType: extra.coin,
         traits: extra.traits,
