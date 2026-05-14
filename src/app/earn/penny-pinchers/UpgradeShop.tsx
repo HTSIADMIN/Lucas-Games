@@ -12,6 +12,7 @@ import {
   nextUpgradeCost,
   upgradeCurrentValueLabel,
 } from "@/lib/games/penny-pinchers/engine";
+import { formatPC } from "@/lib/games/penny-pinchers/format";
 
 const CATEGORY_LABEL: Record<UpgradeCategory, string> = {
   click: "Click",
@@ -117,7 +118,7 @@ export function UpgradeShop({
             }}
           >
             {toast
-              ? `Bought ${toast.bought} for ${toast.spent.toLocaleString()} PC`
+              ? `Bought ${toast.bought} for ${formatPC(toast.spent)} PC`
               : "Cheapest first · stops when broke"}
           </span>
           <button
@@ -305,7 +306,7 @@ export function UpgradeShop({
                     textShadow: affordable ? "1px 1px 0 var(--gold-100)" : undefined,
                   }}
                 >
-                  {cost?.toLocaleString()} <span style={{ fontSize: 12, opacity: 0.85 }}>PC</span>
+                  {cost != null ? formatPC(cost) : ""} <span style={{ fontSize: 12, opacity: 0.85 }}>PC</span>
                 </span>
               )}
               {!maxed && affordable && (

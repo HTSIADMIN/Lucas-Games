@@ -80,6 +80,7 @@ import {
   unlockedCoins,
   type PennyPinchersGameState,
 } from "@/lib/games/penny-pinchers/engine";
+import { formatPC, formatRate } from "@/lib/games/penny-pinchers/format";
 import { CoinSprite } from "./CoinSprite";
 import { UpgradeShop } from "./UpgradeShop";
 import { HelperRoster } from "./HelperRoster";
@@ -1408,7 +1409,7 @@ export function PennyPinchersClient() {
             textAlign: "center",
           }}
         >
-          ★ Welcome back — your helpers earned <b>{welcomeBack.toLocaleString()} PC</b> while you were away.
+          ★ Welcome back — your helpers earned <b>{formatPC(welcomeBack)} PC</b> while you were away.
         </div>
       )}
 
@@ -1582,7 +1583,7 @@ export function PennyPinchersClient() {
               transformOrigin: "left center",
             }}
           >
-            {Math.floor(localCents).toLocaleString()} PC
+            {formatPC(localCents)} PC
           </div>
           <style>{`
             @keyframes pp-pc-pulse {
@@ -1592,7 +1593,7 @@ export function PennyPinchersClient() {
             }
           `}</style>
           <div className="text-mute" style={{ fontSize: 11 }}>
-            Helpers: {Math.round(tweenedRate).toLocaleString()} PC/sec · Lifetime clicks {Math.round(tweenedClicks).toLocaleString()}
+            Helpers: {formatRate(tweenedRate)} PC/sec · Lifetime clicks {formatPC(tweenedClicks)}
           </div>
           {/* Frugality badge — pulled out into its own pill because
               it's hard to earn, persists across runs, and the
@@ -1786,7 +1787,7 @@ export function PennyPinchersClient() {
             >
               {canRoll
                 ? "Prestige →"
-                : `${(localCents / 1000).toFixed(0)}k / ${(server.prestige.thresholdPC / 1000).toFixed(0)}k cents`}
+                : `${formatPC(localCents)} / ${formatPC(server.prestige.thresholdPC)} cents`}
             </button>
           </div>
           <div
@@ -1800,7 +1801,7 @@ export function PennyPinchersClient() {
               Bank It
             </div>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 18, color: "var(--ink-900)" }}>
-              ≈ {projectedPayout.toLocaleString()} ¢
+              ≈ {formatPC(projectedPayout)} ¢
             </div>
             <button
               type="button"
@@ -2143,7 +2144,7 @@ export function PennyPinchersClient() {
                 zIndex: 10,
               }}
             >
-              +{p.pc.toLocaleString()}
+              +{formatPC(p.pc)}
             </div>
           ))}
           <style>{`
@@ -2578,7 +2579,7 @@ export function PennyPinchersClient() {
               animation: "pp-bank-pop 1.6s ease-out forwards",
             }}
           >
-            +{bankCelebration.toLocaleString()} ¢
+            +{formatPC(bankCelebration)} ¢
           </div>
           {/* 12 falling coins — lighter than the prestige shower. */}
           {Array.from({ length: 12 }).map((_, i) => {
@@ -2859,7 +2860,7 @@ export function PennyPinchersClient() {
                     textAlign: "right",
                   }}
                 >
-                  +{totalPC.toLocaleString()} PC
+                  +{formatPC(totalPC)} PC
                 </div>
               </div>
               <p className="text-mute" style={{ fontSize: 12, marginBottom: "var(--sp-4)" }}>
@@ -3049,7 +3050,7 @@ export function PennyPinchersClient() {
             </p>
             <p className="text-mute" style={{ fontSize: 12, marginBottom: "var(--sp-4)" }}>
               Returning it raises Frugality (unlocks future perks). Keeping the
-              change pays {Math.min(LOST_WALLET_KEEP_MAX_PC, LOST_WALLET_KEEP_PC + Math.floor(localCents * LOST_WALLET_KEEP_WEALTH_PCT)).toLocaleString()} PC right now (15% of your stack on top of a 500 PC floor) but takes a Frugality
+              change pays {formatPC(Math.min(LOST_WALLET_KEEP_MAX_PC, LOST_WALLET_KEEP_PC + Math.floor(localCents * LOST_WALLET_KEEP_WEALTH_PCT)))} PC right now (15% of your stack on top of a 500 PC floor) but takes a Frugality
               point with it.
             </p>
             <div className="row" style={{ gap: 8, justifyContent: "center" }}>
@@ -3067,7 +3068,7 @@ export function PennyPinchersClient() {
                 disabled={walletModalChoice === "submitting"}
                 onClick={() => resolveLostWallet("keep")}
               >
-                Keep the Change · +{Math.min(LOST_WALLET_KEEP_MAX_PC, LOST_WALLET_KEEP_PC + Math.floor(localCents * LOST_WALLET_KEEP_WEALTH_PCT)).toLocaleString()} PC
+                Keep the Change · +{formatPC(Math.min(LOST_WALLET_KEEP_MAX_PC, LOST_WALLET_KEEP_PC + Math.floor(localCents * LOST_WALLET_KEEP_WEALTH_PCT)))} PC
               </button>
             </div>
           </div>
@@ -3120,7 +3121,7 @@ export function PennyPinchersClient() {
             </p>
             <ul style={{ margin: "0 0 var(--sp-3) 16px", color: "var(--ink-900)" }}>
               <li>
-                <b>{Math.floor(localCents).toLocaleString()} Pinch Cents</b> in your pocket (sacrificed for the Prestige Points)
+                <b>{formatPC(localCents)} Pinch Cents</b> in your pocket (sacrificed for the Prestige Points)
               </li>
               <li>Every run upgrade you&rsquo;ve bought this cycle</li>
               <li>Every helper you&rsquo;ve hired this cycle</li>
@@ -3358,7 +3359,7 @@ function CushionLootReveal({ reveal }: { reveal: CushionReveal }) {
             marginTop: 2,
           }}
         >
-          +{reveal.pcGain.toLocaleString()} PC
+          +{formatPC(reveal.pcGain)} PC
         </div>
       ) : lintCushion ? (
         <div

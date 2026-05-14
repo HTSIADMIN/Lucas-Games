@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { HELPERS, type HelperId } from "@/lib/games/penny-pinchers/catalog";
 import { nextHelperCost } from "@/lib/games/penny-pinchers/engine";
+import { formatPC, formatRate } from "@/lib/games/penny-pinchers/format";
 
 export function HelperRoster({
   counts,
@@ -69,7 +70,7 @@ export function HelperRoster({
             }}
           >
             {toast
-              ? `Hired ${toast.hired} for ${toast.spent.toLocaleString()} PC`
+              ? `Hired ${toast.hired} for ${formatPC(toast.spent)} PC`
               : "Cheapest first · stops when broke"}
           </span>
           <button
@@ -190,7 +191,7 @@ export function HelperRoster({
                 marginBottom: 8,
               }}
             >
-              +{h.pcPerSec} PC/sec each
+              +{formatRate(h.pcPerSec)} PC/sec each
             </div>
             <div
               aria-hidden
@@ -233,7 +234,7 @@ export function HelperRoster({
                     textShadow: affordable ? "1px 1px 0 var(--gold-100)" : undefined,
                   }}
                 >
-                  {cost?.toLocaleString()} <span style={{ fontSize: 12, opacity: 0.85 }}>PC</span>
+                  {cost != null ? formatPC(cost) : ""} <span style={{ fontSize: 12, opacity: 0.85 }}>PC</span>
                 </span>
               )}
               {!maxed && affordable && (
