@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { formatAmount } from "@/lib/format";
 
 // Smoothly counts the displayed balance from its previous value to
 // the new target whenever `value` changes. Used in place of the
@@ -86,7 +87,7 @@ export function AnimatedBalance({
 
   return (
     <span className={className} style={{ ...style, ...flashStyle }}>
-      {display.toLocaleString()}{suffix}
+      {formatAmount(display)}{suffix}
     </span>
   );
 }

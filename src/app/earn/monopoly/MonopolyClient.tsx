@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 import {
   BOARD_SIZE,
@@ -312,7 +313,7 @@ export function MonopolyClient() {
 
             <div className="row" style={{ gap: "var(--sp-3)" }}>
               <Stat label="Rolls" value={String(state.totalRolls)} />
-              <Stat label="Earned" value={`${state.totalEarned.toLocaleString()} ¢`} money />
+              <Stat label="Earned" value={`${formatAmount(state.totalEarned)} ¢`} money />
             </div>
 
             {error && <p style={{ color: "var(--crimson-300)" }}>{error}</p>}
@@ -385,7 +386,7 @@ export function MonopolyClient() {
                   disabled={busy || !canAfford}
                   style={{ marginTop: 4 }}
                 >
-                  Buy · {spec.price.toLocaleString()} ¢
+                  Buy · {formatAmount(spec.price)} ¢
                 </button>
               </div>
             );
@@ -465,7 +466,7 @@ export function MonopolyClient() {
                       })}
                     </div>
                     <div className="text-mute" style={{ fontSize: 11, marginTop: 6 }}>
-                      Now: <b className="text-money">×{currentMult}</b> ({(p.basePayout * currentMult).toLocaleString()} ¢)
+                      Now: <b className="text-money">×{currentMult}</b> ({formatAmount(p.basePayout * currentMult)} ¢)
                       {nextMult && <> · Next: ×{nextMult}</>}
                     </div>
                     {cost ? (
@@ -475,7 +476,7 @@ export function MonopolyClient() {
                         onClick={() => upgrade(p.id)}
                         disabled={busy || !canUp}
                       >
-                        Upgrade · {cost.cards}🏷 · {cost.coins.toLocaleString()} ¢
+                        Upgrade · {cost.cards}🏷 · {formatAmount(cost.coins)} ¢
                       </button>
                     ) : (
                       <div
@@ -554,7 +555,7 @@ export function MonopolyClient() {
                       marginBottom: "var(--sp-3)",
                     }}
                   >
-                    Trade-in bonus · +{packTradeInTotal.toLocaleString()} ¢
+                    Trade-in bonus · +{formatAmount(packTradeInTotal)} ¢
                   </p>
                 )}
                 <button className="btn btn-lg" onClick={closePack}>
@@ -811,7 +812,7 @@ function ResultCard({ r }: { r: RollResult }) {
         <div style={{ fontSize: 14 }}>Free Parking — small bonus.</div>
       )}
       <div style={{ fontSize: 22, marginTop: 6, color: "var(--gold-300)", textShadow: "2px 2px 0 var(--ink-900)" }}>
-        {positive ? "+" : ""}{r.totalPayout.toLocaleString()} ¢
+        {positive ? "+" : ""}{formatAmount(r.totalPayout)} ¢
       </div>
       {r.freeReroll && (
         <div className="badge badge-gold" style={{ marginTop: 6 }}>FREE REROLL UNLOCKED</div>
@@ -943,7 +944,7 @@ function PackCard({ card, revealed }: { card: PackPullCard; revealed: boolean })
                 Maxed Already
               </div>
               <div style={{ fontFamily: "var(--font-display)", fontSize: 22, color: "var(--ink-900)", textShadow: "1px 1px 0 var(--gold-100)" }}>
-                +{card.coins.toLocaleString()} ¢
+                +{formatAmount(card.coins)} ¢
               </div>
             </>
           ) : (
@@ -952,7 +953,7 @@ function PackCard({ card, revealed }: { card: PackPullCard; revealed: boolean })
                 {card.name}
               </div>
               <div style={{ fontFamily: "var(--font-display)", fontSize: 14, opacity: 0.85 }}>
-                +{card.basePayout.toLocaleString()} ¢
+                +{formatAmount(card.basePayout)} ¢
               </div>
             </>
           )}

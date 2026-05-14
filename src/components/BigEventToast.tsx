@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLive } from "@/components/social/LiveProvider";
 import { useBigBetToastMuted } from "@/lib/preferences";
+import { formatAmount } from "@/lib/format";
 
 // Bottom-left toast that pops up whenever someone takes a swing
 // big enough to count as a "big swing relative to wealth"
@@ -127,7 +128,7 @@ export function BigEventToast() {
               {t.username} · {t.game}
             </div>
             <div style={{ fontSize: 18, marginTop: 2, textShadow: "1px 1px 0 var(--ink-900)" }}>
-              {win ? "+" : ""}{t.net.toLocaleString()} ¢
+              {win ? "+" : ""}{formatAmount(t.net)} ¢
             </div>
           </div>
         );

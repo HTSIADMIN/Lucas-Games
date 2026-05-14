@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ProfileModal } from "@/components/social/ProfileModal";
 import { Avatar } from "@/components/Avatar";
+import { formatAmount } from "@/lib/format";
 
 export type LeaderRow = {
   id: string;
@@ -162,7 +163,7 @@ function Podium({
                   letterSpacing: "var(--ls-tight)",
                 }}
               >
-                {r.balance.toLocaleString()} ¢
+                {formatAmount(r.balance)} ¢
               </div>
               <div
                 style={{
@@ -256,7 +257,7 @@ function LeaderRowView({
         {isMe && <span className="tag-new">YOU</span>}
       </div>
       <div className="game">{tierLabel(row.rank)}</div>
-      <div className="winnings">{row.balance.toLocaleString()} ¢</div>
+      <div className="winnings">{formatAmount(row.balance)} ¢</div>
     </button>
   );
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PlayingCard } from "@/components/PlayingCard";
 import type { Card, Rank, Suit } from "@/lib/games/cards";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 const POLL_MS = 1000;
@@ -180,7 +181,7 @@ export function PokerClient() {
           if (!lastActRef.current.has(-1 - w.seatNo) || lastActRef.current.get(-1 - w.seatNo) !== key) {
             additions.push({
               id: ++logSeqRef.current,
-              text: `${name} won ${w.amount.toLocaleString()} ¢ · ${w.categoryLabel}`,
+              text: `${name} won ${formatAmount(w.amount)} ¢ · ${w.categoryLabel}`,
               tone: "win",
             });
             lastActRef.current.set(-1 - w.seatNo, key);
@@ -327,7 +328,7 @@ export function PokerClient() {
             {state.handNo > 0 && <span className="text-mute" style={{ fontSize: 12, marginLeft: 8 }}>· Hand #{state.handNo}</span>}
           </div>
           <div className="row" style={{ gap: "var(--sp-3)" }}>
-            <span className="badge">{state.table.smallBlind.toLocaleString()}/{state.table.bigBlind.toLocaleString()}</span>
+            <span className="badge">{formatAmount(state.table.smallBlind)}/{formatAmount(state.table.bigBlind)}</span>
             {currentActor && !isMyTurn && (
               <span
                 className="badge"
@@ -455,7 +456,7 @@ export function PokerClient() {
               className="balance"
               style={{ fontSize: 22, padding: "4px 14px" }}
             >
-              POT {state.pot.toLocaleString()} ¢
+              POT {formatAmount(state.pot)} ¢
             </div>
           </div>
 
@@ -521,8 +522,8 @@ export function PokerClient() {
           {!isSeated ? (
             <div className="stack-lg">
               <p className="text-mute" style={{ fontSize: 12 }}>
-                {state.table.name} · {state.table.smallBlind.toLocaleString()}/{state.table.bigBlind.toLocaleString()} blinds.
-                Min buy-in <b>{(state.table.bigBlind * 20).toLocaleString()} ¢</b>, max 100B ¢.
+                {state.table.name} · {formatAmount(state.table.smallBlind)}/{formatAmount(state.table.bigBlind)} blinds.
+                Min buy-in <b>{formatAmount(state.table.bigBlind * 20)} ¢</b>, max 100B ¢.
               </p>
               <button
                 type="button"
@@ -544,14 +545,14 @@ export function PokerClient() {
                 onClick={sit}
                 disabled={busy || (state.balance != null && state.balance < buyIn)}
               >
-                {busy ? "..." : `Sit Down (${buyIn.toLocaleString()} ¢)`}
+                {busy ? "..." : `Sit Down (${formatAmount(buyIn)} ¢)`}
               </button>
             </div>
           ) : isMyTurn ? (
             <div className="stack" style={{ gap: 8 }}>
               <div className="text-mute" style={{ fontSize: 12 }}>
-                Stack <b>{mySeat!.stack.toLocaleString()}</b>
-                {toCall > 0 && <> · To call <b>{toCall.toLocaleString()}</b></>}
+                Stack <b>{formatAmount(mySeat!.stack)}</b>
+                {toCall > 0 && <> · To call <b>{formatAmount(toCall)}</b></>}
               </div>
               <div className="row" style={{ gap: 6 }}>
                 <button className="btn btn-ghost btn-block" onClick={() => act("fold")} disabled={busy}>Fold</button>
@@ -563,7 +564,7 @@ export function PokerClient() {
                     onClick={() => act("call")}
                     disabled={busy || !canCall}
                   >
-                    Call {Math.min(toCall, mySeat!.stack).toLocaleString()}
+                    Call {formatAmount(Math.min(toCall, mySeat!.stack))}
                   </button>
                 )}
               </div>
@@ -612,14 +613,14 @@ export function PokerClient() {
                       onClick={() => act("raise", Math.max(minRaise, Math.min(maxRaise, raiseTo)))}
                       disabled={busy || raiseTo < minRaise || raiseTo > maxRaise}
                     >
-                      Raise {Math.max(minRaise, Math.min(maxRaise, raiseTo)).toLocaleString()}
+                      Raise {formatAmount(Math.max(minRaise, Math.min(maxRaise, raiseTo)))}
                     </button>
                     <button
                       className="btn btn-wood btn-block"
                       onClick={() => act("all_in")}
                       disabled={busy}
                     >
-                      All-in {maxRaise.toLocaleString()}
+                      All-in {formatAmount(maxRaise)}
                     </button>
                   </div>
                 </>
@@ -629,7 +630,7 @@ export function PokerClient() {
           ) : (
             <div className="stack" style={{ gap: 8 }}>
               <div className="text-mute" style={{ fontSize: 12 }}>
-                Stack <b>{mySeat!.stack.toLocaleString()} ¢</b>
+                Stack <b>{formatAmount(mySeat!.stack)} ¢</b>
                 {mySeat!.inHand && !mySeat!.folded && " · in hand"}
                 {mySeat!.folded && " · folded"}
               </div>
@@ -651,7 +652,7 @@ export function PokerClient() {
                     !mySeat!.folded)
                 }
               >
-                Cash Out · {mySeat!.stack.toLocaleString()} ¢
+                Cash Out · {formatAmount(mySeat!.stack)} ¢
               </button>
               {error && <p style={{ color: "var(--crimson-500)", fontSize: 12 }}>{error}</p>}
             </div>
@@ -778,12 +779,12 @@ function TablePicker({
                 <div>
                   <div style={{ fontSize: "var(--fs-body-lg)" }}>{t.name}</div>
                   <div className="text-mute" style={{ fontSize: 11 }}>
-                    Min buy-in {t.minBuyIn.toLocaleString()} ¢
+                    Min buy-in {formatAmount(t.minBuyIn)} ¢
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div className="text-money" style={{ fontSize: 14 }}>
-                    {t.smallBlind.toLocaleString()}/{t.bigBlind.toLocaleString()}
+                    {formatAmount(t.smallBlind)}/{formatAmount(t.bigBlind)}
                   </div>
                   <div className="text-mute" style={{ fontSize: 10 }}>blinds</div>
                 </div>
@@ -934,7 +935,7 @@ function SeatBox({
             {seat.username ?? "Player"}
             {isMe && <span className="tag-new" style={{ marginLeft: 4 }}>YOU</span>}
           </div>
-          <div style={{ fontSize: 11, color: "var(--saddle-400)" }}>{seat.stack.toLocaleString()} ¢</div>
+          <div style={{ fontSize: 11, color: "var(--saddle-400)" }}>{formatAmount(seat.stack)} ¢</div>
         </div>
       </div>
 
@@ -985,7 +986,7 @@ function SeatBox({
               alignSelf: "flex-end",
             }}
           >
-            {seat.committedThisRound.toLocaleString()}
+            {formatAmount(seat.committedThisRound)}
           </div>
         )}
       </div>
@@ -1017,9 +1018,9 @@ function actionLogText(seat: Seat, action: string): string {
   switch (action) {
     case "fold":   return `${name} folded`;
     case "check":  return `${name} checked`;
-    case "call":   return `${name} called ${seat.committedThisRound.toLocaleString()}`;
-    case "raise":  return `${name} raised to ${seat.committedThisRound.toLocaleString()}`;
-    case "all_in": return `${name} went all-in (${seat.committedTotal.toLocaleString()})`;
+    case "call":   return `${name} called ${formatAmount(seat.committedThisRound)}`;
+    case "raise":  return `${name} raised to ${formatAmount(seat.committedThisRound)}`;
+    case "all_in": return `${name} went all-in (${formatAmount(seat.committedTotal)})`;
     default:       return `${name} ${action}`;
   }
 }
@@ -1175,7 +1176,7 @@ function ShowdownStamp({
       >
         {iWon ? "YOU WIN" : `${name} wins`}
         <div style={{ fontSize: 16, marginTop: 4, letterSpacing: "var(--ls-tight)" }}>
-          {top.categoryLabel} · +{top.amount.toLocaleString()} ¢
+          {top.categoryLabel} · +{formatAmount(top.amount)} ¢
         </div>
       </div>
       {iWon && <PokerConfetti />}

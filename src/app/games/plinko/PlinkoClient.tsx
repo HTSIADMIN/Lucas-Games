@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { bucketTable, type PlinkoRisk, type PlinkoRows } from "@/lib/games/plinko/engine";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 // Vertical pixel height per row.
@@ -760,10 +761,10 @@ export function PlinkoClient() {
                 : "var(--crimson-500)",
             }}
           >
-            Bet {bet.toLocaleString()} · ×{result.multiplier} →{" "}
+            Bet {formatAmount(bet)} · ×{result.multiplier} →{" "}
             {result.payout > 0
-              ? `${result.payout > bet ? "+" : ""}${(result.payout - bet).toLocaleString()} ¢`
-              : `-${bet.toLocaleString()} ¢`}
+              ? `${result.payout > bet ? "+" : ""}${formatAmount(result.payout - bet)} ¢`
+              : `-${formatAmount(bet)} ¢`}
           </div>
         )}
 
@@ -829,6 +830,7 @@ function labelFor(code: string) {
   const labels: Record<string, string> = {
     insufficient_funds: "Not enough Coins.",
     bet_too_low: "Bet must be at least 100.",
+    bet_too_high: "Bet too large — try a smaller amount.",
     rows_invalid: "Pick 8, 12, or 16 rows.",
     risk_invalid: "Pick low / med / high.",
   };

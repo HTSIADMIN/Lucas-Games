@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import { useAppSnapshot } from "@/components/AppSnapshotProvider";
+import { formatAmount } from "@/lib/format";
 
 // localStorage key + helper for the "fresh since today's daily reset"
 // glow on the launcher fab. We compare YYYY-MM-DD UTC strings — the
@@ -345,7 +346,7 @@ export function DailyChallenges() {
                   </div>
                   <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
                     <span className="text-money" style={{ fontFamily: "var(--font-display)", fontSize: 13 }}>
-                      +{row.coinReward.toLocaleString()} ¢ · +{row.challengePoints} clan pts
+                      +{formatAmount(row.coinReward)} ¢ · +{row.challengePoints} clan pts
                     </span>
                     {claimed ? (
                       <span className="badge badge-cactus">CLAIMED</span>

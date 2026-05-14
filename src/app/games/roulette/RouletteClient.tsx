@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { colorOf, type RouletteBet, type RouletteBetType } from "@/lib/games/roulette/engine";
 import { GameEvent } from "@/components/GameEvent";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 type Result = {
@@ -237,7 +238,7 @@ export function RouletteClient() {
             }}
           >
             {result.totalPayout > 0
-              ? `${result.winning} ${result.color.toUpperCase()} · +${(result.totalPayout - result.totalBet).toLocaleString()} ¢`
+              ? `${result.winning} ${result.color.toUpperCase()} · +${formatAmount(result.totalPayout - result.totalBet)} ¢`
               : `${result.winning} ${result.color.toUpperCase()} · House wins`}
           </div>
         )}
@@ -301,7 +302,7 @@ export function RouletteClient() {
                   <span style={{ fontFamily: "var(--font-display)", textTransform: "uppercase" }}>
                     {labelBet(b)}
                   </span>
-                  <span className="text-money">{b.amount.toLocaleString()}</span>
+                  <span className="text-money">{formatAmount(b.amount)}</span>
                 </div>
               ))}
             </div>
@@ -309,7 +310,7 @@ export function RouletteClient() {
           <div className="between" style={{ marginTop: "var(--sp-3)" }}>
             <span className="uppercase" style={{ fontSize: 12 }}>Total</span>
             <span className="text-money" style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h4)" }}>
-              {stake.toLocaleString()} ¢
+              {formatAmount(stake)} ¢
             </span>
           </div>
         </div>
@@ -338,7 +339,7 @@ export function RouletteClient() {
                   >
                     <span style={{ fontFamily: "var(--font-display)" }}>{labelBet(r)}</span>
                     <span style={{ color: r.win ? "var(--cactus-500)" : "var(--crimson-500)" }}>
-                      {r.win ? `+${(r.payout - r.amount).toLocaleString()}` : `-${r.amount.toLocaleString()}`}
+                      {r.win ? `+${formatAmount(r.payout - r.amount)}` : `-${formatAmount(r.amount)}`}
                     </span>
                   </div>
                 ))}

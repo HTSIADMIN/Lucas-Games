@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ARCADE_GAME_LABEL, type ArcadeGame } from "@/lib/games/arcade/upgrades";
+import { formatAmount } from "@/lib/format";
 
 // Earn-rate upgrade card rendered inline on each arcade game page
 // (Crossy Road, Flappy, Snake). Shows the player's current level,
@@ -170,7 +171,7 @@ export function ArcadeUpgradePanel({ game }: { game: ArcadeGame }) {
         >
           {busy
             ? "..."
-            : `Upgrade to ×${state.nextMultiplier!.toFixed(2)} — ${state.nextCost!.toLocaleString()} ¢`}
+            : `Upgrade to ×${state.nextMultiplier!.toFixed(2)} — ${formatAmount(state.nextCost!)} ¢`}
         </button>
       )}
       {error && (

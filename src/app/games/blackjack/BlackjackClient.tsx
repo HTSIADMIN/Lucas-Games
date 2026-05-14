@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { PlayingCard } from "@/components/PlayingCard";
 import type { Card } from "@/lib/games/cards";
+import { formatAmount } from "@/lib/format";
 
 type Status =
   | "player_turn"
@@ -285,7 +286,7 @@ function Felt({
                 animation: hand.doubled ? "bj-pulse 0.6s var(--ease-snap) infinite alternate" : undefined,
               }}
             >
-              BET {hand.bet.toLocaleString()}{hand.doubled ? " ×2" : ""}
+              BET {formatAmount(hand.bet)}{hand.doubled ? " ×2" : ""}
             </div>
           )}
         </div>
@@ -532,8 +533,8 @@ function ResultStamp({
     isPush
       ? "PUSH"
       : positive
-      ? `+${net.toLocaleString()} ¢`
-      : `${net.toLocaleString()} ¢`;
+      ? `+${formatAmount(net)} ¢`
+      : `${formatAmount(net)} ¢`;
   return (
     <div
       style={{
@@ -587,7 +588,7 @@ function ActionButton({
   busy: boolean;
 }) {
   const labels = { hit: "Hit", stand: "Stand", double: "Double" };
-  const sub = kind === "double" && amount ? `+${amount.toLocaleString()} ¢` : null;
+  const sub = kind === "double" && amount ? `+${formatAmount(amount)} ¢` : null;
   const theme = BJ_ACTION_THEME[kind];
   return (
     <button
@@ -723,6 +724,7 @@ function labelFor(code: string) {
   const labels: Record<string, string> = {
     insufficient_funds: "Not enough Coins.",
     bet_too_low: "Bet must be at least 100.",
+    bet_too_high: "Bet too large — try a smaller amount.",
     session_not_found: "Hand expired. Deal again.",
     not_player_turn: "Not your turn.",
     already_settled: "Hand already done.",

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLive } from "./LiveProvider";
 import { GameIcon } from "@/components/GameIcon";
 import { Avatar } from "@/components/Avatar";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 export function ChatDrawer({ currentUserId }: { currentUserId: string | null }) {
@@ -444,7 +445,7 @@ function BetLine({ b, championId }: {
           color: win ? "var(--cactus-500)" : "var(--crimson-500)",
         }}
       >
-        {win ? "+" : ""}{b.net.toLocaleString()}
+        {win ? "+" : ""}{formatAmount(b.net)}
       </span>
     </div>
   );

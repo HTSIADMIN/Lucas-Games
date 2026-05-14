@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WeeklyArcadeLeaderboard } from "@/components/WeeklyArcadeLeaderboard";
+import { formatAmount } from "@/lib/format";
 
 const W = 480;
 const H = 540;
@@ -682,7 +683,7 @@ export function FlappyClient() {
                 {score} pipe{score === 1 ? "" : "s"} · {m.label} · {m.multiplier}× mode
               </div>
               <div style={{ marginBottom: 14, fontFamily: "var(--font-display)", fontSize: 22, color: "var(--gold-300)" }}>
-                {projectedPayout >= 1000 ? `+${projectedPayout.toLocaleString()} ¢ banked!` : "Need more pipes for a payout"}
+                {projectedPayout >= 1000 ? `+${formatAmount(projectedPayout)} ¢ banked!` : "Need more pipes for a payout"}
               </div>
               <button className="btn btn-ghost btn-block" onClick={start}>Try Again</button>
             </Overlay>
@@ -784,7 +785,7 @@ export function FlappyClient() {
             })}
           </div>
           <p className="text-mute" style={{ fontSize: "var(--fs-small)", marginTop: "var(--sp-3)" }}>
-            Each pipe pays <b>{m.perPipe.toLocaleString()}¢</b> · cap <b>{m.maxPayout.toLocaleString()}¢</b>
+            Each pipe pays <b>{formatAmount(m.perPipe)}¢</b> · cap <b>{formatAmount(m.maxPayout)}¢</b>
           </p>
         </div>
 
@@ -809,7 +810,7 @@ export function FlappyClient() {
                   }}
                 >
                   {submission.payout > 0
-                    ? `+${submission.payout.toLocaleString()} ¢ · ${submission.multiplier}× ${m.label}`
+                    ? `+${formatAmount(submission.payout)} ¢ · ${submission.multiplier}× ${m.label}`
                     : "Need at least 1,000¢ for a payout."}
                 </div>
                 <button className="btn btn-block" onClick={start}>Fly Again</button>
@@ -897,7 +898,7 @@ function Stat({
           textOverflow: "ellipsis",
         }}
       >
-        {prefix ? `${value.toLocaleString()}${prefix}` : value.toLocaleString()}
+        {prefix ? `${formatAmount(value)}${prefix}` : formatAmount(value)}
       </div>
     </div>
   );

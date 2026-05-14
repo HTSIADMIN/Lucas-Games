@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WeeklyArcadeLeaderboard } from "@/components/WeeklyArcadeLeaderboard";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 // Classic snake. 20×20 grid, wrap-free walls, dies on self-bite or
@@ -362,7 +363,7 @@ export function SnakeClient() {
           {phase === "submitted" && submission && (
             <Overlay tone={submission.payout > 0 ? "neutral" : "danger"}>
               <h3 style={{ fontFamily: "var(--font-display)", fontSize: 28, marginBottom: 8 }}>
-                {submission.payout > 0 ? `+${submission.payout.toLocaleString()} ¢` : "Need more fruit"}
+                {submission.payout > 0 ? `+${formatAmount(submission.payout)} ¢` : "Need more fruit"}
               </h3>
               <p style={{ marginBottom: 14, opacity: 0.85 }}>
                 Final score: {submission.score} fruit
@@ -499,7 +500,7 @@ function Stat({ label, value, tone, prefix }: {
     >
       <div className="label" style={{ color: fg, opacity: 0.7 }}>{label}</div>
       <div style={{ fontFamily: "var(--font-display)", fontSize: 22, lineHeight: 1, marginTop: 2 }}>
-        {value.toLocaleString()}{prefix ? ` ${prefix}` : ""}
+        {formatAmount(value)}{prefix ? ` ${prefix}` : ""}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+import { formatAmount } from "@/lib/format";
 
 // Per-game weekly standings panel rendered inside the Flappy and
 // Crossy Road earn pages. Reads /api/games/<game>/weekly which also
@@ -80,7 +81,7 @@ export function WeeklyArcadeLeaderboard({ game }: { game: ArcadeGame }) {
         </span>
       </div>
       <p className="text-mute" style={{ fontSize: 12, margin: "4px 0 var(--sp-3)" }}>
-        Top score this week wins <span className="text-money">{reward.toLocaleString()} ¢</span>.
+        Top score this week wins <span className="text-money">{formatAmount(reward)} ¢</span>.
       </p>
 
       {rows == null ? (
@@ -138,7 +139,7 @@ export function WeeklyArcadeLeaderboard({ game }: { game: ArcadeGame }) {
         >
           Last week: <b>{lastWeek.topUsername}</b> took the crown with{" "}
           <b>{lastWeek.topScore.toLocaleString()} {SCORE_LABEL[game]}</b>
-          {lastWeek.reward > 0 && <> · paid {lastWeek.reward.toLocaleString()} ¢</>}.
+          {lastWeek.reward > 0 && <> · paid {formatAmount(lastWeek.reward)} ¢</>}.
         </div>
       )}
     </div>

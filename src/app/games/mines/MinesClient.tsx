@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { GameIcon } from "@/components/GameIcon";
 import { GameEvent } from "@/components/GameEvent";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 type Status = "idle" | "active" | "busted" | "cashed";
@@ -465,7 +466,7 @@ export function MinesClient() {
             }}
           >
             {game.status === "cashed"
-              ? `Cashed · Bet ${game.bet.toLocaleString()} · ×${game.multiplier} → +${(game.payout - game.bet).toLocaleString()} ¢`
+              ? `Cashed · Bet ${formatAmount(game.bet)} · ×${game.multiplier} → +${formatAmount(game.payout - game.bet)} ¢`
               : "Boom!"}
           </div>
         )}
@@ -523,7 +524,7 @@ export function MinesClient() {
                     textShadow: "1px 1px 0 rgba(255,246,228,0.45)",
                   }}
                 >
-                  {potential.toLocaleString()} ¢
+                  {formatAmount(potential)} ¢
                 </div>
               </div>
             </div>
@@ -575,7 +576,7 @@ export function MinesClient() {
                 boxShadow: "var(--glow-gold)",
               }}
             >
-              {busy ? "..." : `Cash Out · ${potential.toLocaleString()} ¢`}
+              {busy ? "..." : `Cash Out · ${formatAmount(potential)} ¢`}
             </button>
           </div>
         ) : settled ? (
@@ -595,8 +596,8 @@ export function MinesClient() {
               </div>
               <div style={{ fontSize: "var(--fs-h2)", lineHeight: 1.1 }}>
                 {game.status === "cashed"
-                  ? `+${(game.payout - game.bet).toLocaleString()} ¢`
-                  : `−${game.bet.toLocaleString()} ¢`}
+                  ? `+${formatAmount(game.payout - game.bet)} ¢`
+                  : `−${formatAmount(game.bet)} ¢`}
               </div>
             </div>
             <button className="btn btn-lg btn-block" onClick={newRound} disabled={busy}>
@@ -653,6 +654,7 @@ function labelFor(code: string) {
   const labels: Record<string, string> = {
     insufficient_funds: "Not enough Coins.",
     bet_too_low: "Bet must be at least 100.",
+    bet_too_high: "Bet too large — try a smaller amount.",
     mine_count_invalid: "Pick 1–24 mines.",
     not_found: "Game not found.",
     not_active: "Game already finished.",

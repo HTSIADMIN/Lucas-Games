@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { chanceOfWin, multiplierFor, type DiceDirection } from "@/lib/games/dice/engine";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 type Result = {
@@ -182,7 +183,7 @@ export function DiceClient() {
         <div className="grid grid-3" style={{ gap: "var(--sp-3)" }}>
           <StatBox label="Chance" value={`${chance}%`} tone="parchment" />
           <StatBox label="Multiplier" value={`×${mult}`} tone="parchment" />
-          <StatBox label="Pays" value={winAmount.toLocaleString()} tone="gold" />
+          <StatBox label="Pays" value={formatAmount(winAmount)} tone="gold" />
         </div>
 
         {/* === Controls === */}
@@ -476,8 +477,8 @@ function ResultStamp({
       {win ? "WINNER" : "BUST"}
       <div style={{ fontSize: 16, marginTop: 4, letterSpacing: "var(--ls-tight)" }}>
         {win
-          ? `×${multiplier} · +${(payout - bet).toLocaleString()} ¢`
-          : `Lost ${bet.toLocaleString()} ¢`}
+          ? `×${multiplier} · +${formatAmount(payout - bet)} ¢`
+          : `Lost ${formatAmount(bet)} ¢`}
       </div>
     </div>
   );
@@ -590,6 +591,7 @@ function labelFor(code: string) {
   const labels: Record<string, string> = {
     insufficient_funds: "Not enough Coins.",
     bet_too_low: "Bet must be at least 100.",
+    bet_too_high: "Bet too large — try a smaller amount.",
     target_invalid: "Pick a target between 2 and 99.",
     direction_invalid: "Pick over or under.",
   };

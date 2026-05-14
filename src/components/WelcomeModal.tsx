@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatAmount } from "@/lib/format";
 
 // Shown to a player on their first lobby visit after registering.
 // The sign-in flow stamps localStorage["lg.welcomeNew"] = "1" right
@@ -77,7 +78,7 @@ export function WelcomeModal({ startingBalance = 25_000 }: { startingBalance?: n
             marginBottom: "var(--sp-4)",
           }}
         >
-          {startingBalance.toLocaleString()} ¢
+          {formatAmount(startingBalance)} ¢
         </div>
         <p style={{ fontSize: 13, marginBottom: "var(--sp-5)", color: "var(--saddle-700)" }}>
           Spin the wheel, hit the slots, take a seat at the poker table.

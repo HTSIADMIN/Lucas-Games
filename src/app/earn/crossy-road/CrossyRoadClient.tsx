@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WeeklyArcadeLeaderboard } from "@/components/WeeklyArcadeLeaderboard";
 import { coinSpawnMultiplier } from "@/lib/games/arcade/upgrades";
+import { formatAmount } from "@/lib/format";
 
 /** Base per-grass-row coin spawn probability before any upgrade. */
 const BASE_COIN_CHANCE = 0.06;
@@ -759,7 +760,7 @@ export function CrossyRoadClient() {
                 }}
               >
                 {submission.payout > 0
-                  ? `+${submission.payout.toLocaleString()} ¢`
+                  ? `+${formatAmount(submission.payout)} ¢`
                   : "Need at least 1,000¢ worth (20 rows or 2 coins) for a payout."}
               </div>
               <button className="btn btn-block" onClick={start}>Run Again</button>

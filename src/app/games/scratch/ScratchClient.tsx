@@ -12,6 +12,7 @@ import {
 import { ScratchSym, PixelCoin } from "./Symbols";
 import { BigWinOverlay } from "./BigWinOverlay";
 import { QuickDrawModal } from "./QuickDrawModal";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 type BuyResponse = { ok: true; ticket: ScratchOutcome; balance: number; availableAt?: string };
@@ -452,7 +453,7 @@ export function ScratchClient() {
           </div>
 
           <div className="row" style={{ justifyContent: "space-between", marginTop: "var(--sp-3)", fontFamily: "var(--font-display)", fontSize: 11, letterSpacing: "0.06em", color: spec.textColor }}>
-            <span>BOUNTY: {ticket?.daily ? "FREE" : spec.cost.toLocaleString()} ¢</span>
+            <span>BOUNTY: {ticket?.daily ? "FREE" : formatAmount(spec.cost)} ¢</span>
             <span>SCRATCHED: {Math.round(scratchedFraction * 100)}%</span>
           </div>
 
@@ -478,7 +479,7 @@ export function ScratchClient() {
                     onClick={() => setDesign(id)}
                   >
                     <span>{d.name}</span>
-                    <span style={{ color: "var(--gold-500)" }}>{d.cost.toLocaleString()} ¢</span>
+                    <span style={{ color: "var(--gold-500)" }}>{formatAmount(d.cost)} ¢</span>
                   </button>
                 );
               })}
@@ -736,10 +737,10 @@ function ResultLine({ ticket }: { ticket: ScratchOutcome }) {
       : "var(--cactus-500)";
     return (
       <div className="sign" style={{ display: "block", textAlign: "center", background: tone, color: "var(--ink-900)" }}>
-        +{ticket.payout.toLocaleString()} ¢
+        +{formatAmount(ticket.payout)} ¢
         {ticket.bonusPayout > 0 && (
           <div style={{ fontSize: 12, opacity: 0.85, marginTop: 2 }}>
-            (incl. {ticket.bonusPayout.toLocaleString()} bonus row)
+            (incl. {formatAmount(ticket.bonusPayout)} bonus row)
           </div>
         )}
       </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ModalShell } from "@/components/ModalShell";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 // Sheriff's Bonus quick-draw round.
@@ -162,7 +163,7 @@ export function QuickDrawModal({
           {phase === "settling" && "..."}
           {phase === "fault"    && "TOO SOON"}
           {phase === "done" && payout != null && (payout > 0
-            ? `+${payout.toLocaleString()} ¢`
+            ? `+${formatAmount(payout)} ¢`
             : "TOO SLOW"
           )}
         </div>

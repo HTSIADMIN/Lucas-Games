@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { useBigBetToastMuted } from "@/lib/preferences";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 type ProfileData = {
@@ -175,17 +176,17 @@ export function ProfileModal({
             </div>
 
             <div className="grid grid-2" style={{ marginBottom: "var(--sp-5)", gap: "var(--sp-3)" }}>
-              <Stat label="Balance" value={`${data.stats.balance.toLocaleString()} ¢`} tone="money" />
+              <Stat label="Balance" value={`${formatAmount(data.stats.balance)} ¢`} tone="money" />
               <Stat
                 label="Net P/L"
-                value={`${data.stats.net >= 0 ? "+" : ""}${data.stats.net.toLocaleString()} ¢`}
+                value={`${data.stats.net >= 0 ? "+" : ""}${formatAmount(data.stats.net)} ¢`}
                 tone={data.stats.net >= 0 ? "win" : "loss"}
               />
-              <Stat label="Total Wagered" value={`${data.stats.totalBet.toLocaleString()} ¢`} />
-              <Stat label="Total Won" value={`${data.stats.totalWon.toLocaleString()} ¢`} />
+              <Stat label="Total Wagered" value={`${formatAmount(data.stats.totalBet)} ¢`} />
+              <Stat label="Total Won" value={`${formatAmount(data.stats.totalWon)} ¢`} />
               <Stat
                 label="Biggest Win"
-                value={data.stats.biggestWin > 0 ? `${data.stats.biggestWin.toLocaleString()} ¢` : "—"}
+                value={data.stats.biggestWin > 0 ? `${formatAmount(data.stats.biggestWin)} ¢` : "—"}
                 tone="money"
               />
               <Stat
@@ -220,7 +221,7 @@ export function ProfileModal({
                           }}
                         >
                           {g.net >= 0 ? "+" : ""}
-                          {g.net.toLocaleString()}
+                          {formatAmount(g.net)}
                         </td>
                       </tr>
                     ))}

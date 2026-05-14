@@ -9,6 +9,7 @@ import { useLive } from "@/components/social/LiveProvider";
 import { multiplierAt } from "@/lib/games/crash/engine";
 import { getBrowserClient } from "@/lib/supabase/browser";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+import { formatAmount } from "@/lib/format";
 
 type RoundView = {
   id: string;
@@ -655,9 +656,9 @@ export function CrashClient() {
 
           {myBet && isRunning && !myCashedOut && pendingCashoutAt === null && (
             <div className="stack-lg">
-              <p className="text-mute">Your bet: {myBet.amount.toLocaleString()} ¢</p>
+              <p className="text-mute">Your bet: {formatAmount(myBet.amount)} ¢</p>
               <button className="btn btn-lg btn-block btn-danger" onClick={cashout} disabled={busy}>
-                Cash Out at {liveX.toFixed(2)}× (+{Math.floor(myBet.amount * liveX).toLocaleString()} ¢)
+                Cash Out at {liveX.toFixed(2)}× (+{formatAmount(Math.floor(myBet.amount * liveX))} ¢)
               </button>
             </div>
           )}
@@ -665,7 +666,7 @@ export function CrashClient() {
           {myBet && pendingCashoutAt !== null && !myCashedOut && !isCrashed && (
             <div className="stack-lg">
               <p style={{ color: "var(--cactus-500)" }}>
-                Cashed at {pendingCashoutAt.toFixed(2)}× → +{(Math.floor(myBet.amount * pendingCashoutAt) - myBet.amount).toLocaleString()} ¢
+                Cashed at {pendingCashoutAt.toFixed(2)}× → +{formatAmount(Math.floor(myBet.amount * pendingCashoutAt) - myBet.amount)} ¢
               </p>
               <p className="text-mute" style={{ fontSize: 12 }}>Confirming…</p>
             </div>
@@ -673,10 +674,10 @@ export function CrashClient() {
 
           {myBet && (myCashedOut || isCrashed) && (
             <div className="stack-lg">
-              <p className="text-mute">Bet: {myBet.amount.toLocaleString()} ¢</p>
+              <p className="text-mute">Bet: {formatAmount(myBet.amount)} ¢</p>
               {myCashedOut ? (
                 <p style={{ color: "var(--cactus-500)" }}>
-                  Cashed at {myBet.cashoutX!.toFixed(2)}× → +{(myBet.payout - myBet.amount).toLocaleString()} ¢
+                  Cashed at {myBet.cashoutX!.toFixed(2)}× → +{formatAmount(myBet.payout - myBet.amount)} ¢
                 </p>
               ) : (
                 <p style={{ color: "var(--crimson-500)" }}>Busted at {round?.crashAtX?.toFixed(2)}×</p>
@@ -719,7 +720,7 @@ export function CrashClient() {
                   ? isCrashed
                     ? `Next round in ${nextRoundIn}s`
                     : "Wait for next round..."
-                  : `Bet ${bet.toLocaleString()} ¢`}
+                  : `Bet ${formatAmount(bet)} ¢`}
               </button>
             </div>
           )}
@@ -762,11 +763,11 @@ export function CrashClient() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-display)", fontSize: 13 }}>
                       <span>{tag?.username ?? b.userId.slice(0, 6)}</span>
-                      <span style={{ color: "var(--saddle-400)" }}> · {b.amount.toLocaleString()}</span>
+                      <span style={{ color: "var(--saddle-400)" }}> · {formatAmount(b.amount)}</span>
                     </div>
                     {out ? (
                       <span style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "var(--cactus-500)" }}>
-                        {b.cashoutX!.toFixed(2)}× +{(b.payout - b.amount).toLocaleString()}
+                        {b.cashoutX!.toFixed(2)}× +{formatAmount(b.payout - b.amount)}
                       </span>
                     ) : busted ? (
                       <span style={{ fontFamily: "var(--font-display)", fontSize: 14, color: "var(--crimson-500)" }}>
@@ -894,6 +895,7 @@ function labelFor(code: string) {
   const labels: Record<string, string> = {
     insufficient_funds: "Not enough Coins.",
     bet_too_low: "Bet must be at least 100.",
+    bet_too_high: "Bet too large — try a smaller amount.",
     no_active_round: "No active round.",
     betting_closed: "Betting closed for this round.",
     already_bet_this_round: "You're already in this round.",

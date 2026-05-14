@@ -7,6 +7,7 @@ import * as Sfx from "@/lib/sfx";
 import { GameIcon, type IconName } from "@/components/GameIcon";
 import { SlotSym, BuildingSym, type SlotSymKey } from "./SlotSvg";
 import { BetInput } from "@/components/BetInput";
+import { formatAmount } from "@/lib/format";
 import {
   METER,
   TIER_LABEL,
@@ -525,7 +526,7 @@ function JackpotMarquee({ pool }: { pool: number | null }) {
           lineHeight: 1.05,
         }}
       >
-        {pool == null ? "—" : pool.toLocaleString()} ¢
+        {pool == null ? "—" : formatAmount(pool)} ¢
       </div>
       <div style={{ fontSize: 10, letterSpacing: "var(--ls-loose)", textTransform: "uppercase", color: "var(--parchment-200)", opacity: 0.75 }}>
         1 in 5,000 spins · Pool grows with every coin spent
@@ -576,7 +577,7 @@ function JackpotOverlay({ amount }: { amount: number }) {
           letterSpacing: "0.04em",
         }}
       >
-        +{amount.toLocaleString()} ¢
+        +{formatAmount(amount)} ¢
       </div>
     </div>
   );
@@ -943,8 +944,8 @@ function ResultSign({ result, bet }: { result: SpinResponse | null; bet: number 
         >
           {positive
             ? big
-              ? `BIG WIN! +${result.linePayout.toLocaleString()} ¢`
-              : `+${result.linePayout.toLocaleString()} ¢ on ${result.lineWins.length} line${result.lineWins.length === 1 ? "" : "s"}`
+              ? `BIG WIN! +${formatAmount(result.linePayout)} ¢`
+              : `+${formatAmount(result.linePayout)} ¢ on ${result.lineWins.length} line${result.lineWins.length === 1 ? "" : "s"}`
             : result.coinCount >= 4
             ? `${result.coinCount} coins — so close...`
             : "Spin again."}
@@ -1067,11 +1068,11 @@ function BonusOverlay({
           <BonusStat label="Locked" value={`${bonus.coinsLocked} / 20`} tone="gold" />
           <BonusStat
             label="Pool"
-            value={`${Math.floor(
+            value={`${formatAmount(Math.floor(
               bonus.board.reduce((s, c) => s + (c.value ?? 0), 0) *
                 TIER_MULTIPLIER[bonus.tier] *
                 (bonus.bet / 20)
-            ).toLocaleString()} ¢`}
+            ))} ¢`}
             tone="cactus"
           />
         </div>
@@ -1101,8 +1102,8 @@ function BonusOverlay({
               }}
             >
               {ended.filledScreen
-                ? `BOOMTOWN! +${ended.payout.toLocaleString()} ¢`
-                : `+${ended.payout.toLocaleString()} ¢`}
+                ? `BOOMTOWN! +${formatAmount(ended.payout)} ¢`
+                : `+${formatAmount(ended.payout)} ¢`}
             </div>
             <div className="text-mute" style={{ fontSize: 13, textAlign: "center" }}>
               {ended.coinTotal}× coin total · {TIER_LABEL[ended.tier]} · {TIER_MULTIPLIER[ended.tier]}×
@@ -1426,6 +1427,7 @@ function labelFor(code: string) {
   const labels: Record<string, string> = {
     insufficient_funds: "Not enough Coins.",
     bet_too_low: "Bet must be at least 100.",
+    bet_too_high: "Bet too large — try a smaller amount.",
     bet_invalid: "Invalid bet.",
     bonus_in_progress: "Finish your bonus respin first.",
     no_active_bonus: "No active bonus.",

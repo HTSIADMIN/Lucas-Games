@@ -8,6 +8,7 @@ import { PlayingCard } from "@/components/PlayingCard";
 import { useLive } from "@/components/social/LiveProvider";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
 import type { Card, Rank, Suit } from "@/lib/games/cards";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 type SeatView = {
@@ -345,7 +346,7 @@ export function BlackjackMpClient() {
                     <div style={{ minWidth: 100, fontFamily: "var(--font-display)" }}>
                       <div style={{ fontSize: 14 }}>{tag?.username ?? "Player"}{isMineRow && <span className="tag-new" style={{ marginLeft: 4 }}>YOU</span>}</div>
                       <div style={{ fontSize: 12, color: "var(--saddle-400)" }}>
-                        Bet {seat.bet.toLocaleString()}{seat.doubled && " ×2"}
+                        Bet {formatAmount(seat.bet)}{seat.doubled && " ×2"}
                       </div>
                     </div>
                     <div className="row" style={{ gap: 6 }}>
@@ -379,10 +380,10 @@ export function BlackjackMpClient() {
                 kind={stampStatus}
                 netLabel={
                   stampStatus === "win" || stampStatus === "blackjack"
-                    ? `+${net.toLocaleString()} ¢`
+                    ? `+${formatAmount(net)} ¢`
                     : stampStatus === "push"
                     ? "PUSH"
-                    : `${net.toLocaleString()} ¢`
+                    : `${formatAmount(net)} ¢`
                 }
               />
             )}
@@ -424,7 +425,7 @@ export function BlackjackMpClient() {
                     <BjActionButton
                       kind="double"
                       label="Double"
-                      sub={`+${mySeat.bet.toLocaleString()} ¢`}
+                      sub={`+${formatAmount(mySeat.bet)} ¢`}
                       onClick={() => action("double")}
                       busy={busy}
                     />
@@ -433,7 +434,7 @@ export function BlackjackMpClient() {
                     <BjActionButton
                       kind="split"
                       label="Split"
-                      sub={`+${mySeat.bet.toLocaleString()} ¢`}
+                      sub={`+${formatAmount(mySeat.bet)} ¢`}
                       onClick={() => action("split")}
                       busy={busy}
                     />
@@ -449,7 +450,7 @@ export function BlackjackMpClient() {
                 onClick={placeBet}
                 disabled={busy || bet < 100 || (balance != null && balance < bet)}
               >
-                {busy ? "..." : `Sit Down (${bet.toLocaleString()} ¢)`}
+                {busy ? "..." : `Sit Down (${formatAmount(bet)} ¢)`}
               </button>
               {/* Escape hatch — players who don't want to wait on the
                   shared 15s bet timer can pop over to the solo
@@ -466,21 +467,21 @@ export function BlackjackMpClient() {
             <div className="stack-lg">
               <p className="text-mute">
                 {mySeats.length === 1 ? (
-                  <>You bet <b>{mySeats[0].bet.toLocaleString()} ¢</b>{mySeats[0].doubled && " (doubled)"}</>
+                  <>You bet <b>{formatAmount(mySeats[0].bet)} ¢</b>{mySeats[0].doubled && " (doubled)"}</>
                 ) : (
-                  <>{mySeats.length} hands · total stake <b>{mySeats.reduce((sum, s) => sum + (s.doubled ? s.bet * 2 : s.bet), 0).toLocaleString()} ¢</b></>
+                  <>{mySeats.length} hands · total stake <b>{formatAmount(mySeats.reduce((sum, s) => sum + (s.doubled ? s.bet * 2 : s.bet), 0))} ¢</b></>
                 )}
               </p>
               <p style={{ color: tone(mySeat!.status) }}>{statusBlurb(mySeat!, round?.status)}</p>
               {allMineDone && (
                 <p className="text-money" style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)" }}>
                   {totalPayout <= 0
-                    ? `Lost ${totalStake.toLocaleString()} ¢`
+                    ? `Lost ${formatAmount(totalStake)} ¢`
                     : net > 0
-                    ? `+${net.toLocaleString()} ¢`
+                    ? `+${formatAmount(net)} ¢`
                     : net === 0
                     ? `Push · stake returned`
-                    : `${net.toLocaleString()} ¢`}
+                    : `${formatAmount(net)} ¢`}
                 </p>
               )}
             </div>
@@ -794,7 +795,7 @@ function statusLabel(seat: SeatView) {
     busted: "BUST",
     blackjack: "BLACKJACK!",
     done: seat.payout > 0
-      ? `+${(seat.payout - (seat.doubled ? seat.bet * 2 : seat.bet)).toLocaleString()}`
+      ? `+${formatAmount(seat.payout - (seat.doubled ? seat.bet * 2 : seat.bet))}`
       : "LOST",
   } as const)[seat.status];
 }
@@ -817,6 +818,7 @@ function labelFor(code: string) {
   const m: Record<string, string> = {
     insufficient_funds: "Not enough Coins.",
     bet_too_low: "Bet must be at least 100.",
+    bet_too_high: "Bet too large — try a smaller amount.",
     no_round: "No active round.",
     betting_closed: "Betting closed.",
     already_seated: "You're already in this round.",

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { useCoinFace } from "@/components/CoinFaceProvider";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 type Side = "heads" | "tails";
@@ -201,7 +202,7 @@ export function CoinflipDuelClient() {
                   background: !busy && wager >= 100 ? "var(--gold-300)" : undefined,
                 }}
               >
-                {busy ? "..." : `Post Challenge (${wager.toLocaleString()} ¢)`}
+                {busy ? "..." : `Post Challenge (${formatAmount(wager)} ¢)`}
               </button>
               {error && <p style={{ color: "var(--crimson-500)" }}>{error}</p>}
             </div>
@@ -247,7 +248,7 @@ export function CoinflipDuelClient() {
                           {d.challenger?.username ?? "?"} picks <b>{d.challenger_side.toUpperCase()}</b>
                         </div>
                         <div style={{ color: "var(--saddle-400)", fontSize: 12 }}>
-                          Wager {d.wager.toLocaleString()} ¢ · pot {(d.wager * 2).toLocaleString()} ¢
+                          Wager {formatAmount(d.wager)} ¢ · pot {formatAmount(d.wager * 2)} ¢
                         </div>
                       </div>
                       {isMine ? (
@@ -328,7 +329,7 @@ export function CoinflipDuelClient() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-display)", fontSize: 13 }}>
                       {d.status === "cancelled" ? (
-                        <span>{d.challenger?.username ?? "?"} cancelled · {d.wager.toLocaleString()} ¢</span>
+                        <span>{d.challenger?.username ?? "?"} cancelled · {formatAmount(d.wager)} ¢</span>
                       ) : (
                         <>
                           <div>
@@ -336,7 +337,7 @@ export function CoinflipDuelClient() {
                             {d.acceptor?.username ?? "?"}
                           </div>
                           <div style={{ color: "var(--saddle-400)", fontSize: 12 }}>
-                            Result: <b>{d.result?.toUpperCase()}</b> · pot {(d.wager * 2).toLocaleString()} ¢
+                            Result: <b>{d.result?.toUpperCase()}</b> · pot {formatAmount(d.wager * 2)} ¢
                           </div>
                         </>
                       )}
@@ -349,7 +350,7 @@ export function CoinflipDuelClient() {
                           color: youWon ? "var(--cactus-500)" : "var(--crimson-500)",
                         }}
                       >
-                        {youWon ? `+${(d.wager * 2).toLocaleString()}` : `-${d.wager.toLocaleString()}`}
+                        {youWon ? `+${formatAmount(d.wager * 2)}` : `-${formatAmount(d.wager)}`}
                       </span>
                     )}
                   </div>
@@ -490,7 +491,7 @@ function DuelFlipOverlay({
               textShadow: "2px 2px 0 var(--ink-900)",
             }}
           >
-            {state.iWon ? `YOU WIN +${state.payout.toLocaleString()} ¢` : "House Wins"}
+            {state.iWon ? `YOU WIN +${formatAmount(state.payout)} ¢` : "House Wins"}
           </div>
         )}
         {phase === "revealed" && state.iWon === null && (
@@ -504,7 +505,7 @@ function DuelFlipOverlay({
             }}
           >
             {state.winnerIsChallenger ? state.challengerName : state.acceptorName} took{" "}
-            {state.payout.toLocaleString()} ¢
+            {formatAmount(state.payout)} ¢
           </div>
         )}
 
@@ -809,6 +810,7 @@ function labelFor(code: string) {
   const m: Record<string, string> = {
     insufficient_funds: "Not enough Coins.",
     bet_too_low: "Wager must be at least 100.",
+    bet_too_high: "Wager too large — try a smaller amount.",
     side_invalid: "Pick heads or tails.",
     not_found: "Duel not found.",
     not_open: "Duel already closed.",

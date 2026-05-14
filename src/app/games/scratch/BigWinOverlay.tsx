@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { formatAmount } from "@/lib/format";
 
 // Full-screen takeover for large + jackpot wins.
 //
@@ -194,7 +195,7 @@ export function BigWinOverlay({
           opacity: 0,
         }}
       >
-        +{payout.toLocaleString()} ¢
+        +{formatAmount(payout)} ¢
       </div>
 
       <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />

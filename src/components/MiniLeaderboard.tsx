@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useVisibleInterval } from "@/lib/hooks/useVisibleInterval";
+import { formatAmount } from "@/lib/format";
 
 type Row = {
   userId: string;
@@ -97,7 +98,7 @@ export function MiniLeaderboard({
                       textShadow: "1px 1px 0 var(--gold-100)",
                     }}
                   >
-                    {r.bestPayout.toLocaleString()} ¢
+                    {formatAmount(r.bestPayout)} ¢
                   </td>
                   <td style={{ padding: "6px 4px", textAlign: "right", color: "var(--saddle-400)" }}>
                     {r.runs}

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BetInput } from "@/components/BetInput";
 import { useCoinFace } from "@/components/CoinFaceProvider";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 type Side = "heads" | "tails";
@@ -491,7 +492,7 @@ function ResultStamp({
     >
       {side.toUpperCase()}
       <div style={{ fontSize: 18, marginTop: 4, letterSpacing: "var(--ls-tight)" }}>
-        {win ? `+${(payout - bet).toLocaleString()} ¢` : `Lost ${bet.toLocaleString()} ¢`}
+        {win ? `+${formatAmount(payout - bet)} ¢` : `Lost ${formatAmount(bet)} ¢`}
       </div>
     </div>
   );
@@ -575,6 +576,7 @@ function errorLabel(code: string) {
   const labels: Record<string, string> = {
     insufficient_funds: "Not enough Coins.",
     bet_too_low: "Bet must be at least 100.",
+    bet_too_high: "Bet too large — try a smaller amount.",
     bet_invalid: "Invalid bet.",
     pick_invalid: "Pick heads or tails.",
   };

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SpinSlice } from "@/lib/games/dailySpin/engine";
+import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
 type Status = {
@@ -213,7 +214,7 @@ export function DailySpinClient() {
                 <button className="btn btn-lg btn-block" disabled>Locked</button>
                 {result && (
                   <p style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h4)", color: "var(--gold-500)" }}>
-                    Last spin: +{result.amount.toLocaleString()} ¢
+                    Last spin: +{formatAmount(result.amount)} ¢
                   </p>
                 )}
               </div>
@@ -261,7 +262,7 @@ export function DailySpinClient() {
                           )}
                         </td>
                         <td style={{ padding: "var(--sp-2) 0", textAlign: "right" }} className="text-money">
-                          {s.amount.toLocaleString()} ¢
+                          {formatAmount(s.amount)} ¢
                         </td>
                       </tr>
                     );
@@ -486,7 +487,7 @@ function StripCard({ slice }: { slice: SpinSlice }) {
           zIndex: 1,
         }}
       >
-        {slice.amount.toLocaleString()} ¢
+        {formatAmount(slice.amount)} ¢
       </span>
     </div>
   );
@@ -585,7 +586,7 @@ function ResultStamp({
           letterSpacing: "var(--ls-tight)",
         }}
       >
-        +{amount.toLocaleString()} ¢ ({label})
+        +{formatAmount(amount)} ¢ ({label})
       </div>
     </div>
   );
