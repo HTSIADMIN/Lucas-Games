@@ -1195,11 +1195,70 @@ export function applyResolveLostWallet(
   };
 }
 
+/** Cushion-dive result. Two flavors: regular loot (PC + occasional
+ *  frugality) or — rarer — a buried relic. Discriminated by `kind`
+ *  so the client can render distinct reveal cards. */
+export type CushionFlipResult =
+  | {
+      kind: "loot";
+      state: PennyPinchersGameState;
+      lootId: CushionLootId;
+      label: string;
+      pcGain: number;
+      tier: "lint" | "low" | "mid" | "high" | "jackpot";
+      frugalityGained: number;
+    }
+  | {
+      kind: "relic";
+      state: PennyPinchersGameState;
+      relicId: RelicId;
+      label: string;
+      rarity: string;
+      description: string;
+      newLevel: number;
+      maxLevel: number;
+      duplicateAtMax: boolean;
+    };
+
+/** Per-flip chance the cushion turns up a buried relic instead of
+ *  cash. Rare-but-real find — sits as a "wow" outcome above even
+ *  the jackpot tier. The relic itself rolls from the bronze chest's
+ *  weight table so commons land most of the time. */
+const CUSHION_RELIC_CHANCE = 0.05;
+
 /** Roll one cushion's loot using the supplied RNG. */
 export function applyCushionFlip(
   state: PennyPinchersGameState,
   rand01: () => number,
-): { state: PennyPinchersGameState; lootId: CushionLootId; label: string; pcGain: number; tier: "lint" | "low" | "mid" | "high" | "jackpot"; frugalityGained: number } {
+): CushionFlipResult {
+  // Roll the relic-find chance FIRST so its rarity sits on top of
+  // the regular loot distribution, not buried inside it.
+  if (rand01() < CUSHION_RELIC_CHANCE) {
+    const rolled = rollRelicFromChest("bronze", rand01);
+    if (rolled) {
+      const relics: RelicLevels = { ...state.relics };
+      const before = relics[rolled.id] ?? 0;
+      const maxedOut = before >= rolled.maxLevel;
+      const newLevel = Math.min(rolled.maxLevel, before + 1);
+      relics[rolled.id] = newLevel;
+      return {
+        kind: "relic",
+        state: {
+          ...state,
+          relics,
+          lifetimeClicks: state.lifetimeClicks + 1,
+          lastTickAt: Date.now(),
+        },
+        relicId: rolled.id,
+        label: rolled.label,
+        rarity: rolled.rarity,
+        description: rolled.description,
+        newLevel,
+        maxLevel: rolled.maxLevel,
+        duplicateAtMax: maxedOut,
+      };
+    }
+  }
   const totalWeight = CUSHION_LOOT.reduce((sum, e) => sum + e.weight, 0);
   let r = rand01() * totalWeight;
   let pick: typeof CUSHION_LOOT[number] = CUSHION_LOOT[0];
@@ -1211,6 +1270,7 @@ export function applyCushionFlip(
   const frugalityGain = pick.frugality ?? 0;
   const newFrugality = Math.min(FRUGALITY_MAX, state.frugality + frugalityGain);
   return {
+    kind: "loot",
     state: {
       ...state,
       cents: state.cents + pcGain,

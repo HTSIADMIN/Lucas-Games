@@ -150,17 +150,28 @@ type Couch     = { id: number; x: number; y: number; spawnedAt: number };
 type ActiveBlessing = { id: BlessingId; endsAt: number };
 type CushionReveal = {
   idx: number;
-  lootId: string;
   label: string;
-  pcGain: number;
   revealedAt: number;
-  /** Tier drives the reveal card's colour — looked up from
-   *  CUSHION_LOOT on the client so the server response can stay
-   *  minimal. */
-  tier: "lint" | "low" | "mid" | "high" | "jackpot";
-  /** Frugality awarded by the lint pull (0 for everything else). */
-  frugalityGained: number;
-};
+} & (
+  | {
+      kind: "loot";
+      lootId: string;
+      pcGain: number;
+      /** Tier drives the reveal card's colour. */
+      tier: "lint" | "low" | "mid" | "high" | "jackpot";
+      /** Frugality awarded by the lint pull (0 for everything else). */
+      frugalityGained: number;
+    }
+  | {
+      kind: "relic";
+      relicId: string;
+      rarity: string;
+      description: string;
+      newLevel: number;
+      maxLevel: number;
+      duplicateAtMax: boolean;
+    }
+);
 type FloatPop = { id: number; x: number; y: number; pc: number; shiny: boolean };
 type ClickBurst = {
   id: number;
@@ -1207,14 +1218,38 @@ export function PennyPinchersClient() {
     if (!cur) return;
     const roll = applyCushionFlip(cur, Math.random);
     mutate(() => roll.state);
+    const revealedAt = Date.now();
+    if (roll.kind === "relic") {
+      setCushionReveals((prev) => [
+        ...prev,
+        {
+          idx,
+          kind: "relic",
+          relicId: roll.relicId,
+          label: roll.label,
+          rarity: roll.rarity,
+          description: roll.description,
+          newLevel: roll.newLevel,
+          maxLevel: roll.maxLevel,
+          duplicateAtMax: roll.duplicateAtMax,
+          revealedAt,
+        },
+      ]);
+      // Relic find is the loudest cushion outcome — pack-open + a
+      // coin drop chaser so it doesn't get lost in modal chatter.
+      Sfx.play("pack.open");
+      window.setTimeout(() => Sfx.play("coin.drop"), 220);
+      return;
+    }
     setCushionReveals((prev) => [
       ...prev,
       {
         idx,
+        kind: "loot",
         lootId: roll.lootId,
         label: roll.label,
         pcGain: roll.pcGain,
-        revealedAt: Date.now(),
+        revealedAt,
         tier: roll.tier,
         frugalityGained: roll.frugalityGained,
       },
@@ -2258,6 +2293,81 @@ export function PennyPinchersClient() {
               `}</style>
             </button>
           )}
+
+          {/* Achievement popups — anchored to the bottom of the play
+              area (the ground where coins spawn) so the player sees
+              them in-context. Slide up + fade out over ~5s. Pointer
+              events disabled so they never eat a coin click. */}
+          {achievementToasts.length > 0 && (
+            <div
+              aria-live="polite"
+              style={{
+                position: "absolute",
+                bottom: 12,
+                left: 0,
+                right: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 6,
+                pointerEvents: "none",
+                zIndex: 12,
+              }}
+            >
+              {achievementToasts.map((id) => {
+                const def = ACHIEVEMENTS_BY_ID[id];
+                if (!def) return null;
+                return (
+                  <div
+                    key={id}
+                    style={{
+                      background: "var(--surface-highlight)",
+                      border: "3px solid var(--ink-900)",
+                      padding: "8px 14px",
+                      fontFamily: "var(--font-display)",
+                      minWidth: 240,
+                      maxWidth: "92%",
+                      boxShadow: "var(--sh-card-rest), var(--glow-gold)",
+                      color: "var(--ink-900)",
+                      textAlign: "center",
+                      animation: "pp-achievement-rise 5s cubic-bezier(.25, 1, .35, 1) forwards",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 10,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: "var(--saddle-400)",
+                      }}
+                    >
+                      ♛ Achievement Unlocked
+                      {def.reward > 0 ? ` · +${def.reward} ★` : ""}
+                      {def.frugalityReward ? ` · +${def.frugalityReward} F` : ""}
+                    </div>
+                    <div style={{ fontSize: 15, color: "var(--ink-900)" }}>
+                      {def.label}
+                    </div>
+                    <div
+                      className="text-mute"
+                      style={{ fontSize: 11, marginTop: 2 }}
+                    >
+                      {def.description}
+                    </div>
+                  </div>
+                );
+              })}
+              <style>{`
+                @keyframes pp-achievement-rise {
+                  0%   { transform: translateY(40px); opacity: 0; }
+                  8%   { transform: translateY(-4px); opacity: 1; }
+                  14%  { transform: translateY(0);    opacity: 1; }
+                  82%  { transform: translateY(0);    opacity: 1; }
+                  100% { transform: translateY(-30px); opacity: 0; }
+                }
+              `}</style>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -2443,61 +2553,6 @@ export function PennyPinchersClient() {
       </div>
 
       <PennyLeaderboard rows={server?.leaderboard ?? null} />
-
-      {achievementToasts.length > 0 && (
-        <div
-          aria-live="polite"
-          style={{
-            position: "fixed",
-            top: 80,
-            right: 16,
-            zIndex: 200,
-            display: "flex",
-            flexDirection: "column",
-            gap: 8,
-            pointerEvents: "none",
-          }}
-        >
-          {achievementToasts.map((id) => {
-            const def = ACHIEVEMENTS_BY_ID[id];
-            if (!def) return null;
-            return (
-              <div
-                key={id}
-                style={{
-                  background: "var(--surface-highlight)",
-                  border: "3px solid var(--ink-900)",
-                  padding: "8px 12px",
-                  fontFamily: "var(--font-display)",
-                  minWidth: 240,
-                  boxShadow: "var(--sh-card-rest), var(--glow-gold)",
-                  color: "var(--ink-900)",
-                  animation: "pp-trophy-slide 6s cubic-bezier(.25, 1, .35, 1) forwards",
-                }}
-              >
-                <div style={{ fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--saddle-400)" }}>
-                  Achievement Unlocked{def.reward > 0 ? ` · +${def.reward} ★` : ""}
-                </div>
-                <div style={{ fontSize: 14, color: "var(--ink-900)" }}>
-                  {def.label}
-                </div>
-                <div className="text-mute" style={{ fontSize: 11 }}>
-                  {def.description}
-                </div>
-              </div>
-            );
-          })}
-          <style>{`
-            @keyframes pp-trophy-slide {
-              0%   { transform: translateX(120%); opacity: 0; }
-              8%   { transform: translateX(-6px);  opacity: 1; }
-              14%  { transform: translateX(0);     opacity: 1; }
-              92%  { transform: translateX(0);     opacity: 1; }
-              100% { transform: translateX(120%); opacity: 0; }
-            }
-          `}</style>
-        </div>
-      )}
 
       {faqOpen && <FaqModal onClose={() => setFaqOpen(false)} />}
 
@@ -2738,8 +2793,18 @@ export function PennyPinchersClient() {
         // Tally so the player can watch their couch take grow as
         // they flip — turns the modal into a mini score-screen
         // instead of four blind clicks.
-        const totalPC = cushionReveals.reduce((sum, r) => sum + r.pcGain, 0);
-        const totalFrugality = cushionReveals.reduce((sum, r) => sum + r.frugalityGained, 0);
+        const totalPC = cushionReveals.reduce(
+          (sum, r) => sum + (r.kind === "loot" ? r.pcGain : 0),
+          0,
+        );
+        const totalFrugality = cushionReveals.reduce(
+          (sum, r) => sum + (r.kind === "loot" ? r.frugalityGained : 0),
+          0,
+        );
+        const totalRelics = cushionReveals.reduce(
+          (sum, r) => sum + (r.kind === "relic" ? 1 : 0),
+          0,
+        );
         const allDone = cushionReveals.length >= COUCH_CUSHIONS;
         return (
           <div
@@ -2886,7 +2951,7 @@ export function PennyPinchersClient() {
                             inset: 0,
                             backfaceVisibility: "hidden",
                             transform: "rotateY(180deg)",
-                            ...cushionRevealStyle(reveal?.tier),
+                            ...cushionRevealStyle(reveal),
                             borderRadius: 14,
                             display: "grid",
                             placeItems: "center",
@@ -2913,8 +2978,13 @@ export function PennyPinchersClient() {
                   }}
                 >
                   {totalFrugality > 0 && (
-                    <span style={{ color: "var(--cactus-500)" }}>
+                    <span style={{ color: "var(--cactus-500)", marginRight: 8 }}>
                       ✓ +{totalFrugality} Frugality
+                    </span>
+                  )}
+                  {totalRelics > 0 && (
+                    <span style={{ color: "#c084fc" }}>
+                      ✦ +{totalRelics} Relic{totalRelics === 1 ? "" : "s"}
                     </span>
                   )}
                 </div>
@@ -3117,9 +3187,19 @@ export function PennyPinchersClient() {
  * +N PC line fading in afterward. Pure CSS transition keyed to
  * `revealedAt` so React doesn't have to drive frame-by-frame.
  */
-/** Tier-themed background + border colour for a flipped cushion. */
-function cushionRevealStyle(tier: CushionReveal["tier"] | undefined): React.CSSProperties {
-  switch (tier) {
+/** Tier-themed background + border colour for a flipped cushion.
+ *  Relic reveals get their own purple gradient + glow so the player
+ *  can tell it's something special before the strip even lands. */
+function cushionRevealStyle(reveal: CushionReveal | undefined): React.CSSProperties {
+  if (!reveal) return { background: "var(--parchment-100)", border: "3px solid var(--ink-900)" };
+  if (reveal.kind === "relic") {
+    return {
+      background: "radial-gradient(circle at 50% 40%, #a855f7 0%, #5a3a7a 75%)",
+      border: "3px solid #c084fc",
+      boxShadow: "0 0 18px rgba(168, 85, 247, 0.75), inset 0 0 16px rgba(220, 180, 255, 0.5)",
+    };
+  }
+  switch (reveal.tier) {
     case "jackpot":
       return {
         background: "radial-gradient(circle at 50% 50%, var(--neon-gold) 0%, var(--gold-300) 70%)",
@@ -3154,6 +3234,71 @@ function cushionRevealStyle(tier: CushionReveal["tier"] | undefined): React.CSSP
 }
 
 function CushionLootReveal({ reveal }: { reveal: CushionReveal }) {
+  // Relic find — distinct reveal card that doesn't cycle a strip.
+  // The player sees a flash, then "RELIC!" + the relic name + flavour.
+  if (reveal.kind === "relic") {
+    const dupSuffix = reveal.duplicateAtMax ? " · already maxed" : "";
+    return (
+      <div style={{ width: "100%" }}>
+        <div
+          key={`relic-tag-${reveal.revealedAt}`}
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 11,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            color: "var(--parchment-50)",
+            opacity: 0,
+            animation: "pp-cushion-pc-fade 280ms 200ms ease-out forwards",
+            textAlign: "center",
+            textShadow: "1px 1px 0 rgba(0,0,0,0.55)",
+          }}
+        >
+          ✦ Relic!
+        </div>
+        <div
+          key={`relic-name-${reveal.revealedAt}`}
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 14,
+            color: "var(--parchment-50)",
+            opacity: 0,
+            animation: "pp-cushion-pc-fade 320ms 480ms ease-out forwards",
+            textAlign: "center",
+            lineHeight: 1.1,
+            marginTop: 4,
+            textShadow: "1px 1px 0 rgba(0,0,0,0.6)",
+          }}
+        >
+          {reveal.label}
+        </div>
+        <div
+          key={`relic-rarity-${reveal.revealedAt}`}
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 10,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "rgba(220,180,255,0.95)",
+            opacity: 0,
+            animation: "pp-cushion-pc-fade 320ms 700ms ease-out forwards",
+            textAlign: "center",
+            marginTop: 2,
+          }}
+        >
+          {reveal.rarity} · Lv {reveal.newLevel}/{reveal.maxLevel}{dupSuffix}
+        </div>
+        <style>{`
+          @keyframes pp-cushion-pc-fade {
+            0%   { opacity: 0; transform: translateY(4px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Regular loot reveal — slot-reel strip then PC line.
   const filler = ["Lint", "Pennies", "Nickels", "Dimes", "Quarters", "Half-Dollars", "Dollars", "Jackpot!"];
   const labels = [...filler.filter((l) => l !== reveal.label), reveal.label];
   const finalIdx = labels.length - 1;
