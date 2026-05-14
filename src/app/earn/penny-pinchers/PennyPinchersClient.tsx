@@ -299,6 +299,25 @@ export function PennyPinchersClient() {
    *  any "took my money but didn't level" failures the new atomic
    *  pp_buy_upgrade RPC was meant to eliminate. */
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
+  /** On-screen coin cap — the spawn loop skips a tick when the play
+   *  area already holds this many. Persisted to localStorage as a
+   *  device-level preference (not part of the game-state blob, so
+   *  it doesn't sync across devices). Clamped 5..200. */
+  const COIN_CAP_KEY = "pp:coinCap:v1";
+  const COIN_CAP_MIN = 5;
+  const COIN_CAP_MAX = 200;
+  const [coinCap, setCoinCap] = useState<number>(30);
+  useEffect(() => {
+    try {
+      const v = Number(localStorage.getItem(COIN_CAP_KEY));
+      if (Number.isFinite(v) && v >= COIN_CAP_MIN && v <= COIN_CAP_MAX) {
+        setCoinCap(Math.floor(v));
+      }
+    } catch { /* localStorage may be disabled — fall back to default */ }
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem(COIN_CAP_KEY, String(coinCap)); } catch { /* ignore */ }
+  }, [coinCap]);
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
   const [lostWallet, setLostWallet] = useState<LostWallet | null>(null);
   const [walletModalChoice, setWalletModalChoice] = useState<null | "open" | "submitting">(null);
@@ -761,6 +780,7 @@ export function PennyPinchersClient() {
     bonusShiny,
     hasGreedy,
     cursedPauseUntil,
+    coinCap,
   });
   useEffect(() => {
     spawnInputsRef.current = {
@@ -770,6 +790,7 @@ export function PennyPinchersClient() {
       bonusShiny,
       hasGreedy,
       cursedPauseUntil,
+      coinCap,
     };
   });
   useEffect(() => {
@@ -794,6 +815,14 @@ export function PennyPinchersClient() {
           schedule(params.intervalMs);
           return;
         }
+        // On-screen coin cap. Skip this tick (keep the chain alive)
+        // if the play area is already at the player-configured ceiling.
+        // Keeps the DOM lean during Coin Storm + Frenzy combos and
+        // lets the player set how cluttered the ground gets.
+        if (coinsRef.current.length >= params.coinCap) {
+          schedule(params.intervalMs);
+          return;
+        }
         const rect = playEl.getBoundingClientRect();
         const pad = 40;
         const newSpawns: SpawnedCoin[] = [];
@@ -803,6 +832,10 @@ export function PennyPinchersClient() {
         for (let k = 0; k < baseCount; k++) {
           if (Math.random() < Math.min(0.5, 0.05 * extraHandsLevel)) total++;
         }
+        // Cap burst at the remaining headroom so a Coin Storm or
+        // Frenzy tick doesn't blow past the on-screen ceiling.
+        const headroom = Math.max(0, params.coinCap - coinsRef.current.length);
+        if (total > headroom) total = headroom;
         const curRelicE = relicEffects(cur.relics);
         for (let i = 0; i < total; i++) {
           const x = pad + Math.random() * Math.max(0, rect.width - pad * 2);
@@ -2533,24 +2566,79 @@ export function PennyPinchersClient() {
             </div>
           );
         })}
-        {/* Auto-Picker pause toggle — pinned to the far-right via
-            margin-left:auto so it sits opposite the "Unlocked
-            coins" label. Hidden when Auto-Picker hasn't been
-            bought yet (no point showing a control with nothing to
-            pause). Useful for Pile-It-Up runs where you don't
-            want auto-clicks to swipe a coin you're trying to
-            merge. */}
-        {autoPickerLevel > 0 && (
-          <button
-            type="button"
-            className={`btn btn-sm ${autoPickerPaused ? "btn-ghost" : ""}`}
-            onClick={() => setAutoPickerPaused((p) => !p)}
-            aria-pressed={autoPickerPaused}
-            style={{ marginLeft: "auto" }}
+        {/* Right-side control cluster — on-screen coin cap +
+            Auto-Picker pause toggle. Pushed to the far right via
+            margin-left:auto on the wrapper so both controls sit
+            opposite the "Unlocked coins" label and wrap together
+            on phones. The cap is a device-level preference stored
+            in localStorage (not synced); Auto-Picker pause is
+            ephemeral session state. */}
+        <div
+          style={{
+            marginLeft: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--sp-3)",
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
+          }}
+        >
+          <label
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontFamily: "var(--font-display)",
+              fontSize: 11,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              color: "var(--saddle-400)",
+              cursor: "pointer",
+            }}
+            title={`Skip a spawn tick when the play area already has this many coins (${COIN_CAP_MIN}–${COIN_CAP_MAX}).`}
           >
-            {autoPickerPaused ? "▶ Resume Auto-Picker" : "⏸ Pause Auto-Picker"}
-          </button>
-        )}
+            Coin cap
+            <input
+              type="number"
+              min={COIN_CAP_MIN}
+              max={COIN_CAP_MAX}
+              value={coinCap}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (Number.isFinite(v)) {
+                  setCoinCap(
+                    Math.max(COIN_CAP_MIN, Math.min(COIN_CAP_MAX, Math.floor(v))),
+                  );
+                }
+              }}
+              onFocus={(e) => e.currentTarget.select()}
+              style={{
+                width: 64,
+                padding: "3px 6px",
+                fontFamily: "var(--font-display)",
+                fontSize: 13,
+                textAlign: "center",
+                background: "var(--parchment-50)",
+                border: "2px solid var(--ink-900)",
+                color: "var(--ink-900)",
+                // Drop the spinner-arrow noise on Chromium so the
+                // number sits like a stamped tag, not a form field.
+                appearance: "textfield",
+                MozAppearance: "textfield",
+              }}
+            />
+          </label>
+          {autoPickerLevel > 0 && (
+            <button
+              type="button"
+              className={`btn btn-sm ${autoPickerPaused ? "btn-ghost" : ""}`}
+              onClick={() => setAutoPickerPaused((p) => !p)}
+              aria-pressed={autoPickerPaused}
+            >
+              {autoPickerPaused ? "▶ Resume Auto-Picker" : "⏸ Pause Auto-Picker"}
+            </button>
+          )}
+        </div>
       </div>
 
       <PennyLeaderboard rows={server?.leaderboard ?? null} />
