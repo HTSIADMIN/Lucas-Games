@@ -613,8 +613,14 @@ export const LOST_WALLET_KEEP_MAX_PC = 50_000;
 export const LOST_WALLET_RETURN_FRUGALITY = 1;
 export const LOST_WALLET_KEEP_FRUGALITY = -1;
 /** Bounds applied server-side after each adjustment. */
-export const FRUGALITY_MIN = -50;
-export const FRUGALITY_MAX = 50;
+// Frugality is uncapped — grinding wallet-returns / cushion lint /
+// prestige tithes / saint's mark relics rewards a permanent PC
+// multiplier (+0.5% per point), so the player who works for it
+// deserves the payout. The constants stay as MAX_SAFE_INTEGER so
+// the existing Math.min/Math.max clamping calls in the engine
+// become effective no-ops without having to touch every callsite.
+export const FRUGALITY_MIN = Number.MIN_SAFE_INTEGER;
+export const FRUGALITY_MAX = Number.MAX_SAFE_INTEGER;
 
 // ============================================================
 // PRESTIGE — Phase 3a (reworked Phase 4)
@@ -767,7 +773,7 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
   // permanent Frugality on top so reaching the milestone is its own
   // boost (Frugal Saver +5 = +2.5% PC, Saint +10 = +5%).
   { id: "frugal_saver",          label: "Frugal Saver",          description: "Hit +25 Frugality.",                                 reward: 2, frugalityReward: 5 },
-  { id: "saint",                 label: "Saint",                 description: "Max out Frugality at +50.",                          reward: 5, frugalityReward: 10 },
+  { id: "saint",                 label: "Saint",                 description: "Reach +50 Frugality.",                               reward: 5, frugalityReward: 10 },
 ];
 
 export const ACHIEVEMENTS_BY_ID: Record<AchievementId, AchievementDef> = Object.fromEntries(

@@ -76,14 +76,14 @@ const SECTIONS: { title: string; lines: string[] }[] = [
       "Your prestige count rides the leaderboard as a ★ N Prestige badge — gold at first, then emerald (5+), ruby (10+), sapphire (15+), amethyst (20+), and diamond rainbow (25+).",
       "Higher Ceilings (perm) adds +10 to the max level of every base upgrade per level — five tiers (5, 7, 10, 14, 20★, total 56★) take Coin Value from 20 → 70, Sharper Eyes 10 → 60, etc. Spawn unlocks (Vending / Parking / Laundry / Boardwalk / Grandpa) and Pile It Up are exempt because their meaningful work is the first 5 ranks.",
       "Bigger Pockets (perm) is quadratic: lvl 1 seeds 1k, lvl 5 seeds 25k, maxed seeds 100k cents into the next cycle so the grind back to the first-prestige threshold is automatic at full ranks.",
-      "Prestige Tithe (perm, 5★ × 1.7^lvl) is the new payoff for high-prestige players — each rank multiplies Frugality gained on every Roll It Up (L1 0.5× → L5 1.0×). The grant is floor(prestige count × multiplier), capped at +50.",
+      "Prestige Tithe (perm, 5★ × 1.7^lvl) is the new payoff for high-prestige players — each rank multiplies Frugality gained on every Roll It Up (L1 0.5× → L5 1.0×). The grant is floor(prestige count × multiplier) — no cap, so a deep-prestige loop just keeps stacking Frugality.",
     ],
   },
   {
     title: "Frugality",
     lines: [
       "The Lost Wallet event lets you Return It (+1 Frugality) or Keep the Change (-1 Frugality + 500 PC).",
-      "Each positive Frugality point grants +0.5% PC on every coin. Maxed at +50 → +25% PC across the run.",
+      "Each positive Frugality point grants +0.5% PC on every coin — no cap, so 100 Frugality is +50% PC, 1,000 Frugality is +500% PC, and so on.",
       "Negative Frugality has no penalty for now. Future updates may add cursed-coin chance / risk variants.",
     ],
   },
