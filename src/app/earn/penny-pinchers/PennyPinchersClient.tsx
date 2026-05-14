@@ -1096,12 +1096,13 @@ export function PennyPinchersClient() {
       spawnPop(extra.x, extra.y, extraGained, extra.traits.includes("shiny"), extra.traits[0] ?? null);
       working = next;
     }
-    // Extra pickup chime — a quick clink for each collateral coin so
-    // the player can HEAR the chain-grab landing on top of the base
-    // wood click that fired for the primary. Throttle on the SFX
-    // registry keeps a 5-coin sticky sweep from machine-gunning.
+    // Extra pickup tap — another of the same wood click for each
+    // collateral coin so a Two-Finger / Sticky / Lightning chain
+    // reads audibly as "more than one pickup". The SFX registry
+    // gives ui.wood 5 voices + a 50ms throttle, so a sticky sweep
+    // overlaps cleanly without machine-gunning.
     if (collateral.length > 0 && !opts.silent) {
-      Sfx.play("coins.clink");
+      Sfx.play("ui.wood");
     }
 
     mutate(() => working);
