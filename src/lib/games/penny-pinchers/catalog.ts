@@ -722,18 +722,23 @@ export type AchievementId =
   | "sidewalk_scholar"
   | "coin_connoisseur"
   | "basically_mining"
+  | "coin_crusader"
   | "goblin_mode"
   | "pile_it_up"
   | "bank_tellers_nightmare"
   | "bigger_boat"
   | "frequent_flyer"
+  | "empire_builder"
   | "first_million"
+  | "made_of_money"
   | "treasure_hunter"
   | "relic_hoarder"
   | "page_turner"
   | "album_curator"
+  | "full_house"
   | "frugal_saver"
-  | "saint";
+  | "saint"
+  | "patron_saint";
 
 export type AchievementDef = {
   id: AchievementId;
@@ -747,33 +752,49 @@ export type AchievementDef = {
   frugalityReward?: number;
 };
 
-// Trophy stars now pay meaningfully — small wins drip 1-2★, big
+// Trophy stars pay meaningfully — small wins drip 1-2★, big
 // milestones pay 5-10★, and the truly flagship ones (every album
-// page, ten Roll-Ups) drop a fat ten-star bag. Total set ≈ 67★
-// across all 16 trophies if you complete everything.
+// page, ten Roll-Ups) drop a fat ten-star bag.
+// basically_mining was originally 100,000 clicks — too steep for
+// any Pile-It-Up player whose manual taps accumulate slowly. Pulled
+// down to 50,000 so it sits as the natural top of the
+// 1 / 1k / 10k / 50k ladder, with coin_crusader at 250k as the
+// new endgame brag.
 export const ACHIEVEMENTS: readonly AchievementDef[] = [
-  { id: "a_penny_saved",         label: "A Penny Saved",         description: "Pick up your first coin.",                          reward: 1 },
-  { id: "sidewalk_scholar",      label: "Sidewalk Scholar",      description: "Pick up 1,000 coins in your career.",               reward: 2 },
-  { id: "coin_connoisseur",      label: "Coin Connoisseur",      description: "Pick up 10,000 coins in your career.",              reward: 3 },
-  { id: "basically_mining",      label: "This Is Basically Mining", description: "Pick up 100,000 coins in your career.",          reward: 5 },
-  { id: "goblin_mode",           label: "Goblin Mode",           description: "Hire the Laundromat Goblin.",                       reward: 2 },
-  { id: "pile_it_up",            label: "Pile It Up",            description: "Buy the merging upgrade. Stack 'em.",               reward: 2 },
-  { id: "bank_tellers_nightmare",label: "Bank Teller's Nightmare", description: "Roll It Up for the first time.",                 reward: 5 },
-  { id: "bigger_boat",           label: "Bigger Boat",           description: "Roll It Up a second time. We're gonna need it.",    reward: 3 },
-  { id: "frequent_flyer",        label: "Frequent Flyer",        description: "Roll It Up ten times.",                             reward: 10 },
-  { id: "first_million",         label: "First Million",         description: "Bank 1,000,000 ¢ to your wallet across all sessions.", reward: 5 },
+  // Click ladder
+  { id: "a_penny_saved",         label: "A Penny Saved",            description: "Pick up your first coin.",                                                 reward: 1 },
+  { id: "sidewalk_scholar",      label: "Sidewalk Scholar",         description: "Pick up 1,000 coins in your career.",                                      reward: 2 },
+  { id: "coin_connoisseur",      label: "Coin Connoisseur",         description: "Pick up 10,000 coins in your career.",                                     reward: 3 },
+  { id: "basically_mining",      label: "This Is Basically Mining", description: "Pick up 50,000 coins in your career.",                                     reward: 5 },
+  { id: "coin_crusader",         label: "Coin Crusader",            description: "Pick up 250,000 coins in your career. You can stop now.",                  reward: 10 },
 
-  // New systems
-  { id: "treasure_hunter",       label: "Treasure Hunter",       description: "Open your first relic chest.",                      reward: 2 },
-  { id: "relic_hoarder",         label: "Relic Hoarder",         description: "Own at least one of every relic.",                  reward: 8 },
-  { id: "page_turner",           label: "Page Turner",           description: "Complete any one album page.",                       reward: 2 },
-  { id: "album_curator",         label: "Album Curator",         description: "Complete every album page.",                         reward: 10 },
-  // Frugality trophies — reward bookends on the Frugality grind.
-  // Bank Token payouts unchanged; new frugalityReward stacks +5 / +10
-  // permanent Frugality on top so reaching the milestone is its own
-  // boost (Frugal Saver +5 = +2.5% PC, Saint +10 = +5%).
-  { id: "frugal_saver",          label: "Frugal Saver",          description: "Hit +25 Frugality.",                                 reward: 2, frugalityReward: 5 },
-  { id: "saint",                 label: "Saint",                 description: "Reach +50 Frugality.",                               reward: 5, frugalityReward: 10 },
+  // Helpers / upgrades
+  { id: "goblin_mode",           label: "Goblin Mode",              description: "Hire the Laundromat Goblin.",                                              reward: 2 },
+  { id: "pile_it_up",            label: "Pile It Up",               description: "Buy the merging upgrade. Stack 'em.",                                      reward: 2 },
+  { id: "full_house",            label: "Full House",               description: "Hire at least one of every helper. The whole crew shows up.",              reward: 6 },
+
+  // Prestige ladder
+  { id: "bank_tellers_nightmare",label: "Bank Teller's Nightmare",  description: "Roll It Up for the first time.",                                           reward: 5 },
+  { id: "bigger_boat",           label: "Bigger Boat",              description: "Roll It Up a second time. We're gonna need it.",                           reward: 3 },
+  { id: "frequent_flyer",        label: "Frequent Flyer",           description: "Roll It Up ten times.",                                                    reward: 10 },
+  { id: "empire_builder",        label: "Empire Builder",           description: "Roll It Up 25 times. You've built dynasties on dropped change.",           reward: 15 },
+
+  // Banking ladder
+  { id: "first_million",         label: "First Million",            description: "Bank 1,000,000 ¢ to your wallet across all sessions.",                     reward: 5 },
+  { id: "made_of_money",         label: "Made of Money",            description: "Bank 100,000,000 ¢. You don't count it anymore — you measure it.",         reward: 10 },
+
+  // Relics & album
+  { id: "treasure_hunter",       label: "Treasure Hunter",          description: "Open your first relic chest.",                                             reward: 2 },
+  { id: "relic_hoarder",         label: "Relic Hoarder",            description: "Own at least one of every relic.",                                         reward: 8 },
+  { id: "page_turner",           label: "Page Turner",              description: "Complete any one album page.",                                             reward: 2 },
+  { id: "album_curator",         label: "Album Curator",            description: "Complete every album page.",                                               reward: 10 },
+
+  // Frugality bookends — virtuous play rewarded with permanent
+  // Frugality on top of the prestige-point reward (Frugal Saver +5
+  // → +2.5% PC, Saint +10 → +5%, Patron Saint +20 → +10%).
+  { id: "frugal_saver",          label: "Frugal Saver",             description: "Hit +25 Frugality.",                                                       reward: 2,  frugalityReward: 5 },
+  { id: "saint",                 label: "Saint",                    description: "Reach +50 Frugality.",                                                     reward: 5,  frugalityReward: 10 },
+  { id: "patron_saint",          label: "Patron Saint",             description: "Reach +200 Frugality. They name shrines after you now.",                   reward: 12, frugalityReward: 20 },
 ];
 
 export const ACHIEVEMENTS_BY_ID: Record<AchievementId, AchievementDef> = Object.fromEntries(

@@ -737,19 +737,26 @@ const CONDITIONS: Record<AchievementId, (s: AchievementSnapshot) => boolean> = {
   a_penny_saved:          (s) => s.lifetimeClicks >= 1,
   sidewalk_scholar:       (s) => s.lifetimeClicks >= 1_000,
   coin_connoisseur:       (s) => s.lifetimeClicks >= 10_000,
-  basically_mining:       (s) => s.lifetimeClicks >= 100_000,
+  // Pulled from 100k → 50k so a Pile-It-Up-leaning player can
+  // actually reach it. coin_crusader picks up the old high-end.
+  basically_mining:       (s) => s.lifetimeClicks >= 50_000,
+  coin_crusader:          (s) => s.lifetimeClicks >= 250_000,
   goblin_mode:            (s) => (s.helpers.laundry_goblin ?? 0) >= 1,
   pile_it_up:             (s) => (s.upgrades.pile_it_up ?? 0) >= 1,
+  full_house:             (s) => HELPERS.every((h) => (s.helpers[h.id] ?? 0) >= 1),
   bank_tellers_nightmare: (s) => s.prestigeCount >= 1,
   bigger_boat:            (s) => s.prestigeCount >= 2,
   frequent_flyer:         (s) => s.prestigeCount >= 10,
+  empire_builder:         (s) => s.prestigeCount >= 25,
   first_million:          (s) => s.lifetimeBankedCents >= 1_000_000,
+  made_of_money:          (s) => s.lifetimeBankedCents >= 100_000_000,
   treasure_hunter:        (s) => Object.keys(s.relics).length >= 1,
   relic_hoarder:          (s) => Object.keys(s.relics).length >= RELICS.length,
   page_turner:            (s) => (Object.keys(ALBUM_PAGE_COINS) as AlbumPage[]).some((p) => albumPageComplete(s.album, p)),
   album_curator:          (s) => (Object.keys(ALBUM_PAGE_COINS) as AlbumPage[]).every((p) => albumPageComplete(s.album, p)),
   frugal_saver:           (s) => s.frugality >= 25,
   saint:                  (s) => s.frugality >= 50,
+  patron_saint:           (s) => s.frugality >= 200,
 };
 
 /**

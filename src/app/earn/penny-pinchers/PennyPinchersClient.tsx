@@ -1720,7 +1720,7 @@ export function PennyPinchersClient() {
             </div>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "var(--ink-900)" }}>
               {canRoll
-                ? `+${server.prestige.tokensIfRolled.toLocaleString()} ★ Tokens`
+                ? `+${server.prestige.tokensIfRolled.toLocaleString()} ★ Prestige Points`
                 : `${Math.round(lifetimeProgress * 100)}% to next prestige`}
             </div>
             <div
@@ -2302,8 +2302,8 @@ export function PennyPinchersClient() {
             {([
               ["upgrades",     "Upgrades",     "✦"],
               ["helpers",      "Helpers",      "⚒"],
-              ["tokens",       "Tokens",       "★"],
-              ["achievements", "Trophies",     "♛"],
+              ["tokens",       "Prestige",     "★"],
+              ["achievements", "Achievements", "♛"],
               ["album",        "Album",        "❒"],
               ["relics",       "Relics",       "◇"],
             ] as const).map(([id, label, icon]) => {
@@ -2588,7 +2588,7 @@ export function PennyPinchersClient() {
               animation: "pp-prestige-pop 800ms cubic-bezier(.2,1,.25,1)",
             }}
           >
-            ★ +{prestigeCelebration.toLocaleString()} Tokens ★
+            ★ +{prestigeCelebration.toLocaleString()} Prestige Points ★
           </div>
           {/* 24 coin sprites raining down */}
           {Array.from({ length: 24 }).map((_, i) => {
@@ -3050,7 +3050,7 @@ export function PennyPinchersClient() {
             </p>
             <ul style={{ margin: "0 0 var(--sp-3) 16px", color: "var(--ink-900)" }}>
               <li>
-                <b>{Math.floor(localCents).toLocaleString()} Pinch Cents</b> in your pocket (sacrificed for the tokens)
+                <b>{Math.floor(localCents).toLocaleString()} Pinch Cents</b> in your pocket (sacrificed for the Prestige Points)
               </li>
               <li>Every run upgrade you&rsquo;ve bought this cycle</li>
               <li>Every helper you&rsquo;ve hired this cycle</li>
@@ -3060,14 +3060,34 @@ export function PennyPinchersClient() {
             </p>
             <ul style={{ margin: "0 0 var(--sp-3) 16px", color: "var(--ink-900)" }}>
               <li>Wallet balance + lifetime banked</li>
-              <li>Every Permanent upgrade in the Tokens shop</li>
+              <li>Every Permanent upgrade in the Prestige shop</li>
+              <li>Your Album, Relics, Frugality, and unlocked Achievements</li>
               <li>
-                <b>+{server.prestige.tokensIfRolled.toLocaleString()} ★ Bank Tokens</b> to spend on Permanents
+                <b>+{server.prestige.tokensIfRolled.toLocaleString()} ★ Prestige Points</b> to spend on Permanents
               </li>
-              <li className="text-mute" style={{ fontSize: 13 }}>
-                Tip: tokens follow a sqrt curve — 100k → 5 ★, 200k → 7 ★, 500k → 11 ★, 1M → 15 ★. Quick prestiges pay off; sitting past 1M earns diminishing returns.
+              <li>
+                A permanent PC multiplier on every coin — <b>×{3 + server.prestige.count + 1}</b> after this Roll-Up{server.prestige.count > 0 ? ` (currently ×${3 + server.prestige.count})` : ""}
               </li>
             </ul>
+            <p
+              className="text-mute"
+              style={{
+                fontSize: 13,
+                background: "var(--surface-highlight)",
+                border: "2px solid var(--saddle-300)",
+                padding: "8px 10px",
+                marginBottom: "var(--sp-3)",
+                color: "var(--ink-900)",
+              }}
+            >
+              <b>What&rsquo;s on tap this run:</b> the Helpers ladder now stretches to <b>Coin Diviner</b> (500k PC/sec) — bring Prestige Tithe Points to climb it.
+              Frugality has <b>no cap</b> — every point keeps paying +0.5% PC, forever.
+              The <b>⚡ Max Buy / Max Hire</b> buttons on the Upgrades and Helpers tabs dump your stack into the cheapest lanes in one tap.
+              Two-Finger Pickup actually credits PC for its chain-grabs now (it didn&rsquo;t before).
+            </p>
+            <p className="text-mute" style={{ fontSize: 12, marginBottom: "var(--sp-3)" }}>
+              Tip: Prestige Points follow a sqrt curve — 100k → 5 ★, 200k → 7 ★, 500k → 11 ★, 1M → 15 ★. Quick prestiges pay off; sitting past 1M earns diminishing returns.
+            </p>
             <div className="row" style={{ gap: 8, justifyContent: "center" }}>
               <button
                 type="button"

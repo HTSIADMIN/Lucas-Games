@@ -28,9 +28,9 @@ export function BankTokenShop({
         className="text-mute"
         style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", paddingLeft: 4 }}
       >
-        Permanent — survives every Prestige
+        Permanent · spend Prestige Points · survives every Roll It Up
       </div>
-      {/* Cheapest token upgrade first; maxed perms sink to the bottom. */}
+      {/* Cheapest perm upgrade first; maxed perms sink to the bottom. */}
       {PERM_UPGRADES.slice().sort((a, b) => {
         const aLvl = levels[a.id] ?? 0;
         const bLvl = levels[b.id] ?? 0;
@@ -149,7 +149,7 @@ export function BankTokenShop({
                     textShadow: affordable ? "1px 1px 0 var(--gold-100)" : undefined,
                   }}
                 >
-                  {cost} <span style={{ fontSize: 12, opacity: 0.85 }}>★ Token{cost === 1 ? "" : "s"}</span>
+                  {cost} <span style={{ fontSize: 12, opacity: 0.85 }}>★ Prestige Point{cost === 1 ? "" : "s"}</span>
                 </span>
               )}
               {!maxed && affordable && (
