@@ -55,6 +55,7 @@ import {
   applyBuyPermUpgrade,
   applyBuyMaxUpgrades,
   applyBuyUpgrade,
+  applyHireMaxHelpers,
   applyClick,
   applyCushionFlip,
   applyHireHelper,
@@ -1129,6 +1130,17 @@ export function PennyPinchersClient() {
       setRecentlyHiredId((c) => (c === id ? null : c));
     }, 700);
     Sfx.play("chips.handle");
+  }
+
+  /** Greedy max-hire on the Helpers tab — same shape as buyMaxUpgrades. */
+  function hireMaxHelpers(): { hired: number; spent: number } | null {
+    const cur = stateRef.current;
+    if (!cur) return null;
+    const result = applyHireMaxHelpers(cur);
+    if (result.hired <= 0) return null;
+    mutate(() => result.state);
+    Sfx.play("chips.handle");
+    return { hired: result.hired, spent: result.spent };
   }
 
   function buyPermUpgrade(id: PermUpgradeId, cost: number) {
@@ -2314,6 +2326,7 @@ export function PennyPinchersClient() {
               counts={server.helpers as Record<HelperId, number>}
               cents={localCents}
               onHire={hireHelper}
+              onHireMax={hireMaxHelpers}
               recentlyHiredId={recentlyHiredId}
             />
           ) : tab === "tokens" ? (

@@ -137,7 +137,14 @@ export const UPGRADES_BY_ID: Record<UpgradeId, UpgradeDef> = Object.fromEntries(
 // HELPERS — passive PC/sec generators
 // ============================================================
 
-export type HelperId = "grandma_purse" | "couch_diver" | "meter_inspector" | "laundry_goblin";
+export type HelperId =
+  | "grandma_purse"
+  | "couch_diver"
+  | "meter_inspector"
+  | "laundry_goblin"
+  | "night_watch"
+  | "pawnbroker"
+  | "coin_diviner";
 
 export type HelperDef = {
   id: HelperId;
@@ -150,11 +157,20 @@ export type HelperDef = {
   maxOwn: number;
 };
 
+// Payback per tier ≈ 200 s (baseCost / pcPerSec = 200). Each tier
+// is ~10× the cost of the previous AND ~10× the output, so "the
+// money they generate scales with what they cost" — a late-game
+// helper is no worse a deal than an early-game one. Cost
+// multiplier ramps gently (1.4 → 2.0) so longer-running lines
+// still feel like they ramp into a wall eventually.
 export const HELPERS: readonly HelperDef[] = [
-  { id: "grandma_purse",   label: "Grandma's Change Purse", description: "Generates pennies forever. Cheap entry-level autopilot.", baseCost: 100,    costMultiplier: 1.4, pcPerSec: 0.5, maxOwn: 25 },
-  { id: "couch_diver",     label: "Couch Diver",            description: "Pulls a coin out of the cushions every second.",           baseCost: 1_000,  costMultiplier: 1.5, pcPerSec: 1,   maxOwn: 25 },
-  { id: "meter_inspector", label: "Parking Meter Inspector", description: "Sweeps the meters. Solid mid-game generator.",             baseCost: 10_000, costMultiplier: 1.6, pcPerSec: 5,   maxOwn: 25 },
-  { id: "laundry_goblin",  label: "Laundromat Goblin",      description: "Occasionally dumps a pile of quarters.",                   baseCost: 100_000, costMultiplier: 1.7, pcPerSec: 15,  maxOwn: 25 },
+  { id: "grandma_purse",   label: "Grandma's Change Purse",  description: "Pulls warm pennies out of an old vinyl coin purse. Cheap entry-level autopilot.", baseCost: 100,         costMultiplier: 1.4, pcPerSec: 0.5,     maxOwn: 25 },
+  { id: "couch_diver",     label: "Couch Diver",             description: "Hands deep between every cushion in town.",                                        baseCost: 1_000,       costMultiplier: 1.5, pcPerSec: 5,       maxOwn: 25 },
+  { id: "meter_inspector", label: "Parking Meter Inspector", description: "Walks the meters every day. Solid mid-game generator.",                            baseCost: 10_000,      costMultiplier: 1.6, pcPerSec: 50,      maxOwn: 25 },
+  { id: "laundry_goblin",  label: "Laundromat Goblin",       description: "Empties forgotten quarters out of every dryer on the strip.",                      baseCost: 100_000,     costMultiplier: 1.7, pcPerSec: 500,     maxOwn: 25 },
+  { id: "night_watch",     label: "Night-Watch Sweeper",     description: "Keys to every shop after closing — bigger bills, fewer witnesses.",                baseCost: 1_000_000,   costMultiplier: 1.8, pcPerSec: 5_000,   maxOwn: 25 },
+  { id: "pawnbroker",      label: "Pawnbroker",              description: "Runs the dusty shop on Main Street. Flips coin collections for clean profit.",     baseCost: 10_000_000,  costMultiplier: 1.9, pcPerSec: 50_000,  maxOwn: 25 },
+  { id: "coin_diviner",    label: "Coin Diviner",            description: "Dowses for buried piles in the foothills. Supernatural payouts, slow steps.",      baseCost: 100_000_000, costMultiplier: 2.0, pcPerSec: 500_000, maxOwn: 25 },
 ];
 
 export const HELPERS_BY_ID: Record<HelperId, HelperDef> = Object.fromEntries(

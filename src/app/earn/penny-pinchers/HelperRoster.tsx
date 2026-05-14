@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { HELPERS, type HelperId } from "@/lib/games/penny-pinchers/catalog";
 import { nextHelperCost } from "@/lib/games/penny-pinchers/engine";
 
@@ -7,16 +8,92 @@ export function HelperRoster({
   counts,
   cents,
   onHire,
+  onHireMax,
   recentlyHiredId,
 }: {
   counts: Record<HelperId, number> | Partial<Record<HelperId, number>>;
   cents: number;
   onHire: (id: HelperId, cost: number) => void;
+  /** Greedy max-hire — hires the cheapest affordable helper in a
+   *  loop until nothing is affordable. */
+  onHireMax?: () => { hired: number; spent: number } | null;
   /** When set, that helper's row briefly flashes gold after a successful hire. */
   recentlyHiredId?: HelperId | null;
 }) {
+  // Cheapest helper currently in reach — gates the Max Hire button.
+  const cheapestAffordable = (() => {
+    let cheapest = Number.POSITIVE_INFINITY;
+    for (const h of HELPERS) {
+      const owned = counts[h.id] ?? 0;
+      if (owned >= h.maxOwn) continue;
+      const c = nextHelperCost(h.id, owned);
+      if (c == null || c > cents) continue;
+      if (c < cheapest) cheapest = c;
+    }
+    return cheapest === Number.POSITIVE_INFINITY ? null : cheapest;
+  })();
+
+  const [toast, setToast] = useState<{ hired: number; spent: number } | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 3000);
+    return () => window.clearTimeout(id);
+  }, [toast]);
+
+  function handleHireMax() {
+    if (!onHireMax) return;
+    const result = onHireMax();
+    if (result && result.hired > 0) setToast(result);
+  }
+
   return (
     <div className="stack pp-shop-scroll" style={{ gap: "var(--sp-2)" }}>
+      {onHireMax && (
+        <div
+          className="row"
+          style={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 8,
+            minHeight: 30,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 11,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: toast ? "var(--cactus-500)" : "var(--saddle-400)",
+              transition: "color 200ms",
+            }}
+          >
+            {toast
+              ? `Hired ${toast.hired} for ${toast.spent.toLocaleString()} PC`
+              : "Cheapest first · stops when broke"}
+          </span>
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={cheapestAffordable == null}
+            onClick={handleHireMax}
+            style={{
+              animation:
+                cheapestAffordable != null && !toast
+                  ? "pp-maxbuy-pulse 1.8s ease-in-out infinite"
+                  : undefined,
+            }}
+          >
+            ⚡ Max Hire
+          </button>
+        </div>
+      )}
+      <style>{`
+        @keyframes pp-maxbuy-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(255,196,64,0); }
+          50%      { box-shadow: 0 0 0 2px rgba(255,196,64,0.55), 0 0 12px rgba(255,196,64,0.45); }
+        }
+      `}</style>
       <style>{`
         @keyframes pp-shop-affordable {
           0%, 100% { box-shadow: 0 0 0 0 rgba(255,196,64,0); }

@@ -13,6 +13,7 @@ import {
   FRUGALITY_MAX,
   FRUGALITY_MIN,
   FRUGALITY_PC_PER_POINT,
+  HELPERS,
   HELPERS_BY_ID,
   MERGE_PROXIMITY_PX,
   OFFLINE_CAP_HOURS,
@@ -1071,6 +1072,38 @@ export function applyHireHelper(
     newCount,
     cost,
   };
+}
+
+/** Greedy "max hire" for the Helpers tab — same pattern as
+ *  applyBuyMaxUpgrades. Hires the cheapest currently-affordable
+ *  helper in a loop until nothing's affordable. */
+export function applyHireMaxHelpers(
+  state: PennyPinchersGameState,
+): { state: PennyPinchersGameState; hired: number; spent: number } {
+  let working = state;
+  let hired = 0;
+  let spent = 0;
+  for (let i = 0; i < 5_000; i++) {
+    let cheapestId: HelperId | null = null;
+    let cheapestCost = Number.POSITIVE_INFINITY;
+    for (const def of HELPERS) {
+      const owned = working.helpers[def.id] ?? 0;
+      if (owned >= def.maxOwn) continue;
+      const cost = nextHelperCost(def.id, owned);
+      if (cost == null || cost > working.cents) continue;
+      if (cost < cheapestCost) {
+        cheapestCost = cost;
+        cheapestId = def.id;
+      }
+    }
+    if (!cheapestId) break;
+    const result = applyHireHelper(working, cheapestId);
+    if (!result.ok) break;
+    working = result.state;
+    hired += 1;
+    spent += result.cost;
+  }
+  return { state: working, hired, spent };
 }
 
 export function applyBuyPermUpgrade(
