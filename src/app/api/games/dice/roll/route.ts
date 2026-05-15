@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
 import { playOneShot, validateBet } from "@/lib/games/common";
 import { roll, type DiceDirection } from "@/lib/games/dice/engine";
+import { mulBigByNumber, toBig } from "@/lib/big-math";
 
 export const runtime = "nodejs";
 
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
       bet: v.bet,
       state: { target, direction: dir },
       runEngine: () => roll(target, dir, v.bet),
+      payoutBig: (o) => mulBigByNumber(toBig(v.bet), o.multiplier),
     });
     return NextResponse.json({
       ok: true,

@@ -5,6 +5,7 @@ import { credit, getBalance } from "@/lib/wallet";
 import { getCrashBet, insertGameSession, updateCrashBet } from "@/lib/db";
 import { multiplierAt } from "@/lib/games/crash/engine";
 import { getCrashState } from "@/lib/games/crash/scheduler";
+import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
 
 export const runtime = "nodejs";
 
@@ -57,11 +58,12 @@ export async function POST() {
 
   // Clamp to 2 decimal places to match what the client sees.
   const cashoutX = Math.floor(liveX * 100) / 100;
-  const payout = Math.floor(bet.bet * cashoutX);
+  const payoutBig = mulBigByNumber(toBig(bet.bet), cashoutX);
+  const payout = toNum(payoutBig);
 
   await credit({
     userId: s.user.id,
-    amount: payout,
+    amount: payoutBig,
     reason: "crash_cashout",
     refKind: "crash",
     refId: `${round.id}:${s.user.id}:cashout`,

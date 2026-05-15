@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
 import { playOneShot, validateBet } from "@/lib/games/common";
 import { flip, type CoinSide } from "@/lib/games/coinflip/engine";
+import { mulBigByNumber, toBig } from "@/lib/big-math";
 
 export const runtime = "nodejs";
 
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
       bet,
       state: { pick },
       runEngine: () => flip(pick, bet),
+      payoutBig: (o) => mulBigByNumber(toBig(bet), o.multiplier),
     });
     return NextResponse.json({
       ok: true,

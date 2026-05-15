@@ -7,11 +7,11 @@ import {
   doubleDown,
   hit,
   isTerminal,
-  payoutFor,
   publicView,
   stand,
   type BlackjackState,
 } from "@/lib/games/blackjack/engine";
+import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
 
 export const runtime = "nodejs";
 
@@ -74,11 +74,32 @@ export async function POST(req: Request, ctx: { params: Promise<{ sessionId: str
   let payout: number | null = null;
   let balance = await getBalance(s.user.id);
   if (isTerminal(state.status)) {
-    payout = payoutFor(state);
-    if (payout > 0) {
+    // BigInt-precise payout: derive the float win factor (2.5/2/1)
+    // from the terminal status, multiply the BigInt stake (which is
+    // doubled if the player doubled down).
+    let winFactor = 0;
+    switch (state.status) {
+      case "player_blackjack":
+        winFactor = 2.5;
+        break;
+      case "win":
+      case "dealer_bust":
+        winFactor = 2;
+        break;
+      case "push":
+        winFactor = 1;
+        break;
+      default:
+        winFactor = 0;
+    }
+    const stakeBig = state.doubled ? toBig(state.bet) * BigInt(2) : toBig(state.bet);
+    const payoutBig =
+      winFactor > 0 ? mulBigByNumber(stakeBig, winFactor) : BigInt(0);
+    payout = winFactor > 0 ? toNum(payoutBig) : 0;
+    if (payoutBig > BigInt(0)) {
       await credit({
         userId: s.user.id,
-        amount: payout,
+        amount: payoutBig,
         reason: "blackjack_settle",
         refKind: "blackjack",
         refId: `${sessionId}:settle`,

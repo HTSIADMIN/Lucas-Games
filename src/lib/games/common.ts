@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { credit, debit, getBalance } from "@/lib/wallet";
 import { insertGameSession, settleGameSession } from "@/lib/db";
+import { toBig, toNum } from "@/lib/big-math";
 
 export const MIN_BET = 100;
 /** Legacy export — there's no upper bet cap anymore. The wallet
@@ -32,6 +33,13 @@ export function validateBet(bet: unknown): { ok: true; bet: number } | { ok: fal
  * Settle a one-shot server-RNG game in a single transaction:
  *   debit(bet) → run engine → credit(payout if any) → settle session.
  * Returns the new balance and the engine's outcome.
+ *
+ * `bigPayout` (optional) overrides the credit amount with a
+ * BigInt-precise payout so very large stakes don't drift via JS
+ * `number` multiplication. When omitted, falls back to crediting
+ * `outcome.payout` (the engine's JS-number result). Callers that
+ * have a known multiplier should compute
+ * `mulBigByNumber(toBig(bet), multiplier)` and pass it here.
  */
 export async function playOneShot<T extends { payout: number }>(input: {
   userId: string;
@@ -39,6 +47,9 @@ export async function playOneShot<T extends { payout: number }>(input: {
   bet: number;
   state: Record<string, unknown>;
   runEngine: () => T;
+  /** Optional: derive from the engine's multiplier in the route and
+   *  pass through here so the wallet credit is BigInt-exact. */
+  payoutBig?: (outcome: T) => bigint;
 }): Promise<{ sessionId: string; balance: number; outcome: T }> {
   const sessionId = randomUUID();
 
@@ -62,17 +73,24 @@ export async function playOneShot<T extends { payout: number }>(input: {
 
   const outcome = input.runEngine();
 
-  if (outcome.payout > 0) {
+  // BigInt-precise payout when the route provides a deriver;
+  // otherwise the engine's `outcome.payout` (JS number) is used as-is.
+  const payoutBig: bigint = input.payoutBig
+    ? input.payoutBig(outcome)
+    : toBig(outcome.payout);
+  const payoutNum = toNum(payoutBig);
+
+  if (payoutBig > BigInt(0)) {
     await credit({
       userId: input.userId,
-      amount: outcome.payout,
+      amount: payoutBig,
       reason: `${input.game}_win`,
       refKind: input.game,
       refId: `${sessionId}:win`,
     });
   }
 
-  await settleGameSession(sessionId, outcome.payout, { ...input.state, ...outcome });
+  await settleGameSession(sessionId, payoutNum, { ...input.state, ...outcome });
 
   return { sessionId, balance: await getBalance(input.userId), outcome };
 }

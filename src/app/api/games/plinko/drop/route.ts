@@ -6,6 +6,7 @@ import { validateBet } from "@/lib/games/common";
 import { credit, debit, getBalance } from "@/lib/wallet";
 import { insertGameSession, insertPlinkoDrop } from "@/lib/db";
 import { drop, type PlinkoRisk, type PlinkoRows } from "@/lib/games/plinko/engine";
+import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
 
 export const runtime = "nodejs";
 
@@ -46,6 +47,12 @@ export async function POST(req: NextRequest) {
   const r = drop(rows, risk, v.bet);
   const seed = randomBytes(8).toString("hex");
 
+  // BigInt-precise payout from the engine's multiplier so the wallet
+  // credit doesn't drift past 9 quadrillion. `r.payout` (JS-number)
+  // is fine for the DB columns and JSON response.
+  const payoutBig = mulBigByNumber(toBig(v.bet), r.multiplier);
+  const payout = toNum(payoutBig);
+
   await insertPlinkoDrop({
     id,
     user_id: s.user.id,
@@ -54,14 +61,14 @@ export async function POST(req: NextRequest) {
     risk,
     bucket: r.bucket,
     multiplier: r.multiplier,
-    payout: r.payout,
+    payout,
     seed,
   });
 
-  if (r.payout > 0) {
+  if (payoutBig > BigInt(0)) {
     await credit({
       userId: s.user.id,
-      amount: r.payout,
+      amount: payoutBig,
       reason: "plinko_win",
       refKind: "plinko",
       refId: `${id}:win`,
@@ -74,7 +81,7 @@ export async function POST(req: NextRequest) {
     user_id: s.user.id,
     game: "plinko",
     bet: v.bet,
-    payout: r.payout,
+    payout,
     state: { rows, risk, bucket: r.bucket, multiplier: r.multiplier },
     status: "settled",
   });
@@ -84,7 +91,7 @@ export async function POST(req: NextRequest) {
     dropId: id,
     bucket: r.bucket,
     multiplier: r.multiplier,
-    payout: r.payout,
+    payout,
     table: r.table,
     rows,
     risk,

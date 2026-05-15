@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { readSession } from "@/lib/auth/session";
 import { credit, getBalance } from "@/lib/wallet";
 import { getMinesGame, insertGameSession, updateMinesGame } from "@/lib/db";
+import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
 
 export const runtime = "nodejs";
 
@@ -21,10 +22,11 @@ export async function POST(_req: Request, ctx: { params: Promise<{ gameId: strin
     return NextResponse.json({ error: "no_reveals" }, { status: 400 });
   }
 
-  const payout = Math.floor(game.bet * game.current_multiplier);
+  const payoutBig = mulBigByNumber(toBig(game.bet), Number(game.current_multiplier));
+  const payout = toNum(payoutBig);
   await credit({
     userId: s.user.id,
-    amount: payout,
+    amount: payoutBig,
     reason: "mines_cashout",
     refKind: "mines",
     refId: `${gameId}:cashout`,

@@ -12,6 +12,7 @@ import {
 } from "@/lib/db";
 import { credit, getBalance } from "@/lib/wallet";
 import { freshDeck, cardValue, type Card } from "@/lib/games/cards";
+import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
 
 export const BET_WINDOW_MS = 7_000;
 export const ACTION_WINDOW_MS = 7_000;
@@ -230,25 +231,31 @@ async function runDealerAndSettle(round: BlackjackRound, seats: BlackjackSeat[])
   const dBust = dTotal > 21;
 
   for (const s of seats) {
-    let payout = 0;
+    // BigInt-precise per-seat payout. Win factor is a clean
+    // float (2.5 for blackjack, 2 for win, 1 for push, 0 for loss);
+    // the stake is BigInt-promoted before any multiplication so a
+    // quadrillion-coin seat can't drift via JS-number math.
+    const stakeBig = s.doubled ? toBig(s.bet) * BigInt(2) : toBig(s.bet);
+    let winFactor = 0;
     if (s.status === "blackjack") {
-      // 3:2 unless dealer also blackjack → push
-      if (isBlackjack(dealer)) payout = s.bet; // push
-      else payout = Math.floor(s.bet * 2.5);
+      // 3:2 unless dealer also blackjack → push.
+      winFactor = isBlackjack(dealer) ? 1 : 2.5;
     } else if (s.status === "standing") {
       const pTotal = handTotal(s.hand as Card[]);
-      const stake = s.doubled ? s.bet * 2 : s.bet;
-      if (dBust || pTotal > dTotal) payout = stake * 2;
-      else if (pTotal === dTotal) payout = stake;
-      else payout = 0;
+      if (dBust || pTotal > dTotal) winFactor = 2;
+      else if (pTotal === dTotal) winFactor = 1;
+      else winFactor = 0;
     } else if (s.status === "busted") {
-      payout = 0; // already lost (bet was debited at place-bet time)
+      winFactor = 0; // already lost (bet was debited at place-bet time)
     }
+    const payoutBig =
+      winFactor > 0 ? mulBigByNumber(stakeBig, winFactor) : BigInt(0);
+    const payout = toNum(payoutBig);
 
-    if (payout > 0) {
+    if (payoutBig > BigInt(0)) {
       await credit({
         userId: s.user_id,
-        amount: payout,
+        amount: payoutBig,
         reason: "blackjack_settle",
         refKind: "blackjack",
         refId: `${round.id}:${s.user_id}:settle`,

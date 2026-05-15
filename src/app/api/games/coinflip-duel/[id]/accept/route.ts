@@ -4,6 +4,7 @@ import { credit, debit, getBalance } from "@/lib/wallet";
 import { getCoinflipDuel, insertGameSession, updateCoinflipDuel } from "@/lib/db";
 import { randomUUID } from "node:crypto";
 import { randInt } from "@/lib/games/rng";
+import { toBig, toNum } from "@/lib/big-math";
 
 export const runtime = "nodejs";
 
@@ -34,11 +35,14 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   // Server flip — fair 50/50.
   const result: "heads" | "tails" = randInt(0, 1) === 0 ? "heads" : "tails";
   const winnerId = result === duel.challenger_side ? duel.challenger_id : s.user.id;
-  const pot = duel.wager * 2;
+  // Pot is the two matched wagers — BigInt-precise so past 9 quadrillion
+  // the doubling doesn't drift.
+  const potBig = toBig(duel.wager) * BigInt(2);
+  const pot = toNum(potBig);
 
   await credit({
     userId: winnerId,
-    amount: pot,
+    amount: potBig,
     reason: "coinflip_duel_win",
     refKind: "coinflip_duel",
     refId: `${id}:settle`,

@@ -12,6 +12,7 @@ import {
   type BonusCell,
 } from "@/lib/games/slots/engine";
 import { randomUUID } from "node:crypto";
+import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
 
 export const runtime = "nodejs";
 
@@ -63,20 +64,36 @@ export async function POST() {
     filledScreen: result.filledScreen,
   });
 
+  // BigInt-precise bonus payout: the engine computes
+  // `Math.floor(coinTotal * mult * (bet / 20))` in JS-number, which
+  // drifts at quadrillion-scale stakes. Derive the effective bonus
+  // multiplier from the engine's result and re-multiply against the
+  // BigInt bet so the wallet credit stays exact.
+  let bonusPayoutBig = BigInt(0);
+  if (settled.payout > 0 && run.bet > 0) {
+    const bonusMultiplier = settled.payout / run.bet;
+    bonusPayoutBig = mulBigByNumber(toBig(run.bet), bonusMultiplier);
+  } else if (settled.payout > 0) {
+    // Defensive: if bet was 0 (shouldn't happen for a real bonus run),
+    // fall back to the engine's number to keep behavior stable.
+    bonusPayoutBig = toBig(settled.payout);
+  }
+  const bonusPayoutOut = toNum(bonusPayoutBig);
+
   await updateSlotRun(run.id, {
     grid: result.board,
     respins_left: 0,
     coins_locked: result.coinsLocked,
     building_tier: settled.tier,
-    final_payout: settled.payout,
+    final_payout: bonusPayoutOut,
     status: "settled",
     ended_at: new Date().toISOString(),
   });
 
-  if (settled.payout > 0) {
+  if (bonusPayoutBig > BigInt(0)) {
     await credit({
       userId: s.user.id,
-      amount: settled.payout,
+      amount: bonusPayoutBig,
       reason: "slots_bonus_win",
       refKind: "slots",
       refId: `${run.id}:bonus`,
@@ -89,7 +106,7 @@ export async function POST() {
     user_id: s.user.id,
     game: "slots",
     bet: 0,
-    payout: settled.payout,
+    payout: bonusPayoutOut,
     state: {
       kind: "bonus_settle",
       tier: settled.tier,
@@ -110,7 +127,7 @@ export async function POST() {
     coinsLocked: result.coinsLocked,
     tier: settled.tier,
     filledScreen: result.filledScreen,
-    payout: settled.payout,
+    payout: bonusPayoutOut,
     coinTotal: settled.coinTotal,
     balance: await getBalance(s.user.id),
   });

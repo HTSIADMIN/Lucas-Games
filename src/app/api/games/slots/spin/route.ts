@@ -19,6 +19,7 @@ import {
   type ReelCell,
 } from "@/lib/games/slots/engine";
 import { getJackpotPool, rollJackpotTrigger, STARTING_POOL } from "@/lib/games/slots/jackpot";
+import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
 
 export const runtime = "nodejs";
 
@@ -91,9 +92,11 @@ export async function POST(req: Request) {
     const poolNow = await getJackpotPool();
     jackpotPayout = poolNow - STARTING_POOL;
     if (jackpotPayout > 0) {
+      // Jackpot is a fixed pool amount — no multiplication, just
+      // BigInt-coerce so the wallet credit stays exact end-to-end.
       await credit({
         userId: s.user.id,
-        amount: jackpotPayout,
+        amount: toBig(jackpotPayout),
         reason: "slots_jackpot",
         refKind: "slots",
         refId: `${sessionId}:jackpot`,
@@ -105,16 +108,23 @@ export async function POST(req: Request) {
   const meterIn = meterIn0;
   const result = baseSpin(bet, meterIn);
 
-  // Credit line wins
+  // Credit line wins. The engine sums per-line `Math.floor((bet / 20)
+  // * pay)` in JS-number, which drifts past 9 quadrillion. Derive the
+  // overall float multiplier from result.linePayout / bet and
+  // re-multiply against toBig(bet) for the wallet credit.
+  let linePayoutBig = BigInt(0);
   if (result.linePayout > 0) {
+    const lineMultiplier = result.linePayout / bet;
+    linePayoutBig = mulBigByNumber(toBig(bet), lineMultiplier);
     await credit({
       userId: s.user.id,
-      amount: result.linePayout,
+      amount: linePayoutBig,
       reason: "slots_win",
       refKind: "slots",
       refId: `${sessionId}:lines`,
     });
   }
+  const linePayoutOut = result.linePayout > 0 ? toNum(linePayoutBig) : 0;
 
   // Persist meter
   await setSlotsMeter(s.user.id, result.meterAfter);
@@ -125,7 +135,7 @@ export async function POST(req: Request) {
     user_id: s.user.id,
     game: "slots",
     bet,
-    payout: result.linePayout,
+    payout: linePayoutOut,
     state: {
       coinCount: result.triggerCoinCount,
       bonusTriggered: result.bonusTriggered,
@@ -160,7 +170,7 @@ export async function POST(req: Request) {
     ok: true,
     grid: wireGrid,
     lineWins: result.lineWins,
-    linePayout: result.linePayout,
+    linePayout: linePayoutOut,
     coinCount: result.triggerCoinCount,
     bonusTriggered: result.bonusTriggered,
     runId,

@@ -5,6 +5,7 @@ import { credit, debit, getBalance } from "@/lib/wallet";
 import { insertGameSession, settleGameSession } from "@/lib/db";
 import { spin, validateBet, type RouletteBet } from "@/lib/games/roulette/engine";
 import { getHotNumber, HOT_PAYOUT, STRAIGHT_PAYOUT } from "@/lib/games/roulette/hot";
+import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
 
 export const runtime = "nodejs";
 
@@ -53,10 +54,22 @@ export async function POST(req: Request) {
     status: "open",
   });
 
-  if (result.totalPayout > 0) {
+  // BigInt-precise total payout: derive each winning row's float
+  // multiplier from `row.payout / row.amount` (always an integer:
+  // 2/3/36) and re-multiply against the BigInt stake. Sum with
+  // BigInt `+` so quadrillion-scale stakes don't drift.
+  let totalPayoutBig = BigInt(0);
+  for (const row of result.rows) {
+    if (!row.win || row.payout <= 0 || row.amount <= 0) continue;
+    const m = row.payout / row.amount;
+    totalPayoutBig = totalPayoutBig + mulBigByNumber(toBig(row.amount), m);
+  }
+  const totalPayoutNum = toNum(totalPayoutBig);
+
+  if (totalPayoutBig > BigInt(0)) {
     await credit({
       userId: s.user.id,
-      amount: result.totalPayout,
+      amount: totalPayoutBig,
       reason: "roulette_settle",
       refKind: "roulette",
       refId: `${sessionId}:settle`,
@@ -68,25 +81,29 @@ export async function POST(req: Request) {
   // payout from 35× (already credited above) to 50×. The bonus delta
   // is HOT_PAYOUT - STRAIGHT_PAYOUT = 15× the straight stake.
   const hot = getHotNumber();
-  let hotBonus = 0;
+  let hotBonusBig = BigInt(0);
   if (result.winning === hot.value) {
     for (const b of bets) {
       if (b.type === "straight" && b.value === hot.value) {
-        hotBonus += b.amount * (HOT_PAYOUT - STRAIGHT_PAYOUT);
+        hotBonusBig =
+          hotBonusBig +
+          mulBigByNumber(toBig(b.amount), HOT_PAYOUT - STRAIGHT_PAYOUT);
       }
     }
   }
-  if (hotBonus > 0) {
+  const hotBonus = toNum(hotBonusBig);
+  if (hotBonusBig > BigInt(0)) {
     await credit({
       userId: s.user.id,
-      amount: hotBonus,
+      amount: hotBonusBig,
       reason: "roulette_hot_bonus",
       refKind: "roulette",
       refId: `${sessionId}:hot`,
     });
   }
 
-  await settleGameSession(sessionId, result.totalPayout + hotBonus, { bets, ...result, hot: hot.value, hotBonus });
+  const totalOut = toNum(totalPayoutBig + hotBonusBig);
+  await settleGameSession(sessionId, totalOut, { bets, ...result, totalPayout: totalPayoutNum, hot: hot.value, hotBonus });
 
   return NextResponse.json({
     ok: true,
@@ -95,7 +112,7 @@ export async function POST(req: Request) {
     color: result.color,
     rows: result.rows,
     totalBet: result.totalBet,
-    totalPayout: result.totalPayout + hotBonus,
+    totalPayout: totalOut,
     hotNumber: hot.value,
     hotBonus,
     balance: await getBalance(s.user.id),

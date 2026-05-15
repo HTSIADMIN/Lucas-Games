@@ -4,7 +4,8 @@ import { readSession } from "@/lib/auth/session";
 import { validateBet } from "@/lib/games/common";
 import { credit, debit, getBalance } from "@/lib/wallet";
 import { insertGameSession, settleGameSession } from "@/lib/db";
-import { isTerminal, payoutFor, publicView, startHand, type BlackjackState } from "@/lib/games/blackjack/engine";
+import { isTerminal, publicView, startHand, type BlackjackState } from "@/lib/games/blackjack/engine";
+import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
 
 export const runtime = "nodejs";
 
@@ -43,11 +44,33 @@ export async function POST(req: Request) {
     let balance = await getBalance(s.user.id);
     let payout = 0;
     if (isTerminal(state.status)) {
-      payout = payoutFor(state);
-      if (payout > 0) {
+      // BigInt-precise payout: derive the float win factor from the
+      // terminal status so wallet credits stay exact past 9 quadrillion.
+      // The deal hand can only terminate at player_blackjack, push (both
+      // blackjack), or loss (dealer blackjack vs player non-blackjack).
+      let winFactor = 0;
+      switch (state.status) {
+        case "player_blackjack":
+          winFactor = 2.5;
+          break;
+        case "win":
+        case "dealer_bust":
+          winFactor = 2;
+          break;
+        case "push":
+          winFactor = 1;
+          break;
+        default:
+          winFactor = 0;
+      }
+      const stakeBig = state.doubled ? toBig(state.bet) * BigInt(2) : toBig(state.bet);
+      const payoutBig =
+        winFactor > 0 ? mulBigByNumber(stakeBig, winFactor) : BigInt(0);
+      payout = toNum(payoutBig);
+      if (payoutBig > BigInt(0)) {
         await credit({
           userId: s.user.id,
-          amount: payout,
+          amount: payoutBig,
           reason: "blackjack_settle",
           refKind: "blackjack",
           refId: `${sessionId}:settle`,
