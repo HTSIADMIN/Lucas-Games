@@ -800,9 +800,11 @@ export async function getStateView(tableId: string, currentUserId: string): Prom
 
 // Sit / leave helpers ------------------------------------------------
 
-/** Hard cap on a poker buy-in. Set to match MAX_BET (100B) so a
- *  whale can sit deep at any stakes. */
-export const MAX_POKER_BUYIN = 100_000_000_000;
+/** Legacy export — poker buy-in is uncapped now (matches MAX_BET
+ *  removal site-wide). The player's wallet balance is the real cap.
+ *  A whale can sit a quadrillion-coin stack at any stakes; debit
+ *  rejects on insufficient_funds, not on size. */
+export const MAX_POKER_BUYIN = Number.POSITIVE_INFINITY;
 
 export async function sitDown(tableId: string, userId: string, buyIn: number): Promise<{ ok: true; seatNo: number } | { ok: false; error: string }> {
   const table = await getTable(tableId);

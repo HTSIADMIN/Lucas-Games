@@ -24,7 +24,8 @@ export async function POST(req: Request) {
     if (e) return NextResponse.json({ error: e }, { status: 400 });
   }
   const total = bets.reduce((sum, b) => sum + b.amount, 0);
-  if (total > 100_000_000_000) return NextResponse.json({ error: "bet_too_high" }, { status: 400 });
+  // No upper cap — the wallet balance is the only real ceiling.
+  // debit() throws insufficient_funds if the total exceeds it.
 
   const sessionId = randomUUID();
   try {

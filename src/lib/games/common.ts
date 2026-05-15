@@ -4,21 +4,27 @@ import { credit, debit, getBalance } from "@/lib/wallet";
 import { insertGameSession, settleGameSession } from "@/lib/db";
 
 export const MIN_BET = 100;
-/** Hard ceiling on a single bet. Set to Number.MAX_SAFE_INTEGER so
- *  the validator effectively never rejects on size — the wallet
- *  balance is the real cap (you can't bet more than you have).
- *  Past ~9 quadrillion JS number precision starts drifting on
- *  arithmetic, but the named-tier display formatter (`formatAmount`)
- *  hides those digits anyway. The constant is kept around so any
- *  legacy caller that imports it still works. */
-export const MAX_BET = Number.MAX_SAFE_INTEGER;
+/** Legacy export — there's no upper bet cap anymore. The wallet
+ *  balance is the only real ceiling (debit throws insufficient_funds
+ *  if you don't have it). Postgres `bigint` storage holds up to
+ *  9.22 quintillion, ~45× above any current player balance; past 9
+ *  quadrillion JS `number` arithmetic drifts by 1–64 ¢ per op but
+ *  the named-tier display formatter (`formatAmount`) hides those
+ *  drift digits, so it's invisible in play. If you ever cross the
+ *  9 quintillion DB wall, switch the wallet to BigInt or
+ *  break_infinity.js — but that's many years of play away. */
+export const MAX_BET = Number.POSITIVE_INFINITY;
 
 export function validateBet(bet: unknown): { ok: true; bet: number } | { ok: false; error: string } {
+  // Number.isInteger is true for any whole-value JS number including
+  // those past MAX_SAFE_INTEGER (which can only represent integers
+  // anyway — every other one past 2^53), so the existing integer
+  // check still passes for stupendously large stakes. The upper-cap
+  // check is gone — the wallet balance is the cap.
   if (typeof bet !== "number" || !Number.isFinite(bet) || !Number.isInteger(bet)) {
     return { ok: false, error: "bet_invalid" };
   }
   if (bet < MIN_BET) return { ok: false, error: "bet_too_low" };
-  if (bet > MAX_BET) return { ok: false, error: "bet_too_high" };
   return { ok: true, bet };
 }
 
