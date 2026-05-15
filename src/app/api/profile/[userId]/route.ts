@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
-import { getUserById } from "@/lib/db";
+import { getUserById, recentTransactions } from "@/lib/db";
 import { getBalance } from "@/lib/wallet";
 import { levelFromXp, xpFromCoinsWagered } from "@/lib/xp";
 import { getChampionId } from "@/lib/champion";
@@ -64,6 +64,21 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
 
   const championId = await getChampionId();
 
+  // Recent wallet activity — only surfaced on the requester's OWN
+  // profile. Other users' ledger history stays private. 25 rows is
+  // about a screenful of history; the helper sorts newest-first.
+  const isMe = userId === s.user.id;
+  const transactions = isMe
+    ? (await recentTransactions(userId, 25)).map((t) => ({
+        id: t.id,
+        delta: t.delta,
+        reason: t.reason,
+        refKind: t.ref_kind,
+        refId: t.ref_id,
+        createdAt: t.created_at,
+      }))
+    : [];
+
   return NextResponse.json({
     user: {
       id: user.id,
@@ -97,5 +112,6 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
         return { xp, ...l, totalNetWon: netWon };
       })(),
     },
+    transactions,
   });
 }

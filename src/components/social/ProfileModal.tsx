@@ -7,6 +7,15 @@ import { useBigBetToastMuted } from "@/lib/preferences";
 import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
+type Transaction = {
+  id: number;
+  delta: number;
+  reason: string;
+  refKind: string | null;
+  refId: string | null;
+  createdAt: string;
+};
+
 type ProfileData = {
   user: {
     id: string;
@@ -37,6 +46,9 @@ type ProfileData = {
     intoLevelXp: number;
     toNextXp: number;
   };
+  /** Newest-first wallet ledger entries — only populated on the
+   *  requester's own profile, empty for everyone else. */
+  transactions: Transaction[];
 };
 
 const GAME_LABEL: Record<string, string> = {
@@ -52,6 +64,97 @@ const GAME_LABEL: Record<string, string> = {
   daily_spin: "Daily Spin",
   crossy_road: "Crossy Road",
 };
+
+/** Map a wallet `reason` string to a player-facing label. Falls
+ *  through to a title-cased version of the raw reason for any
+ *  string not listed here — newer codepaths land sensibly even
+ *  before this map is updated. */
+const REASON_LABEL: Record<string, string> = {
+  signup_bonus: "Welcome bonus",
+  // Slots
+  slots_bet: "Slots — bet",
+  slots_win: "Slots — line win",
+  slots_bonus_win: "Slots — bonus win",
+  slots_jackpot: "Slots — JACKPOT!",
+  // Blackjack
+  blackjack_bet: "Blackjack — bet",
+  blackjack_win: "Blackjack — win",
+  blackjack_payout: "Blackjack — settle",
+  blackjack_mp_bet: "Blackjack MP — bet",
+  blackjack_mp_win: "Blackjack MP — settle",
+  // Roulette
+  roulette_bet: "Roulette — bet",
+  roulette_win: "Roulette — win",
+  roulette_settle: "Roulette — settle",
+  roulette_hot_bonus: "Roulette — hot bonus",
+  // Mines
+  mines_bet: "Mines — bet",
+  mines_cashout: "Mines — cashout",
+  // Crash
+  crash_bet: "Crash — bet",
+  crash_cashout: "Crash — cashout",
+  // Plinko / dice / coinflip / poker / scratch
+  plinko_bet: "Plinko — bet",
+  plinko_win: "Plinko — win",
+  dice_bet: "Dice — bet",
+  dice_win: "Dice — win",
+  coinflip_bet: "Coin Flip — bet",
+  coinflip_win: "Coin Flip — win",
+  coinflip_duel_bet: "Coin Flip duel — bet",
+  coinflip_duel_win: "Coin Flip duel — win",
+  poker_bet: "Poker — buy-in",
+  poker_win: "Poker — payout",
+  scratch_bet: "Scratch — ticket",
+  scratch_win: "Scratch — payout",
+  // Tip
+  tip_send: "Tip sent",
+  tip_received: "Tip received",
+  // Earn games
+  daily_spin: "Daily Spin reward",
+  penny_pinchers_bank: "Penny Pinchers bank",
+  monopoly_roll: "Monopoly roll",
+  monopoly_pack: "Monopoly pack",
+  monopoly_mystery_pay: "Monopoly mystery — pay",
+  monopoly_upgrade: "Monopoly upgrade",
+  flappy_score: "Flappy reward",
+  snake_score: "Snake reward",
+  crossy_road_score: "Crossy Road reward",
+  // Shop / cosmetics
+  shop_buy: "Shop purchase",
+  shop_pack_open: "Shop pack opened",
+  shop_pack_buy: "Shop pack",
+  // Clans / challenges
+  clan_create: "Clan founded",
+  clan_chest_open: "Clan chest",
+  challenge_reward: "Daily challenge reward",
+  arcade_upgrade: "Arcade upgrade",
+};
+
+function labelForReason(reason: string): string {
+  if (REASON_LABEL[reason]) return REASON_LABEL[reason];
+  // Fallback: prefix prefixes are usually `<game>_<action>`. Title-
+  // case + replace underscores for a passable display string.
+  return reason
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/** Compact relative-time stamp for the transaction list. */
+function formatAgo(iso: string): string {
+  const t = new Date(iso).getTime();
+  const delta = Date.now() - t;
+  if (!Number.isFinite(delta) || delta < 0) return "just now";
+  const sec = Math.floor(delta / 1000);
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return `${day}d ago`;
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
 
 export function ProfileModal({
   userId,
@@ -229,6 +332,14 @@ export function ProfileModal({
                 </table>
               </>
             )}
+            {data.transactions.length > 0 && (
+              <>
+                <div className="divider" style={{ marginTop: "var(--sp-5)", marginBottom: "var(--sp-3)" }}>
+                  Recent Activity
+                </div>
+                <WalletHistory rows={data.transactions} />
+              </>
+            )}
             {userId === "me" && (
               <Link
                 href="/shop#loadout"
@@ -390,4 +501,71 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "mo
 function formatDate(iso: string) {
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+/** Scrollable wallet ledger panel — newest first, signed deltas
+ *  colored win/loss, reason labels prettified via REASON_LABEL.
+ *  Capped at ~280px tall so the modal stays manageable; overflow
+ *  scrolls. */
+function WalletHistory({ rows }: { rows: Transaction[] }) {
+  return (
+    <div
+      className="panel"
+      style={{
+        background: "var(--parchment-50)",
+        padding: 0,
+        maxHeight: 280,
+        overflowY: "auto",
+      }}
+    >
+      {rows.map((tx) => {
+        const positive = tx.delta >= 0;
+        const sign = positive ? "+" : "";
+        const color = positive ? "var(--cactus-500)" : "var(--crimson-500)";
+        return (
+          <div
+            key={tx.id}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              alignItems: "baseline",
+              gap: 8,
+              padding: "8px 12px",
+              borderBottom: "1px dashed var(--saddle-200)",
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 13,
+                  color: "var(--ink-900)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {labelForReason(tx.reason)}
+              </div>
+              <div className="text-mute" style={{ fontSize: 11 }}>
+                {formatAgo(tx.createdAt)}
+              </div>
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 14,
+                color,
+                textAlign: "right",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {sign}
+              {formatAmount(tx.delta)} ¢
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
