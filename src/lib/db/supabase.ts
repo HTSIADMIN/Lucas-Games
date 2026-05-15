@@ -151,6 +151,14 @@ export async function resetPinAttempts(userId: string): Promise<void> {
 export async function insertWalletTransaction(
   input: Omit<WalletTransaction, "id" | "created_at">
 ): Promise<WalletTransaction> {
+  // After migration 0041, `delta` is Postgres `numeric` so PostgREST
+  // returns it as a string. Coerce to number at the boundary so the
+  // declared WalletTransaction.delta type stays honest.
+  type RawTx = Omit<WalletTransaction, "delta"> & { delta: number | string };
+  const toTx = (row: RawTx): WalletTransaction => ({
+    ...row,
+    delta: Number(row.delta),
+  });
   if (input.ref_kind && input.ref_id) {
     const { data: existing, error: lookupErr } = await client()
       .from("wallet_transactions")
@@ -159,7 +167,7 @@ export async function insertWalletTransaction(
       .eq("ref_id", input.ref_id)
       .maybeSingle();
     if (lookupErr) throw new Error(`insertWalletTransaction lookup: ${lookupErr.message}`);
-    if (existing) return existing as WalletTransaction;
+    if (existing) return toTx(existing as RawTx);
   }
   const { data, error } = await client()
     .from("wallet_transactions")
@@ -173,7 +181,7 @@ export async function insertWalletTransaction(
     .select("*")
     .single();
   if (error) throw new Error(`insertWalletTransaction: ${error.message}`);
-  return data as WalletTransaction;
+  return toTx(data as RawTx);
 }
 
 export async function walletBalance(userId: string): Promise<number> {
@@ -194,7 +202,17 @@ export async function recentTransactions(userId: string, limit = 20): Promise<Wa
     .order("id", { ascending: false })
     .limit(limit);
   if (error) throw new Error(`recentTransactions: ${error.message}`);
-  return (data ?? []) as WalletTransaction[];
+  // `delta` is `numeric` on the column (since migration 0041) so
+  // PostgREST returns it as a string to preserve precision. Coerce
+  // back to `number` at the JS boundary so callers see the same
+  // type they always did. Past 9 quadrillion this loses 1–64 ¢
+  // precision per row, but the named-tier formatter hides those
+  // digits in the UI.
+  type RawTx = Omit<WalletTransaction, "delta"> & { delta: number | string };
+  return ((data ?? []) as RawTx[]).map((r) => ({
+    ...r,
+    delta: Number(r.delta),
+  }));
 }
 
 // ============ GAME SESSIONS ============

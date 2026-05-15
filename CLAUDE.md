@@ -39,6 +39,16 @@ Top-level layout:
 | `src/lib/clans/` `src/lib/challenges/` `src/lib/arcade/` | Subsystem modules |
 | `supabase/migrations/` | `0001_…` through `0039_…` — append-only, never edit landed migrations |
 
+## Wallet ledger — numeric storage, formatter-hidden JS drift
+
+Migration `0041_wallet_numeric` switched `wallet_transactions.delta` from `bigint` to Postgres `numeric` (arbitrary precision) so the ledger has effectively no storage ceiling. `wallet_balances` and the `leaderboard` view both cascade through `numeric` now; `slots_jackpot_ledger_sum()` returns `numeric` too.
+
+Wire-format note: PostgREST serializes `numeric` columns as **strings** to preserve precision past JS `Number.MAX_SAFE_INTEGER`. Every wallet read in [`src/lib/db/supabase.ts`](src/lib/db/supabase.ts) (`walletBalance`, `recentTransactions`, `insertWalletTransaction`, `slotsJackpotLedgerSum`) coerces `Number(...)` at the boundary so callers still see plain JS numbers. The four direct `from("wallet_balances")` reads in `/api/app/snapshot`, `/api/feed/big-bets`, `LiveProvider`, and `/api/earn/penny-pinchers/leaderboard` also coerce.
+
+What this leaves on the table: past 9 quadrillion (`Number.MAX_SAFE_INTEGER`), JS `number` arithmetic drifts by 1–64 ¢ per operation. The drift is invisible because the named-tier formatter [`formatAmount`](src/lib/format.ts) only renders the leading three significant digits ("1.94Qi" instead of "1,937,767,637,411,183,653"). If precision past 9Qa ever becomes user-visible, swap the JS wallet layer to BigInt (read strings as-is, parse to BigInt, format via `toString()`) — that's a follow-up refactor that's not yet needed because the storage wall is gone and the display layer hides the drift.
+
+There are **no bet caps** anywhere site-wide as of this same commit pass — `MAX_BET = Number.POSITIVE_INFINITY` in [`src/lib/games/common.ts`](src/lib/games/common.ts), `MAX_POKER_BUYIN` is infinity, the roulette total-stake cap is gone, the `/tip` chat command has no upper limit. The player's wallet balance is the only real cap on any action.
+
 ## Snapshot packet optimizer
 
 `/api/app/snapshot` ([src/app/api/app/snapshot/route.ts](src/app/api/app/snapshot/route.ts)) is the **single per-user poll** that replaced five separate ones:
