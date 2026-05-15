@@ -188,15 +188,58 @@ export function ProfileModal({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "var(--sp-4)",
+        padding: "var(--sp-3)",
       }}
     >
+      <style>{`
+        /* Mobile tightening for the profile modal. The desktop layout
+           sits at 96px avatar + sp-6 padding + a row header; on a
+           360px phone that leaves almost no room for the username +
+           XP bar. These rules trim padding, scale the avatar down,
+           and let the header row wrap cleanly. */
+        @media (max-width: 540px) {
+          .pp-profile-modal {
+            padding: var(--sp-3) !important;
+          }
+          .pp-profile-modal .pp-profile-header {
+            flex-wrap: wrap;
+            gap: var(--sp-3) !important;
+            margin-bottom: var(--sp-4) !important;
+          }
+          .pp-profile-modal .pp-profile-avatar-slot {
+            flex: 0 0 auto;
+          }
+          .pp-profile-modal .pp-profile-headline {
+            font-size: var(--fs-h3) !important;
+          }
+          .pp-profile-modal .pp-profile-stats {
+            gap: var(--sp-2) !important;
+          }
+          .pp-profile-modal .pp-profile-stats .panel {
+            padding: var(--sp-2) !important;
+          }
+          .pp-profile-modal .pp-profile-stats .label {
+            font-size: 10px;
+          }
+          .pp-profile-modal .pp-profile-stats .pp-stat-value {
+            font-size: var(--fs-body-lg) !important;
+          }
+          /* By-game table — let the numeric columns shrink so the
+             game name takes the remainder, and tighten row padding. */
+          .pp-profile-modal table.pp-profile-bygame td,
+          .pp-profile-modal table.pp-profile-bygame th {
+            padding: 4px 2px !important;
+            font-size: 12px !important;
+          }
+        }
+      `}</style>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="panel panel-wood"
+        className="panel panel-wood pp-profile-modal"
         style={{
+          position: "relative",
           width: "min(560px, 100%)",
-          maxHeight: "calc(100vh - 64px)",
+          maxHeight: "calc(100dvh - 32px)",
           overflowY: "auto",
           padding: "var(--sp-6)",
           background: "var(--parchment-100)",
@@ -209,7 +252,9 @@ export function ProfileModal({
           onClick={onClose}
           aria-label="close"
           style={{
-            float: "right",
+            position: "absolute",
+            top: "var(--sp-2)",
+            right: "var(--sp-2)",
             background: "var(--saddle-200)",
             color: "var(--parchment-50)",
             border: "3px solid var(--ink-900)",
@@ -219,6 +264,7 @@ export function ProfileModal({
             fontSize: 18,
             cursor: "pointer",
             boxShadow: "var(--bevel-light), var(--bevel-dark)",
+            zIndex: 1,
           }}
         >
           ×
@@ -228,25 +274,42 @@ export function ProfileModal({
         {error && <p style={{ color: "var(--crimson-500)" }}>Couldn't load profile.</p>}
         {data && (
           <>
-            <div className="row" style={{ marginBottom: "var(--sp-5)" }}>
-              <Avatar
-                initials={data.user.initials}
-                color={data.user.avatarColor}
-                size={96}
-                fontSize={32}
-                level={data.xp?.level}
-                frame={data.user.equipped.frame}
-                hat={data.user.equipped.hat ?? null}
-                champion={!!data.user.isChampion}
-              />
-              <div style={{ flex: 1 }}>
-                <h2 style={{ margin: 0, fontSize: "var(--fs-h2)" }}>{data.user.username}</h2>
+            <div
+              className="row pp-profile-header"
+              style={{ marginBottom: "var(--sp-5)", alignItems: "center" }}
+            >
+              <div className="pp-profile-avatar-slot">
+                <Avatar
+                  initials={data.user.initials}
+                  color={data.user.avatarColor}
+                  size={80}
+                  fontSize={28}
+                  level={data.xp?.level}
+                  frame={data.user.equipped.frame}
+                  hat={data.user.equipped.hat ?? null}
+                  champion={!!data.user.isChampion}
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h2
+                  className="pp-profile-headline"
+                  style={{
+                    margin: 0,
+                    fontSize: "var(--fs-h2)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    paddingRight: 40,
+                  }}
+                >
+                  {data.user.username}
+                </h2>
                 <p className="text-mute" style={{ fontSize: "var(--fs-small)", marginBottom: 6 }}>
                   Member since {data.user.memberSince ? formatDate(data.user.memberSince) : "—"}
                 </p>
                 {data.xp && (
                   <div>
-                    <div className="row" style={{ gap: 6, alignItems: "baseline" }}>
+                    <div className="row" style={{ gap: 6, alignItems: "baseline", flexWrap: "wrap" }}>
                       <span style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)", color: "var(--gold-500)", textShadow: "2px 2px 0 var(--gold-100)" }}>
                         LVL {data.xp.level}
                       </span>
@@ -278,7 +341,10 @@ export function ProfileModal({
               </div>
             </div>
 
-            <div className="grid grid-2" style={{ marginBottom: "var(--sp-5)", gap: "var(--sp-3)" }}>
+            <div
+              className="grid grid-2 pp-profile-stats"
+              style={{ marginBottom: "var(--sp-5)", gap: "var(--sp-3)" }}
+            >
               <Stat label="Balance" value={`${formatAmount(data.stats.balance)} ¢`} tone="money" />
               <Stat
                 label="Net P/L"
@@ -303,7 +369,10 @@ export function ProfileModal({
                 <div className="divider" style={{ marginBottom: "var(--sp-3)" }}>
                   By Game
                 </div>
-                <table style={{ width: "100%", fontFamily: "var(--font-display)", fontSize: 14 }}>
+                <table
+                  className="pp-profile-bygame"
+                  style={{ width: "100%", fontFamily: "var(--font-display)", fontSize: 14 }}
+                >
                   <thead>
                     <tr style={{ borderBottom: "2px dashed var(--saddle-300)" }}>
                       <th style={{ textAlign: "left", padding: "6px 4px" }}>Game</th>
@@ -485,11 +554,15 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "mo
     <div className="panel" style={{ background: "var(--parchment-200)", padding: "var(--sp-3)" }}>
       <div className="label" style={{ marginBottom: 4 }}>{label}</div>
       <div
+        className="pp-stat-value"
         style={{
           fontFamily: "var(--font-display)",
           fontSize: "var(--fs-h4)",
           color,
           textShadow: tone === "money" ? "2px 2px 0 var(--gold-100)" : undefined,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         }}
       >
         {value}

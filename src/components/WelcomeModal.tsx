@@ -38,14 +38,37 @@ export function WelcomeModal({ startingBalance = 25_000 }: { startingBalance?: n
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "var(--sp-4)",
+        padding: "var(--sp-3)",
       }}
     >
+      <style>{`
+        /* Phones get a tighter padded card so the 48px balance number
+           and the tip stack fit comfortably without scrolling. */
+        @media (max-width: 480px) {
+          .pp-welcome-card {
+            padding: var(--sp-4) !important;
+          }
+          .pp-welcome-card .pp-welcome-title {
+            font-size: var(--fs-h3) !important;
+            margin-bottom: var(--sp-2) !important;
+          }
+          .pp-welcome-card .pp-welcome-balance {
+            font-size: 36px !important;
+            margin-bottom: var(--sp-3) !important;
+          }
+          .pp-welcome-card .pp-welcome-tips {
+            font-size: 12px !important;
+            text-align: left;
+          }
+        }
+      `}</style>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="panel-wood"
+        className="panel-wood pp-welcome-card"
         style={{
           width: "min(440px, 100%)",
+          maxHeight: "calc(100dvh - 32px)",
+          overflowY: "auto",
           padding: "var(--sp-6)",
           border: "4px solid var(--ink-900)",
           boxShadow: "var(--sh-popover), var(--glow-gold)",
@@ -55,6 +78,7 @@ export function WelcomeModal({ startingBalance = 25_000 }: { startingBalance?: n
         }}
       >
         <div
+          className="pp-welcome-title"
           style={{
             fontFamily: "var(--font-display)",
             fontSize: "var(--fs-h2)",
@@ -64,12 +88,13 @@ export function WelcomeModal({ startingBalance = 25_000 }: { startingBalance?: n
             marginBottom: "var(--sp-3)",
           }}
         >
-          ★ WELCOME ★
+          ★ WELCOME TO THE SALOON ★
         </div>
-        <p style={{ fontSize: "var(--fs-body-lg)", margin: "0 0 var(--sp-4)" }}>
+        <p style={{ fontSize: "var(--fs-body-lg)", margin: "0 0 var(--sp-3)" }}>
           You just sat down at the table with
         </p>
         <div
+          className="pp-welcome-balance"
           style={{
             fontFamily: "var(--font-display)",
             fontSize: 48,
@@ -80,10 +105,30 @@ export function WelcomeModal({ startingBalance = 25_000 }: { startingBalance?: n
         >
           {formatAmount(startingBalance)} ¢
         </div>
-        <p style={{ fontSize: 13, marginBottom: "var(--sp-5)", color: "var(--saddle-700)" }}>
-          Spin the wheel, hit the slots, take a seat at the poker table.
-          Daily challenges + free arcade games refill your roll if it runs dry.
-        </p>
+        <ul
+          className="pp-welcome-tips"
+          style={{
+            fontSize: 13,
+            margin: "0 0 var(--sp-5)",
+            paddingLeft: 18,
+            color: "var(--saddle-700)",
+            textAlign: "left",
+            lineHeight: 1.5,
+          }}
+        >
+          <li>
+            <b>Penny Pinchers</b> — click coins, hire helpers, bank PC for wallet ¢. The main free path to a big stack.
+          </li>
+          <li>
+            <b>House games</b> — slots, blackjack, crash, dice, mines, plinko, poker, roulette, scratch, coin flip.
+          </li>
+          <li>
+            <b>Daily Spin + Daily Challenges</b> + free arcade games (Crossy Road, Flappy, Snake) keep your roll topped up.
+          </li>
+          <li>
+            <b>Roll broke?</b> Free games never gate. You can&rsquo;t lose progress here.
+          </li>
+        </ul>
         <button
           type="button"
           onClick={dismiss}
