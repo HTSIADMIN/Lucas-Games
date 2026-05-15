@@ -37,6 +37,60 @@ const TIER_SUFFIXES = [
   "Vg",   // 1e63  vigintillion
 ] as const;
 
+export type TierSuffix = typeof TIER_SUFFIXES[number];
+
+/** Tier index for a numeric or BigInt amount. 0 = no suffix (under
+ *  10K), 1 = K, 2 = M, 3 = B, 4 = T, 5 = Qa, ... Used by display
+ *  components to color or animate around tier crossings (e.g.
+ *  "balance climbed M → B"). */
+export function tierIndex(n: number | bigint): number {
+  if (typeof n === "bigint") {
+    const v = n < BigInt(0) ? -n : n;
+    if (v < BigInt(10_000)) return 0;
+    const digits = v.toString().length;
+    return Math.min(TIER_SUFFIXES.length - 1, Math.floor((digits - 1) / 3));
+  }
+  if (!Number.isFinite(n) || Math.abs(n) < 10_000) return 0;
+  return Math.min(TIER_SUFFIXES.length - 1, Math.floor(Math.log10(Math.abs(n)) / 3));
+}
+
+/** Plain-letter tier suffix for an amount (e.g. "B", "Qa"), or
+ *  empty string under 10K. */
+export function tierSuffix(n: number | bigint): TierSuffix {
+  return TIER_SUFFIXES[tierIndex(n)];
+}
+
+/** CSS color string for a tier suffix. Default tiers cycle through
+ *  saloon-palette accents so each new milestone reads visibly
+ *  different from the last. */
+export function tierColor(suffix: TierSuffix): string {
+  switch (suffix) {
+    case "":     return "var(--ink-900)";
+    case "K":    return "var(--saddle-400)";
+    case "M":    return "var(--gold-500)";
+    case "B":    return "var(--cactus-500)";
+    case "T":    return "var(--sky-500)";
+    case "Qa":   return "#a855f7";  // purple
+    case "Qi":   return "#ec4899";  // magenta
+    case "Sx":   return "#f97316";  // orange
+    case "Sp":   return "#14b8a6";  // teal
+    case "Oc":   return "#06b6d4";  // cyan
+    case "No":   return "#8b5cf6";  // violet
+    case "Dc":   return "#eab308";  // amber
+    case "Vg":   return "#fb7185";  // rose (top of the named ladder)
+    default:     return "var(--gold-300)";
+  }
+}
+
+/** Split a formatted amount into its numeric leading portion and
+ *  its alphabetic tier suffix. Useful when a component wants to
+ *  style the suffix separately. */
+export function splitFormatted(s: string): { lead: string; suffix: string } {
+  const m = s.match(/^(-?[\d,.]+)([A-Za-z]*)$/);
+  if (!m) return { lead: s, suffix: "" };
+  return { lead: m[1], suffix: m[2] };
+}
+
 /** Tier-formatted number. Keeps comma-separated exact display for
  *  small values so the early game reads as a counter; above 10k it
  *  switches to abbreviated tier suffixes.
