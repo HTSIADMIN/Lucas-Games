@@ -3,9 +3,12 @@ import { randomUUID } from "node:crypto";
 import { readSession } from "@/lib/auth/session";
 import { credit, getBalance } from "@/lib/wallet";
 import { savePennyPinchersBlob } from "@/lib/db";
+import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
+import { BANK_PC_PER_WALLET_CENT } from "@/lib/games/penny-pinchers/catalog";
 import {
   applyBank,
   migrateLoadedState,
+  relicEffects,
   type PennyPinchersGameState,
 } from "@/lib/games/penny-pinchers/engine";
 
@@ -40,7 +43,17 @@ export async function POST(req: Request) {
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
   const newState: PennyPinchersGameState = result.state;
-  const { payoutCents, pcConsumed } = result;
+  const { pcConsumed } = result;
+
+  // BigInt-precise payout. applyBank computed payoutCents via JS
+  // float math (Math.floor(cents / 4) × bankPayoutMul), which drifts
+  // by a few ¢ once a player's PC stack passes 9 quadrillion. Redo
+  // the same formula in BigInt so the wallet credit lands exactly
+  // on the rate × relic-bonus product, not a Number-rounded one.
+  const relicE = relicEffects(submitted.relics);
+  const baseBig = toBig(submitted.cents) / BigInt(BANK_PC_PER_WALLET_CENT);
+  const payoutBig = mulBigByNumber(baseBig, relicE.bankPayoutMul);
+  const payoutCents = toNum(payoutBig);
 
   // Wallet credit + state save. If the wallet credit succeeds but
   // the state save fails, the client will overwrite the stale
@@ -49,7 +62,7 @@ export async function POST(req: Request) {
   // truth for the payout itself.
   await credit({
     userId: s.user.id,
-    amount: payoutCents,
+    amount: payoutBig,
     reason: "penny_pinchers_bank",
     refKind: "penny_pinchers",
     refId: `${randomUUID()}:bank`,
