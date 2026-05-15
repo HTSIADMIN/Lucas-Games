@@ -4,6 +4,7 @@ import { HeaderProfilePill } from "@/components/HeaderProfilePill";
 import { SfxControls } from "@/components/SfxControls";
 import { MobileNavMenu } from "@/components/MobileNavMenu";
 import { WhatsNewButton } from "@/components/WhatsNewButton";
+import { CompetitiveChip } from "@/components/CompetitiveChip";
 
 export function SiteHeader({
   current,
@@ -34,6 +35,7 @@ export function SiteHeader({
       {/* Desktop-only inline nav + sfx. Hidden under the breakpoint;
           MobileNavMenu picks them up there instead. */}
       <div className="site-header-desktop">
+        <CompetitiveChip />
         <WhatsNewButton />
         <SfxControls />
         <nav className="site-nav">

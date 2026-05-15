@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLive } from "./LiveProvider";
 import { GameIcon } from "@/components/GameIcon";
 import { Avatar } from "@/components/Avatar";
+import { StreakFlame } from "@/components/StreakFlame";
 import { formatAmount } from "@/lib/format";
 import * as Sfx from "@/lib/sfx";
 
@@ -391,6 +392,9 @@ function BetLine({ b, championId }: {
     multiplier?: number;
     bigOdds?: boolean;
     bigWealth?: boolean;
+    /** Player's current hot-streak length (consecutive wins). The
+     *  flame badge only renders when ≥ 3 — see StreakFlame. */
+    streak?: number;
     /** Settlement timestamp (ms). Drives the relative-time stamp
      *  on the row; supplied by LiveBet feed entries. */
     at?: number;
@@ -414,15 +418,29 @@ function BetLine({ b, championId }: {
       border: "2px solid var(--ink-900)",
       boxShadow: showMultBadge || showWealthBadge ? "var(--glow-gold)" : undefined,
     }}>
-      <Avatar
-        initials={b.initials}
-        color={b.avatarColor}
-        size={26}
-        fontSize={11}
-        frame={b.frame ?? null}
-        hat={b.hat ?? null}
-        champion={!!b.userId && b.userId === championId}
-      />
+      <span style={{ position: "relative", display: "inline-flex", flexShrink: 0 }}>
+        <Avatar
+          initials={b.initials}
+          color={b.avatarColor}
+          size={26}
+          fontSize={11}
+          frame={b.frame ?? null}
+          hat={b.hat ?? null}
+          champion={!!b.userId && b.userId === championId}
+        />
+        {b.streak != null && b.streak >= 3 && (
+          <span
+            style={{
+              position: "absolute",
+              bottom: -4,
+              right: -6,
+              pointerEvents: "none",
+            }}
+          >
+            <StreakFlame n={b.streak} size="xs" />
+          </span>
+        )}
+      </span>
       <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-display)", fontSize: 13 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 4, flexWrap: "wrap" }}>
           <span>{b.username}</span>

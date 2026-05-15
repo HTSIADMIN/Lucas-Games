@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { useBigBetToastMuted } from "@/lib/preferences";
 import { formatAmount } from "@/lib/format";
+import { AchievementShowcase } from "@/components/AchievementShowcase";
 import * as Sfx from "@/lib/sfx";
 
 type Transaction = {
@@ -49,6 +50,11 @@ type ProfileData = {
   /** Newest-first wallet ledger entries — only populated on the
    *  requester's own profile, empty for everyone else. */
   transactions: Transaction[];
+  /** Trophy showcase — total unlocked + most-recent 5. */
+  achievements?: {
+    total: number;
+    recent: { source: string; achievementId: string; unlockedAt: string }[];
+  };
 };
 
 const GAME_LABEL: Record<string, string> = {
@@ -399,6 +405,18 @@ export function ProfileModal({
                     ))}
                   </tbody>
                 </table>
+              </>
+            )}
+            {data.achievements && (data.achievements.total > 0 || userId === "me") && (
+              <>
+                <div className="divider" style={{ marginTop: "var(--sp-5)", marginBottom: "var(--sp-3)" }}>
+                  Trophies
+                </div>
+                <AchievementShowcase
+                  total={data.achievements.total}
+                  recent={data.achievements.recent}
+                  showEmpty={userId === "me"}
+                />
               </>
             )}
             {data.transactions.length > 0 && (

@@ -23,6 +23,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
   let totalWon = 0;
   let biggestWin = 0;
   let gamesPlayed: { game: string; count: number; net: number }[] = [];
+  let achievementCount = 0;
+  let recentAchievements: { source: string; achievementId: string; unlockedAt: string }[] = [];
   const firstSeen: string | null = user.created_at;
 
   if (useSupabase) {
@@ -59,6 +61,30 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
         count: Number(g.count),
         net: Number(g.net),
       }));
+    }
+
+    // Achievement showcase — recent unlocks across every game source
+    // unioned in the user_achievements view (migration 0045). Pull
+    // the latest 5 + the total count for the count chip / "see all".
+    try {
+      const [countRes, recentRes] = await Promise.all([
+        supa.rpc("achievement_count", { p_user_id: userId }),
+        supa.rpc("recent_achievements", { p_user_id: userId, p_limit: 5 }),
+      ]);
+      if (typeof countRes.data === "number") achievementCount = countRes.data;
+      else if (countRes.data != null) achievementCount = Number(countRes.data) || 0;
+      const rows = (recentRes.data ?? []) as {
+        source: string;
+        achievement_id: string;
+        unlocked_at: string;
+      }[];
+      recentAchievements = rows.map((r) => ({
+        source: r.source,
+        achievementId: r.achievement_id,
+        unlockedAt: r.unlocked_at,
+      }));
+    } catch (e) {
+      console.error("[recent_achievements]", e);
     }
   }
 
@@ -113,5 +139,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
       })(),
     },
     transactions,
+    achievements: {
+      total: achievementCount,
+      recent: recentAchievements,
+    },
   });
 }

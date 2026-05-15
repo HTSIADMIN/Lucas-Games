@@ -36,6 +36,36 @@ export type EarnStatus = {
   monopoly: { ready: boolean; nextAt: number | null };
 };
 
+export type WinningsWindow = {
+  bet: number;
+  won: number;
+  net: number;
+};
+
+export type WinningsSnapshot = {
+  today: WinningsWindow;
+  week: WinningsWindow;
+};
+
+export type CompetitiveSnapshot = {
+  myRank: number | null;
+  myBalance: number;
+  totalPlayers: number;
+  rival: {
+    userId: string;
+    username: string;
+    avatarColor: string;
+    initials: string;
+    frame: string | null;
+    hat: string | null;
+    balance: number;
+    /** rival.balance - my.balance — non-negative. */
+    gap: number;
+  } | null;
+  championId: string | null;
+  championSince: string | null;
+};
+
 export type AppSnapshot = {
   balance: number;
   event: ActiveEvent;
@@ -45,6 +75,12 @@ export type AppSnapshot = {
   chat: ChatMessagePublic[];
   /** Recent qualifying big-bets feed — Realtime is the primary path. */
   bets: LiveBet[];
+  /** Catch-me chip / rank-drop toast context. */
+  competitive: CompetitiveSnapshot;
+  /** Daily / weekly winnings chips under the header balance. */
+  winnings: WinningsSnapshot;
+  /** Current hot-streak length for the requesting user. */
+  streak: { length: number };
 };
 
 type Ctx = {
@@ -90,6 +126,19 @@ export function AppSnapshotProvider({
           dailyClaimable: 0,
           chat: [],
           bets: [],
+          competitive: {
+            myRank: null,
+            myBalance: initialBalance,
+            totalPlayers: 0,
+            rival: null,
+            championId: null,
+            championSince: null,
+          },
+          winnings: {
+            today: { bet: 0, won: 0, net: 0 },
+            week: { bet: 0, won: 0, net: 0 },
+          },
+          streak: { length: 0 },
         }
       : null,
   );
@@ -97,7 +146,17 @@ export function AppSnapshotProvider({
   const fetchSnapshot = useCallback(async () => {
     if (!enabled) return;
     try {
-      const r = await fetch("/api/app/snapshot");
+      // Pass the browser's IANA timezone so the server can compute
+      // "today" / "this week" boundaries against the player's
+      // mental model (instead of always UTC).
+      const headers: Record<string, string> = {};
+      try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (tz) headers["time-zone"] = tz;
+      } catch {
+        /* ignore — server falls back to UTC */
+      }
+      const r = await fetch("/api/app/snapshot", { headers });
       if (!r.ok) return;
       const data = (await r.json()) as AppSnapshot;
       setSnapshot(data);

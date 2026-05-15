@@ -3,6 +3,8 @@
 // reading the value via the matching hook re-renders.
 
 const TOAST_MUTE_KEY = "lg.bigBetToast.muted";
+const CATCH_ME_HIDDEN_KEY = "lg.catchMeChip:hidden";
+const CATCH_ME_TOAST_HIDDEN_KEY = "lg.catchMeChip:toastHidden";
 const PREF_EVENT = "lg-pref-changed";
 
 function readBool(key: string, fallback: boolean): boolean {
@@ -56,4 +58,60 @@ export function useBigBetToastMuted(): [boolean, (v: boolean) => void] {
     setMuted(v);
   }
   return [muted, set];
+}
+
+// -------------------------------------------------------------
+// Catch-me chip preferences (driven by CompetitiveChip)
+// -------------------------------------------------------------
+
+export function getCatchMeChipHidden(): boolean {
+  return readBool(CATCH_ME_HIDDEN_KEY, false);
+}
+export function setCatchMeChipHidden(v: boolean): void {
+  writeBool(CATCH_ME_HIDDEN_KEY, v);
+}
+export function getCatchMeToastSuppressed(): boolean {
+  return readBool(CATCH_ME_TOAST_HIDDEN_KEY, false);
+}
+export function setCatchMeToastSuppressed(v: boolean): void {
+  writeBool(CATCH_ME_TOAST_HIDDEN_KEY, v);
+}
+
+function useBoolPref(
+  key: string,
+  read: () => boolean,
+  write: (v: boolean) => void,
+): [boolean, (v: boolean) => void] {
+  const [value, setValue] = useState<boolean>(() => read());
+  useEffect(() => {
+    function onChange(e: Event) {
+      const ce = e as CustomEvent<{ key?: string }>;
+      if (!ce.detail || ce.detail.key === key) setValue(read());
+    }
+    function onStorage(e: StorageEvent) {
+      if (e.key === key) setValue(read());
+    }
+    window.addEventListener(PREF_EVENT, onChange);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(PREF_EVENT, onChange);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [key, read]);
+  function set(v: boolean) {
+    write(v);
+    setValue(v);
+  }
+  return [value, set];
+}
+
+export function useCatchMeChipHidden(): [boolean, (v: boolean) => void] {
+  return useBoolPref(CATCH_ME_HIDDEN_KEY, getCatchMeChipHidden, setCatchMeChipHidden);
+}
+export function useCatchMeToastSuppressed(): [boolean, (v: boolean) => void] {
+  return useBoolPref(
+    CATCH_ME_TOAST_HIDDEN_KEY,
+    getCatchMeToastSuppressed,
+    setCatchMeToastSuppressed,
+  );
 }

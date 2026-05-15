@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLive } from "./LiveProvider";
 import { Avatar } from "@/components/Avatar";
+import { StreakFlame } from "@/components/StreakFlame";
 
 const GAME_LABEL: Record<string, string> = {
   lobby: "Lobby",
@@ -58,7 +59,7 @@ const GAME_HREF: Record<string, string> = {
 };
 
 export function HeaderPresence({ currentUserId }: { currentUserId: string | null }) {
-  const { presence, ready, championId } = useLive();
+  const { presence, ready, championId, streaksByUser } = useLive();
   if (!ready || presence.length === 0) return null;
 
   return (
@@ -71,21 +72,31 @@ export function HeaderPresence({ currentUserId }: { currentUserId: string | null
           const isMe = m.userId === currentUserId;
           const label = m.game ? GAME_LABEL[m.game] ?? m.game : "...";
           const href = m.game ? GAME_HREF[m.game] : null;
+          const streak = streaksByUser[m.userId] ?? 0;
           // Click-to-jump: each pill is a link to whatever room the
           // player is currently in. Falls back to a non-clickable
           // pill if we don't recognize the game key (e.g. a new room
           // we haven't mapped yet).
           const inner = (
             <>
-              <Avatar
-                initials={m.initials}
-                color={m.avatarColor}
-                size={26}
-                fontSize={11}
-                frame={m.frame ?? null}
-                hat={m.hat ?? null}
-                champion={m.userId === championId}
-              />
+              <span style={{ position: "relative", display: "inline-flex", flexShrink: 0 }}>
+                <Avatar
+                  initials={m.initials}
+                  color={m.avatarColor}
+                  size={26}
+                  fontSize={11}
+                  frame={m.frame ?? null}
+                  hat={m.hat ?? null}
+                  champion={m.userId === championId}
+                />
+                {streak >= 3 && (
+                  <span
+                    style={{ position: "absolute", bottom: -3, right: -5, pointerEvents: "none" }}
+                  >
+                    <StreakFlame n={streak} size="xs" />
+                  </span>
+                )}
+              </span>
               <span className="header-presence-pill-label">{label}</span>
             </>
           );

@@ -32,6 +32,10 @@ export type LiveBet = {
   multiplier: number;
   bigOdds: boolean;
   bigWealth: boolean;
+  /** Player's current hot-streak length (consecutive RNG wins).
+   *  0 when not on a streak. Surfaced as a flame badge by the chat
+   *  feed when ≥ 3. */
+  streak?: number;
   at: number;
 };
 
@@ -57,6 +61,11 @@ type LiveCtx = {
   bets: LiveBet[];
   chat: ChatMessagePublic[];
   championId: string | null;
+  /** Per-user streak length, lazily refreshed for the currently-online
+   *  presence list. Used by HeaderPresence to render the flame next
+   *  to a username when the streak ≥ 3. Empty map when not yet
+   *  populated. */
+  streaksByUser: Record<string, number>;
   pushChat: (m: ChatMessagePublic) => void;
 };
 
@@ -67,6 +76,7 @@ const Ctx = createContext<LiveCtx>({
   bets: [],
   chat: [],
   championId: null,
+  streaksByUser: {},
   pushChat: () => {},
 });
 
@@ -99,6 +109,7 @@ export function LiveProvider({
   const [bets, setBets] = useState<LiveBet[]>([]);
   const [chat, setChat] = useState<ChatMessagePublic[]>(initialChat);
   const [ready, setReady] = useState(false);
+  const [streaksByUser, setStreaksByUser] = useState<Record<string, number>>({});
   const gameRef = useRef(game);
 
   useEffect(() => { gameRef.current = game; }, [game]);
@@ -128,12 +139,15 @@ export function LiveProvider({
           };
           if (row.status !== "settled") return;
           const net = row.payout - row.bet;
-          // Look up user info AND current balance in parallel.
-          // Pre-bet wealth = current_balance - net (this settle just
-          // landed, so the live wallet view is post-settle).
-          const [{ data: userData }, { data: balData }] = await Promise.all([
+          // Look up user info, current balance, AND current streak in
+          // parallel. Pre-bet wealth = current_balance - net (this
+          // settle just landed, so the live wallet view is post-settle).
+          // Streak is a sub-50-row SQL function — cheap to call once
+          // per enriched event.
+          const [{ data: userData }, { data: balData }, { data: streakData }] = await Promise.all([
             supa.from("users_public").select("*").eq("id", row.user_id).maybeSingle(),
             supa.from("wallet_balances").select("balance").eq("user_id", row.user_id).maybeSingle(),
+            supa.rpc("current_streak", { p_user_id: row.user_id }),
           ]);
           const u = (userData ?? {}) as {
             username?: string;
@@ -150,6 +164,7 @@ export function LiveProvider({
             wealth,
           });
           if (!qualifies) return;
+          const streak = typeof streakData === "number" ? streakData : Number(streakData) || 0;
           setBets((prev) =>
             [
               {
@@ -167,6 +182,7 @@ export function LiveProvider({
                 multiplier,
                 bigOdds,
                 bigWealth,
+                streak,
                 at: Date.now(),
               },
               ...prev,
@@ -302,9 +318,45 @@ export function LiveProvider({
     }
   }, [me, snapshot]);
 
+  // Periodically refresh per-presence-user streak counts so the
+  // HeaderPresence strip can render a flame next to anyone on a
+  // ≥3-win run. Batched into a single RPC against
+  // `current_streaks_for(uuid[])` — one round-trip, no N+1.
+  useEffect(() => {
+    if (!me) return;
+    const ids = presence.map((p) => p.userId);
+    if (ids.length === 0) return;
+    let cancelled = false;
+    async function refresh() {
+      const supa = getBrowserClient();
+      if (!supa) return;
+      try {
+        const { data } = await supa.rpc("current_streaks_for", { p_user_ids: ids });
+        if (cancelled) return;
+        const next: Record<string, number> = {};
+        for (const row of (data ?? []) as { user_id: string; length: number }[]) {
+          next[row.user_id] = Number(row.length) || 0;
+        }
+        setStreaksByUser(next);
+      } catch {
+        /* keep the previous map */
+      }
+    }
+    void refresh();
+    // Re-fetch every 30s — presence churns quickly but the streak
+    // value only changes when a new session settles.
+    const t = setInterval(refresh, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+    // Re-fire when the set of presenced user ids changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me?.id, presence.map((p) => p.userId).join("|")]);
+
   const value = useMemo(
-    () => ({ ready, me, presence, bets, chat, championId, pushChat }),
-    [ready, me, presence, bets, chat, championId],
+    () => ({ ready, me, presence, bets, chat, championId, streaksByUser, pushChat }),
+    [ready, me, presence, bets, chat, championId, streaksByUser],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
