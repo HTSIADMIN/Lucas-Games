@@ -39,6 +39,7 @@ export const resetPinAttempts      = impl.resetPinAttempts;
 
 export const insertWalletTransaction = impl.insertWalletTransaction;
 export const walletBalance         = impl.walletBalance;
+export const walletBalanceExact    = impl.walletBalanceExact;
 export const recentTransactions    = impl.recentTransactions;
 
 export const insertGameSession     = impl.insertGameSession;

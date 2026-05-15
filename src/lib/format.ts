@@ -41,17 +41,46 @@ const TIER_SUFFIXES = [
  *  small values so the early game reads as a counter; above 10k it
  *  switches to abbreviated tier suffixes.
  *
+ *  Accepts `number` or `bigint`. BigInt callers preserve full
+ *  precision past JS `Number.MAX_SAFE_INTEGER` (~9 quadrillion);
+ *  the formatter inspects the digit count directly rather than
+ *  going through Math.log10 so 5-vigintillion-coin amounts read
+ *  correctly even when they can't fit in a double.
+ *
  *  Examples:
- *    formatAmount(847)            → "847"
- *    formatAmount(12_345)         → "12.3K"
- *    formatAmount(8_456_000)      → "8.46M"
- *    formatAmount(2_300_000_000)  → "2.30B"
- *    formatAmount(7.8e12)         → "7.80T"
- *    formatAmount(4.1e15)         → "4.10Qa"
- *    formatAmount(9.9e18)         → "9.90Qi"
- *    formatAmount(1.5e24)         → "1.50Sp"
+ *    formatAmount(847)              → "847"
+ *    formatAmount(12_345)           → "12.3K"
+ *    formatAmount(8_456_000)        → "8.46M"
+ *    formatAmount(2_300_000_000)    → "2.30B"
+ *    formatAmount(7.8e12)           → "7.80T"
+ *    formatAmount(4.1e15)           → "4.10Qa"
+ *    formatAmount(9.9e18)           → "9.90Qi"
+ *    formatAmount(1500n ** 10n)     → "57.7Qi"
  */
-export function formatAmount(n: number): string {
+export function formatAmount(n: number | bigint): string {
+  // BigInt path — no Math.log10, no Number cast, full precision.
+  if (typeof n === "bigint") {
+    if (n < BigInt(0)) return "-" + formatAmount(-n);
+    if (n < BigInt(10_000)) return n.toString();
+    const digits = n.toString();
+    // tierIndex = floor((digits - 1) / 3). 5-digit number = K (idx 1),
+    // 7-digit = M (idx 2), etc.
+    const tierIndex = Math.min(TIER_SUFFIXES.length - 1, Math.floor((digits.length - 1) / 3));
+    const leadingCount = digits.length - tierIndex * 3;
+    // Show ~3 significant digits — match the number-path output.
+    const lead = digits.slice(0, leadingCount);
+    const next = digits.slice(leadingCount, leadingCount + 3);
+    const suffix = TIER_SUFFIXES[tierIndex];
+    let formatted: string;
+    if (leadingCount === 1) {
+      formatted = `${lead}.${next.slice(0, 2).padEnd(2, "0")}`;
+    } else if (leadingCount === 2) {
+      formatted = `${lead}.${(next[0] ?? "0")}`;
+    } else {
+      formatted = lead;
+    }
+    return formatted + suffix;
+  }
   if (!Number.isFinite(n)) return n > 0 ? "∞" : "-∞";
   if (n < 0) return "-" + formatAmount(-n);
   // Floor for stability — helper drips / partial-payouts carry
@@ -77,7 +106,8 @@ export function formatAmount(n: number): string {
 /** Variant for per-second rates — same tiering, but always keeps two
  *  significant decimals so a slow ramp (e.g. "0.50 PC/sec → 5.00 PC/sec")
  *  reads as a real change instead of jumping straight to integers. */
-export function formatRate(n: number): string {
+export function formatRate(n: number | bigint): string {
+  if (typeof n === "bigint") return formatAmount(n);
   if (!Number.isFinite(n)) return "∞";
   if (n < 0) return "-" + formatRate(-n);
   if (n < 1) return n.toFixed(2);

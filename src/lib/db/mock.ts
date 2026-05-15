@@ -178,8 +178,13 @@ export async function resetPinAttempts(userId: string): Promise<void> {
 
 // ============ WALLET ============
 export async function insertWalletTransaction(
-  input: Omit<WalletTransaction, "id" | "created_at">
+  input: Omit<WalletTransaction, "id" | "created_at" | "delta"> & { delta: number | bigint }
 ): Promise<WalletTransaction> {
+  // Mock-side stays in JS-number land for delta storage (the
+  // file-backed JSON mock doesn't serialize bigint cleanly). We
+  // coerce on entry so a bigint caller still works at the
+  // backend-agnostic API boundary.
+  const delta = typeof input.delta === "bigint" ? Number(input.delta) : input.delta;
   if (input.ref_kind && input.ref_id) {
     const existing = db().wallet_transactions.find(
       (t) => t.ref_kind === input.ref_kind && t.ref_id === input.ref_id
@@ -187,13 +192,25 @@ export async function insertWalletTransaction(
     if (existing) return existing;
   }
   db()._walletSeq += 1;
-  const tx: WalletTransaction = { ...input, id: db()._walletSeq, created_at: new Date().toISOString() };
+  const tx: WalletTransaction = { ...input, delta, id: db()._walletSeq, created_at: new Date().toISOString() };
   db().wallet_transactions.push(tx);
   commit(); return tx;
 }
 
 export async function walletBalance(userId: string): Promise<number> {
   return db().wallet_transactions.filter((t) => t.user_id === userId).reduce((s, t) => s + t.delta, 0);
+}
+
+/** Mirror of supabase's walletBalanceExact — returns a BigInt-typed
+ *  balance so callers can do precise comparisons. The mock stores
+ *  deltas as JS numbers, so this still drifts past 9 quadrillion
+ *  in mock mode; the precise round-trip only works against
+ *  Postgres. Mock mode is only used in dev sans Supabase. */
+export async function walletBalanceExact(userId: string): Promise<bigint> {
+  const sum = db().wallet_transactions
+    .filter((t) => t.user_id === userId)
+    .reduce((s, t) => s + t.delta, 0);
+  return BigInt(Math.floor(sum));
 }
 
 export async function recentTransactions(userId: string, limit = 20): Promise<WalletTransaction[]> {

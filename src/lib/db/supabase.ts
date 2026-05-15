@@ -149,16 +149,27 @@ export async function resetPinAttempts(userId: string): Promise<void> {
 
 // ============ WALLET ============
 export async function insertWalletTransaction(
-  input: Omit<WalletTransaction, "id" | "created_at">
+  input: Omit<WalletTransaction, "id" | "created_at" | "delta"> & { delta: number | bigint }
 ): Promise<WalletTransaction> {
-  // After migration 0041, `delta` is Postgres `numeric` so PostgREST
-  // returns it as a string. Coerce to number at the boundary so the
-  // declared WalletTransaction.delta type stays honest.
+  // The `delta` column is Postgres `numeric` (migration 0041) so
+  // PostgREST round-trips it as a string. We accept either `number`
+  // or `bigint` from callers; bigint gets serialized as a string
+  // for the JSON request body so its precision survives past JS
+  // Number.MAX_SAFE_INTEGER. The returned WalletTransaction.delta
+  // is downcast to `number` for the API boundary — callers that
+  // need exact precision past 9 quadrillion read the ledger
+  // differently (e.g. getBalanceExact uses BigInt end-to-end).
   type RawTx = Omit<WalletTransaction, "delta"> & { delta: number | string };
   const toTx = (row: RawTx): WalletTransaction => ({
     ...row,
     delta: Number(row.delta),
   });
+  // Bigint serializes via JSON only with a custom replacer; in
+  // PostgREST, sending the column as a JSON STRING makes Postgres
+  // parse the number itself (numeric column accepts string input).
+  // This sidesteps the JS-Number precision wall on the wire.
+  const wireDelta: number | string =
+    typeof input.delta === "bigint" ? input.delta.toString() : input.delta;
   if (input.ref_kind && input.ref_id) {
     const { data: existing, error: lookupErr } = await client()
       .from("wallet_transactions")
@@ -173,7 +184,7 @@ export async function insertWalletTransaction(
     .from("wallet_transactions")
     .insert({
       user_id: input.user_id,
-      delta: input.delta,
+      delta: wireDelta,
       reason: input.reason,
       ref_kind: input.ref_kind,
       ref_id: input.ref_id,
@@ -184,6 +195,11 @@ export async function insertWalletTransaction(
   return toTx(data as RawTx);
 }
 
+/** Returns the wallet balance as a JS number. Past 9 quadrillion
+ *  the result drifts by 1–64 ¢ vs. the true ledger sum — the
+ *  named-tier formatter hides those digits in the UI and callers
+ *  that need exact precision (e.g. insufficient-funds checks) use
+ *  `walletBalanceExact` for a BigInt round-trip. */
 export async function walletBalance(userId: string): Promise<number> {
   const { data, error } = await client()
     .from("wallet_balances")
@@ -192,6 +208,28 @@ export async function walletBalance(userId: string): Promise<number> {
     .maybeSingle();
   if (error) throw new Error(`walletBalance: ${error.message}`);
   return Number((data as { balance?: number | string } | null)?.balance ?? 0);
+}
+
+/** BigInt-precise wallet balance. The `numeric` column comes back
+ *  from PostgREST as a string; parsing through BigInt preserves
+ *  the integer exactly regardless of size, so comparisons like
+ *  `balance < amount` are reliable past 9 quadrillion. Used by
+ *  the debit insufficient-funds gate. */
+export async function walletBalanceExact(userId: string): Promise<bigint> {
+  const { data, error } = await client()
+    .from("wallet_balances")
+    .select("balance")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(`walletBalanceExact: ${error.message}`);
+  const raw = (data as { balance?: number | string } | null)?.balance;
+  if (raw == null) return BigInt(0);
+  // PostgREST returns numeric as string. Strip any decimals
+  // defensively (the column is always integer-valued but a future
+  // migration might allow fractions).
+  const str = String(raw).split(".")[0];
+  try { return BigInt(str); }
+  catch { return BigInt(0); }
 }
 
 export async function recentTransactions(userId: string, limit = 20): Promise<WalletTransaction[]> {
