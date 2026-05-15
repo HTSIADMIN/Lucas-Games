@@ -391,12 +391,19 @@ function BetLine({ b, championId }: {
     multiplier?: number;
     bigOdds?: boolean;
     bigWealth?: boolean;
+    /** Settlement timestamp (ms). Drives the relative-time stamp
+     *  on the row; supplied by LiveBet feed entries. */
+    at?: number;
   };
   championId: string | null;
 }) {
   const win = b.net > 0;
-  const showMultBadge = !!b.bigOdds && (b.multiplier ?? 0) >= 50;
+  const mult = b.multiplier ?? 0;
+  const showMultBadge = !!b.bigOdds && mult >= 50;
   const showWealthBadge = !!b.bigWealth;
+  // Multiplier tier — heavier visual treatment for absurd wins.
+  // 50×–99× muted gold, 100×–999× full gold-glow, 1k×+ pulsing.
+  const multTier = mult >= 1000 ? "mega" : mult >= 100 ? "huge" : "big";
   return (
     <div style={{
       display: "flex",
@@ -417,36 +424,55 @@ function BetLine({ b, championId }: {
         champion={!!b.userId && b.userId === championId}
       />
       <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--font-display)", fontSize: 13 }}>
-        <span>{b.username}</span>
-        <span style={{ color: "var(--saddle-400)" }}> · {b.game}</span>
-        {showMultBadge && (
-          <span
-            className="badge badge-gold badge-glow"
-            style={{ marginLeft: 6, fontSize: 9, padding: "1px 5px", letterSpacing: "var(--ls-loose)" }}
-            title={`Won ${formatMult(b.multiplier!)}× their bet`}
-          >
-            {formatMult(b.multiplier!)}×
-          </span>
-        )}
-        {showWealthBadge && (
-          <span
-            className={`badge ${win ? "badge-cactus" : "badge-crimson"}`}
-            style={{ marginLeft: 6, fontSize: 9, padding: "1px 5px", letterSpacing: "var(--ls-loose)" }}
-            title="Big swing relative to their wealth"
-          >
-            {win ? "BIG WIN" : "BIG LOSS"}
-          </span>
-        )}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 4, flexWrap: "wrap" }}>
+          <span>{b.username}</span>
+          <span style={{ color: "var(--saddle-400)", fontSize: 11 }}>· {b.game}</span>
+          {showMultBadge && (
+            <span
+              className="badge badge-gold badge-glow"
+              style={{
+                marginLeft: 2,
+                fontSize: 9,
+                padding: "1px 5px",
+                letterSpacing: "var(--ls-loose)",
+                animation: multTier === "mega" ? "pp-bet-mult-pulse 1.4s ease-in-out infinite" : undefined,
+              }}
+              title={`Won ${formatMult(mult)}× their bet`}
+            >
+              {formatMult(mult)}×
+            </span>
+          )}
+          {showWealthBadge && (
+            <span
+              className={`badge ${win ? "badge-cactus" : "badge-crimson"}`}
+              style={{ marginLeft: 2, fontSize: 9, padding: "1px 5px", letterSpacing: "var(--ls-loose)" }}
+              title="Big swing relative to their wealth"
+            >
+              {win ? "BIG WIN" : "BIG LOSS"}
+            </span>
+          )}
+        </div>
+        <div className="text-mute" style={{ fontSize: 10, lineHeight: 1.2, marginTop: 1 }}>
+          bet {formatAmount(b.bet)} ¢
+          {b.at != null && <> · {formatBetAgo(b.at)}</>}
+        </div>
       </div>
       <span
         style={{
           fontFamily: "var(--font-display)",
           fontSize: 14,
           color: win ? "var(--cactus-500)" : "var(--crimson-500)",
+          whiteSpace: "nowrap",
         }}
       >
         {win ? "+" : ""}{formatAmount(b.net)}
       </span>
+      <style>{`
+        @keyframes pp-bet-mult-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(255, 196, 64, 0.55); }
+          50%      { box-shadow: 0 0 0 4px rgba(255, 196, 64, 0.95), 0 0 16px rgba(255, 196, 64, 0.8); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -455,4 +481,19 @@ function formatMult(m: number): string {
   if (m >= 1000) return `${Math.round(m / 100) / 10}k`;
   if (m >= 100) return `${Math.round(m)}`;
   return `${Math.round(m * 10) / 10}`;
+}
+
+/** Compact relative-time for a bet feed row. Always returns 2–3
+ *  characters so the row layout stays stable. */
+function formatBetAgo(at: number): string {
+  const delta = Date.now() - at;
+  if (!Number.isFinite(delta) || delta < 0) return "now";
+  const sec = Math.floor(delta / 1000);
+  if (sec < 5) return "now";
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h`;
+  return `${Math.floor(hr / 24)}d`;
 }
