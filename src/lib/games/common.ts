@@ -4,16 +4,14 @@ import { credit, debit, getBalance } from "@/lib/wallet";
 import { insertGameSession, settleGameSession } from "@/lib/db";
 
 export const MIN_BET = 100;
-/** Hard ceiling on a single bet across every server-RNG game.
- *  Wallet balances + every game-session bet/payout column are bigint
- *  so the DB has effectively unlimited headroom. The cap is a sanity
- *  guard — keeps `bet × max-multiplier` payouts under JS
- *  Number.MAX_SAFE_INTEGER (≈9.007e15). 1 quadrillion × 25× slot
- *  payout = 25 quadrillion, still inside MAX_SAFE_INTEGER. Bumped up
- *  from 10 T after Penny Pinchers banking pushed real wallets into
- *  the hundreds of billions and players want to spin their whole
- *  stack in a single bet. */
-export const MAX_BET = 1_000_000_000_000_000;
+/** Hard ceiling on a single bet. Set to Number.MAX_SAFE_INTEGER so
+ *  the validator effectively never rejects on size — the wallet
+ *  balance is the real cap (you can't bet more than you have).
+ *  Past ~9 quadrillion JS number precision starts drifting on
+ *  arithmetic, but the named-tier display formatter (`formatAmount`)
+ *  hides those digits anyway. The constant is kept around so any
+ *  legacy caller that imports it still works. */
+export const MAX_BET = Number.MAX_SAFE_INTEGER;
 
 export function validateBet(bet: unknown): { ok: true; bet: number } | { ok: false; error: string } {
   if (typeof bet !== "number" || !Number.isFinite(bet) || !Number.isInteger(bet)) {

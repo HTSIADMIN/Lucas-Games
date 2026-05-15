@@ -6,6 +6,7 @@ import {
   getUserByUsername,
   insertChatMessage,
 } from "@/lib/db";
+import { formatAmount } from "@/lib/format";
 
 export const runtime = "nodejs";
 
@@ -13,10 +14,14 @@ const MAX_LEN = 280;
 
 function parseTipCommand(raw: string): { username: string; amount: number } | null {
   // /tip @bobby 5000  OR  /tip bobby 5000
-  const m = raw.trim().match(/^\/tip\s+@?(\S+)\s+(\d{1,12})\s*$/i);
+  // Amount cap = JS Number.MAX_SAFE_INTEGER (~9 quadrillion); the
+  // real limit is the sender's wallet balance (debit will reject
+  // insufficient_funds). Regex allows up to 16 digits to cover the
+  // safe-integer range without going past the precision wall.
+  const m = raw.trim().match(/^\/tip\s+@?(\S+)\s+(\d{1,16})\s*$/i);
   if (!m) return null;
   const amount = Number(m[2]);
-  if (!Number.isInteger(amount) || amount <= 0 || amount > 100_000_000) return null;
+  if (!Number.isInteger(amount) || amount <= 0 || amount > Number.MAX_SAFE_INTEGER) return null;
   return { username: m[1], amount };
 }
 
@@ -62,7 +67,7 @@ export async function POST(req: Request) {
 
     const msg = await insertChatMessage({
       user_id: s.user.id,
-      body: `tipped @${target.username} ${tip.amount.toLocaleString()} ¢`,
+      body: `tipped @${target.username} ${formatAmount(tip.amount)} ¢`,
       kind: "tip",
       ref_kind: "tip",
       ref_id: tipId,
