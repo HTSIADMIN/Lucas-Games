@@ -170,3 +170,129 @@ export function formatRate(n: number | bigint): string {
   }
   return formatAmount(n);
 }
+
+// ============================================================
+// Long-name tier formatting + parsing for the BetInput
+//
+// `formatAmount` renders "1.00M" / "1.45B" — compact for chips and
+// HUD readouts but reads as alphabet soup at a glance. The bet
+// input shows the player's stake big and prominent; long-form
+// names ("1 mil", "1.5 bil", "2.3 tril") read more naturally there.
+//
+// `parseBetAmount` accepts the long-form names AND the short ones
+// AND raw integers, so a player can type "1m", "1 mil", "1000000",
+// or "1,000,000" interchangeably. Returns null on garbage so the
+// input can fall back to the existing value.
+// ============================================================
+
+/** Long-form tier names matching the TIER_SUFFIXES index. Short
+ *  enough to fit the bet display, readable enough that a 10-year-old
+ *  understands "5 bil" without parsing "5.00B". */
+const LONG_TIER_NAMES = [
+  "",       // 1e0
+  "k",      // 1e3   thousand
+  "mil",    // 1e6   million
+  "bil",    // 1e9   billion
+  "tril",   // 1e12  trillion
+  "quad",   // 1e15  quadrillion
+  "quint",  // 1e18  quintillion
+  "sext",   // 1e21  sextillion
+  "sept",   // 1e24  septillion
+  "oct",    // 1e27  octillion
+  "non",    // 1e30  nonillion
+  "dec",    // 1e33  decillion
+  "udec",   // 1e36  undecillion
+  "ddec",   // 1e39  duodecillion
+  "tdec",   // 1e42  tredecillion
+  "qadec",  // 1e45  quattuordecillion
+  "qidec",  // 1e48  quindecillion
+  "sxdec",  // 1e51  sexdecillion
+  "spdec",  // 1e54  septendecillion
+  "ocdec",  // 1e57  octodecillion
+  "nodec",  // 1e60  novemdecillion
+  "vig",    // 1e63  vigintillion
+] as const;
+
+/** Format an amount with long-form tier names. Mirrors `formatAmount`
+ *  but uses "1 mil" / "1.5 bil" / "2.3 tril" instead of "1.00M" etc.
+ *  Under 10,000 stays comma-formatted (exact). 10K - 1M shows "k"
+ *  with a leading-digit count to fit ~3 significant digits. */
+export function formatBetAmount(n: number | bigint): string {
+  if (typeof n === "bigint") {
+    if (n < BigInt(0)) return "-" + formatBetAmount(-n);
+    if (n < BigInt(10_000)) return n.toString();
+    const digits = n.toString();
+    const tier = Math.min(LONG_TIER_NAMES.length - 1, Math.floor((digits.length - 1) / 3));
+    const leadingCount = digits.length - tier * 3;
+    const lead = digits.slice(0, leadingCount);
+    const next = digits.slice(leadingCount, leadingCount + 3);
+    let formatted: string;
+    if (leadingCount === 1) formatted = `${lead}.${next.slice(0, 2).padEnd(2, "0")}`;
+    else if (leadingCount === 2) formatted = `${lead}.${next[0] ?? "0"}`;
+    else formatted = lead;
+    return `${formatted} ${LONG_TIER_NAMES[tier]}`.trimEnd();
+  }
+  if (!Number.isFinite(n)) return n > 0 ? "∞" : "-∞";
+  if (n < 0) return "-" + formatBetAmount(-n);
+  const v = Math.floor(n);
+  if (v < 10_000) return v.toLocaleString();
+  const tier = Math.min(LONG_TIER_NAMES.length - 1, Math.floor(Math.log10(v) / 3));
+  const scaled = v / Math.pow(1000, tier);
+  let lead: string;
+  if (scaled < 10) lead = scaled.toFixed(2);
+  else if (scaled < 100) lead = scaled.toFixed(1);
+  else lead = Math.floor(scaled).toString();
+  const name = LONG_TIER_NAMES[tier];
+  return name ? `${lead} ${name}` : lead;
+}
+
+// Build a lookup from any-shorthand → tier index. Accepts both the
+// long names ("mil", "bil") and the short letter form ("M", "B"),
+// case-insensitive. "k" maps to thousand for both forms.
+const SUFFIX_TO_TIER: Record<string, number> = (() => {
+  const map: Record<string, number> = {};
+  LONG_TIER_NAMES.forEach((name, i) => {
+    if (name) map[name.toLowerCase()] = i;
+  });
+  TIER_SUFFIXES.forEach((suffix, i) => {
+    if (suffix) map[suffix.toLowerCase()] = i;
+  });
+  // A few common single-letter aliases that don't appear in the
+  // short list (TIER_SUFFIXES[1] is "K" already, but covering "k"
+  // explicitly for the bigger ones too in case a player types "1q"
+  // for a quadrillion — match the short form's first letter).
+  map["q"] = 5; // quad — disambiguates against Qi (quint) by length
+  return map;
+})();
+
+/** Parse a player-entered bet string into a coin integer. Accepts:
+ *    "1000000"          → 1_000_000
+ *    "1,000,000"        → 1_000_000
+ *    "1m" / "1 m"       → 1_000_000
+ *    "1mil" / "1.5 mil" → 1_000_000 / 1_500_000
+ *    "1.5b" / "1.5 bil" → 1_500_000_000
+ *    "2.3t" / "2.3 tril"→ 2_300_000_000_000
+ *
+ *  Returns null on garbage so the caller can leave the existing
+ *  value alone instead of clobbering it with NaN. Floors fractional
+ *  results — coins are integer-only. */
+export function parseBetAmount(input: string): number | null {
+  if (typeof input !== "string") return null;
+  const s = input.trim().toLowerCase().replace(/,/g, "").replace(/\s+/g, "");
+  if (s === "") return null;
+  // Pull off a numeric prefix and a suffix (letters). The suffix
+  // can be empty, in which case the prefix is the answer.
+  const m = s.match(/^([0-9]*\.?[0-9]+)([a-z]*)$/);
+  if (!m) return null;
+  const numPart = Number(m[1]);
+  if (!Number.isFinite(numPart) || numPart < 0) return null;
+  const suffix = m[2];
+  if (!suffix) return Math.floor(numPart);
+  const tier = SUFFIX_TO_TIER[suffix];
+  if (tier == null) return null;
+  // Use Math.pow(1000, tier) for the multiplier. Past Number.MAX_SAFE_INTEGER
+  // this loses precision, but bet inputs are always within the player's
+  // wallet — and even the top player's stack is under ~1e22 (sextillion).
+  // 1e22 is well within JS double range so the multiplier is exact.
+  return Math.floor(numPart * Math.pow(1000, tier));
+}

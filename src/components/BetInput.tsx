@@ -1,11 +1,13 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { formatBetAmount, parseBetAmount } from "@/lib/format";
 
 const PRESETS = [100, 1_000, 10_000, 100_000];
 
 function formatPreset(n: number): string {
-  if (n >= 1_000_000) return `+${n / 1_000_000}M`;
+  if (n >= 1_000_000_000) return `+${n / 1_000_000_000} bil`;
+  if (n >= 1_000_000) return `+${n / 1_000_000} mil`;
   if (n >= 1_000) return `+${n / 1_000}k`;
   return `+${n}`;
 }
@@ -36,6 +38,20 @@ export function BetInput({
   // touchedRef flips and presets stack normally.
   const touchedRef = useRef(false);
 
+  // Editing mode — when the input is focused we show the raw digits
+  // (or whatever the player has typed so far). On blur, switch back
+  // to the long-form display ("1 mil" instead of "1,000,000"). This
+  // gives the readable HUD reading without breaking text entry.
+  //
+  // `draft` is only meaningful while editing — onFocus reseeds it
+  // from the current `value`, onChange keeps it in sync with what
+  // the player types, onBlur commits and stops using it. No need
+  // to track external value changes here; the buttons (Clear,
+  // halve, double, presets) all act while the input is blurred,
+  // and the next focus will pick up the fresh `value`.
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string>(() => String(value));
+
   function setSafe(n: number) {
     if (!Number.isFinite(n)) n = 0;
     onChange(Math.max(0, Math.min(max, Math.floor(n))));
@@ -61,6 +77,11 @@ export function BetInput({
     setSafe(value * 2);
   }
 
+  // Display text. While editing: raw draft so backspace / typing
+  // works naturally. While idle: long-form name ("1.5 mil") so the
+  // HUD is readable at a glance.
+  const displayValue = editing ? draft : formatBetAmount(value);
+
   return (
     <div className="stack" style={{ gap: "var(--sp-3)" }}>
       <div className="between" style={{ alignItems: "baseline" }}>
@@ -80,7 +101,13 @@ export function BetInput({
           panel tone for bg, lightest fg colour for the value text,
           fg-muted for the 'COINS' label and the value's drop shadow.
           Light themes get the same triple, just flipped (cream bg,
-          ink value, mid-brown shadow). */}
+          ink value, mid-brown shadow).
+
+          The input is text-mode (not number-mode) so we can show the
+          long-form name "1 mil" when idle. On focus it flips to the
+          raw draft for unencumbered typing — the player can type
+          "1m", "1 mil", "1000000", or "1,000,000" interchangeably.
+          parseBetAmount handles all four. */}
       <div
         style={{
           display: "flex",
@@ -96,15 +123,38 @@ export function BetInput({
           COINS
         </span>
         <input
-          type="number"
-          value={value}
-          min={0}
-          max={max}
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
+          spellCheck={false}
+          value={displayValue}
+          onFocus={(e) => {
+            setEditing(true);
+            setDraft(String(value));
+            // Defer the select so the new draft text is in the
+            // textbox first.
+            const el = e.currentTarget;
+            requestAnimationFrame(() => el.select());
+          }}
           onChange={(e) => {
             touchedRef.current = true;
-            setSafe(Number(e.target.value));
+            const raw = e.target.value;
+            setDraft(raw);
+            // Live-parse every keystroke so the underlying numeric
+            // value matches what the input shows. Garbage parses
+            // are ignored — the player can finish typing without
+            // losing their in-progress amount (e.g. "1." mid-type).
+            const parsed = parseBetAmount(raw);
+            if (parsed != null) setSafe(parsed);
           }}
-          onFocus={(e) => e.currentTarget.select()}
+          onBlur={() => {
+            // Commit a final parse — if the player left something
+            // weird in there, snap back to the current value's
+            // formatted form.
+            const parsed = parseBetAmount(draft);
+            if (parsed != null) setSafe(parsed);
+            setEditing(false);
+          }}
           disabled={disabled}
           style={{
             border: 0,
