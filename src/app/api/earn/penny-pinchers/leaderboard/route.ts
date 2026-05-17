@@ -38,7 +38,7 @@ export async function GET() {
   }
 
   const userIds = (pp ?? []).map((r) => (r as { user_id: string }).user_id);
-  let balanceById: Record<string, number> = {};
+  const balanceById: Record<string, number> = {};
   if (userIds.length > 0) {
     const { data: balances } = await sb
       .from("wallet_balances")
@@ -52,10 +52,13 @@ export async function GET() {
   type UserBlob = { username: string; avatar_color: string; initials: string };
   type Row = {
     user_id: string;
-    lifetime_pc_earned: number;
-    lifetime_clicks: number;
-    frugality: number;
-    prestige_count: number;
+    // After migration 0046 these come back as strings (PostgREST
+    // serializes `numeric` columns as strings to preserve precision).
+    // Coerce to JS number for the wire shape consumers expect.
+    lifetime_pc_earned: number | string;
+    lifetime_clicks: number | string;
+    frugality: number | string;
+    prestige_count: number | string;
     users: UserBlob | UserBlob[] | null;
   };
 
@@ -66,10 +69,10 @@ export async function GET() {
       username: u?.username ?? "?",
       avatarColor: u?.avatar_color ?? "var(--gold-300)",
       initials: u?.initials ?? "??",
-      lifetimePCEarned: r.lifetime_pc_earned,
-      lifetimeClicks: r.lifetime_clicks,
-      frugality: r.frugality,
-      prestigeCount: r.prestige_count,
+      lifetimePCEarned: Number(r.lifetime_pc_earned),
+      lifetimeClicks: Number(r.lifetime_clicks),
+      frugality: Number(r.frugality),
+      prestigeCount: Number(r.prestige_count),
       walletBalance: balanceById[r.user_id] ?? 0,
       isMe: r.user_id === s.user.id,
     };

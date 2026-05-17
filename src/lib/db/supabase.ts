@@ -51,6 +51,30 @@ function unwrap<T>(res: { data: T | null; error: { message: string } | null }, c
   return res.data;
 }
 
+/**
+ * Coerce a list of fields on an object back to `number`. Used at
+ * every read site for tables whose money columns were widened to
+ * Postgres `numeric` in migration 0046 — PostgREST returns numeric
+ * as a string to preserve precision past Number.MAX_SAFE_INTEGER,
+ * but the JS layer's TS types stay `number`. The named-tier
+ * `formatAmount` formatter hides the ≤ 64 ¢ drift at 9 quadrillion+.
+ *
+ * Null/undefined fields are left alone (e.g. `final_payout` on an
+ * active slot run is null until the bonus settles).
+ */
+function coerceNum<T extends Record<string, unknown>>(row: T, fields: readonly (keyof T)[]): T {
+  for (const f of fields) {
+    const v = row[f];
+    if (v == null) continue;
+    if (typeof v === "string") (row[f] as unknown as number) = Number(v);
+  }
+  return row;
+}
+
+function coerceList<T extends Record<string, unknown>>(rows: T[], fields: readonly (keyof T)[]): T[] {
+  return rows.map((r) => coerceNum({ ...r }, fields));
+}
+
 // ============ USERS ============
 export async function listUsersPublic(): Promise<UserPublic[]> {
   const { data, error } = await client()
@@ -254,6 +278,8 @@ export async function recentTransactions(userId: string, limit = 20): Promise<Wa
 }
 
 // ============ GAME SESSIONS ============
+const GAME_SESSION_NUM_FIELDS = ["bet", "payout"] as const;
+
 export async function insertGameSession(
   input: Omit<GameSession, "created_at" | "settled_at">
 ): Promise<GameSession> {
@@ -267,7 +293,7 @@ export async function insertGameSession(
     status: input.status,
   }).select("*").single();
   if (error) throw new Error(`insertGameSession: ${error.message}`);
-  return data as GameSession;
+  return coerceNum({ ...(data as GameSession) }, GAME_SESSION_NUM_FIELDS);
 }
 export async function settleGameSession(
   id: string, payout: number, state?: Record<string, unknown>
@@ -280,19 +306,22 @@ export async function settleGameSession(
   if (state) update.state = state;
   const { data, error } = await client().from("game_sessions").update(update).eq("id", id).select("*").maybeSingle();
   if (error) throw new Error(`settleGameSession: ${error.message}`);
-  return (data as GameSession | null) ?? null;
+  if (!data) return null;
+  return coerceNum({ ...(data as GameSession) }, GAME_SESSION_NUM_FIELDS);
 }
 export async function getGameSession(id: string): Promise<GameSession | null> {
   const { data, error } = await client().from("game_sessions").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(`getGameSession: ${error.message}`);
-  return (data as GameSession | null) ?? null;
+  if (!data) return null;
+  return coerceNum({ ...(data as GameSession) }, GAME_SESSION_NUM_FIELDS);
 }
 export async function updateGameSession(
   id: string, patch: Partial<GameSession>
 ): Promise<GameSession | null> {
   const { data, error } = await client().from("game_sessions").update(patch).eq("id", id).select("*").maybeSingle();
   if (error) throw new Error(`updateGameSession: ${error.message}`);
-  return (data as GameSession | null) ?? null;
+  if (!data) return null;
+  return coerceNum({ ...(data as GameSession) }, GAME_SESSION_NUM_FIELDS);
 }
 
 // ============ EARN COOLDOWNS ============
@@ -470,10 +499,12 @@ export async function updateCrashRound(
   return (data as CrashRound | null) ?? null;
 }
 
+const CRASH_BET_NUM_FIELDS = ["bet", "payout"] as const;
+
 export async function listCrashBets(roundId: string): Promise<CrashBet[]> {
   const { data, error } = await client().from("crash_bets").select("*").eq("round_id", roundId);
   if (error) throw new Error(`listCrashBets: ${error.message}`);
-  return (data ?? []) as CrashBet[];
+  return coerceList((data ?? []) as CrashBet[], CRASH_BET_NUM_FIELDS);
 }
 
 export async function getCrashBet(roundId: string, userId: string): Promise<CrashBet | null> {
@@ -484,7 +515,8 @@ export async function getCrashBet(roundId: string, userId: string): Promise<Cras
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error(`getCrashBet: ${error.message}`);
-  return (data as CrashBet | null) ?? null;
+  if (!data) return null;
+  return coerceNum({ ...(data as CrashBet) }, CRASH_BET_NUM_FIELDS);
 }
 
 export async function insertCrashBet(
@@ -507,7 +539,7 @@ export async function insertCrashBet(
     }
     throw new Error(`insertCrashBet: ${error.message}`);
   }
-  return data as CrashBet;
+  return coerceNum({ ...(data as CrashBet) }, CRASH_BET_NUM_FIELDS);
 }
 
 export async function updateCrashBet(
@@ -521,7 +553,8 @@ export async function updateCrashBet(
     .select("*")
     .maybeSingle();
   if (error) throw new Error(`updateCrashBet: ${error.message}`);
-  return (data as CrashBet | null) ?? null;
+  if (!data) return null;
+  return coerceNum({ ...(data as CrashBet) }, CRASH_BET_NUM_FIELDS);
 }
 
 export async function listOpenCrashBets(roundId: string): Promise<CrashBet[]> {
@@ -531,7 +564,7 @@ export async function listOpenCrashBets(roundId: string): Promise<CrashBet[]> {
     .eq("round_id", roundId)
     .is("cashout_at_x", null);
   if (error) throw new Error(`listOpenCrashBets: ${error.message}`);
-  return (data ?? []) as CrashBet[];
+  return coerceList((data ?? []) as CrashBet[], CRASH_BET_NUM_FIELDS);
 }
 
 // ============ MONOPOLY ============
@@ -581,10 +614,21 @@ export async function upsertMonopolyOwned(row: MonopolyOwned): Promise<MonopolyO
 }
 
 // ============ PENNY PINCHERS ============
+const PP_STATE_NUM_FIELDS = [
+  "cents",
+  "lifetime_clicks",
+  "lifetime_pc_earned",
+  "lifetime_banked_cents",
+  "daily_banked_cents",
+  "prestige_count",
+  "bank_tokens",
+] as const;
+
 export async function getPennyPinchersState(userId: string): Promise<PennyPinchersState | null> {
   const { data, error } = await client().from("penny_pinchers_state").select("*").eq("user_id", userId).maybeSingle();
   if (error) throw new Error(`getPennyPinchersState: ${error.message}`);
-  return (data as PennyPinchersState | null) ?? null;
+  if (!data) return null;
+  return coerceNum({ ...(data as PennyPinchersState) }, PP_STATE_NUM_FIELDS);
 }
 export async function upsertPennyPinchersState(state: PennyPinchersState): Promise<PennyPinchersState> {
   const { data, error } = await client()
@@ -786,6 +830,8 @@ export async function upsertPennyPinchersHelper(row: PennyPinchersHelper): Promi
 }
 
 // ============ COIN FLIP DUELS ============
+const COINFLIP_DUEL_NUM_FIELDS = ["wager"] as const;
+
 export async function listOpenCoinflipDuels(): Promise<CoinflipDuel[]> {
   const { data, error } = await client()
     .from("coinflip_duels")
@@ -793,7 +839,7 @@ export async function listOpenCoinflipDuels(): Promise<CoinflipDuel[]> {
     .eq("status", "open")
     .order("created_at", { ascending: false });
   if (error) throw new Error(`listOpenCoinflipDuels: ${error.message}`);
-  return (data ?? []) as CoinflipDuel[];
+  return coerceList((data ?? []) as CoinflipDuel[], COINFLIP_DUEL_NUM_FIELDS);
 }
 export async function listRecentCoinflipDuels(limit = 20): Promise<CoinflipDuel[]> {
   const { data, error } = await client()
@@ -802,12 +848,13 @@ export async function listRecentCoinflipDuels(limit = 20): Promise<CoinflipDuel[
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw new Error(`listRecentCoinflipDuels: ${error.message}`);
-  return (data ?? []) as CoinflipDuel[];
+  return coerceList((data ?? []) as CoinflipDuel[], COINFLIP_DUEL_NUM_FIELDS);
 }
 export async function getCoinflipDuel(id: string): Promise<CoinflipDuel | null> {
   const { data, error } = await client().from("coinflip_duels").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(`getCoinflipDuel: ${error.message}`);
-  return (data as CoinflipDuel | null) ?? null;
+  if (!data) return null;
+  return coerceNum({ ...(data as CoinflipDuel) }, COINFLIP_DUEL_NUM_FIELDS);
 }
 export async function insertCoinflipDuel(duel: CoinflipDuel): Promise<CoinflipDuel> {
   const { data, error } = await client().from("coinflip_duels").insert({
@@ -818,12 +865,13 @@ export async function insertCoinflipDuel(duel: CoinflipDuel): Promise<CoinflipDu
     status: duel.status,
   }).select("*").single();
   if (error) throw new Error(`insertCoinflipDuel: ${error.message}`);
-  return data as CoinflipDuel;
+  return coerceNum({ ...(data as CoinflipDuel) }, COINFLIP_DUEL_NUM_FIELDS);
 }
 export async function updateCoinflipDuel(id: string, patch: Partial<CoinflipDuel>): Promise<CoinflipDuel | null> {
   const { data, error } = await client().from("coinflip_duels").update(patch).eq("id", id).select("*").maybeSingle();
   if (error) throw new Error(`updateCoinflipDuel: ${error.message}`);
-  return (data as CoinflipDuel | null) ?? null;
+  if (!data) return null;
+  return coerceNum({ ...(data as CoinflipDuel) }, COINFLIP_DUEL_NUM_FIELDS);
 }
 
 // ============ BLACKJACK MULTIPLAYER ============
@@ -858,15 +906,18 @@ export async function updateBlackjackRound(id: string, patch: Partial<BlackjackR
   if (error) throw new Error(`updateBlackjackRound: ${error.message}`);
   return (data as BlackjackRound | null) ?? null;
 }
+const BLACKJACK_SEAT_NUM_FIELDS = ["bet", "payout"] as const;
+
 export async function listBlackjackSeats(roundId: string): Promise<BlackjackSeat[]> {
   const { data, error } = await client().from("blackjack_seats").select("*").eq("round_id", roundId).order("id", { ascending: true });
   if (error) throw new Error(`listBlackjackSeats: ${error.message}`);
-  return (data ?? []) as BlackjackSeat[];
+  return coerceList((data ?? []) as BlackjackSeat[], BLACKJACK_SEAT_NUM_FIELDS);
 }
 export async function getBlackjackSeat(roundId: string, userId: string): Promise<BlackjackSeat | null> {
   const { data, error } = await client().from("blackjack_seats").select("*").eq("round_id", roundId).eq("user_id", userId).maybeSingle();
   if (error) throw new Error(`getBlackjackSeat: ${error.message}`);
-  return (data as BlackjackSeat | null) ?? null;
+  if (!data) return null;
+  return coerceNum({ ...(data as BlackjackSeat) }, BLACKJACK_SEAT_NUM_FIELDS);
 }
 export async function insertBlackjackSeat(input: Omit<BlackjackSeat, "id" | "placed_at">): Promise<BlackjackSeat> {
   const { data, error } = await client().from("blackjack_seats").insert({
@@ -877,12 +928,13 @@ export async function insertBlackjackSeat(input: Omit<BlackjackSeat, "id" | "pla
     if ((error as { code?: string }).code === "23505") throw new Error("seat_already_taken");
     throw new Error(`insertBlackjackSeat: ${error.message}`);
   }
-  return data as BlackjackSeat;
+  return coerceNum({ ...(data as BlackjackSeat) }, BLACKJACK_SEAT_NUM_FIELDS);
 }
 export async function updateBlackjackSeat(id: number, patch: Partial<BlackjackSeat>): Promise<BlackjackSeat | null> {
   const { data, error } = await client().from("blackjack_seats").update(patch).eq("id", id).select("*").maybeSingle();
   if (error) throw new Error(`updateBlackjackSeat: ${error.message}`);
-  return (data as BlackjackSeat | null) ?? null;
+  if (!data) return null;
+  return coerceNum({ ...(data as BlackjackSeat) }, BLACKJACK_SEAT_NUM_FIELDS);
 }
 
 // ============ CHAT ============
@@ -984,6 +1036,8 @@ export async function setSlotsMeter(userId: string, value: number): Promise<void
   if (error) throw new Error(`setSlotsMeter: ${error.message}`);
 }
 
+const SLOT_RUN_NUM_FIELDS = ["bet", "final_payout"] as const;
+
 export async function getActiveSlotRun(userId: string): Promise<SlotRun | null> {
   const { data, error } = await client()
     .from("slot_runs")
@@ -994,7 +1048,8 @@ export async function getActiveSlotRun(userId: string): Promise<SlotRun | null> 
     .limit(1)
     .maybeSingle();
   if (error) throw new Error(`getActiveSlotRun: ${error.message}`);
-  return (data as SlotRun | null) ?? null;
+  if (!data) return null;
+  return coerceNum({ ...(data as SlotRun) }, SLOT_RUN_NUM_FIELDS);
 }
 
 export async function insertSlotRun(run: Omit<SlotRun, "created_at" | "ended_at"> & {
@@ -1017,7 +1072,7 @@ export async function insertSlotRun(run: Omit<SlotRun, "created_at" | "ended_at"
     .select("*")
     .single();
   if (error) throw new Error(`insertSlotRun: ${error.message}`);
-  return data as SlotRun;
+  return coerceNum({ ...(data as SlotRun) }, SLOT_RUN_NUM_FIELDS);
 }
 
 export async function updateSlotRun(id: string, patch: Partial<SlotRun>): Promise<SlotRun | null> {
@@ -1028,7 +1083,8 @@ export async function updateSlotRun(id: string, patch: Partial<SlotRun>): Promis
     .select("*")
     .maybeSingle();
   if (error) throw new Error(`updateSlotRun: ${error.message}`);
-  return (data as SlotRun | null) ?? null;
+  if (!data) return null;
+  return coerceNum({ ...(data as SlotRun) }, SLOT_RUN_NUM_FIELDS);
 }
 
 // ============ DAILY CHALLENGES ============
