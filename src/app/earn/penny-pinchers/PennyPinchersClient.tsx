@@ -50,6 +50,7 @@ import {
   type UpgradeId,
 } from "@/lib/games/penny-pinchers/catalog";
 import {
+  BANK_COOLDOWN_MS,
   applyAchievementSweep,
   applyBuyBlessing,
   applyBuyPermUpgrade,
@@ -298,6 +299,29 @@ export function PennyPinchersClient() {
   const [recentlyBoughtPermId, setRecentlyBoughtPermId] = useState<PermUpgradeId | null>(null);
   /** Wallet ¢ payout from the most recent bank — shows the coin-shower for ~1.6s. */
   const [bankCelebration, setBankCelebration] = useState<number | null>(null);
+  /** Epoch-ms when the next Bank It is allowed. Set after a successful
+   *  bank (or echoed from the 429 response if the player tried to
+   *  bank too soon). The button is disabled until now ≥ this value,
+   *  and `nowTickForBankCooldown` keeps it ticking so the visible
+   *  countdown updates every second. Server-side check is the real
+   *  gate; this state is purely UX. */
+  const [bankReadyAt, setBankReadyAt] = useState<number>(0);
+  /** In-flight bank request guard — prevents a double-click from
+   *  firing two POSTs before the first response lands (which would
+   *  both see the same persisted state and both try to credit the
+   *  wallet). Combined with the server-side cooldown precheck, this
+   *  fully closes the spam-bank exploit. */
+  const bankingRef = useRef(false);
+  /** Re-renders the Bank It panel every 1s while the cooldown is
+   *  active so the "Bank It (15s)" countdown ticks. Stops when no
+   *  cooldown is active to avoid pointless renders. */
+  const [bankNowTick, setBankNowTick] = useState(0);
+  useEffect(() => {
+    if (bankReadyAt <= Date.now()) return;
+    const t = setInterval(() => setBankNowTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [bankReadyAt]);
+  void bankNowTick; // re-render trigger only
   /** Blessing id mid-celebration — keeps the fountain modal open for ~800ms with a Granted! flash. */
   const [grantedBlessing, setGrantedBlessing] = useState<BlessingId | null>(null);
   const [achievementToasts, setAchievementToasts] = useState<AchievementId[]>([]);
@@ -509,6 +533,15 @@ export function PennyPinchersClient() {
       stateRef.current = accrued;
       setState(accrued);
       setWalletBalance(serverWallet);
+      // Hydrate the Bank It cooldown from the loaded state so a
+      // player who banked right before closing the tab sees the
+      // correct "Cooling… 18s" countdown on reopen — otherwise
+      // they'd click, get a 429, then sync. Functionally identical,
+      // just less surprising.
+      if (accrued.lastBankAt != null) {
+        const next = accrued.lastBankAt + BANK_COOLDOWN_MS;
+        if (next > Date.now()) setBankReadyAt(next);
+      }
       if (firstLoadRef.current) {
         firstLoadRef.current = false;
         const gapMs = chosen.lastTickAt ? Date.now() - chosen.lastTickAt : 0;
@@ -1373,10 +1406,21 @@ export function PennyPinchersClient() {
 
   /** Bank It — server-authoritative because it touches the wallet
    *  ledger. Posts the current state blob; server runs `applyBank`,
-   *  credits wallet, saves state, returns new state + payout. */
+   *  credits wallet, saves state, returns new state + payout.
+   *
+   *  Two layers of spam protection:
+   *   1. `bankingRef` ensures only one POST is in flight at a time.
+   *   2. `bankReadyAt` blocks a click while the 30s cooldown is
+   *      active. (Server still rechecks against the persisted
+   *      `lastBankAt` so a tampered client can't bypass.)
+   *  If the server rejects with 429 (e.g. client clock skew), we
+   *  honor its `nextBankAt` for the visible countdown. */
   async function bank() {
     const cur = stateRef.current;
     if (!cur || cur.cents <= 0) return;
+    if (bankingRef.current) return;
+    if (Date.now() < bankReadyAt) return;
+    bankingRef.current = true;
     Sfx.play("chips.stack");
     try {
       // Make sure the very latest state is what the server sees —
@@ -1388,6 +1432,21 @@ export function PennyPinchersClient() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ state: cur }),
       });
+      if (r.status === 429) {
+        // Cooldown rejection — sync our local timer with the server's
+        // authoritative answer. Players still see a countdown; spam
+        // clicks just no-op until the timer drains.
+        const cd = (await r.json().catch(() => ({}))) as {
+          nextBankAt?: number;
+          remainingMs?: number;
+        };
+        const next =
+          typeof cd.nextBankAt === "number"
+            ? cd.nextBankAt
+            : Date.now() + (cd.remainingMs ?? BANK_COOLDOWN_MS);
+        setBankReadyAt(next);
+        return;
+      }
       if (!r.ok) return;
       const d = (await r.json()) as {
         payoutCents: number;
@@ -1403,6 +1462,11 @@ export function PennyPinchersClient() {
       // dirty (server already has the latest).
       dirtyRef.current = false;
       setLastSavedAt(new Date().toISOString());
+      // Lock the local cooldown to match the server (engine wrote
+      // lastBankAt = now on the same `now` we used for the 429
+      // precheck). Even if the server's clock skews a touch, the
+      // next request's 429 will resync.
+      setBankReadyAt(Date.now() + BANK_COOLDOWN_MS);
       if (swept.newlyUnlocked.length > 0) {
         Sfx.play("win.levelup");
         setAchievementToasts((prev) => [...prev, ...swept.newlyUnlocked]);
@@ -1416,6 +1480,9 @@ export function PennyPinchersClient() {
       setBankCelebration(d.payoutCents);
       window.setTimeout(() => setBankCelebration(null), 1600);
     } catch { /* offline — try again on next click */ }
+    finally {
+      bankingRef.current = false;
+    }
   }
 
   /** Buy a relic chest — called by the RelicShop child. Runs the
@@ -1864,11 +1931,17 @@ export function PennyPinchersClient() {
                 : `${formatPC(localCents)} / ${formatPC(server.prestige.thresholdPC)} cents`}
             </button>
           </div>
+          {/* Bank It panel — disabled during the 30s server-side
+              cooldown. `bankNowTick` re-renders the panel every
+              second while cooling so the countdown actually ticks. */}
           <div
             className="panel"
             style={{
               padding: "var(--sp-3) var(--sp-4)",
-              background: projectedPayout > 0 ? "var(--surface-highlight)" : undefined,
+              background:
+                projectedPayout > 0 && now >= bankReadyAt
+                  ? "var(--surface-highlight)"
+                  : undefined,
             }}
           >
             <div className="text-mute" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>
@@ -1880,11 +1953,16 @@ export function PennyPinchersClient() {
             <button
               type="button"
               className="btn btn-sm"
-              disabled={projectedPayout <= 0}
+              disabled={projectedPayout <= 0 || now < bankReadyAt}
               onClick={bank}
               style={{ marginTop: 6, width: "100%" }}
+              title={now < bankReadyAt ? `Ready in ${Math.ceil((bankReadyAt - now) / 1000)}s` : undefined}
             >
-              {projectedPayout > 0 ? "Bank It" : "Need more PC"}
+              {now < bankReadyAt
+                ? `Cooling… ${Math.ceil((bankReadyAt - now) / 1000)}s`
+                : projectedPayout > 0
+                  ? "Bank It"
+                  : "Need more PC"}
             </button>
           </div>
           {/* Save status chip — countdown to next autosave + transient

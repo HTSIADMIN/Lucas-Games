@@ -1492,6 +1492,17 @@ export function applyPrestige(
   };
 }
 
+/** Minimum time between two consecutive Bank It actions, in
+ *  milliseconds. Server-side check uses the *persisted* last-bank
+ *  timestamp (state_blob.lastBankAt) — not the client-submitted one
+ *  — so spam-clicking can't bypass it via concurrent in-flight
+ *  requests. The client mirrors the same value for UX (disabled
+ *  button + countdown).
+ *
+ *  30s strikes the balance between "click-spam exploit gone" and
+ *  "legitimate banking feels snappy". Adjust via this constant. */
+export const BANK_COOLDOWN_MS = 30_000;
+
 /** Bank PC → wallet ¢. Returns payout + new state with cents drained. */
 export function applyBank(
   state: PennyPinchersGameState,

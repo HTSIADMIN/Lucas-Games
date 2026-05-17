@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { readSession } from "@/lib/auth/session";
 import { credit, getBalance } from "@/lib/wallet";
-import { savePennyPinchersBlob } from "@/lib/db";
+import { getPennyPinchersBlob, savePennyPinchersBlob } from "@/lib/db";
 import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
 import { BANK_PC_PER_WALLET_CENT } from "@/lib/games/penny-pinchers/catalog";
 import {
+  BANK_COOLDOWN_MS,
   applyBank,
   migrateLoadedState,
   relicEffects,
@@ -38,8 +39,44 @@ export async function POST(req: Request) {
   if (!body.state || typeof body.state !== "object") {
     return NextResponse.json({ error: "bad_state" }, { status: 400 });
   }
+
+  // Server-authoritative cooldown — read the PERSISTED state_blob's
+  // lastBankAt (not the client's submitted state) so spam-clicking
+  // can't bypass via concurrent in-flight requests. Five requests
+  // fired within 100 ms all see the same stored timestamp; only the
+  // first one (which lands the savePennyPinchersBlob below) updates
+  // it, so the rest get rejected. The 429 carries `nextBankAt` so
+  // the client can show a precise countdown.
+  const now = Date.now();
+  try {
+    const persisted = await getPennyPinchersBlob(s.user.id);
+    const lastBankAt =
+      persisted.blob && typeof (persisted.blob as { lastBankAt?: unknown }).lastBankAt === "number"
+        ? ((persisted.blob as { lastBankAt: number }).lastBankAt as number)
+        : null;
+    if (lastBankAt != null) {
+      const since = now - lastBankAt;
+      if (since < BANK_COOLDOWN_MS) {
+        return NextResponse.json(
+          {
+            error: "bank_cooldown",
+            cooldownMs: BANK_COOLDOWN_MS,
+            nextBankAt: lastBankAt + BANK_COOLDOWN_MS,
+            remainingMs: BANK_COOLDOWN_MS - since,
+          },
+          { status: 429 },
+        );
+      }
+    }
+  } catch (err) {
+    // Persisted-blob read failure is non-fatal — we'd rather let the
+    // bank go through than block legitimate play. The cooldown still
+    // applies on the next attempt once the read recovers.
+    console.error("[pp:bank] cooldown precheck failed", err);
+  }
+
   const submitted = migrateLoadedState(body.state);
-  const result = applyBank(submitted);
+  const result = applyBank(submitted, now);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
   const newState: PennyPinchersGameState = result.state;
