@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
 import { getBalance } from "@/lib/wallet";
-import { levelFromXp, xpFromCoinsWagered } from "@/lib/xp";
+import { getUserLevel } from "@/lib/xpServer";
 
 export const runtime = "nodejs";
 
@@ -9,44 +9,24 @@ export async function GET() {
   const s = await readSession();
   if (!s) return NextResponse.json({ user: null }, { status: 401 });
 
-  // XP / level — derived from net wins, not total wagered.
-  const useSupabase = !!(
-    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
-
-  let totalNetWon = 0;
-  if (useSupabase) {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supa = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false } },
-    );
-    const { data } = await supa
-      .from("game_sessions")
-      .select("bet, payout")
-      .eq("user_id", s.user.id)
-      .eq("status", "settled");
-    if (data) {
-      for (const r of data as { bet: number | string; payout: number | string }[]) {
-        const net = Number(r.payout) - Number(r.bet);
-        if (net > 0) totalNetWon += net;
-      }
-    }
-  }
-
-  const xp = xpFromCoinsWagered(totalNetWon);
-  const lvl = levelFromXp(xp);
+  // Activity-based XP — see src/lib/xp.ts for the rationale. The
+  // old payload included `totalNetWon`; the new shape exposes the
+  // activity counters (gamesPlayed, achievementsUnlocked, plus a
+  // reserved playMinutes) so future consumers can see what's
+  // feeding the level.
+  const lvl = await getUserLevel(s.user.id);
 
   return NextResponse.json({
     user: { id: s.user.id, username: s.user.username },
     balance: await getBalance(s.user.id),
-    xp,
+    xp: lvl.xp,
     level: lvl.level,
     currentLevelXp: lvl.currentLevelXp,
     nextLevelXp: lvl.nextLevelXp,
     intoLevelXp: lvl.intoLevelXp,
     toNextXp: lvl.toNextXp,
-    totalNetWon,
+    gamesPlayed: lvl.gamesPlayed,
+    playMinutes: lvl.playMinutes,
+    achievementsUnlocked: lvl.achievementsUnlocked,
   });
 }

@@ -46,6 +46,13 @@ type ProfileData = {
     level: number;
     intoLevelXp: number;
     toNextXp: number;
+    /** What's feeding the XP — surfaced as a tiny hint under the
+     *  LVL badge so the player understands the level is activity-
+     *  driven, not money-driven. Optional so older payloads still
+     *  render (UI just hides the hint). */
+    gamesPlayed?: number;
+    achievementsUnlocked?: number;
+    playMinutes?: number;
   };
   /** Newest-first wallet ledger entries — only populated on the
    *  requester's own profile, empty for everyone else. */
@@ -342,6 +349,23 @@ export function ProfileModal({
                         }}
                       />
                     </div>
+                    {/* Activity breakdown — explains where the level
+                        comes from (games played + achievements
+                        unlocked). Hidden when neither counter is
+                        present (older API responses). */}
+                    {(data.xp.gamesPlayed != null || data.xp.achievementsUnlocked != null) && (
+                      <div className="text-mute" style={{ fontSize: 11, marginTop: 4, letterSpacing: "0.04em" }}>
+                        {data.xp.gamesPlayed != null && (
+                          <span>{data.xp.gamesPlayed.toLocaleString()} game{data.xp.gamesPlayed === 1 ? "" : "s"}</span>
+                        )}
+                        {data.xp.gamesPlayed != null && data.xp.achievementsUnlocked != null && (
+                          <span> · </span>
+                        )}
+                        {data.xp.achievementsUnlocked != null && data.xp.achievementsUnlocked > 0 && (
+                          <span>{data.xp.achievementsUnlocked} trophy{data.xp.achievementsUnlocked === 1 ? "" : "s"}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

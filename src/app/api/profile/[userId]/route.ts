@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { readSession } from "@/lib/auth/session";
 import { getUserById, recentTransactions } from "@/lib/db";
 import { getBalance } from "@/lib/wallet";
-import { levelFromXp, xpFromCoinsWagered } from "@/lib/xp";
+import { getUserLevel } from "@/lib/xpServer";
 import { getChampionId } from "@/lib/champion";
 
 export const runtime = "nodejs";
@@ -105,6 +105,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
       }))
     : [];
 
+  // Activity-based XP (replaces the old net-wins-derived level). One
+  // RPC pulls games_played + achievements_unlocked + play_seconds.
+  const xpInfo = await getUserLevel(userId);
+
   return NextResponse.json({
     user: {
       id: user.id,
@@ -130,13 +134,15 @@ export async function GET(_req: Request, ctx: { params: Promise<{ userId: string
       gamesPlayed,
     },
     xp: {
-      ...(() => {
-        // XP from net wins per game (positive nets only). Mirrors getUserLevel.
-        const netWon = gamesPlayed.reduce((s, g) => s + (g.net > 0 ? g.net : 0), 0);
-        const xp = xpFromCoinsWagered(netWon);
-        const l = levelFromXp(xp);
-        return { xp, ...l, totalNetWon: netWon };
-      })(),
+      xp: xpInfo.xp,
+      level: xpInfo.level,
+      currentLevelXp: xpInfo.currentLevelXp,
+      nextLevelXp: xpInfo.nextLevelXp,
+      intoLevelXp: xpInfo.intoLevelXp,
+      toNextXp: xpInfo.toNextXp,
+      gamesPlayed: xpInfo.gamesPlayed,
+      playMinutes: xpInfo.playMinutes,
+      achievementsUnlocked: xpInfo.achievementsUnlocked,
     },
     transactions,
     achievements: {
