@@ -6,6 +6,8 @@ import { insertGameSession, settleGameSession } from "@/lib/db";
 import { spin, validateBet, type RouletteBet } from "@/lib/games/roulette/engine";
 import { getHotNumber, HOT_PAYOUT, STRAIGHT_PAYOUT } from "@/lib/games/roulette/hot";
 import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
+import { detectRouletteAchievements } from "@/lib/achievements/detect";
+import { unlockAndDetectAchievements } from "@/lib/achievements/settle";
 
 export const runtime = "nodejs";
 
@@ -105,6 +107,27 @@ export async function POST(req: Request) {
   const totalOut = toNum(totalPayoutBig + hotBonusBig);
   await settleGameSession(sessionId, totalOut, { bets, ...result, totalPayout: totalPayoutNum, hot: hot.value, hotBonus });
 
+  // Achievement detection. `straightUpHit` = any straight bet whose
+  // value matched the winning number AND the player wagered on it.
+  // `previousWasWin` left false in v1 — would require a separate
+  // query for the player's prior roulette settle; deferred.
+  const straightUpHit = bets.some(
+    (b) => b.type === "straight" && b.value === result.winning,
+  );
+  const balanceAfter = await getBalance(s.user.id);
+  const ids = detectRouletteAchievements({
+    won: totalOut > total,
+    straightUpHit,
+    betPositions: bets.length,
+    previousWasWin: false,
+  });
+  const newlyUnlocked = await unlockAndDetectAchievements({
+    userId: s.user.id,
+    source: "roulette",
+    perGameIds: ids,
+    countAsBet: true,
+    postBetBalance: balanceAfter,
+  });
   return NextResponse.json({
     ok: true,
     sessionId,
@@ -115,6 +138,7 @@ export async function POST(req: Request) {
     totalPayout: totalOut,
     hotNumber: hot.value,
     hotBonus,
-    balance: await getBalance(s.user.id),
+    balance: balanceAfter,
+    newlyUnlockedAchievements: newlyUnlocked,
   });
 }

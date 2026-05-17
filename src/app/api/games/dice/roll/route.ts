@@ -3,6 +3,8 @@ import { readSession } from "@/lib/auth/session";
 import { playOneShot, validateBet } from "@/lib/games/common";
 import { roll, type DiceDirection } from "@/lib/games/dice/engine";
 import { mulBigByNumber, toBig } from "@/lib/big-math";
+import { detectDiceAchievements } from "@/lib/achievements/detect";
+import { unlockAndDetectAchievements } from "@/lib/achievements/settle";
 
 export const runtime = "nodejs";
 
@@ -38,6 +40,19 @@ export async function POST(req: Request) {
       runEngine: () => roll(target, dir, v.bet),
       payoutBig: (o) => mulBigByNumber(toBig(v.bet), o.multiplier),
     });
+    const ids = detectDiceAchievements({
+      target,
+      direction: dir,
+      won: r.outcome.win,
+      bet: v.bet,
+    });
+    const newlyUnlocked = await unlockAndDetectAchievements({
+      userId: s.user.id,
+      source: "dice",
+      perGameIds: ids,
+      countAsBet: true,
+      postBetBalance: r.balance,
+    });
     return NextResponse.json({
       ok: true,
       roll: r.outcome.roll,
@@ -45,6 +60,7 @@ export async function POST(req: Request) {
       multiplier: r.outcome.multiplier,
       payout: r.outcome.payout,
       balance: r.balance,
+      newlyUnlockedAchievements: newlyUnlocked,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "error";

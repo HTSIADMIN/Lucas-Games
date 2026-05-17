@@ -107,6 +107,42 @@ Vault-cracked animation as a new keyframe set in `globals.css`
 
 Estimated 5–7 hours.
 
+### 🔜 Achievements — finish wiring the 4 remaining game routes
+
+System scaffolding shipped (migration 0048, catalogs, detect helpers,
+unlockAndDetectAchievements helper, global fetch interceptor,
+`<AchievementToast />`). 10 of 12 casino games already fire
+achievements at settlement. The remaining 4 need their detection
+hook added to the right settle path:
+
+| Game | Settle path | Needs |
+|---|---|---|
+| blackjack (solo) | `src/app/api/games/blackjack/[sessionId]/action/route.ts` (stand / bust / final settle) | Wire `detectBlackjackAchievements`. Detection signature is in `src/lib/achievements/detect.ts` — needs `net`, `naturalBlackjack`, `fiveCardCharlie`, `doubledAndWon`, `dealerBust`, `playerTotal`, `playerCardCount`. |
+| blackjack-mp | `src/app/api/games/blackjack-mp/action/route.ts` (final-hand resolution) | Wire `detectBlackjackMpAchievements`. Lighter context — same fields minus the doubled/perfect-21 paths. |
+| poker | `src/app/api/games/poker/action/route.ts` + `src/app/api/games/poker/sit/route.ts` | Wire `detectPokerAchievements`. Needs `seated`, `net`, `allIn`, `bluffWin`, `potSize`. The poker engine should expose `allIn` and `wonByFold` flags on the hand-resolution result. |
+| coinflip-duel | `src/app/api/games/coinflip-duel/create/route.ts` + `src/app/api/games/coinflip-duel/[id]/accept/route.ts` | Wire `detectCoinflipDuelAchievements`. Two-step: `first_challenge` fires on create; `first_accept` / `first_win` / `big_duel_win` fire on the accept (which resolves the duel). |
+
+Pattern to follow (see `slots/spin/route.ts` or `coinflip/flip/route.ts`):
+```ts
+const ids = detectXxxAchievements({...});
+const newlyUnlocked = await unlockAndDetectAchievements({
+  userId: s.user.id,
+  source: "xxx",
+  perGameIds: ids,
+  countAsBet: true, // false on cashout-side settles
+  postBetBalance: balanceAfter,
+});
+return NextResponse.json({ ..., newlyUnlockedAchievements: newlyUnlocked });
+```
+
+Also nice-to-haves once data is plentiful:
+- Roulette `hot_streak` (needs to query the prior round's win state).
+- Mines `big_clear` fires on cashout but never on auto-bust mid-board.
+- Cross-game "first_bet" sequence — the very first ever bet across all
+  games should trigger Welcome to the Saloon; today that fires from
+  the FIRST GAME ROUTE the player exercises, not strictly from a
+  "first bet ever" detection. Tighten if it feels noisy.
+
 ## Shared follow-ups (when convenient)
 
 - The preexisting `react-hooks/set-state-in-effect` lint errors in

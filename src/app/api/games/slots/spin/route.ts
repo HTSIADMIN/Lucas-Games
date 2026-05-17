@@ -20,6 +20,8 @@ import {
 } from "@/lib/games/slots/engine";
 import { getJackpotPool, rollJackpotTrigger, STARTING_POOL } from "@/lib/games/slots/jackpot";
 import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
+import { detectSlotsAchievements } from "@/lib/achievements/detect";
+import { unlockAndDetectAchievements } from "@/lib/achievements/settle";
 
 export const runtime = "nodejs";
 
@@ -164,6 +166,25 @@ export async function POST(req: Request) {
     bonusBoard = initial.board;
   }
 
+  // Achievement detection — slots-specific plus cross-game meta.
+  // Total payout for the spin = line wins + (any jackpot trigger).
+  const spinTotalPayout = linePayoutOut + jackpotPayout;
+  const slotsIds = detectSlotsAchievements({
+    bet,
+    payout: spinTotalPayout,
+    jackpotHit,
+    bonusTriggered: result.bonusTriggered,
+    meterForced: result.meterForcedThisSpin,
+  });
+  const balanceAfter = await getBalance(s.user.id);
+  const newlyUnlocked = await unlockAndDetectAchievements({
+    userId: s.user.id,
+    source: "slots",
+    perGameIds: slotsIds,
+    countAsBet: true,
+    postBetBalance: balanceAfter,
+  });
+
   // Wire the result back to the client.
   const wireGrid = result.grid.map((col) => col.map((c: ReelCell) => cellToWire(c)));
   return NextResponse.json({
@@ -177,7 +198,8 @@ export async function POST(req: Request) {
     bonusBoard,
     bonusTier: result.bonusStartTier,
     meter: { value: result.meterAfter, gain: result.meterGain, forced: result.meterForcedThisSpin },
-    balance: await getBalance(s.user.id),
+    balance: balanceAfter,
+    newlyUnlockedAchievements: newlyUnlocked,
     /** Progressive jackpot pool snapshot AFTER this spin's bet
      *  accrual + any payout this spin. */
     jackpot: {

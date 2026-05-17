@@ -13,6 +13,8 @@ import {
 } from "@/lib/games/slots/engine";
 import { randomUUID } from "node:crypto";
 import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
+import { detectSlotsAchievements } from "@/lib/achievements/detect";
+import { unlockAchievements } from "@/lib/achievements/db";
 
 export const runtime = "nodejs";
 
@@ -117,6 +119,17 @@ export async function POST() {
     status: "settled",
   });
 
+  // Bonus settle can hit big_multi — payout ≥ 100× the bonus's
+  // originating bet. Fire per-game detect; meta doesn't bump since
+  // the original spin already counted as the bet.
+  const ids = detectSlotsAchievements({
+    bet: run.bet,
+    payout: bonusPayoutOut,
+    jackpotHit: false,
+    bonusTriggered: false,
+    meterForced: false,
+  });
+  const newIds = await unlockAchievements(s.user.id, "slots", ids);
   return NextResponse.json({
     ok: true,
     finished: true,
@@ -130,5 +143,6 @@ export async function POST() {
     payout: bonusPayoutOut,
     coinTotal: settled.coinTotal,
     balance: await getBalance(s.user.id),
+    newlyUnlockedAchievements: newIds.map((id) => ({ source: "slots", id })),
   });
 }

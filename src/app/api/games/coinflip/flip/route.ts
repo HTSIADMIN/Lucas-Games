@@ -3,6 +3,8 @@ import { readSession } from "@/lib/auth/session";
 import { playOneShot, validateBet } from "@/lib/games/common";
 import { flip, type CoinSide } from "@/lib/games/coinflip/engine";
 import { mulBigByNumber, toBig } from "@/lib/big-math";
+import { detectCoinflipAchievements } from "@/lib/achievements/detect";
+import { unlockAndDetectAchievements } from "@/lib/achievements/settle";
 
 export const runtime = "nodejs";
 
@@ -34,12 +36,25 @@ export async function POST(req: Request) {
       runEngine: () => flip(pick, bet),
       payoutBig: (o) => mulBigByNumber(toBig(bet), o.multiplier),
     });
+    const ids = detectCoinflipAchievements({
+      side: pick,
+      won: r.outcome.win,
+      bet,
+    });
+    const newlyUnlocked = await unlockAndDetectAchievements({
+      userId: s.user.id,
+      source: "coinflip",
+      perGameIds: ids,
+      countAsBet: true,
+      postBetBalance: r.balance,
+    });
     return NextResponse.json({
       ok: true,
       result: r.outcome.result,
       win: r.outcome.win,
       payout: r.outcome.payout,
       balance: r.balance,
+      newlyUnlockedAchievements: newlyUnlocked,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "error";

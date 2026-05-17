@@ -7,6 +7,8 @@ import { credit, debit, getBalance } from "@/lib/wallet";
 import { insertGameSession, insertPlinkoDrop } from "@/lib/db";
 import { drop, type PlinkoRisk, type PlinkoRows } from "@/lib/games/plinko/engine";
 import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
+import { detectPlinkoAchievements } from "@/lib/achievements/detect";
+import { unlockAndDetectAchievements } from "@/lib/achievements/settle";
 
 export const runtime = "nodejs";
 
@@ -86,6 +88,21 @@ export async function POST(req: NextRequest) {
     status: "settled",
   });
 
+  const balanceAfter = await getBalance(s.user.id);
+  const ids = detectPlinkoAchievements({
+    bet: v.bet,
+    payout,
+    bucket: r.bucket,
+    rows,
+    risk,
+  });
+  const newlyUnlocked = await unlockAndDetectAchievements({
+    userId: s.user.id,
+    source: "plinko",
+    perGameIds: ids,
+    countAsBet: true,
+    postBetBalance: balanceAfter,
+  });
   return NextResponse.json({
     ok: true,
     dropId: id,
@@ -95,6 +112,7 @@ export async function POST(req: NextRequest) {
     table: r.table,
     rows,
     risk,
-    balance: await getBalance(s.user.id),
+    balance: balanceAfter,
+    newlyUnlockedAchievements: newlyUnlocked,
   });
 }

@@ -6,6 +6,8 @@ import { debit, getBalance } from "@/lib/wallet";
 import { insertMinesGame } from "@/lib/db";
 import { GRID, makeLayout, multiplierFor } from "@/lib/games/mines/engine";
 import { grantPickaxe, pickaxeGrantChance } from "@/lib/games/mines/pickaxe";
+import { detectMinesAchievements } from "@/lib/achievements/detect";
+import { unlockAndDetectAchievements } from "@/lib/achievements/settle";
 
 export const runtime = "nodejs";
 
@@ -60,6 +62,24 @@ export async function POST(req: Request) {
   const hasPickaxe = Math.random() < pickaxeGrantChance(mineCount);
   if (hasPickaxe) grantPickaxe(id);
 
+  // Starting a Mines game fires "first_dig" + meta (bet placed).
+  // "early_bust" / "big_clear" / "near_clear" fire from the reveal +
+  // cashout routes.
+  const balanceAfter = await getBalance(s.user.id);
+  const totalGems = 25 - mineCount;
+  const ids = detectMinesAchievements({
+    revealed: 0,
+    totalGems,
+    busted: false,
+    cashedOut: false,
+  });
+  const newlyUnlocked = await unlockAndDetectAchievements({
+    userId: s.user.id,
+    source: "mines",
+    perGameIds: ids,
+    countAsBet: true,
+    postBetBalance: balanceAfter,
+  });
   return NextResponse.json({
     ok: true,
     gameId: id,
@@ -72,6 +92,7 @@ export async function POST(req: Request) {
     bet: v.bet,
     payout: 0,
     pickaxe: hasPickaxe,
-    balance: await getBalance(s.user.id),
+    balance: balanceAfter,
+    newlyUnlockedAchievements: newlyUnlocked,
   });
 }

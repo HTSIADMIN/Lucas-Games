@@ -15,6 +15,20 @@
 //   4. Done — the showcase auto-renders the new ones.
 
 import { ACHIEVEMENTS as PP_ACHIEVEMENTS } from "@/lib/games/penny-pinchers/catalog";
+import { SLOTS_ACHIEVEMENTS } from "./catalogs/slots";
+import { BLACKJACK_ACHIEVEMENTS } from "./catalogs/blackjack";
+import { BLACKJACK_MP_ACHIEVEMENTS } from "./catalogs/blackjack_mp";
+import { COINFLIP_ACHIEVEMENTS } from "./catalogs/coinflip";
+import { COINFLIP_DUEL_ACHIEVEMENTS } from "./catalogs/coinflip_duel";
+import { CRASH_ACHIEVEMENTS } from "./catalogs/crash";
+import { DICE_ACHIEVEMENTS } from "./catalogs/dice";
+import { MINES_ACHIEVEMENTS } from "./catalogs/mines";
+import { PLINKO_ACHIEVEMENTS } from "./catalogs/plinko";
+import { POKER_ACHIEVEMENTS } from "./catalogs/poker";
+import { ROULETTE_ACHIEVEMENTS } from "./catalogs/roulette";
+import { SCRATCH_ACHIEVEMENTS } from "./catalogs/scratch";
+import { META_ACHIEVEMENTS } from "./catalogs/meta";
+import type { AchievementCatalogEntry } from "./catalogs/types";
 
 export type AchievementDef = {
   source: string; // e.g. "penny_pinchers"
@@ -77,9 +91,37 @@ const PP_REGISTRY: AchievementDef[] = PP_ACHIEVEMENTS.map((a) => {
   } satisfies AchievementDef;
 });
 
+/** Helper — wrap a per-game catalog into the unified
+ *  AchievementDef[] with the correct `source` tag. */
+function withSource(
+  source: string,
+  entries: readonly AchievementCatalogEntry[],
+): AchievementDef[] {
+  return entries.map((e) => ({
+    source,
+    id: e.id,
+    label: e.label,
+    description: e.description,
+    icon: e.icon,
+    rarity: e.rarity,
+  }));
+}
+
 export const ACHIEVEMENTS: readonly AchievementDef[] = [
   ...PP_REGISTRY,
-  // Future: spread other games' registries here.
+  ...withSource("slots",         SLOTS_ACHIEVEMENTS),
+  ...withSource("blackjack",     BLACKJACK_ACHIEVEMENTS),
+  ...withSource("blackjack-mp",  BLACKJACK_MP_ACHIEVEMENTS),
+  ...withSource("coinflip",      COINFLIP_ACHIEVEMENTS),
+  ...withSource("coinflip-duel", COINFLIP_DUEL_ACHIEVEMENTS),
+  ...withSource("crash",         CRASH_ACHIEVEMENTS),
+  ...withSource("dice",          DICE_ACHIEVEMENTS),
+  ...withSource("mines",         MINES_ACHIEVEMENTS),
+  ...withSource("plinko",        PLINKO_ACHIEVEMENTS),
+  ...withSource("poker",         POKER_ACHIEVEMENTS),
+  ...withSource("roulette",      ROULETTE_ACHIEVEMENTS),
+  ...withSource("scratch",       SCRATCH_ACHIEVEMENTS),
+  ...withSource("meta",          META_ACHIEVEMENTS),
 ];
 
 export const ACHIEVEMENTS_BY_KEY: Record<string, AchievementDef> = Object.fromEntries(

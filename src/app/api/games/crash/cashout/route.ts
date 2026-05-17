@@ -6,6 +6,8 @@ import { getCrashBet, insertGameSession, updateCrashBet } from "@/lib/db";
 import { multiplierAt } from "@/lib/games/crash/engine";
 import { getCrashState } from "@/lib/games/crash/scheduler";
 import { mulBigByNumber, toBig, toNum } from "@/lib/big-math";
+import { detectCrashAchievements } from "@/lib/achievements/detect";
+import { unlockAndDetectAchievements } from "@/lib/achievements/settle";
 
 export const runtime = "nodejs";
 
@@ -84,11 +86,27 @@ export async function POST() {
     status: "settled",
   });
 
+  const balanceAfter = await getBalance(s.user.id);
+  // Crash counts as a bet at bet/route (debit landed there). Cashout
+  // is the win-side event — fire achievements but don't bump meta
+  // bet count.
+  const ids = detectCrashAchievements({
+    betPlaced: true,
+    cashoutMultiplier: cashoutX,
+  });
+  const newlyUnlocked = await unlockAndDetectAchievements({
+    userId: s.user.id,
+    source: "crash",
+    perGameIds: ids,
+    countAsBet: false,
+    postBetBalance: balanceAfter,
+  });
   return NextResponse.json({
     ok: true,
     busted: false,
     cashoutX,
     payout,
-    balance: await getBalance(s.user.id),
+    balance: balanceAfter,
+    newlyUnlockedAchievements: newlyUnlocked,
   });
 }

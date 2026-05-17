@@ -8,6 +8,8 @@ import { DailySpinReadyToast } from "@/components/DailySpinReadyToast";
 import { EventTicker } from "@/components/EventTicker";
 import { BigEventToast } from "@/components/BigEventToast";
 import { AppSnapshotProvider } from "@/components/AppSnapshotProvider";
+import { AchievementToast } from "@/components/AchievementToast";
+import { AchievementFetchHook } from "@/components/AchievementFetchHook";
 import type { ChatMessagePublic } from "@/lib/db";
 
 export type Me = {
@@ -60,6 +62,8 @@ export function AppLive({
         {me && <DailyChallenges />}
         {me && <BigEventToast />}
         {me && <DailySpinReadyToast />}
+        {me && <AchievementToast />}
+        {me && <AchievementFetchHook />}
       </LiveProvider>
     </AppSnapshotProvider>
   );

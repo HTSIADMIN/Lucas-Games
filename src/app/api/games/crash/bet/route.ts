@@ -4,6 +4,8 @@ import { validateBet } from "@/lib/games/common";
 import { debit, getBalance } from "@/lib/wallet";
 import { getCrashBet, insertCrashBet } from "@/lib/db";
 import { getCrashState } from "@/lib/games/crash/scheduler";
+import { detectCrashAchievements } from "@/lib/achievements/detect";
+import { unlockAchievements } from "@/lib/achievements/db";
 
 export const runtime = "nodejs";
 
@@ -53,9 +55,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 
+  // Per-game `first_bet` fires here when the bet is placed. Meta
+  // detection waits for the round to settle (game_sessions row
+  // lands in the cashout/bust route) so the bet-counter only bumps
+  // once per round.
+  const ids = detectCrashAchievements({
+    betPlaced: true,
+    cashoutMultiplier: null,
+  });
+  const newIds = await unlockAchievements(s.user.id, "crash", ids);
   return NextResponse.json({
     ok: true,
     roundId: state.round.id,
     balance: await getBalance(s.user.id),
+    newlyUnlockedAchievements: newIds.map((id) => ({ source: "crash", id })),
   });
 }

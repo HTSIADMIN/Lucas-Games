@@ -4,6 +4,8 @@ import { readSession } from "@/lib/auth/session";
 import { getBalance } from "@/lib/wallet";
 import { getMinesGame, insertGameSession, updateMinesGame } from "@/lib/db";
 import { GRID, countSafe, multiplierFor } from "@/lib/games/mines/engine";
+import { detectMinesAchievements } from "@/lib/achievements/detect";
+import { unlockAndDetectAchievements } from "@/lib/achievements/settle";
 
 export const runtime = "nodejs";
 
@@ -47,6 +49,24 @@ export async function POST(req: Request, ctx: { params: Promise<{ gameId: string
       state: { mineCount: game.mine_count, busted: true },
       status: "settled",
     });
+    // "early_bust" fires when the FIRST click was a mine — i.e.
+    // the new revealed string has no `r` chars (only x + dashes).
+    const revealedGemsBeforeBust = (game.revealed.match(/r/g) || []).length;
+    const totalGems = 25 - game.mine_count;
+    const ids = detectMinesAchievements({
+      revealed: revealedGemsBeforeBust,
+      totalGems,
+      busted: true,
+      cashedOut: false,
+    });
+    const balanceAfter = await getBalance(s.user.id);
+    const newlyUnlocked = await unlockAndDetectAchievements({
+      userId: s.user.id,
+      source: "mines",
+      perGameIds: ids,
+      countAsBet: false, // start counted as the bet; bust is settle
+      postBetBalance: balanceAfter,
+    });
     return NextResponse.json({
       ok: true,
       cell,
@@ -58,7 +78,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ gameId: string
       nextMultiplier: 0,
       bet: game.bet,
       payout: 0,
-      balance: await getBalance(s.user.id),
+      balance: balanceAfter,
+      newlyUnlockedAchievements: newlyUnlocked,
     });
   }
 

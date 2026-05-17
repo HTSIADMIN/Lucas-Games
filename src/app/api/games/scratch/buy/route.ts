@@ -3,6 +3,8 @@ import { readSession } from "@/lib/auth/session";
 import { playOneShot } from "@/lib/games/common";
 import { generateTicket } from "@/lib/games/scratch/engine";
 import { isValidScratchCost, designForCost } from "@/lib/games/scratch/designs";
+import { detectScratchAchievements } from "@/lib/achievements/detect";
+import { unlockAndDetectAchievements } from "@/lib/achievements/settle";
 
 export const runtime = "nodejs";
 
@@ -33,10 +35,24 @@ export async function POST(req: Request) {
       state: { design },
       runEngine: () => generateTicket({ cost, design }),
     });
+    const ticket = r.outcome as { payout: number; tier?: string };
+    const ids = detectScratchAchievements({
+      bet: cost,
+      payout: ticket.payout,
+      jackpot: ticket.tier === "jackpot",
+    });
+    const newlyUnlocked = await unlockAndDetectAchievements({
+      userId: s.user.id,
+      source: "scratch",
+      perGameIds: ids,
+      countAsBet: true,
+      postBetBalance: r.balance,
+    });
     return NextResponse.json({
       ok: true,
       ticket: r.outcome,
       balance: r.balance,
+      newlyUnlockedAchievements: newlyUnlocked,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "error";
